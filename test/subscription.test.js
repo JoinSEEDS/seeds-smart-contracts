@@ -1,37 +1,39 @@
 const { describe } = require("riteway")
-const { eos, encodeName } = require("./helper")
+const { eos, encodeName, getBalance, names } = require('../scripts/helper')
 
-const getBalance = async (user) => {
-  const balance = await eos.getCurrencyBalance('token', user, 'SEEDS')
-  return Number.parseInt(balance[0])
-}
+const { accounts, subscription, token, application } = names
 
 describe("subscription", async assert => {
-  const accounts = await eos.contract('accounts')
-  const subscription = await eos.contract('subscription')
-  const token = await eos.contract('token')
+  const contracts = Promise.all([
+    eos.contract(token),
+    eos.contract(accounts),
+    eos.contract(subscription),
+  ]).then(([token, accounts, subscription]) => ({
+    token, accounts, subscription
+  }))
 
-  const applicationInitialBalance = await getBalance('application')
+  const applicationInitialBalance = await getBalance(application)
 
-  await subscription.reset({ authorization: 'subscription@active' })
+  await contracts.subscription.reset({ authorization: `${subscription}@active` })
 
-  await accounts.addapp('application', { authorization: 'accounts@active' })
-  
-  await accounts.adduser('user1', { authorization: 'accounts@active' })
-  
-  await subscription.create('application', '10.0000 SEEDS', { authorization: 'application@active' })
-  
-  await subscription.update('application', 1, '20.0000 SEEDS', { authorization: 'application@active' })
-  
-  await token.transfer('user1', 'subscription', '10.0000 SEEDS', 'application', { authorization: 'user1@active' })
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  await contracts.accounts.addapp(application, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
 
-  await subscription.disable('user1', 'application')
-  
-  await subscription.enable('user1', 'application')
+  await contracts.subscription.create(application, '10.0000 SEEDS', { authorization: `${application}@active` })
 
-  await subscription.claimpayout('application')
+  await contracts.subscription.update(application, 1, '20.0000 SEEDS', { authorization: `${application}@active` })
 
-  const applicationFinalBalance = await getBalance('application')
+  await contracts.token.transfer(firstuser, subscription, '10.0000 SEEDS', application, { authorization: `${firstuser}@active` })
+
+  await contracts.subscription.disable(firstuser, application)
+
+  await contracts.subscription.enable(firstuser, application)
+
+  await contracts.subscription.claimpayout(application)
+
+  const applicationFinalBalance = await getBalance(application)
 
   assert({
     given: 'subscribed user',

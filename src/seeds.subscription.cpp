@@ -10,26 +10,14 @@ void subscription::reset() {
   
   while (pitr != providers.end()) {
     name app = pitr->app;
-
     subscription_tables subs(_self, app.value);
     auto sitr = subs.begin();
     
     while(sitr != subs.end()) {
-      subs.modify(sitr, _self, [&](auto& sub) {
-        sub.deposit = asset(0, seeds_symbol);
-        sub.active = false;
-      });
-        
-      sitr++;
+      sitr = subs.erase(sitr);
     }
     
-    providers.modify(pitr, _self, [&](auto& provider) {
-      provider.price = asset(0, seeds_symbol);
-      provider.balance = asset(0, seeds_symbol);
-      provider.active = false;
-    });
-  
-    pitr++;
+    pitr = providers.erase(pitr);
   }
 }
 
@@ -83,29 +71,7 @@ void subscription::update(name app, bool active, asset price)
 
 void subscription::increase(name from, name to, asset quantity, string memo)
 {
-  name app = name(memo);
-  
-  check(providers.find(app.value) != providers.end(), "no provider");
-  check_user(from);
-  check_asset(quantity);
-  
-  subscription_tables subs(_self, app.value);
-  
-  auto sitr = subs.find(from.value);
- 
-  if (sitr == subs.end()) {
-    subs.emplace(from, [&](auto& sub) {
-      sub.user = from;
-      sub.deposit = quantity;
-      sub.active = false;
-    });
-  } else {
-    subs.modify(sitr, from, [&](auto& sub) {
-      sub.deposit += quantity;
-    });
-  }
-  
-  deposit(quantity);
+
 }
 
 void subscription::enable(name user, name app)

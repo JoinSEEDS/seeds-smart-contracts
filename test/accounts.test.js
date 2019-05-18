@@ -1,59 +1,70 @@
 const { describe } = require('riteway')
-const { eos } = require('./helper')
+const { eos, names } = require('../scripts/helper')
 const { equals } = require('ramda')
-
-// {"account":"accounts","auth":{"accounts":[{"permission":{"actor":"accounts","permission":"eosio.code"},"weight":1}],"keys":[{"key":"EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","weight":1}],"threshold":1,"waits":[]},"parent":"","permission":"owner"}
 
 const publicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
 
+const { accounts, application, firstuser, seconduser } = names
+
 describe('accounts', async assert => {
-  const accounts = await eos.contract('accounts')
+  const contract = await eos.contract(accounts)
 
-  await accounts.addapp('application', { authorization: 'accounts@active' })
+  console.log(contract)
 
-  await accounts.addrequest('application', 'user1', publicKey, publicKey, { authorization: 'application@active' })
-  
-  await accounts.addrequest('application', 'user2', publicKey, publicKey, { authorization: 'application@active' })
+  await contract.reset({ authorization: `${accounts}@active` })
 
-  await accounts.fulfill('application', 'user1', { authorization: 'accounts@owner' })
-  
-  await accounts.fulfill('application', 'user2', { authorization: 'accounts@owner' })
+  await contract.addapp(application, { authorization: `${accounts}@active` })
 
-  await accounts.adduser('user1', { authorization: 'accounts@active' })
-  
-  await accounts.adduser('user2', { authorization: 'accounts@active' })
+  try {
+    await contract.addrequest(application, firstuser, publicKey, publicKey, { authorization: `${application}@active` })
+    await contract.fulfill(application, firstuser, { authorization: `${accounts}@owner` })
+    console.log(`${firstuser} account created`)
+  } catch (err) {
+    console.log(`${firstuser} account already exists`)
+  }
+
+  try {
+    await contract.addrequest(application, seconduser, publicKey, publicKey, { authorization: `${application}@active` })
+    await contract.fulfill(application, seconduser, { authorization: `${accounts}@owner` })
+    console.log(`${firstuser} account created`)
+  } catch (err) {
+    console.log(`${seconduser} account already exists`)
+  }
+
+  await contract.adduser(firstuser, { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, { authorization: `${accounts}@active` })
 
   const users = await eos.getTableRows({
-    code: 'accounts',
-    scope: 'accounts',
+    code: accounts,
+    scope: accounts,
     table: 'users',
     json: true,
   })
-  
+
   const applications = await eos.getTableRows({
-    code: 'accounts',
-    scope: 'accounts',
+    code: accounts,
+    scope: accounts,
     table: 'apps',
     json: true
   })
-  
+
   assert({
     given: 'users table',
     should: 'show joined users',
     actual: users.rows,
     expected: [{
-      account: 'user1'
+      account: firstuser
     }, {
-      account: 'user2'
+      account: seconduser
     }]
   })
-  
+
   assert({
     given: 'apps table',
     should: 'show joined applications',
     actual: applications.rows,
     expected: [{
-      account: 'application'
+      account: application
     }]
   })
 })

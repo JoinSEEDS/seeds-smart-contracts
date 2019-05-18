@@ -1,5 +1,19 @@
 #include <seeds.accounts.hpp>
 
+void accounts::reset() {
+  require_auth(_self);
+  
+  auto aitr = apps.begin();
+  while (aitr != apps.end()) {
+    aitr = apps.erase(aitr);
+  }
+  
+  auto uitr = users.begin();
+  while (uitr != users.end()) {
+    uitr = users.erase(uitr);
+  }
+}
+
 void accounts::adduser(name account)
 {
   require_auth(_self);

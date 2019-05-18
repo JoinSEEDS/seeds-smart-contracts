@@ -18,6 +18,8 @@ CONTRACT accounts : public contract {
             requests(receiver, receiver.value)
             {}
 
+        ACTION reset();
+
         ACTION adduser(name account);
         
         ACTION addapp(name account);
@@ -60,4 +62,4 @@ CONTRACT accounts : public contract {
         request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (adduser)(addapp)(addrequest)(fulfill));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(addapp)(addrequest)(fulfill));

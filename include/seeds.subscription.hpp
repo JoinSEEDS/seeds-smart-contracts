@@ -89,7 +89,7 @@ CONTRACT subscription : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-    if (action == name("transfer").value && code == "token"_n.value) {
+    if (action == name("transfer").value) {
         execute_action<subscription>(name(receiver), name(code), &subscription::increase);
     } else if (code == receiver) {
         switch (action) {

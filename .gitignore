@@ -1,6 +1,3 @@
 node_modules
 package-lock.json
-.eosproj
 .idea
-*.wasm
-*.abi
