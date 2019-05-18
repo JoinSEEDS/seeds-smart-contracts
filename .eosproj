@@ -1,0 +1,20 @@
+{
+  "main": "",
+  "contract": "",
+  "include": "",
+  "cdt": "",
+  "output": "",
+  "scripts": {
+    "build": "eosio-cpp -abigen -I ./include -contract eosio.token -o ./artifacts/eosio.token.wasm src/eosio.token.cpp\neosio-cpp -abigen -I ./include -contract accounts -o ./artifacts/accounts.wasm src/seeds.accounts.cpp\neosio-cpp -abigen -I ./include -contract harvest -o ./artifacts/harvest.wasm src/seeds.harvest.cpp\neosio-cpp -abigen -I ./include -contract subscription -o ./artifacts/subscription.wasm src/seeds.subscription.cpp"
+  },
+  "deploy": {
+    "target": "both",
+    "mainnet": "",
+    "kylin": "",
+    "jungle": "",
+    "local": ""
+  },
+  "test": {
+    "npmClient": "npm"
+  }
+}
