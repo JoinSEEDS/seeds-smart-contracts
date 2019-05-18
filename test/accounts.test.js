@@ -9,8 +9,6 @@ const { accounts, application, firstuser, seconduser } = names
 describe('accounts', async assert => {
   const contract = await eos.contract(accounts)
 
-  console.log(contract)
-
   await contract.reset({ authorization: `${accounts}@active` })
 
   await contract.addapp(application, { authorization: `${accounts}@active` })
