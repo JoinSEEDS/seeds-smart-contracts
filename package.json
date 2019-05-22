@@ -4,17 +4,25 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "riteway test/*.test.js | tap-nirvana"
+    "test": "riteway test/*.test.js | tap-nirvana",
+    "deploy": "node ./scripts/deploy.js",
+    "deploy:local": "EOSIO_NETWORK=local node ./scripts/deploy.js",
+    "deploy:kylin": "EOSIO_NETWORK=kylin node ./scripts/deploy.js",
+    "test:local:accounts": "EOSIO_NETWORK=local riteway test/accounts.test.js | tap-nirvana",
+    "test:local:harvest": "EOSIO_NETWORK=local riteway test/harvest.test.js | tap-nirvana",
+    "test:local:subscription": "EOSIO_NETWORK=local riteway test/subscription.test.js | tap-nirvana"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ramda": "^0.26.1",
-    "riteway": "^6.0.3",
+    "bignumber.js": "^8.1.1",
     "chai": "^4.2.0",
     "eosjs": "^16.0.9",
     "json": "^9.0.6",
-    "mocha": "^6.1.4"
+    "mocha": "^6.1.4",
+    "ramda": "^0.26.1",
+    "riteway": "^6.0.3",
+    "tap-nirvana": "^1.1.0"
   }
 }

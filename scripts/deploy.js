@@ -3,8 +3,8 @@ const path = require('path')
 const { eos, accounts } = require('./helper')
 
 const source = async (name) => {
-  const codePath = path.join(__dirname, '..', name.concat('.wasm'))
-  const abiPath = path.join(__dirname, '..', name.concat('.abi'))
+  const codePath = path.join(__dirname, '../artifacts', name.concat('.wasm'))
+  const abiPath = path.join(__dirname, '../artifacts', name.concat('.abi'))
 
   const code = new Promise(resolve => {
     fs.readFile(codePath, (_, r) => resolve(r))
@@ -73,35 +73,50 @@ const deploy = async ({ name, account }) => {
     })
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
-   console.error(`failed deploy ${name} to ${account}`, err)
+    console.error(`failed deploy ${name} to ${account}`, err)
   }
 }
 
-const setCodePermission = async ({ account, publicKey }) => {
+const addPermission = async ({ account: target }, targetRole, { account: actor }, actorRole) => {
   try {
-    await eos.updateauth({
-      account,
+    const { parent, required_auth: { threshold, waits, keys, accounts } } =
+      (await eos.getAccount(target))
+        .permissions.find(p => p.perm_name == targetRole)
+
+    const existingPermission = accounts.find(({ permission }) =>
+      permission.actor == actor && permission.permission == actorRole
+    )
+
+    if (existingPermission)
+      return console.error(`permission ${actor}@${actorRole} already exists for ${target}@${targetRole}`)
+
+    const permissions = {
+      account: target,
+      permission: targetRole,
+      parent,
       auth: {
-        [account]: [{
+        threshold,
+        waits,
+        accounts: [
+          ...accounts,
+          {
             permission: {
-              actor: account,
-              permission: 'eosio.code'
+              actor,
+              permission: actorRole
             },
             weight: 1
-        }],
-        keys: [{
-          key: publicKey,
-          weight: 1
-        }],
-        threshold: 1,
-        waits: []
-      },
-      parent: "",
-      permission: "owner"
-    }, { authorization: `${account}@owner` })
-    console.log(`${account} permission updated`)
+          }
+        ],
+        keys: [
+          ...keys
+        ]
+      }
+    }
+
+    await eos.updateauth(permissions, { authorization: `${target}@owner` })
+    console.log(`permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
   } catch (err) {
-    console.error(`failed permission update to ${account} by ${creator}`, err)
+    console.error(`failed permission update on ${target} for ${actor}`, err)
   }
 }
 
@@ -130,32 +145,59 @@ const issueToken = async ({ account, issuer, supply }) => {
     }, {
       authorization: `${issuer}@active`
     })
-    console.log(`token issued to ${issuer}`)
+    console.log(`token issued to ${issuer} (${supply})`)
   } catch (err) {
     console.error(`failed to issue tokens on ${account} to ${issuer}`, err)
+  }
+}
+
+const transfer = async ({ account, issuer }, { account: user }, quantity) => {
+  try {
+    const token = await eos.contract(account)
+    await token.transfer({
+      from: issuer,
+      to: user,
+      quantity,
+      memo: ''
+    }, {
+      authorization: `${issuer}@active`
+    })
+    console.log(`token sent to ${user} (${quantity})`)
+  } catch (err) {
+    console.log(`failed to transfer from ${issuer} to ${user} on ${account}`)
   }
 }
 
 (async () => {
   // NOTE: ensure existing CREATOR account before running deployment script
 
-  await createAccount(accounts.firstuser)
-  await createAccount(accounts.seconduser)
-  await createAccount(accounts.application)
-  await createAccount(accounts.bank)
+  const {
+    firstuser, seconduser, application, bank,
+    token, harvest, subscription, accounts: accts
+  } = accounts
 
-  await createAccount(accounts.token)
-  await deploy(accounts.token)
-  await createToken(accounts.token)
-  await issueToken(accounts.token)
+  await createAccount(firstuser)
+  await createAccount(seconduser)
+  await createAccount(application)
+  await createAccount(bank)
+  await createAccount(accts)
+  await createAccount(harvest)
+  await createAccount(subscription)
+  await createAccount(token)
 
-  await createAccount(accounts.accounts)
-  await deploy(accounts.accounts)
-  await setCodePermission(accounts.accounts)
+  await deploy(token)
+  await deploy(accts)
+  await deploy(harvest)
+  await deploy(subscription)
 
-  await createAccount(accounts.harvest)
-  await deploy(accounts.harvest)
+  await createToken(token)
+  await issueToken(token)
+  await transfer(token, firstuser, '100000.0000 SEEDS')
+  await transfer(token, seconduser, '100000.0000 SEEDS')
 
-  await createAccount(accounts.subscription)
-  await deploy(accounts.subscription)
+  await addPermission(accts, 'owner', accts, 'eosio.code')
+  await addPermission(harvest, 'active', harvest, 'eosio.code')
+  await addPermission(subscription, 'active', subscription, 'eosio.code')
+  await addPermission(bank, 'active', harvest, 'active')
+  await addPermission(bank, 'active', subscription, 'active')
 })()
