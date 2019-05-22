@@ -107,6 +107,7 @@ void harvest::claimreward(name from) {
 void harvest::onperiod() {
   require_auth(_self);
 
+  configure(name("lastharvest"), now());
   auto uitr = users.begin();
   auto citr = config.find(name("periodreward").value);
   auto titr = balances.find(_self.value);

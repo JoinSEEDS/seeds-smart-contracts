@@ -9,26 +9,29 @@ const { accounts, application, firstuser, seconduser } = names
 describe('accounts', async assert => {
   const contract = await eos.contract(accounts)
 
+  console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
 
+  console.log('join application')
   await contract.addapp(application, { authorization: `${accounts}@active` })
 
   try {
+    console.log(`create account ${firstuser}`)
     await contract.addrequest(application, firstuser, publicKey, publicKey, { authorization: `${application}@active` })
     await contract.fulfill(application, firstuser, { authorization: `${accounts}@owner` })
-    console.log(`${firstuser} account created`)
   } catch (err) {
     console.log(`${firstuser} account already exists`)
   }
 
   try {
+    console.log(`create account ${seconduser}`)
     await contract.addrequest(application, seconduser, publicKey, publicKey, { authorization: `${application}@active` })
     await contract.fulfill(application, seconduser, { authorization: `${accounts}@owner` })
-    console.log(`${firstuser} account created`)
   } catch (err) {
     console.log(`${seconduser} account already exists`)
   }
 
+  console.log('join users')
   await contract.adduser(firstuser, { authorization: `${accounts}@active` })
   await contract.adduser(seconduser, { authorization: `${accounts}@active` })
 

@@ -71,7 +71,31 @@ void subscription::update(name app, bool active, asset price)
 
 void subscription::increase(name from, name to, asset quantity, string memo)
 {
-
+  if (to == _self) {
+    name app = name(memo);
+    
+    check(providers.find(app.value) != providers.end(), "no provider");
+    check_user(from);
+    check_asset(quantity);
+    
+    subscription_tables subs(_self, app.value);
+    
+    auto sitr = subs.find(from.value);
+   
+    if (sitr == subs.end()) {
+      subs.emplace(_self, [&](auto& sub) {
+        sub.user = from;
+        sub.deposit = quantity;
+        sub.active = false;
+      });
+    } else {
+      subs.modify(sitr, _self, [&](auto& sub) {
+        sub.deposit += quantity;
+      });
+    }
+    
+    deposit(quantity);
+  }
 }
 
 void subscription::enable(name user, name app)

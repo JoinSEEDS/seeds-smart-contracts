@@ -62,6 +62,9 @@ void accounts::fulfill(name app, name user)
   }
   
   requests.erase(ritr);
+  users.emplace(_self, [&](auto& item) {
+      item.account = user;
+  });
 }
 
 void accounts::buyaccount(name account, string owner_key, string active_key)
