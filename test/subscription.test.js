@@ -19,10 +19,10 @@ describe("subscription", async assert => {
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
-  
+
   console.log('join application')
   await contracts.accounts.addapp(application, { authorization: `${accounts}@active` })
-  
+
   console.log('join users')
   await contracts.accounts.adduser(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
@@ -41,6 +41,9 @@ describe("subscription", async assert => {
 
   console.log('enable subscription')
   await contracts.subscription.enable(firstuser, application, { authorization: `${firstuser}@active` })
+
+  console.log('every period')
+  await contracts.subscription.onblock({ authorization: `${subscription}@active` })
 
   console.log('claim payout')
   await contracts.subscription.claimpayout(application)

@@ -3,11 +3,6 @@
 void harvest::reset() {
   require_auth(_self);
 
-  configure(name("periodreward"), 1000);
-  configure(name("periodblocks"), 10);
-  configure(name("tokenaccnt"), "token"_n.value);
-  configure(name("bankaccnt"), "bank"_n.value);
-
   auto uitr = users.begin();
   while (uitr != users.end()) {
     init_balance(uitr->account);
@@ -27,41 +22,23 @@ void harvest::reset() {
   });
 }
 
-void harvest::configure(name param, uint64_t value) {
-  require_auth(_self);
-
-  auto citr = config.find(param.value);
-
-  if (citr == config.end()) {
-    config.emplace(_self, [&](auto& item) {
-      item.param = param;
-      item.value = value;
-    });
-  } else {
-    config.modify(citr, _self, [&](auto& item) {
-      item.param = param;
-      item.value = value;
-    });
-  }
-}
-
 void harvest::plant(name from, name to, asset quantity, string memo) {
   if (to == _self) {
     check_user(from);
-  
+
     init_balance(from);
     init_balance(_self);
-  
+
     auto bitr = balances.find(from.value);
     balances.modify(bitr, _self, [&](auto& user) {
       user.planted += quantity;
     });
-  
+
     auto titr = balances.find(_self.value);
     balances.modify(titr, _self, [&](auto& total) {
       total.planted += quantity;
     });
-    
+
     deposit(quantity);
   }
 }
@@ -69,7 +46,7 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 void harvest::unplant(name from, asset quantity) {
   require_auth(from);
   check_user(from);
-  
+
   auto bitr = balances.find(from.value);
   balances.modify(bitr, from, [&](auto& user) {
     user.planted -= quantity;
@@ -95,7 +72,7 @@ void harvest::claimreward(name from) {
     user.reward = asset(0, seeds_symbol);
     check(reward > user.reward, "no reward");
   });
-  
+
   auto titr = balances.find(_self.value);
   balances.modify(titr, from, [&](auto& total) {
     total.reward -= reward;
@@ -107,16 +84,15 @@ void harvest::claimreward(name from) {
 void harvest::onperiod() {
   require_auth(_self);
 
-  configure(name("lastharvest"), now());
   auto uitr = users.begin();
   auto citr = config.find(name("periodreward").value);
   auto titr = balances.find(_self.value);
 
   uint64_t period_reward = citr->value;
   asset total_planted = titr->planted;
-  
+
   uint64_t total_reward = 0;
-  
+
   while (uitr != users.end()) {
     auto bitr = balances.find((uitr->account).value);
     if (bitr != balances.end()) {
@@ -128,7 +104,7 @@ void harvest::onperiod() {
     }
     uitr++;
   }
-  
+
   balances.modify(titr, _self, [&](auto& total) {
     total.reward += asset(total_reward, seeds_symbol);
   });
@@ -161,10 +137,10 @@ void harvest::check_asset(asset quantity)
 void harvest::deposit(asset quantity)
 {
   check_asset(quantity);
-  
+
   auto token_account = config.find(name("tokenaccnt").value)->value;
   auto bank_account = config.find(name("bankaccnt").value)->value;
-  
+
   token::transfer_action action{name(token_account), {_self, "active"_n}};
   action.send(_self, name(bank_account), quantity, "");
 }
@@ -172,7 +148,7 @@ void harvest::deposit(asset quantity)
 void harvest::withdraw(name beneficiary, asset quantity)
 {
   check_asset(quantity);
-  
+
   auto token_account = config.find(name("tokenaccnt").value)->value;
   auto bank_account = config.find(name("bankaccnt").value)->value;
 
