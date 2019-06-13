@@ -1,6 +1,25 @@
 const fs = require('fs')
 const path = require('path')
-const { eos, accounts } = require('./helper')
+const R = require('ramda')
+const { eos, encodeName, accounts } = require('./helper')
+
+const debug = process.env.DEBUG || false
+
+console.log = ((showMessage) => {
+  return (msg) => {
+    showMessage('+ ', msg)
+  }
+})(console.log)
+
+console.error = ((showMessage) => {
+  return (msg, err) => {
+    if (process.env.DEBUG === 'true' && err) {
+      showMessage('- ', msg, err)
+    } else {
+      showMessage('- ', msg)
+    }
+  }
+})(console.error)
 
 const source = async (name) => {
   const codePath = path.join(__dirname, '../artifacts', name.concat('.wasm'))
@@ -42,7 +61,7 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
     })
     console.log(`${account} created`)
   } catch (err) {
-    console.error(`failed create ${account} by ${creator}`, err)
+    console.error(`account ${account} already created`, err)
   }
 }
 
@@ -73,7 +92,7 @@ const deploy = async ({ name, account }) => {
     })
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
-    console.error(`failed deploy ${name} to ${account}`, err)
+    console.error(`account ${name} already deployed`, err)
   }
 }
 
@@ -120,84 +139,106 @@ const addPermission = async ({ account: target }, targetRole, { account: actor }
   }
 }
 
-const createToken = async ({ account, issuer, supply }) => {
-  try {
-    const token = await eos.contract(account)
-    await token.create({
-      issuer,
-      maximum_supply: supply
-    }, {
-      authorization: `${account}@active`
-    })
-    console.log(`token created to ${issuer}`)
-  } catch (err) {
-    console.error(`failed to create token on ${account} to ${issuer}`, err)
-  }
-}
+const createAccounts = (accounts) => Promise.all(
+  accounts.map(createAccount)
+)
 
-const issueToken = async ({ account, issuer, supply }) => {
-  try {
-    const token = await eos.contract(account)
-    await token.issue({
-      memo: '',
-      quantity: supply,
-      to: issuer
-    }, {
-      authorization: `${issuer}@active`
-    })
-    console.log(`token issued to ${issuer} (${supply})`)
-  } catch (err) {
-    console.error(`failed to issue tokens on ${account} to ${issuer}`, err)
-  }
-}
+const deployContracts = (contracts) => Promise.all(
+  contracts.map(deploy)
+)
 
-const transfer = async ({ account, issuer }, { account: user }, quantity) => {
-  try {
-    const token = await eos.contract(account)
-    await token.transfer({
-      from: issuer,
-      to: user,
-      quantity,
-      memo: ''
-    }, {
-      authorization: `${issuer}@active`
-    })
-    console.log(`token sent to ${user} (${quantity})`)
-  } catch (err) {
-    console.log(`failed to transfer from ${issuer} to ${user} on ${account}`)
-  }
-}
+const addPermissions = (permissions) => Promise.all(
+  permissions.map(
+    permission => addPermission(...permission)
+  )
+)
 
-(async () => {
-  // NOTE: ensure existing CREATOR account before running deployment script
+const configure = ({ account }) => (params) =>
+  eos.contract(account)
+    .then(contract => Promise.all(
+      Object.keys(params)
+        .map(param =>
+          contract.configure(param, params[param], { authorization: `${account}@active` })
+            .then(() => console.log(`configure ${param} equal to ${params[param]}`))
+        )
+    ))
 
+const addCoins = ({ account, issuer, supply }) => (accounts) =>
+  eos.contract(account)
+    .then(contract =>
+      contract.create({
+        issuer: issuer,
+        maximum_supply: supply
+      }, { authorization: `${account}@active` })
+        .then(() => {
+          console.log(`token created to ${issuer}`)
+          return contract.issue({
+            to: issuer,
+            quantity: supply,
+            memo: ''
+          }, { authorization: `${issuer}@active` })
+            .then(() => {
+              console.log(`token issued to ${issuer} (${supply})`)
+              return Promise.all(
+                accounts.map(({ account, quantity }) =>
+                  contract.transfer({
+                    from: issuer,
+                    to: account,
+                    quantity,
+                    memo: ''
+                  }, { authorization: `${issuer}@active` })
+                    .then(() => console.log(`token sent to ${user} (${quantity})`))
+                    .catch((err) => console.error(`failed to transfer from ${issuer} to ${user} on ${account}`, err))
+                )
+              )
+            })
+            .catch(() => console.log(`failed to issue tokens on ${account} to ${issuer}`))
+        })
+        .catch((err) => console.error(`token ${account} already created`, err))
+    )
+
+const joinUsers = ({ account }) => (users) =>
+  eos.contract(account)
+    .then(contract => Promise.all(
+      users.map(user =>
+        contract.adduser(user.account, { authorization: `${account}@active` })
+          .then(() => console.log(`joined user ${user.account} on ${account}`))
+          .catch((err) => console.error(`user ${user.account} already joined`, err))
+      )
+    ))
+
+const codeOwnerPermission = (account) =>
+  [account, 'owner', account, 'eosio.code']
+
+const codeActivePermission = (account) =>
+  [account, 'active', account, 'eosio.code']
+
+const accountActivePermission = (subject, object) =>
+  [subject, 'active', object, 'active']
+
+const main = async () => {
   const {
-    firstuser, seconduser, application, bank,
-    token, harvest, subscription, accounts: accts
+    owner, firstuser, seconduser, thirduser, application, bank,
+    token, harvest, subscription, settings, proposals,
+    accounts: accts
   } = accounts
 
-  await createAccount(firstuser)
-  await createAccount(seconduser)
-  await createAccount(application)
-  await createAccount(bank)
-  await createAccount(accts)
-  await createAccount(harvest)
-  await createAccount(subscription)
-  await createAccount(token)
+  try {
+    await eos.getAccount(owner.account)
+  } catch (err) {
+    console.error(`Please, deploy ${owner.account} account manually before running script`, err)
+  }
 
-  await deploy(token)
-  await deploy(accts)
-  await deploy(harvest)
-  await deploy(subscription)
 
-  await createToken(token)
-  await issueToken(token)
-  await transfer(token, firstuser, '100000.0000 SEEDS')
-  await transfer(token, seconduser, '100000.0000 SEEDS')
+  await addPermissions([
+    codeOwnerPermission(accts),
+    codeActivePermission(harvest),
+    codeActivePermission(subscription),
+    codeActivePermission(proposals),
+    accountActivePermission(bank, harvest),
+    accountActivePermission(bank, subscription),
+    accountActivePermission(bank, proposals)
+  ])
+}
 
-  await addPermission(accts, 'owner', accts, 'eosio.code')
-  await addPermission(harvest, 'active', harvest, 'eosio.code')
-  await addPermission(subscription, 'active', subscription, 'eosio.code')
-  await addPermission(bank, 'active', harvest, 'active')
-  await addPermission(bank, 'active', subscription, 'active')
-})()
+main()

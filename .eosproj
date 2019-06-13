@@ -1,18 +1,18 @@
 {
-  "main": "default",
-  "contract": "default",
+  "main": "src/seeds.harvest.cpp",
+  "contract": "harvest",
   "include": "",
   "cdt": "",
   "output": "",
   "scripts": {
-    "build": "eosio-cpp -abigen -I ./include -contract eosio.token -o ./artifacts/eosio.token.wasm src/eosio.token.cpp\neosio-cpp -abigen -I ./include -contract accounts -o ./artifacts/accounts.wasm src/seeds.accounts.cpp\neosio-cpp -abigen -I ./include -contract harvest -o ./artifacts/harvest.wasm src/seeds.harvest.cpp\neosio-cpp -abigen -I ./include -contract subscription -o ./artifacts/subscription.wasm src/seeds.subscription.cpp"
+    "build": "eosio-cpp -abigen -I ./include -contract eosio.token -o ./artifacts/eosio.token.wasm src/eosio.token.cpp\neosio-cpp -abigen -I ./include -contract accounts -o ./artifacts/accounts.wasm src/seeds.accounts.cpp\neosio-cpp -abigen -I ./include -contract harvest -o ./artifacts/harvest.wasm src/seeds.harvest.cpp\neosio-cpp -abigen -I ./include -contract subscription -o ./artifacts/subscription.wasm src/seeds.subscription.cpp\neosio-cpp -abigen -I ./include -contract proposals -o ./artifacts/proposals.wasm src/seeds.proposals.cpp"
   },
   "deploy": {
     "target": "both",
     "mainnet": "",
     "kylin": "",
     "jungle": "",
-    "local": ""
+    "local": "accounts"
   },
   "test": {
     "npmClient": "npm"
