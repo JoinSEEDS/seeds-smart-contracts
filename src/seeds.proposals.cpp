@@ -6,13 +6,6 @@ void proposals::reset() {
   auto pitr = props.begin();
 
   while (pitr != props.end()) {
-      votes_tables votes(_self, pitr->id);
-      auto vitr = votes.begin();
-
-      while (vitr != votes.end()) {
-          vitr = votes.erase(vitr);
-      }
-
       pitr = props.erase(pitr);
   }
 
@@ -25,6 +18,34 @@ void proposals::reset() {
       proposal.executed = true;
       proposal.votes = 0;
   });
+}
+
+void proposals::onperiod() {
+    require_auth(_self);
+
+    auto pitr = props.begin();
+    auto vitr = voice.begin();
+
+    while (pitr != props.end()) {
+        if (pitr->votes > 0) {
+            withdraw(pitr->recipient, pitr->quantity);
+        }
+
+        props.modify(pitr, _self, [&](auto& proposal) {
+            proposal.executed = false;
+            proposal.votes = 0;
+        });
+
+        pitr++;
+    }
+
+    while (vitr != voice.end()) {
+        voice.modify(vitr, _self, [&](auto& voice) {
+            voice.balance = 0;
+        });
+
+        vitr++;
+    }
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string memo) {
@@ -48,7 +69,7 @@ void proposals::create(name creator, name recipient, asset quantity, string memo
   });
 }
 
-void proposals::vote(name voter, uint64_t id) {
+void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
   check_user(voter);
 
@@ -56,36 +77,54 @@ void proposals::vote(name voter, uint64_t id) {
   check(pitr != props.end(), "no proposal");
   check(pitr->executed == false, "already executed");
 
-  votes_tables votes(_self, pitr->id);
-  auto vitr = votes.find(voter.value);
-  check(vitr == votes.end(), "already voted");
+  auto vitr = voice.find(voter.value);
+  check(vitr != voice.end(), "no user voice");
 
   props.modify(pitr, voter, [&](auto& proposal) {
-     proposal.votes += 1;
+    proposal.votes += amount;
   });
 
-  votes.emplace(voter, [&](auto& vote) {
-      vote.account = voter;
+  voice.modify(vitr, voter, [&](auto& voice) {
+    voice.balance -= amount;
   });
 }
 
-void proposals::execute(uint64_t id) {
-  require_auth(_self);
+void proposals::against(name voter, uint64_t id, uint64_t amount) {
+    require_auth(voter);
+    check_user(voter);
 
-  auto pitr = props.find(id);
-  check(pitr != props.end(), "no proposal");
-  check(pitr->executed == false, "already executed");
+    auto pitr = props.find(id);
+    check(pitr != props.end(), "no proposal");
+    check(pitr->executed == false, "already executed");
 
-  auto quota = config.find(name("propsquota").value)->value;
-  uint64_t totalUsers = std::distance(users.cbegin(), users.cend());
+    auto vitr = voice.find(voter.value);
+    check(vitr != voice.end(), "no user voice");
 
-  check(pitr->votes * 100 / totalUsers > quota, "not enough votes");
+    props.modify(pitr, voter, [&](auto& proposal) {
+        proposal.votes -= amount;
+    });
 
-  props.modify(pitr, _self, [&](auto& proposal) {
-      proposal.executed = true;
-  });
+    voice.modify(vitr, voter, [&](auto& voice) {
+        voice.balance -= amount;
+    });
+}
 
-  withdraw(pitr->recipient, pitr->quantity);
+void proposals::addvoice(name user, uint64_t amount)
+{
+    require_auth(_self);
+
+    auto vitr = voice.find(user.value);
+
+    if (vitr == voice.end()) {
+        voice.emplace(_self, [&](auto& voice) {
+            voice.account = user;
+            voice.balance = amount;
+        });
+    } else {
+        voice.modify(vitr, _self, [&](auto& voice) {
+            voice.balance += amount;
+        });
+    }
 }
 
 void proposals::withdraw(name beneficiary, asset quantity)

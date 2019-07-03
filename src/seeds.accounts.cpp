@@ -21,6 +21,9 @@ void accounts::adduser(name account)
 
   users.emplace(_self, [&](auto& user) {
       user.account = account;
+      user.status = name("visitor");
+      user.reputation = current_time() % 99;
+      user.fullname = "";
   });
 }
 
@@ -65,7 +68,58 @@ void accounts::fulfill(name app, name user)
 
   users.emplace(_self, [&](auto& item) {
       item.account = user;
+      item.status = name("visitor");
+      item.reputation = current_time() % 99;
+      item.fullname = "";
   });
+}
+
+void accounts::setname(name user, string fullname)
+{
+    require_auth(user);
+
+    auto uitr = users.find(user.value);
+    users.modify(uitr, user, [&](auto& user) {
+        user.fullname = fullname;
+    });
+}
+
+void accounts::makeresident(name user)
+{
+    auto uitr = users.find(user.value);
+    check(uitr != users.end(), "no user");
+    check(uitr->status == name("visitor"), "user is not a visitor");
+
+    auto bitr = balances.find(user.value);
+    
+    transaction_tables transactions(name("token"), seeds_symbol.code().raw());
+    auto titr = transactions.find(user.value);
+
+    check(bitr->planted.amount >= 50, "user has less than required seeds planted");
+    check(titr->transactions_number >= 1, "user has less than required transactions number");
+
+    users.modify(uitr, _self, [&](auto& user) {
+        user.status = name("resident");
+    });
+}
+
+void accounts::makecitizen(name user)
+{
+    auto uitr = users.find(user.value);
+    check(uitr != users.end(), "no user");
+    check(uitr->status == name("resident"), "user is not a resident");
+
+    auto bitr = balances.find(user.value);
+
+    transaction_tables transactions(name("token"), seeds_symbol.code().raw());
+    auto titr = transactions.find(user.value);
+
+    check(bitr->planted.amount >= 100, "user has less than required seeds planted");
+    check(titr->transactions_number >= 2, "user has less than required transactions number");
+
+    users.modify(uitr, _self, [&](auto& user) {
+        user.status = name("citizen");
+    });
 }
 
 void accounts::buyaccount(name account, string owner_key, string active_key)

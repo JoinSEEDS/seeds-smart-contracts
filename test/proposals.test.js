@@ -18,7 +18,6 @@ describe('Proposals', async assert => {
   console.log('join users')
   await contracts.accounts.adduser(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(thirduser, { authorization: `${accounts}@active` })
 
   console.log('deposit bank')
   await contracts.token.transfer(firstuser, bank, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -26,14 +25,18 @@ describe('Proposals', async assert => {
   console.log('create proposal')
   await contracts.proposals.create(firstuser, seconduser, '100.0000 SEEDS', 'donate for charity', { authorization: `${firstuser}@active` })
 
-  console.log('first vote')
-  await contracts.proposals.vote(firstuser, 1, { authorization: `${firstuser}@active` })
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
 
-  console.log('second vote')
-  await contracts.proposals.vote(seconduser, 1, { authorization: `${seconduser}@active` })
+  console.log('favour vote')
+  await contracts.proposals.favour(firstuser, 1, 9, { authorization: `${firstuser}@active` })
+
+  console.log('against vote')
+  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
 
   console.log('execute proposal')
-  await contracts.proposals.execute(1, { authorization: `${proposals}@active` })
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   const props = await getTableRows({
     code: proposals,
@@ -54,8 +57,8 @@ describe('Proposals', async assert => {
       recipient: seconduser,
       quantity: '100.0000 SEEDS',
       memo: 'donate for charity',
-      executed: 1,
-      votes: 2
+      executed: 0,
+      votes: 0
     }
   })
 

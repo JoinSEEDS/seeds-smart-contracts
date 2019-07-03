@@ -27,7 +27,7 @@ namespace eosio {
     * tokens on eosio based blockchains.
     * @{
     */
-   class [[eosio::contract("eosio.token")]] token : public contract {
+   class [[eosio::contract("token")]] token : public contract {
       public:
          using contract::contract;
 
@@ -172,11 +172,25 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct [[eosio::table]] transaction_stats {
+            name account;
+            asset transactions_volume;
+            uint64_t transactions_number;
+
+            uint64_t primary_key()const { return account.value; }
+            uint64_t by_transaction_volume()const { return transactions_volume.amount; }
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+         typedef eosio::multi_index< "trxstat"_n, transaction_stats,
+            indexed_by<"bytrxvolume"_n,
+            const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
+         > transaction_tables;
 
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
+         void update_stats( const name& from, const name& to, const asset& quantity );
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

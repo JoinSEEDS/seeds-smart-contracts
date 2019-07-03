@@ -1,7 +1,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
-#include <eosio.token.hpp>
+#include <seeds.token.hpp>
 
 using namespace eosio;
 using std::string;
@@ -13,17 +13,22 @@ CONTRACT proposals : public contract {
       proposals(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
-          config(name("seedsettings"), name("settings").value),
-          users(name("seedsaccnts3"), name("accounts").value)
+          voice(receiver, receiver.value),
+          config(name("settings"), name("settings").value),
+          users(name("accounts"), name("accounts").value)
           {}
 
       ACTION reset();
 
       ACTION create(name creator, name recipient, asset quantity, string memo);
 
-      ACTION vote(name voter, uint64_t id);
+      ACTION addvoice(name user, uint64_t amount);
 
-      ACTION execute(uint64_t id);
+      ACTION favour(name user, uint64_t id, uint64_t amount);
+
+      ACTION against(name user, uint64_t id, uint64_t amount);
+      
+      ACTION onperiod();
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -58,14 +63,22 @@ CONTRACT proposals : public contract {
           uint64_t primary_key()const { return account.value; }
       };
 
+      TABLE voice_table {
+        name account;
+        uint64_t balance;
+        uint64_t primary_key()const { return account.value; }
+      };
+
       typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
       typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
       typedef eosio::multi_index<"config"_n, config_table> config_tables;
       typedef eosio::multi_index<"users"_n, user_table> user_tables;
+      typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
 
       config_tables config;
       proposal_tables props;
       user_tables users;
+      voice_tables voice;
 };
 
-EOSIO_DISPATCH(proposals, (reset)(create)(vote)(execute));
+EOSIO_DISPATCH(proposals, (reset)(create)(addvoice)(favour)(against)(onperiod));

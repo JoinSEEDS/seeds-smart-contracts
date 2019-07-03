@@ -4,10 +4,11 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
 
-const { accounts, application, firstuser, seconduser } = names
+const { accounts, harvest, token, application, firstuser, seconduser } = names
 
 describe('accounts', async assert => {
   const contract = await eos.contract(accounts)
+  const thetoken = await eos.contract(token)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -35,6 +36,22 @@ describe('accounts', async assert => {
   await contract.adduser(firstuser, { authorization: `${accounts}@active` })
   await contract.adduser(seconduser, { authorization: `${accounts}@active` })
 
+  console.log('plant 50 seeds')
+  await thetoken.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  console.log('make resident')
+  await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
+
+  console.log("plant 100 seeds")
+  await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  console.log('make citizen')
+  await contract.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+
+  console.log('set name')
+  await contract.setname(firstuser, 'First User', { authorization: `${firstuser}@active` })
+  await contract.setname(seconduser, 'Second User', { authorization: `${seconduser}@active` })
+
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -52,12 +69,23 @@ describe('accounts', async assert => {
   assert({
     given: 'users table',
     should: 'show joined users',
-    actual: users.rows,
+    actual: users.rows.map(({ account, status, fullname }) => ({ account, status, fullname })),
     expected: [{
-      account: firstuser
+      account: firstuser,
+      status: 'citizen',
+      fullname: 'First User'
     }, {
-      account: seconduser
+      account: seconduser,
+      status: 'visitor',
+      fullname: 'Second User'
     }]
+  })
+  
+  assert({
+    given: 'random reputation',
+    should: 'less than 99',
+    actual: users.rows.map(({ reputation }) => reputation < 99),
+    expected: [true, true]
   })
 
   assert({

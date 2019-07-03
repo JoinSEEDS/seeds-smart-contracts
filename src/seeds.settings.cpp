@@ -5,10 +5,14 @@ void settings::reset() {
 
   configure(name("tokenaccnt"), "placeholder"_n.value);
   configure(name("bankaccnt"), "placeholder"_n.value);
-  configure(name("hrvstreward"), 0);
+  configure(name("totalreward"), 10000);
+  configure(name("stakereward"), 33);
+  configure(name("volumereward"), 33);
+  configure(name("repreward"), 34);
   configure(name("hrvstperiod"), 0);
   configure(name("subsperiod"), 0);
   configure(name("propsquota"), 0);
+  configure(name("usercount"), 0);
 }
 
 void settings::configure(name param, uint64_t value) {

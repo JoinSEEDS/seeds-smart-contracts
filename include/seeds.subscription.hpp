@@ -1,7 +1,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
-#include <eosio.token.hpp>
+#include <seeds.token.hpp>
 
 using namespace eosio;
 using std::string;
@@ -12,9 +12,9 @@ CONTRACT subscription : public contract {
     subscription(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         providers(receiver, receiver.value),
-        config(name("seedsettings"), name("settings").value),
-        users(name("seedsaccnts3"), name("accounts").value),
-        apps(name("seedsaccnts3"), name("accounts").value)
+        config(name("settings"), name("settings").value),
+        users(name("accounts"), name("accounts").value),
+        apps(name("accounts"), name("accounts").value)
         {}
 
     ACTION reset();
@@ -87,7 +87,7 @@ CONTRACT subscription : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-    if (action == name("transfer").value) {
+    if (action == name("transfer").value && code == "token"_n.value) {
         execute_action<subscription>(name(receiver), name(code), &subscription::increase);
     } else if (code == receiver) {
         switch (action) {

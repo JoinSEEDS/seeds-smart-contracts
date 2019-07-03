@@ -34,17 +34,23 @@ const chainId = EOSIO_CHAIN_ID || networks[EOSIO_NETWORK] || networks.local
 const httpEndpoint = EOSIO_API_ENDPOINT || endpoints[EOSIO_NETWORK] || endpoints.local
 const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
 
+const publicKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.telosMainnet]: 'EOS8Do4YTkSrLTVLvZxtKwp1fVBnHsJa3KnLkcANHjnXAFQ3B5EzF'
+}
+const publicKey = publicKeys[chainId]
+
 const account = (accountName) => ({
   type: 'account',
   account: accountName,
   creator: owner,
-  publicKey: 'EOS8Do4YTkSrLTVLvZxtKwp1fVBnHsJa3KnLkcANHjnXAFQ3B5EzF',
+  publicKey: publicKey,
   stakes: {
-    cpu: '1.0000 TLOS',
-    net: '1.0000 TLOS',
+    cpu: '1.0000 EOS',
+    net: '1.0000 EOS',
     ram: 10000
   },
-  quantity: '1000.0000 SEEDS'
+  quantity: '100000.0000 SEEDS'
 })
 
 const contract = (accountName, contractName) => ({
@@ -52,8 +58,8 @@ const contract = (accountName, contractName) => ({
   type: 'contract',
   name: contractName,
   stakes: {
-    cpu: '5.0000 TLOS',
-    net: '5.0000 TLOS',
+    cpu: '5.0000 EOS',
+    net: '5.0000 EOS',
     ram: 400000
   }
 })
@@ -74,7 +80,7 @@ const accountsMetadata = (network) => {
       proposals: contract('proposals', 'proposals'),
       token: {
         ...contract('token'),
-        name: 'eosio.token',
+        name: 'token',
         issuer: owner,
         supply: '1000000.0000 SEEDS',
       }
@@ -117,6 +123,8 @@ const accountsMetadata = (network) => {
         supply: '100000000.0000 SEEDS'
       }
     }
+  } else if (network == networks.telosTestnet) {
+    return {}
   } else {
     throw new Error(`${network} is not supported network`)
   }
@@ -125,8 +133,16 @@ const accountsMetadata = (network) => {
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
+const keyProviders = {
+  [networks.local]: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
+  [networks.telosMainnet]: ['5KJhdyBnd4cfW4o1Bynu8zUnSi4TGwZ1nxhuYLX7ryBjAxEAYX9', '5JViN9Jck32dG5JZqxLKYGHgd1AazQBByb9yTju1YHDMjHgi5Ro'],
+  [networks.telosTestnet]: '5J1gYLAc4GUo7EXNAXyaZTgo3m3SxtxDygdVUsNL4Par5Swfy1q'
+}
+
+const keyProvider = keyProviders[chainId]
+
 const config = {
-  keyProvider: ['5KJhdyBnd4cfW4o1Bynu8zUnSi4TGwZ1nxhuYLX7ryBjAxEAYX9', '5JViN9Jck32dG5JZqxLKYGHgd1AazQBByb9yTju1YHDMjHgi5Ro'],
+  keyProvider,
   httpEndpoint,
   chainId
 }
