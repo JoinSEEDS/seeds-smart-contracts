@@ -12,6 +12,7 @@ CONTRACT harvest : public contract {
     harvest(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
+        harveststat(receiver, receiver.value),
         config(name("settings"), name("settings").value),
         users(name("accounts"), name("accounts").value)
         {}
@@ -71,8 +72,20 @@ CONTRACT harvest : public contract {
         uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
         uint64_t by_transaction_volume()const { return transactions_volume.amount; }
     };
+    
+    TABLE harvest_table {
+      name account;
+      uint64_t planted_score;
+      uint64_t transactions_score;
+      uint64_t reputation_score;
+      uint64_t contribution_score;
+      
+      uint64_t primary_key()const { return account.value; }
+    };
 
     typedef eosio::multi_index<"config"_n, config_table> config_tables;
+
+    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
 
     typedef eosio::multi_index< "trxstat"_n, transaction_table,
         indexed_by<"bytrxvolume"_n,
@@ -92,6 +105,7 @@ CONTRACT harvest : public contract {
     config_tables config;
     balance_tables balances;
     user_tables users;
+    harvest_tables harveststat;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
