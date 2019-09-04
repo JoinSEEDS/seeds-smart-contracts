@@ -58,8 +58,8 @@ const contract = (accountName, contractName) => ({
   type: 'contract',
   name: contractName,
   stakes: {
-    cpu: '5.0000 EOS',
-    net: '5.0000 EOS',
+    cpu: '1.0000 TLOS',
+    net: '1.0000 TLOS',
     ram: 400000
   }
 })
@@ -68,19 +68,18 @@ const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      firstuser: account('firstuser'),
-      seconduser: account('seconduser'),
-      thirduser: account('thirduser'),
-      application: account('application'),
-      bank: account('bank'),
-      accounts: contract('accounts', 'accounts'),
-      harvest: contract('harvest', 'harvest'),
-      subscription: contract('subscription', 'subscription'),
-      settings: contract('settings', 'settings'),
-      proposals: contract('proposals', 'proposals'),
+      firstuser: account('seedsuser444'),
+      seconduser: account('seedsuser555'),
+      thirduser: account('seedsuser333'),
+      application: account('seedsapp2222'),
+      bank: account('seedsbank222'),
+      accounts: contract('seedsaccnts3', 'accounts'),
+      harvest: contract('seedshrvst11', 'harvest'),
+      subscription: contract('seedssubs222', 'subscription'),
+      settings: contract('seedsettings', 'settings'),
+      proposals: contract('seedsprops12', 'proposals'),
       token: {
-        ...contract('token'),
-        name: 'token',
+        ...contract('seedstoken12', 'token'),
         issuer: owner,
         supply: '1000000.0000 SEEDS',
       }
@@ -118,7 +117,7 @@ const accountsMetadata = (network) => {
       settings: contract('seedsettings', 'settings'),
       proposals: contract('seedsprops12', 'proposals'),
       token: {
-        ...contract('seedstoken12', 'eosio.token'),
+        ...contract('seedstoken12', 'token'),
         issuer: owner,
         supply: '100000000.0000 SEEDS'
       }

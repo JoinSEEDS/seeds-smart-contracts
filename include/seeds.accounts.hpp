@@ -16,17 +16,18 @@ CONTRACT accounts : public contract {
           apps(receiver, receiver.value),
           users(receiver, receiver.value),
           requests(receiver, receiver.value),
-          balances(name("harvest"), name("harvest").value)
+          people(receiver, receiver.value),
+          balances(name("seedshrvst11"), name("seedshrvst11").value)
           {}
 
       ACTION reset();
 
       ACTION adduser(name account);
-      
+
       ACTION addapp(name account);
-      
+
       ACTION addrequest(name app, name user, string owner_key, string active_key);
-      
+
       ACTION fulfill(name app, name user);
 
       ACTION makeresident(name user);
@@ -34,19 +35,21 @@ CONTRACT accounts : public contract {
       ACTION makecitizen(name user);
 
       ACTION setname(name user, string fullname);
+
+      ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests, uint64_t score);
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
-  
+
       void buyaccount(name account, string owner_key, string active_key);
-  
-      symbol network_symbol = symbol("EOS", 4);
-  
+
+      symbol network_symbol = symbol("TLOS", 4);
+
       TABLE app_table {
         name account;
-        
+
         uint64_t primary_key()const { return account.value; }
       };
-  
+
       TABLE user_table {
         name account;
         name status;
@@ -56,13 +59,27 @@ CONTRACT accounts : public contract {
         uint64_t primary_key()const { return account.value; }
         uint64_t by_reputation()const { return reputation; }
       };
-      
+
+      TABLE people_table {
+        name account;
+        name type;
+        string nickname;
+        string image;
+        string story;
+        string roles;
+        string skills;
+        string interests;
+        uint64_t score;
+
+        uint64_t primary_key()const { return account.value; }
+      };
+
       TABLE request_table {
         name app;
         name user;
         string owner_key;
         string active_key;
-        
+
         uint64_t primary_key()const { return user.value; }
       };
 
@@ -75,12 +92,13 @@ CONTRACT accounts : public contract {
       uint64_t by_planted()const { return planted.amount; }
     };
 
-      typedef eosio::multi_index<"users"_n, user_table,
-        indexed_by<"byreputation"_n,
-        const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-      > user_tables;
-      typedef eosio::multi_index<"apps"_n, app_table> app_tables;
-      typedef eosio::multi_index<"requests"_n, request_table> request_tables;
+    typedef eosio::multi_index<"users"_n, user_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
+    > user_tables;
+    typedef eosio::multi_index<"apps"_n, app_table> app_tables;
+    typedef eosio::multi_index<"requests"_n, request_table> request_tables;
+    typedef eosio::multi_index<"people"_n, people_table> people_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
@@ -106,6 +124,7 @@ CONTRACT accounts : public contract {
       user_tables users;
       app_tables apps;
       request_tables requests;
+      people_tables people;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(setname));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(setname)(update));

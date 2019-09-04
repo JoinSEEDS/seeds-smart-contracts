@@ -28,11 +28,14 @@ describe("harvest", async assert => {
   await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
-  await contracts.token.transfer(firstuser, harvest, '150.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(firstuser, harvest, '140.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '210.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   console.log('unplant seeds')
   await contracts.harvest.unplant(seconduser, '100.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+  console.log('sow seeds')
+  await contracts.harvest.sow(seconduser, firstuser, '10.0000 SEEDS', { authorization: `${seconduser}@active` })
 
   console.log('distribute seeds')
   await contracts.harvest.onperiod({ authorization: `${harvest}@active` })
@@ -57,8 +60,8 @@ describe("harvest", async assert => {
   })
 
   console.log('claim rewards')
-  await contracts.harvest.claimreward(firstuser, { authorization: `${firstuser}@active` })
-  await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
+  await contracts.harvest.claimreward(firstuser, '66.6666 SEEDS', { authorization: `${firstuser}@active` })
+  await contracts.harvest.claimreward(seconduser, '33.3333 SEEDS', { authorization: `${seconduser}@active` })
 
   assert({
     given: 'harvest',

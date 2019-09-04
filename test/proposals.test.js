@@ -25,6 +25,9 @@ describe('Proposals', async assert => {
   console.log('create proposal')
   await contracts.proposals.create(firstuser, seconduser, '100.0000 SEEDS', 'donate for charity', { authorization: `${firstuser}@active` })
 
+  console.log('stake seeds')
+  await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
   console.log('add voice')
   await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })

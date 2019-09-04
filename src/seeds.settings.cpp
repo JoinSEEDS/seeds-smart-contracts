@@ -5,7 +5,7 @@ void settings::reset() {
 
   configure(name("tokenaccnt"), "placeholder"_n.value);
   configure(name("bankaccnt"), "placeholder"_n.value);
-  configure(name("totalreward"), 10000);
+  configure(name("totalreward"), 1000000);
   configure(name("stakereward"), 33);
   configure(name("volumereward"), 33);
   configure(name("repreward"), 34);

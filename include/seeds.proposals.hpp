@@ -14,26 +14,32 @@ CONTRACT proposals : public contract {
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
+          details(receiver, receiver.value),
           config(name("settings"), name("settings").value),
-          users(name("accounts"), name("accounts").value)
+          users(name("seedsaccnts3"), name("seedsaccnts3").value)
           {}
 
       ACTION reset();
 
       ACTION create(name creator, name recipient, asset quantity, string memo);
 
+      ACTION update(uint64_t id, string title, string summary, string description);
+
+      ACTION stake(name from, name to, asset quantity, string memo);
+
       ACTION addvoice(name user, uint64_t amount);
 
       ACTION favour(name user, uint64_t id, uint64_t amount);
 
       ACTION against(name user, uint64_t id, uint64_t amount);
-      
+
       ACTION onperiod();
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 
       void check_user(name account);
       void check_asset(asset quantity);
+      void deposit(asset quantity);
       void withdraw(name account, asset quantity);
 
       TABLE config_table {
@@ -47,10 +53,19 @@ CONTRACT proposals : public contract {
           name creator;
           name recipient;
           asset quantity;
+          asset staked;
           string memo;
           bool executed;
           uint64_t votes;
           uint64_t primary_key()const { return id; }
+      };
+
+      TABLE details_table {
+        uint64_t id;
+        string title;
+        string summary;
+        string description;
+        uint64_t primary_key() const { return id; }
       };
 
       TABLE user_table {
@@ -74,11 +89,21 @@ CONTRACT proposals : public contract {
       typedef eosio::multi_index<"config"_n, config_table> config_tables;
       typedef eosio::multi_index<"users"_n, user_table> user_tables;
       typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
+      typedef eosio::multi_index<"details"_n, details_table> details_tables;
 
       config_tables config;
       proposal_tables props;
       user_tables users;
       voice_tables voice;
+      details_tables details;
 };
 
-EOSIO_DISPATCH(proposals, (reset)(create)(addvoice)(favour)(against)(onperiod));
+extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+  if (action == name("transfer").value && code == "token"_n.value) {
+      execute_action<proposals>(name(receiver), name(code), &proposals::stake);
+  } else if (code == receiver) {
+      switch (action) {
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod))
+      }
+  }
+}

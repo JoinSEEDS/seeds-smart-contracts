@@ -14,6 +14,7 @@ void proposals::reset() {
       proposal.creator = _self;
       proposal.recipient = _self;
       proposal.quantity = asset(0, seeds_symbol);
+      proposal.staked = asset(0, seeds_symbol);
       proposal.memo = "genesis proposal";
       proposal.executed = true;
       proposal.votes = 0;
@@ -29,11 +30,13 @@ void proposals::onperiod() {
     while (pitr != props.end()) {
         if (pitr->votes > 0) {
             withdraw(pitr->recipient, pitr->quantity);
+            withdraw(pitr->recipient, pitr->staked);
         }
 
         props.modify(pitr, _self, [&](auto& proposal) {
             proposal.executed = false;
             proposal.votes = 0;
+            proposal.staked = asset(0, seeds_symbol);
         });
 
         pitr++;
@@ -63,10 +66,50 @@ void proposals::create(name creator, name recipient, asset quantity, string memo
       proposal.creator = creator;
       proposal.recipient = recipient;
       proposal.quantity = quantity;
+      proposal.staked = asset(0, seeds_symbol);
       proposal.memo = memo;
       proposal.executed = false;
       proposal.votes = 0;
   });
+}
+
+void proposals::update(uint64_t id, string title, string summary, string description) {
+  auto pitr = props.find(id);
+  auto ditr = details.find(id);
+
+  check(pitr != props.end(), "no proposal");
+  check_user(pitr->creator);
+
+  if (ditr == details.end()) {
+    details.emplace(_self, [&](auto& proposal) {
+      proposal.id = id;
+      proposal.title = title;
+      proposal.summary = summary;
+      proposal.description = description;
+    });
+  } else {
+    details.modify(ditr, _self, [&](auto& proposal) {
+      proposal.title = title;
+      proposal.summary = summary;
+      proposal.description = description;
+    });
+  }
+}
+
+void proposals::stake(name from, name to, asset quantity, string memo) {
+    if (to == _self) {
+        check_user(from);
+        check_asset(quantity);
+
+        uint64_t id = std::stoi(memo);
+
+        auto pitr = props.find(id);
+        check(pitr != props.end(), "no proposal");
+
+        props.modify(pitr, _self, [&](auto& proposal) {
+            proposal.staked += quantity;
+        });
+    }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -125,6 +168,17 @@ void proposals::addvoice(name user, uint64_t amount)
             voice.balance += amount;
         });
     }
+}
+
+void proposals::deposit(asset quantity)
+{
+  check_asset(quantity);
+
+  auto token_account = config.find(name("tokenaccnt").value)->value;
+  auto bank_account = config.find(name("bankaccnt").value)->value;
+
+  token::transfer_action action{name(token_account), {_self, "active"_n}};
+  action.send(_self, name(bank_account), quantity, "");
 }
 
 void proposals::withdraw(name beneficiary, asset quantity)

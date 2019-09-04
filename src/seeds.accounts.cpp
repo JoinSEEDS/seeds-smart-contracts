@@ -12,6 +12,11 @@ void accounts::reset() {
   while (uitr != users.end()) {
     uitr = users.erase(uitr);
   }
+
+  auto ritr = requests.begin();
+  while (ritr != requests.end()) {
+    ritr = requests.erase(ritr);
+  }
 }
 
 void accounts::adduser(name account)
@@ -22,7 +27,7 @@ void accounts::adduser(name account)
   users.emplace(_self, [&](auto& user) {
       user.account = account;
       user.status = name("visitor");
-      user.reputation = current_time() % 99;
+      user.reputation = (current_time() + 1) % 99;
       user.fullname = "";
   });
 }
@@ -79,8 +84,25 @@ void accounts::setname(name user, string fullname)
     require_auth(user);
 
     auto uitr = users.find(user.value);
-    users.modify(uitr, user, [&](auto& user) {
+    users.modify(uitr, _self, [&](auto& user) {
         user.fullname = fullname;
+    });
+}
+
+void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests, uint64_t score)
+{
+    require_auth(user);
+
+    auto pitr = people.find(user.value);
+    people.modify(pitr, _self, [&](auto& user) {
+      user.type = type;
+      user.nickname = nickname;
+      user.image = image;
+      user.story = story;
+      user.roles = roles;
+      user.skills = skills;
+      user.interests = interests;
+      user.score = score;
     });
 }
 
@@ -91,8 +113,8 @@ void accounts::makeresident(name user)
     check(uitr->status == name("visitor"), "user is not a visitor");
 
     auto bitr = balances.find(user.value);
-    
-    transaction_tables transactions(name("token"), seeds_symbol.code().raw());
+
+    transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
@@ -111,7 +133,7 @@ void accounts::makecitizen(name user)
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(name("token"), seeds_symbol.code().raw());
+    transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
     check(bitr->planted.amount >= 100, "user has less than required seeds planted");
@@ -126,7 +148,7 @@ void accounts::buyaccount(name account, string owner_key, string active_key)
 {
   check(is_account(account) == false, "existing account");
 
-  asset ram = asset(3000, network_symbol);
+  asset ram = asset(28000, network_symbol);
   asset cpu = asset(900, network_symbol);
   asset net = asset(100, network_symbol);
 

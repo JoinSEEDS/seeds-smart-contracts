@@ -13,8 +13,8 @@ CONTRACT harvest : public contract {
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
         harveststat(receiver, receiver.value),
-        config(name("settings"), name("settings").value),
-        users(name("accounts"), name("accounts").value)
+        config(name("seedsettings"), name("seedsettings").value),
+        users(name("seedsaccnts3"), name("seedsaccnts3").value)
         {}
 
     ACTION reset();
@@ -25,8 +25,10 @@ CONTRACT harvest : public contract {
 
     ACTION unplant(name from, asset quantity);
 
-    ACTION claimreward(name from);
-    
+    ACTION claimreward(name from, asset reward);
+
+    ACTION sow(name from, name to, asset quantity);
+
     using reset_action = action_wrapper<"reset"_n, &harvest::reset>;
     using onperiod_action = action_wrapper<"onperiod"_n, &harvest::onperiod>;
     using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
@@ -72,14 +74,14 @@ CONTRACT harvest : public contract {
         uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
         uint64_t by_transaction_volume()const { return transactions_volume.amount; }
     };
-    
+
     TABLE harvest_table {
       name account;
       uint64_t planted_score;
       uint64_t transactions_score;
       uint64_t reputation_score;
       uint64_t contribution_score;
-      
+
       uint64_t primary_key()const { return account.value; }
     };
 
@@ -109,11 +111,11 @@ CONTRACT harvest : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "token"_n.value) {
+  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(onperiod)(unplant)(claimreward))
+          EOSIO_DISPATCH_HELPER(harvest, (reset)(onperiod)(unplant)(claimreward)(sow))
       }
   }
 }
