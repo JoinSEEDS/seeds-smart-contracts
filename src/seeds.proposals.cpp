@@ -15,9 +15,13 @@ void proposals::reset() {
       proposal.recipient = _self;
       proposal.quantity = asset(0, seeds_symbol);
       proposal.staked = asset(0, seeds_symbol);
-      proposal.memo = "genesis proposal";
       proposal.executed = true;
       proposal.votes = 0;
+      proposal.title = "";
+      proposal.summary = "";
+      proposal.description = "";
+      proposal.image = "";
+      proposal.url = "";
   });
 }
 
@@ -51,10 +55,10 @@ void proposals::onperiod() {
     }
 }
 
-void proposals::create(name creator, name recipient, asset quantity, string memo) {
+void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url) {
   require_auth(creator);
-  check_user(creator);
-  check_user(recipient);
+  // check_user(creator);
+  // check_user(recipient);
   check_asset(quantity);
 
   auto pitr = props.end();
@@ -67,33 +71,29 @@ void proposals::create(name creator, name recipient, asset quantity, string memo
       proposal.recipient = recipient;
       proposal.quantity = quantity;
       proposal.staked = asset(0, seeds_symbol);
-      proposal.memo = memo;
       proposal.executed = false;
       proposal.votes = 0;
+      proposal.title = title;
+      proposal.summary = summary;
+      proposal.description = description;
+      proposal.image = image;
+      proposal.url = url;
   });
 }
 
-void proposals::update(uint64_t id, string title, string summary, string description) {
+void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
   auto pitr = props.find(id);
-  auto ditr = details.find(id);
 
   check(pitr != props.end(), "no proposal");
-  check_user(pitr->creator);
+  require_auth(pitr->creator);
 
-  if (ditr == details.end()) {
-    details.emplace(_self, [&](auto& proposal) {
-      proposal.id = id;
-      proposal.title = title;
-      proposal.summary = summary;
-      proposal.description = description;
-    });
-  } else {
-    details.modify(ditr, _self, [&](auto& proposal) {
-      proposal.title = title;
-      proposal.summary = summary;
-      proposal.description = description;
-    });
-  }
+  props.modify(pitr, _self, [&](auto& proposal) {
+    proposal.title = title;
+    proposal.summary = summary;
+    proposal.description = description;
+    proposal.image = image;
+    proposal.url = url;
+  });
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {

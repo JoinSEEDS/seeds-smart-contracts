@@ -14,16 +14,15 @@ CONTRACT proposals : public contract {
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
-          details(receiver, receiver.value),
           config(name("settings"), name("settings").value),
           users(name("seedsaccnts3"), name("seedsaccnts3").value)
           {}
 
       ACTION reset();
 
-      ACTION create(name creator, name recipient, asset quantity, string memo);
+      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url);
 
-      ACTION update(uint64_t id, string title, string summary, string description);
+      ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
@@ -54,18 +53,14 @@ CONTRACT proposals : public contract {
           name recipient;
           asset quantity;
           asset staked;
-          string memo;
           bool executed;
           uint64_t votes;
+          string title;
+          string summary;
+          string description;
+          string image;
+          string url;
           uint64_t primary_key()const { return id; }
-      };
-
-      TABLE details_table {
-        uint64_t id;
-        string title;
-        string summary;
-        string description;
-        uint64_t primary_key() const { return id; }
       };
 
       TABLE user_table {
@@ -89,13 +84,11 @@ CONTRACT proposals : public contract {
       typedef eosio::multi_index<"config"_n, config_table> config_tables;
       typedef eosio::multi_index<"users"_n, user_table> user_tables;
       typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
-      typedef eosio::multi_index<"details"_n, details_table> details_tables;
 
       config_tables config;
       proposal_tables props;
       user_tables users;
       voice_tables voice;
-      details_tables details;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

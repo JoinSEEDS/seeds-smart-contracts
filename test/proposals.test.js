@@ -23,7 +23,37 @@ describe('Proposals', async assert => {
   await contracts.token.transfer(firstuser, bank, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.create(firstuser, seconduser, '100.0000 SEEDS', 'donate for charity', { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+
+  console.log('update proposal')
+  await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
+
+  const props = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true
+  })
+
+  assert({
+    given: 'proposals table',
+    should: 'show created proposal',
+    actual: props.rows[1],
+    expected: {
+      id: 1,
+      creator: firstuser,
+      recipient: seconduser,
+      quantity: '100.0000 SEEDS',
+      staked: '0.0000 SEEDS',
+      executed: 0,
+      votes: 0,
+      title: 'title2',
+      summary: 'summary2',
+      description: 'description2',
+      image: 'image2',
+      url: 'url2'
+    }
+  })
 
   console.log('stake seeds')
   await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
@@ -41,29 +71,7 @@ describe('Proposals', async assert => {
   console.log('execute proposal')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
-  const props = await getTableRows({
-    code: proposals,
-    scope: proposals,
-    table: 'props',
-    json: true
-  })
-
   const secondUserFinalBalance = await getBalance(seconduser)
-
-  assert({
-    given: 'proposals table',
-    should: 'show created proposal',
-    actual: props.rows[1],
-    expected: {
-      id: 1,
-      creator: firstuser,
-      recipient: seconduser,
-      quantity: '100.0000 SEEDS',
-      memo: 'donate for charity',
-      executed: 0,
-      votes: 0
-    }
-  })
 
   assert({
     given: 'proposal executed',
