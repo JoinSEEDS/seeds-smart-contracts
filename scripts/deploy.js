@@ -219,7 +219,7 @@ const accountActivePermission = (subject, object) =>
 const main = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
-    token, harvest, subscription, settings, proposals,
+    token, harvest, subscription, settings, proposals, policy,
     accounts: accts
   } = accounts
 
@@ -229,41 +229,9 @@ const main = async () => {
     console.error(`Please, deploy ${owner.account} account manually before running script`, err)
     return
   }
-
-  await createAccount(firstuser)
-  await createAccount(seconduser)
-  await createAccount(application)
-  await createAccount(bank)
-  await createAccount(accts)
-  await createAccount(harvest)
-  await createAccount(subscription)
-  await createAccount(token)
-  await createAccount(settings)
-  await createAccount(proposals)
-
-  await deploy(token)
-  await deploy(accts)
-  await deploy(harvest)
-  await deploy(subscription)
-  await deploy(settings)
-  await deploy(proposals)
-
-  await addPermission(accts, 'owner', accts, 'eosio.code')
-  await addPermission(harvest, 'active', harvest, 'eosio.code')
-  await addPermission(subscription, 'active', subscription, 'eosio.code')
-  await addPermission(proposals, 'active', proposals, 'eosio.code')
-  await addPermission(bank, 'active', harvest, 'active')
-  await addPermission(bank, 'active', subscription, 'active')
-  await addPermission(bank, 'active', proposals, 'active')
-  await addPermission(settings, 'active', accts, 'eosio.code')
-
-  await addCoins(token)([ firstuser, seconduser, bank ])
-
-  await configure(settings)({
-    tokenaccnt: encodeName(token.account, false),
-    bankaccnt: encodeName(bank.account, false),
-    hrvstreward: 100000
-  })
+  
+  await createAccount(policy)
+  await deploy(policy)
 }
 
 main()

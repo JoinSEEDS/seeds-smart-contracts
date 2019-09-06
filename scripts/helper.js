@@ -60,7 +60,7 @@ const contract = (accountName, contractName) => ({
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
-    ram: 400000
+    ram: 10000
   }
 })
 
@@ -78,6 +78,7 @@ const accountsMetadata = (network) => {
       subscription: contract('seedssubs222', 'subscription'),
       settings: contract('seedsettings', 'settings'),
       proposals: contract('seedsprops12', 'proposals'),
+      policy: contract('seedspolicy1', 'policy'),
       token: {
         ...contract('seedstoken12', 'token'),
         issuer: owner,
@@ -120,7 +121,8 @@ const accountsMetadata = (network) => {
         ...contract('seedstoken12', 'token'),
         issuer: owner,
         supply: '100000000.0000 SEEDS'
-      }
+      },
+      policy: contract('seedspolicy1', 'policy')
     }
   } else if (network == networks.telosTestnet) {
     return {}
