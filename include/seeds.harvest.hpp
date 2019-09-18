@@ -1,6 +1,8 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
+#include <eosiolib/time.hpp>
+#include <eosiolib/transaction.hpp>
 #include <seeds.token.hpp>
 
 using namespace eosio;
@@ -25,6 +27,10 @@ CONTRACT harvest : public contract {
 
     ACTION unplant(name from, asset quantity);
 
+    ACTION claimrefund(name from);
+
+    ACTION cancelrefund(name from);
+
     ACTION claimreward(name from, asset reward);
 
     ACTION sow(name from, name to, asset quantity);
@@ -35,6 +41,7 @@ CONTRACT harvest : public contract {
     using claimreward_action = action_wrapper<"claimreward"_n, &harvest::claimreward>;
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
+    uint64_t ONE_WEEK = 604800;
 
     void init_balance(name account);
     void check_user(name account);
@@ -55,6 +62,17 @@ CONTRACT harvest : public contract {
 
       uint64_t primary_key()const { return account.value; }
       uint64_t by_planted()const { return planted.amount; }
+    };
+
+    TABLE refund_table {
+      uint64_t request_id;
+      uint64_t refund_id;
+      name account;
+      asset amount;
+      uint32_t weeks_delay;
+      uint32_t request_time;
+
+      uint64_t primary_key()const { return refund_id; }
     };
 
     TABLE user_table {
@@ -84,6 +102,8 @@ CONTRACT harvest : public contract {
 
       uint64_t primary_key()const { return account.value; }
     };
+
+    typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"config"_n, config_table> config_tables;
 

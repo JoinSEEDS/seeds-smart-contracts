@@ -55,11 +55,76 @@ void harvest::sow(name from, name to, asset quantity) {
     });
 }
 
+void harvest::claimrefund(name from) {
+  refund_tables refunds(get_self(), from.value);
+
+  auto ritr = refunds.begin();
+
+  while (ritr != refunds.end()) {
+    uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
+
+    if (refund_time < current_time()) {
+      refunds.erase(ritr);
+      withdraw(ritr->account, ritr->amount);
+    }
+
+    ritr++;
+  }
+}
+
+void harvest::cancelrefund(name from) {
+  require_auth(from);
+
+  refund_tables refunds(get_self(), from.value);
+
+  auto ritr = refunds.begin();
+
+  while (ritr != refunds.end()) {
+    uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
+
+    if (refund_time > current_time()) {
+      refunds.erase(ritr);
+
+      auto bitr = balances.find(from.value);
+      balances.modify(bitr, _self, [&](auto& user) {
+        user.planted += ritr->amount;
+      });
+
+      auto titr = balances.find(_self.value);
+      balances.modify(titr, _self, [&](auto& total) {
+        total.planted += ritr->amount;
+      });
+    }
+
+    ritr++;
+  }
+}
+
 void harvest::unplant(name from, asset quantity) {
   require_auth(from);
   check_user(from);
 
-  init_balance(from);
+  uint64_t lastRequestId = 0;
+  uint64_t lastRefundId = 0;
+
+  refund_tables refunds(get_self(), from.value);
+  if (refunds.begin() != refunds.end()) {
+    auto ritr = refunds.end();
+    ritr--;
+    lastRequestId = ritr->request_id;
+    lastRefundId = ritr->refund_id;
+  }
+
+  for (uint64_t week = 1; week <= 12; week++) {
+    refunds.emplace(_self, [&](auto& refund) {
+      refund.request_id = lastRequestId + 1;
+      refund.refund_id = lastRefundId + week;
+      refund.account = from;
+      refund.amount = quantity;
+      refund.weeks_delay = week;
+      refund.request_time = current_time();
+    });
+  }
 
   auto bitr = balances.find(from.value);
   balances.modify(bitr, _self, [&](auto& user) {
@@ -70,8 +135,6 @@ void harvest::unplant(name from, asset quantity) {
   balances.modify(titr, _self, [&](auto& total) {
     total.planted -= quantity;
   });
-
-  withdraw(from, quantity);
 }
 
 void harvest::claimreward(name from, asset reward) {
@@ -145,7 +208,7 @@ void harvest::onperiod() {
           stat.planted_score = 0;
         });
       }
-      
+
       init_balance(account);
 
       uitr++;
@@ -191,7 +254,7 @@ void harvest::onperiod() {
               user.reward += asset(user_stake_reward, seeds_symbol);
           });
         }
-        
+
         auto hsitr = harveststat.find(account.value);
         if (hsitr != harveststat.end()) {
           harveststat.modify(hsitr, _self, [&](auto& stat) {
@@ -218,14 +281,14 @@ void harvest::onperiod() {
               user.reward += asset(user_reputation_reward, seeds_symbol);
           });
         }
-        
+
         auto hsitr = harveststat.find(account.value);
         if (hsitr != harveststat.end()) {
           harveststat.modify(hsitr, _self, [&](auto& stat) {
             stat.reputation_score = current_user_number;
           });
         }
-        
+
         total_reward += user_reputation_reward;
 
         ritr++;
