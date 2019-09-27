@@ -8,25 +8,6 @@ void proposals::reset() {
   while (pitr != props.end()) {
       pitr = props.erase(pitr);
   }
-
-  props.emplace(_self, [&](auto& proposal) {
-      proposal.id = 0;
-      proposal.creator = _self;
-      proposal.recipient = _self;
-      proposal.quantity = asset(0, seeds_symbol);
-      proposal.staked = asset(0, seeds_symbol);
-      proposal.executed = true;
-      proposal.total = 0;
-      proposal.favour = 0;
-      proposal.against = 0;
-      proposal.title = "";
-      proposal.summary = "";
-      proposal.description = "";
-      proposal.image = "";
-      proposal.url = "";
-      proposal.creation_date = now();
-      proposal.status = name("rejected");
-  });
 }
 
 void proposals::onperiod() {
@@ -87,9 +68,12 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
   // check_user(recipient);
   check_asset(quantity);
 
-  auto pitr = props.end();
-  pitr--;
-  uint64_t lastId = pitr->id;
+  uint64_t lastId = 0;
+  if (props.begin() != props.end()) {
+    auto pitr = props.end();
+    pitr--;
+    lastId = pitr->id;
+  }
 
   props.emplace(_self, [&](auto& proposal) {
       proposal.id = lastId + 1;

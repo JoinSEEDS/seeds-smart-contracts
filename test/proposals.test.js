@@ -35,7 +35,7 @@ describe('Proposals', async assert => {
     json: true
   })
   
-  const createdProposal = props.rows[1]
+  const createdProposal = props.rows[0]
   delete createdProposal.creation_date
 
   assert({
