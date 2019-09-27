@@ -10,16 +10,16 @@ CONTRACT policy : public contract {
       : contract(receiver, code, ds)
       {}
 
-    ACTION create(name account, uint64_t uuid, string signature, string policy);
+    ACTION create(name account, string uuid, string signature, string policy);
 
-    ACTION update(name account, uint64_t uuid, string signature, string policy);
+    ACTION update(name account, string uuid, string signature, string policy);
   private:
     TABLE policy_table {
       name account;
-      uint64_t uuid;
+      string uuid;
       string signature;
       string policy;
-      uint64_t primary_key()const { return uuid; }
+      uint64_t primary_key()const { return account.value; }
     };
 
     typedef eosio::multi_index<"policies"_n, policy_table> policy_tables;
