@@ -16,12 +16,16 @@ void proposals::reset() {
       proposal.quantity = asset(0, seeds_symbol);
       proposal.staked = asset(0, seeds_symbol);
       proposal.executed = true;
-      proposal.votes = 0;
+      proposal.total = 0;
+      proposal.favour = 0;
+      proposal.against = 0;
       proposal.title = "";
       proposal.summary = "";
       proposal.description = "";
       proposal.image = "";
       proposal.url = "";
+      proposal.creation_date = now();
+      proposal.status = name("rejected");
   });
 }
 
@@ -32,16 +36,28 @@ void proposals::onperiod() {
     auto vitr = voice.begin();
 
     while (pitr != props.end()) {
-        if (pitr->votes > 0) {
+        if (pitr->favour > pitr->against) {
             withdraw(pitr->recipient, pitr->quantity);
             withdraw(pitr->recipient, pitr->staked);
-        }
 
-        props.modify(pitr, _self, [&](auto& proposal) {
-            proposal.executed = false;
-            proposal.votes = 0;
-            proposal.staked = asset(0, seeds_symbol);
-        });
+            props.modify(pitr, _self, [&](auto& proposal) {
+                proposal.executed = true;
+                proposal.total = 0;
+                proposal.favour = 0;
+                proposal.against = 0;
+                proposal.staked = asset(0, seeds_symbol);
+                proposal.status = name("passed");
+            });
+        } else {
+          props.modify(pitr, _self, [&](auto& proposal) {
+              proposal.executed = false;
+              proposal.total = 0;
+              proposal.favour = 0;
+              proposal.against = 0;
+              proposal.staked = asset(0, seeds_symbol);
+              proposal.status = name("rejected");
+          });
+        }
 
         pitr++;
     }
@@ -72,12 +88,16 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.quantity = quantity;
       proposal.staked = asset(0, seeds_symbol);
       proposal.executed = false;
-      proposal.votes = 0;
+      proposal.total = 0;
+      proposal.favour = 0;
+      proposal.against = 0;
       proposal.title = title;
       proposal.summary = summary;
       proposal.description = description;
       proposal.image = image;
       proposal.url = url;
+      proposal.creation_date = now();
+      proposal.status = name("open");
   });
 }
 
@@ -124,7 +144,8 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   check(vitr != voice.end(), "no user voice");
 
   props.modify(pitr, voter, [&](auto& proposal) {
-    proposal.votes += amount;
+    proposal.total += amount;
+    proposal.favour += amount;
   });
 
   voice.modify(vitr, voter, [&](auto& voice) {
@@ -144,7 +165,8 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     check(vitr != voice.end(), "no user voice");
 
     props.modify(pitr, voter, [&](auto& proposal) {
-        proposal.votes -= amount;
+        proposal.total += amount;
+        proposal.against += amount;
     });
 
     voice.modify(vitr, voter, [&](auto& voice) {

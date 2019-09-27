@@ -54,12 +54,16 @@ CONTRACT proposals : public contract {
           asset quantity;
           asset staked;
           bool executed;
-          uint64_t votes;
+          uint64_t total;
+          uint64_t favour;
+          uint64_t against;
           string title;
           string summary;
           string description;
           string image;
           string url;
+          name status;
+          uint64_t creation_date;
           uint64_t primary_key()const { return id; }
       };
 
