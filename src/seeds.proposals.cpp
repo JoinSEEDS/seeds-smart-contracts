@@ -64,11 +64,21 @@ void proposals::onperiod() {
 
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance = 0;
+            voice.balance = 1000;
         });
 
         vitr++;
     }
+
+    transaction trx{};
+    trx.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "onperiod"_n,
+      std::make_tuple()
+    );
+    trx.delay_sec = 2548800;
+    trx.send(now(), _self);
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url) {

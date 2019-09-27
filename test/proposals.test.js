@@ -1,11 +1,11 @@
 const { describe } = require('riteway')
 const R = require('ramda')
-const { names, getTableRows, getBalance, initContracts } = require('../scripts/helper')
+const { eos, names, getTableRows, getBalance, initContracts } = require('../scripts/helper')
 
-const { accounts, proposals, token, bank, firstuser, seconduser, thirduser } = names
+const { harvest, accounts, proposals, token, bank, firstuser, seconduser, thirduser } = names
 
 describe('Proposals', async assert => {
-  const contracts = await initContracts({ accounts, proposals, token })
+  const contracts = await initContracts({ accounts, proposals, token, harvest })
 
   const secondUserInitialBalance = await getBalance(seconduser)
 
@@ -16,8 +16,8 @@ describe('Proposals', async assert => {
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'firstuser', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
 
   console.log('deposit bank')
   await contracts.token.transfer(firstuser, bank, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -34,11 +34,14 @@ describe('Proposals', async assert => {
     table: 'props',
     json: true
   })
+  
+  const createdProposal = props.rows[1]
+  delete createdProposal.creation_date
 
   assert({
     given: 'proposals table',
     should: 'show created proposal',
-    actual: props.rows[1],
+    actual: createdProposal,
     expected: {
       id: 1,
       creator: firstuser,
@@ -46,12 +49,15 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 0,
-      votes: 0,
+      total: 0,
+      favour: 0,
+      against: 0,
       title: 'title2',
       summary: 'summary2',
       description: 'description2',
       image: 'image2',
-      url: 'url2'
+      url: 'url2',
+      status: 'open'
     }
   })
 
