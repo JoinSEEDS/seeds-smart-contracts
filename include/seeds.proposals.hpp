@@ -40,6 +40,7 @@ CONTRACT proposals : public contract {
       void check_asset(asset quantity);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity);
+      void burn(asset quantity);
 
       TABLE config_table {
           name param;

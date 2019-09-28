@@ -26,19 +26,15 @@ void proposals::onperiod() {
 
               props.modify(pitr, _self, [&](auto& proposal) {
                   proposal.executed = true;
-                  proposal.total = 0;
-                  proposal.favour = 0;
-                  proposal.against = 0;
                   proposal.staked = asset(0, seeds_symbol);
                   proposal.status = name("passed");
               });
             }
         } else {
+          burn(pitr->staked);
+
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
-              proposal.total = 0;
-              proposal.favour = 0;
-              proposal.against = 0;
               proposal.staked = asset(0, seeds_symbol);
               proposal.status = name("rejected");
           });
@@ -115,19 +111,21 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
-    if (to == _self) {
-        check_user(from);
-        check_asset(quantity);
+  if (to == _self) {
+      check_user(from);
+      check_asset(quantity);
 
-        uint64_t id = std::stoi(memo);
+      uint64_t id = std::stoi(memo);
 
-        auto pitr = props.find(id);
-        check(pitr != props.end(), "no proposal");
+      auto pitr = props.find(id);
+      check(pitr != props.end(), "no proposal");
 
-        props.modify(pitr, _self, [&](auto& proposal) {
-            proposal.staked += quantity;
-        });
-    }
+      props.modify(pitr, _self, [&](auto& proposal) {
+          proposal.staked += quantity;
+      });
+
+      deposit(quantity);
+  }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -216,6 +214,17 @@ void proposals::withdraw(name beneficiary, asset quantity)
 
   token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), beneficiary, quantity, "");
+}
+
+void proposals::burn(asset quantity)
+{
+  check_asset(quantity);
+
+  auto token_account = config.find(name("tokenaccnt").value)->value;
+  auto bank_account = config.find(name("bankaccnt").value)->value;
+
+  token::burn_action action{name(token_account), {name(bank_account), "active"_n}};
+  action.send(name(bank_account), quantity);
 }
 
 void proposals::check_asset(asset quantity)
