@@ -16,19 +16,23 @@ void proposals::onperiod() {
     auto pitr = props.begin();
     auto vitr = voice.begin();
 
+    uint64_t min_stake = config.find(name("propminstake").value)->value;
+
     while (pitr != props.end()) {
         if (pitr->favour > pitr->against) {
-            withdraw(pitr->recipient, pitr->quantity);
-            withdraw(pitr->recipient, pitr->staked);
+            if (pitr->staked >= asset(min_stake, seeds_symbol)) {
+              withdraw(pitr->recipient, pitr->quantity);
+              withdraw(pitr->recipient, pitr->staked);
 
-            props.modify(pitr, _self, [&](auto& proposal) {
-                proposal.executed = true;
-                proposal.total = 0;
-                proposal.favour = 0;
-                proposal.against = 0;
-                proposal.staked = asset(0, seeds_symbol);
-                proposal.status = name("passed");
-            });
+              props.modify(pitr, _self, [&](auto& proposal) {
+                  proposal.executed = true;
+                  proposal.total = 0;
+                  proposal.favour = 0;
+                  proposal.against = 0;
+                  proposal.staked = asset(0, seeds_symbol);
+                  proposal.status = name("passed");
+              });
+            }
         } else {
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
@@ -134,6 +138,9 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   check(pitr != props.end(), "no proposal");
   check(pitr->executed == false, "already executed");
 
+  uint64_t min_stake = config.find(name("propminstake").value)->value;
+  check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
+
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "no user voice");
 
@@ -154,6 +161,9 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     auto pitr = props.find(id);
     check(pitr != props.end(), "no proposal");
     check(pitr->executed == false, "already executed");
+
+    uint64_t min_stake = config.find(name("propminstake").value)->value;
+    check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
 
     auto vitr = voice.find(voter.value);
     check(vitr != voice.end(), "no user voice");

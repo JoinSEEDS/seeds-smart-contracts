@@ -19,14 +19,14 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(firstuser, 'firstuser', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
 
-  console.log('deposit bank')
-  await contracts.token.transfer(firstuser, bank, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-
   console.log('create proposal')
   await contracts.proposals.create(firstuser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake')
+  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
 
   const props = await getTableRows({
     code: proposals,
@@ -34,7 +34,7 @@ describe('Proposals', async assert => {
     table: 'props',
     json: true
   })
-  
+
   const createdProposal = props.rows[0]
   delete createdProposal.creation_date
 
@@ -47,7 +47,7 @@ describe('Proposals', async assert => {
       creator: firstuser,
       recipient: seconduser,
       quantity: '100.0000 SEEDS',
-      staked: '0.0000 SEEDS',
+      staked: '1000.0000 SEEDS',
       executed: 0,
       total: 0,
       favour: 0,
