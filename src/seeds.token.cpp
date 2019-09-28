@@ -79,6 +79,23 @@ void token::retire( const asset& quantity, const string& memo )
     sub_balance( st.issuer, quantity );
 }
 
+void token::burn( const name& from, const asset& quantity )
+{
+  require_auth(from);
+
+  auto sym = quantity.symbol;
+  check(sym.is_valid(), "invalid symbol name");
+
+  stats statstable(get_self(), sym.code().raw());
+  auto sitr = statstable.find(sym.code().raw());
+
+  statstable.modify(sitr, from, [&](auto& stats) {
+    stats.supply -= quantity;
+  });
+
+  sub_balance(from, quantity);
+}
+
 void token::transfer( const name&    from,
                       const name&    to,
                       const asset&   quantity,
@@ -136,9 +153,9 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
     auto sym_code_raw = quantity.symbol.code().raw();
 
     transaction_tables transactions(get_self(), sym_code_raw);
-    
+
     auto fromitr = transactions.find(from.value);
-    
+
     if (fromitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {
         user.account = from;
@@ -153,7 +170,7 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
     }
 
     auto toitr = transactions.find(to.value);
-    
+
     if (toitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {
         user.account = to;
@@ -199,4 +216,4 @@ void token::close( const name& owner, const symbol& symbol )
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn) )
