@@ -33,24 +33,8 @@ describe('accounts', async assert => {
   }
 
   console.log('join users')
-  await contract.adduser(firstuser, { authorization: `${accounts}@active` })
-  await contract.adduser(seconduser, { authorization: `${accounts}@active` })
-
-  console.log('plant 50 seeds')
-  await thetoken.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-
-  console.log('make resident')
-  await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
-
-  console.log("plant 100 seeds")
-  await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-
-  console.log('make citizen')
-  await contract.makecitizen(firstuser, { authorization: `${firstuser}@active` })
-
-  console.log('set name')
-  await contract.setname(firstuser, 'First User', { authorization: `${firstuser}@active` })
-  await contract.setname(seconduser, 'Second User', { authorization: `${seconduser}@active` })
+  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
+  await contract.joinuser(seconduser, { authorization: `${accounts}@active` })
 
   const users = await eos.getTableRows({
     code: accounts,
@@ -59,41 +43,15 @@ describe('accounts', async assert => {
     json: true,
   })
 
-  const applications = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'apps',
-    json: true
-  })
+  const now = new Date() / 1000
+
+  const firstTimestamp = users.rows[0].timestamp
 
   assert({
-    given: 'users table',
-    should: 'show joined users',
-    actual: users.rows.map(({ account, status, fullname }) => ({ account, status, fullname })),
-    expected: [{
-      account: firstuser,
-      status: 'citizen',
-      fullname: 'First User'
-    }, {
-      account: seconduser,
-      status: 'visitor',
-      fullname: 'Second User'
-    }]
-  })
-  
-  assert({
-    given: 'random reputation',
-    should: 'less than 99',
-    actual: users.rows.map(({ reputation }) => reputation < 99),
-    expected: [true, true]
+    given: 'created user',
+    should: 'have correct timestamp',
+    actual: Math.abs(firstTimestamp - now) < 5,
+    expected: true
   })
 
-  assert({
-    given: 'apps table',
-    should: 'show joined applications',
-    actual: applications.rows,
-    expected: [{
-      account: application
-    }]
-  })
 })

@@ -3,32 +3,73 @@
 void accounts::reset() {
   require_auth(_self);
 
-  auto aitr = apps.begin();
-  while (aitr != apps.end()) {
-    aitr = apps.erase(aitr);
-  }
-
   auto uitr = users.begin();
   while (uitr != users.end()) {
     uitr = users.erase(uitr);
   }
-
-  auto ritr = requests.begin();
-  while (ritr != requests.end()) {
-    ritr = requests.erase(ritr);
-  }
 }
 
-void accounts::adduser(name account)
+void accounts::migrate(name account,
+        name status,
+        name type,
+        string nickname,
+        string image,
+        string story,
+        string roles,
+        string skills,
+        string interests,
+        uint64_t reputation
+) 
+{
+    require_auth(_self);
+
+  users.emplace(_self, [&](auto& user) {
+    user.account = account;
+    user.status = status;
+    user.type = type;
+    user.nickname = nickname;
+    user.image = image;
+    user.story = story;
+    user.roles = roles;
+    user.skills = skills;
+    user.interests = interests;
+    user.reputation = reputation;
+    user.timestamp = now();
+  });
+}
+
+void accounts::joinuser(name account)
+{
+  require_auth(_self);
+
+  auto uitr = users.find(account.value);
+  check(uitr == users.end(), "existing user");
+
+  users.emplace(_self, [&](auto& user) {
+    user.account = account;
+    user.status = name("visitor");
+    user.reputation = 0;
+    user.type = name("individual");
+    user.timestamp = now();
+  });
+}
+
+
+void accounts::adduser(name account, string nickname)
 {
   require_auth(_self);
   check(is_account(account), "no account");
 
+  auto uitr = users.find(account.value);
+  check(uitr == users.end(), "existing user");
+
   users.emplace(_self, [&](auto& user) {
       user.account = account;
       user.status = name("visitor");
-      user.reputation = (current_time() + 1) % 99;
-      user.fullname = "";
+      user.reputation = 0;
+      user.type = name("individual");
+      user.nickname = nickname;
+      user.timestamp = now();
   });
 }
 
@@ -74,27 +115,18 @@ void accounts::fulfill(name app, name user)
   users.emplace(_self, [&](auto& item) {
       item.account = user;
       item.status = name("visitor");
-      item.reputation = current_time() % 99;
-      item.fullname = "";
+      item.reputation = 0;
   });
 }
 
-void accounts::setname(name user, string fullname)
+void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
 {
     require_auth(user);
+
+    check(type == name("individual") || type == name("organization"), "invalid type");
 
     auto uitr = users.find(user.value);
     users.modify(uitr, _self, [&](auto& user) {
-        user.fullname = fullname;
-    });
-}
-
-void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests, uint64_t score)
-{
-    require_auth(user);
-
-    auto pitr = people.find(user.value);
-    people.modify(pitr, _self, [&](auto& user) {
       user.type = type;
       user.nickname = nickname;
       user.image = image;
@@ -102,7 +134,6 @@ void accounts::update(name user, name type, string nickname, string image, strin
       user.roles = roles;
       user.skills = skills;
       user.interests = interests;
-      user.score = score;
     });
 }
 

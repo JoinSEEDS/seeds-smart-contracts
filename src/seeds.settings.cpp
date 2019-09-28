@@ -13,6 +13,7 @@ void settings::reset() {
   configure(name("subsperiod"), 0);
   configure(name("propsquota"), 0);
   configure(name("usercount"), 0);
+  configure(name("propminstake"), 1000);
 }
 
 void settings::configure(name param, uint64_t value) {

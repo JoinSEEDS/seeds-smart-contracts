@@ -55,24 +55,26 @@ void harvest::sow(name from, name to, asset quantity) {
     });
 }
 
-void harvest::claimrefund(name from) {
+void harvest::claimrefund(name from, uint64_t request_id) {
   refund_tables refunds(get_self(), from.value);
 
   auto ritr = refunds.begin();
 
   while (ritr != refunds.end()) {
-    uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
+    if (request_id == ritr->request_id) {
+      uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
-    if (refund_time < current_time()) {
-      refunds.erase(ritr);
-      withdraw(ritr->account, ritr->amount);
+      if (refund_time < current_time()) {
+        refunds.erase(ritr);
+        withdraw(ritr->account, ritr->amount);
+      }
     }
 
     ritr++;
   }
 }
 
-void harvest::cancelrefund(name from) {
+void harvest::cancelrefund(name from, uint64_t request_id) {
   require_auth(from);
 
   refund_tables refunds(get_self(), from.value);
@@ -80,20 +82,22 @@ void harvest::cancelrefund(name from) {
   auto ritr = refunds.begin();
 
   while (ritr != refunds.end()) {
-    uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
+    if (request_id == ritr->request_id) {
+      uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
-    if (refund_time > current_time()) {
-      refunds.erase(ritr);
+      if (refund_time > current_time()) {
+        refunds.erase(ritr);
 
-      auto bitr = balances.find(from.value);
-      balances.modify(bitr, _self, [&](auto& user) {
-        user.planted += ritr->amount;
-      });
+        auto bitr = balances.find(from.value);
+        balances.modify(bitr, _self, [&](auto& user) {
+          user.planted += ritr->amount;
+        });
 
-      auto titr = balances.find(_self.value);
-      balances.modify(titr, _self, [&](auto& total) {
-        total.planted += ritr->amount;
-      });
+        auto titr = balances.find(_self.value);
+        balances.modify(titr, _self, [&](auto& total) {
+          total.planted += ritr->amount;
+        });
+      }
     }
 
     ritr++;
@@ -135,6 +139,7 @@ void harvest::unplant(name from, asset quantity) {
   balances.modify(titr, _self, [&](auto& total) {
     total.planted -= quantity;
   });
+
 }
 
 void harvest::claimreward(name from, asset reward) {
@@ -147,7 +152,7 @@ void harvest::claimreward(name from, asset reward) {
   auto bitr = balances.find(from.value);
   balances.modify(bitr, _self, [&](auto& user) {
     user.reward = user.reward - reward;
-    check(user.reward > asset(0, seeds_symbol), "no reward");
+    check(user.reward >= asset(0, seeds_symbol), "no reward");
   });
 
   auto titr = balances.find(_self.value);
@@ -158,148 +163,35 @@ void harvest::claimreward(name from, asset reward) {
   withdraw(from, reward);
 }
 
-
-void harvest::onperiod() {
+void harvest::upbyplanted() {
   require_auth(_self);
 
-  transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
+  auto users = balances.get_index<"byplanted"_n>();
 
-  auto users_by_volume = transactions.get_index<"bytrxvolume"_n>();
-  auto users_by_stake = balances.get_index<"byplanted"_n>();
-  auto users_by_rep = users.get_index<"byreputation"_n>();
+  uint64_t total_participants = std::distance(users.begin(), users.end());
 
-  auto vitr = users_by_volume.begin();
-  auto sitr = users_by_stake.begin();
-  auto ritr = users_by_rep.begin();
+  uint64_t current_participant = 1;
 
-  uint64_t volume_users = std::distance(users_by_volume.begin(), users_by_volume.end());
-  uint64_t stake_users = std::distance(users_by_stake.begin(), users_by_stake.end());
-  uint64_t rep_users = std::distance(users_by_rep.begin(), users_by_rep.end());
+  auto uitr = users.begin();
 
-  uint64_t volume_reward = 100000;
-  uint64_t stake_reward = 100000;
-  uint64_t rep_reward = 100000;
-  uint64_t total_reward = 0;
+  while (uitr != users.end()) {
+    if (uitr->account != get_self()) {
+      uint64_t user_score = current_participant * 100 / total_participants;
 
-  uint64_t base_volume_reward = (2 * volume_reward) / (volume_users * volume_users + volume_users);
-  uint64_t base_stake_reward = (2 * stake_reward) / (stake_users * stake_users + stake_users);
-  uint64_t base_rep_reward = (2 * rep_reward) / (rep_users * rep_users + rep_users);
+      auto hsitr = harveststat.find(uitr->account.value);
+      harveststat.modify(hsitr, _self, [&](auto& stat) {
+        stat.planted_score = current_participant;
+      });
 
-  {
-    auto uitr = users.begin();
-    while (uitr != users.end()) {
-      name account = uitr->account;
-
-      auto hsitr = harveststat.find(account.value);
-      if (hsitr == harveststat.end()) {
-        harveststat.emplace(_self, [&](auto& stat) {
-          stat.account = account;
-          stat.contribution_score = 0;
-          stat.reputation_score = 0;
-          stat.transactions_score = 0;
-          stat.planted_score = 0;
-        });
-      } else {
-        harveststat.modify(hsitr, _self, [&](auto& stat) {
-          stat.account = account;
-          stat.contribution_score = 0;
-          stat.reputation_score = 0;
-          stat.transactions_score = 0;
-          stat.planted_score = 0;
-        });
-      }
-
-      init_balance(account);
-
-      uitr++;
+      current_participant++;
     }
   }
+}
 
-  {
-      uint64_t current_user_number = 1;
-      while (vitr != users_by_volume.end()) {
-        name account = vitr->account;
-        uint64_t user_volume_reward = base_volume_reward * current_user_number;
+void harvest::onperiod() {
+    require_auth(_self);
 
-        auto hitr = balances.find(account.value);
-        if (hitr != balances.end()) {
-          balances.modify(hitr, _self, [&](auto& user) {
-              user.reward += asset(user_volume_reward, seeds_symbol);
-          });
-        }
-
-        auto hsitr = harveststat.find(account.value);
-        if (hsitr != harveststat.end()) {
-          harveststat.modify(hsitr, _self, [&](auto& stat) {
-            stat.transactions_score = current_user_number;
-          });
-        }
-
-        total_reward += user_volume_reward;
-
-        vitr++;
-        current_user_number++;
-      }
-  }
-
-  {
-    uint64_t current_user_number = 1;
-    while (sitr != users_by_stake.end()) {
-        name account = sitr->account;
-        uint64_t user_stake_reward = base_stake_reward * current_user_number;
-
-        auto hitr = balances.find(account.value);
-        if (hitr != balances.end()) {
-          balances.modify(hitr, _self, [&](auto& user) {
-              user.reward += asset(user_stake_reward, seeds_symbol);
-          });
-        }
-
-        auto hsitr = harveststat.find(account.value);
-        if (hsitr != harveststat.end()) {
-          harveststat.modify(hsitr, _self, [&](auto& stat) {
-            stat.planted_score = current_user_number;
-          });
-        }
-
-        total_reward += user_stake_reward;
-
-        sitr++;
-        current_user_number++;
-    }
-  }
-
-  {
-    uint64_t current_user_number = 1;
-    while(ritr != users_by_rep.end()) {
-        name account = ritr->account;
-        uint64_t user_reputation_reward = base_rep_reward * current_user_number;
-
-        auto hitr = balances.find(account.value);
-        if (hitr != balances.end()) {
-          balances.modify(hitr, _self, [&](auto& user) {
-              user.reward += asset(user_reputation_reward, seeds_symbol);
-          });
-        }
-
-        auto hsitr = harveststat.find(account.value);
-        if (hsitr != harveststat.end()) {
-          harveststat.modify(hsitr, _self, [&](auto& stat) {
-            stat.reputation_score = current_user_number;
-          });
-        }
-
-        total_reward += user_reputation_reward;
-
-        ritr++;
-        current_user_number++;
-    }
-  }
-
-  auto htitr = balances.find(_self.value);
-  balances.modify(htitr, _self, [&](auto& total) {
-    total.reward += asset(total_reward, seeds_symbol);
-  });
+    withdraw(name("seedsuser555"), asset(20000, seeds_symbol));
 }
 
 void harvest::init_balance(name account)

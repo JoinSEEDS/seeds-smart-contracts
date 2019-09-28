@@ -1,11 +1,11 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
+#include <eosiolib/transaction.hpp>
 #include <seeds.token.hpp>
 
 using namespace eosio;
 using std::string;
-using std::count;
 
 CONTRACT proposals : public contract {
   public:
@@ -14,7 +14,7 @@ CONTRACT proposals : public contract {
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
-          config(name("settings"), name("settings").value),
+          config(name("seedsettings"), name("seedsettings").value),
           users(name("seedsaccnts3"), name("seedsaccnts3").value)
           {}
 
@@ -40,6 +40,7 @@ CONTRACT proposals : public contract {
       void check_asset(asset quantity);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity);
+      void burn(asset quantity);
 
       TABLE config_table {
           name param;
@@ -54,12 +55,16 @@ CONTRACT proposals : public contract {
           asset quantity;
           asset staked;
           bool executed;
-          uint64_t votes;
+          uint64_t total;
+          uint64_t favour;
+          uint64_t against;
           string title;
           string summary;
           string description;
           string image;
           string url;
+          name status;
+          uint64_t creation_date;
           uint64_t primary_key()const { return id; }
       };
 
@@ -92,7 +97,7 @@ CONTRACT proposals : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "token"_n.value) {
+  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {

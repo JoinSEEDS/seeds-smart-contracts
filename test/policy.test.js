@@ -3,11 +3,8 @@ const { eos, names } = require('../scripts/helper')
 
 const { policy, firstuser } = names
 
-  describe('policy', async assert => {
+describe('policy', async assert => {
   const contract = await eos.contract(policy)
-
-  console.log('reset tables')
-  await contract.reset({ authorization: `${policy}@active`})
 
   let accountField = firstuser
   let uuidField = '123'
@@ -19,7 +16,7 @@ const { policy, firstuser } = names
     uuidField,
     signatureField,
     policyField,
-    { authorization: `${account}@active` }
+    { authorization: `${firstuser}@active` }
   )
 
   policyField = 'updated-policy-string'
@@ -29,12 +26,12 @@ const { policy, firstuser } = names
     uuidField,
     signatureField,
     policyField,
-    { authorization: `${account}@active` }
+    { authorization: `${firstuser}@active` }
   )
 
   const { rows } = await eos.getTableRows({
     code: policy,
-    scope: account,
+    scope: firstuser,
     table: 'policies',
     json: true
   })
@@ -44,10 +41,10 @@ const { policy, firstuser } = names
     should: 'show created row in table',
     actual: rows,
     expected: [{
-      accountField,
-      uuidField,
-      signatureField,
-      policyField
+      account: accountField,
+      uuid: uuidField,
+      signature: signatureField,
+      policy: policyField
     }]
   })
 })
