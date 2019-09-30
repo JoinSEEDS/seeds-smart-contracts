@@ -16,6 +16,7 @@ CONTRACT accounts : public contract {
           apps(receiver, receiver.value),
           users(receiver, receiver.value),
           requests(receiver, receiver.value),
+          refs(receiver, receiver.value),
           balances(name("seedshrvst11"), name("seedshrvst11").value)
           {}
 
@@ -36,7 +37,9 @@ CONTRACT accounts : public contract {
       ACTION makecitizen(name user);
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
-      
+
+      ACTION addref(name referrer, name invited);
+
       ACTION migrate(name account,
         name status,
         name type,
@@ -47,7 +50,7 @@ CONTRACT accounts : public contract {
         string skills,
         string interests,
         uint64_t reputation);
-      
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -59,6 +62,13 @@ CONTRACT accounts : public contract {
         name account;
 
         uint64_t primary_key()const { return account.value; }
+      };
+
+      TABLE ref_table {
+        name referrer;
+        name invited;
+
+        uint64_t primary_key() const { return referrer.value; }
       };
 
       TABLE user_table {
@@ -102,11 +112,14 @@ CONTRACT accounts : public contract {
     > user_tables;
     typedef eosio::multi_index<"apps"_n, app_table> app_tables;
     typedef eosio::multi_index<"requests"_n, request_table> request_tables;
+    typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
+
+    ref_tables refs;
 
     balance_tables balances;
 
@@ -129,4 +142,4 @@ CONTRACT accounts : public contract {
       request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref));

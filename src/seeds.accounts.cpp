@@ -3,9 +3,24 @@
 void accounts::reset() {
   require_auth(_self);
 
+  auto aitr = apps.begin();
+  while (aitr != apps.end()) {
+    aitr = apps.erase(aitr);
+  }
+
   auto uitr = users.begin();
   while (uitr != users.end()) {
     uitr = users.erase(uitr);
+  }
+
+  auto ritr = requests.begin();
+  while (ritr != requests.end()) {
+    ritr = requests.erase(ritr);
+  }
+  
+  auto refitr = refs.begin();
+  while (refitr != refs.end()) {
+    refitr = refs.erase(refitr);
   }
 }
 
@@ -19,7 +34,7 @@ void accounts::migrate(name account,
         string skills,
         string interests,
         uint64_t reputation
-) 
+)
 {
     require_auth(_self);
 
@@ -81,6 +96,18 @@ void accounts::addapp(name account)
   apps.emplace(_self, [&](auto& app) {
     app.account = account;
   });
+}
+
+void accounts::addref(name referrer, name invited)
+{
+    require_auth(_self);
+    check(is_account(referrer), "wrong referral");
+    check(is_account(invited), "wrong invited");
+
+    refs.emplace(_self, [&](auto& ref) {
+      ref.referrer = referrer;
+      ref.invited = invited;
+    });
 }
 
 void accounts::addrequest(name app, name user, string owner_key, string active_key)
@@ -148,8 +175,17 @@ void accounts::makeresident(name user)
     transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
+    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+/*
+    while (ritr != invited_users.end() && ritr->referrer == user) {
+      invited_users_number++;
+      ritr++;
+    }
+*/
+
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
+    check(invited_users_number >= 1, "user has less than required referrals");
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("resident");

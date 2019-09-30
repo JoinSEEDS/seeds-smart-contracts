@@ -36,11 +36,21 @@ describe('accounts', async assert => {
   await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
   await contract.joinuser(seconduser, { authorization: `${accounts}@active` })
 
+  console.log('add referral')
+  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@active` })
+
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
     table: 'users',
     json: true,
+  })
+  
+  const refs = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'refs',
+    json: true
   })
 
   const now = new Date() / 1000
@@ -52,6 +62,19 @@ describe('accounts', async assert => {
     should: 'have correct timestamp',
     actual: Math.abs(firstTimestamp - now) < 5,
     expected: true
+  })
+  
+  assert({
+    given: 'invited user',
+    should: 'have row in table',
+    actual: refs,
+    expected: {
+      rows: [{
+        referrer: firstuser,
+        invited: seconduser
+      }],
+      more: false
+    }
   })
 
 })
