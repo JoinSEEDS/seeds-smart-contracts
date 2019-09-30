@@ -226,7 +226,7 @@ const main = async () => {
   try {
     await eos.getAccount(owner.account)
   } catch (err) {
-    console.error(`Please, deploy ${owner.account} account manually before running script`, err)
+    console.error(`Please, deploy owner account manually before running script`, err)
     return
   }
 
