@@ -186,6 +186,7 @@ void accounts::makeresident(name user)
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
     check(invited_users_number >= 1, "user has less than required referrals");
+    check(uitr->reputation >= 100, "user has less than required reputation");
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("resident");
@@ -203,8 +204,12 @@ void accounts::makecitizen(name user)
     transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
+    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+
     check(bitr->planted.amount >= 100, "user has less than required seeds planted");
     check(titr->transactions_number >= 2, "user has less than required transactions number");
+    check(invited_users_number >= 3, "user has less than required referrals");
+    check(uitr->reputation >= 100, "user has less than required reputation");
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("citizen");
