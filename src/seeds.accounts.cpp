@@ -150,7 +150,6 @@ void accounts::makeresident(name user)
 
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
-    check(uitr->reputation >= 50, "user has less than required reputation")
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("resident");
@@ -170,7 +169,6 @@ void accounts::makecitizen(name user)
 
     check(bitr->planted.amount >= 100, "user has less than required seeds planted");
     check(titr->transactions_number >= 2, "user has less than required transactions number");
-    check(uitr->reputation >= 50, "user has less than required reputation")
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("citizen");
