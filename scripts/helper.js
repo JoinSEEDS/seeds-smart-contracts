@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const Eos = require('eosjs')
 const R = require('ramda')
 
@@ -35,16 +37,16 @@ const httpEndpoint = EOSIO_API_ENDPOINT || endpoints[EOSIO_NETWORK] || endpoints
 const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
 
 const publicKeys = {
-  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
-  [networks.telosMainnet]: 'EOS8Do4YTkSrLTVLvZxtKwp1fVBnHsJa3KnLkcANHjnXAFQ3B5EzF'
+  [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
+  [networks.telosMainnet]: ['EOS6F3waTpq11VRFBTWUp6tif3u5GY6QGwBxhmq9CsdLi2NU1Rmdv', 'EOS6HL4bXo3aC1YF5xtkst2boyeCjkd9N5aKMcaF9khdq9HrxPJzu']
 }
-const publicKey = publicKeys[chainId]
+const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
 
 const account = (accountName) => ({
   type: 'account',
   account: accountName,
   creator: owner,
-  publicKey: publicKey,
+  publicKey: activePublicKey,
   stakes: {
     cpu: '1.0000 EOS',
     net: '1.0000 EOS',
@@ -102,7 +104,8 @@ const accountsMetadata = (network) => {
         ...contract('seedstoken12', 'eosio.token'),
         issuer: owner,
         supply: '100000000.0000 SEEDS'
-      }
+      },
+      policy: contract('seedspolicy1', 'policy')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -135,9 +138,9 @@ const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
 const keyProviders = {
-  [networks.local]: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
-  [networks.telosMainnet]: ['5KJhdyBnd4cfW4o1Bynu8zUnSi4TGwZ1nxhuYLX7ryBjAxEAYX9', '5JViN9Jck32dG5JZqxLKYGHgd1AazQBByb9yTju1YHDMjHgi5Ro'],
-  [networks.telosTestnet]: '5J1gYLAc4GUo7EXNAXyaZTgo3m3SxtxDygdVUsNL4Par5Swfy1q'
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY],
+  [networks.telosTestnet]: [process.env.TELOS_TESTNET_PRIVATE_KEY, process.env.TELOS_TESTNET_PRIVATE_KEY]
 }
 
 const keyProvider = keyProviders[chainId]
@@ -174,5 +177,5 @@ const initContracts = (accounts) =>
 
 module.exports = {
   eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
-  accounts, names
+  accounts, names, ownerPublicKey, activePublicKey
 }

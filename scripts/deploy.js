@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, accounts } = require('./helper')
+const { eos, encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -93,6 +93,33 @@ const deploy = async ({ name, account }) => {
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
     console.error(`account ${name} already deployed`, err)
+  }
+}
+
+const changeKeyPermission = async (account, permission, key) => {
+  try {
+    const { permissions } = await eos.getAccount(account)
+
+    const { parent, required_auth } = permissions.find(p => p.perm_name === permission)
+
+    const { threshold, waits, keys, accounts } = required_auth
+
+    const newPermissions = {
+      account,
+      permission,
+      parent,
+      auth: {
+        threshold,
+        waits,
+        accounts,
+        keys: [{ key, weight: 1 }]
+      }
+    }
+
+    await eos.updateauth(newPermissions, { authorization: `${account}@owner` })
+    console.log(`private keys updated for ${account}@${permission}`)
+  } catch (err) {
+    console.error(`failed keys update for ${account}@${permission}`, err)
   }
 }
 
@@ -215,6 +242,17 @@ const codeActivePermission = (account) =>
 
 const accountActivePermission = (subject, object) =>
   [subject, 'active', object, 'active']
+
+const updatePrivateKeys = async () => {
+  const targets = Object.keys(accounts).map(key => accounts[key].account)
+
+  for (let i = 0; i < targets.length; i++) {
+    if (targets[i] !== 'seedssubs222') {
+      await changeKeyPermission(targets[i], 'active', activePublicKey)
+      await changeKeyPermission(targets[i], 'owner', ownerPublicKey)
+    }
+  }
+}
 
 const main = async () => {
   const {
