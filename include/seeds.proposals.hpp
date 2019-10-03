@@ -14,6 +14,7 @@ CONTRACT proposals : public contract {
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
+          votes(receiver, receiver.value),
           config(name("seedsettings"), name("seedsettings").value),
           users(name("seedsaccnts3"), name("seedsaccnts3").value)
           {}
@@ -74,8 +75,12 @@ CONTRACT proposals : public contract {
       };
 
       TABLE vote_table {
+          uint64_t id;
           name account;
-          uint64_t primary_key()const { return account.value; }
+          uint64_t proposal_id;
+          uint64_t amount;
+          bool favour;
+          uint64_t primary_key()const { return id; }
       };
 
       TABLE voice_table {
@@ -94,6 +99,7 @@ CONTRACT proposals : public contract {
       proposal_tables props;
       user_tables users;
       voice_tables voice;
+      votes_tables votes;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

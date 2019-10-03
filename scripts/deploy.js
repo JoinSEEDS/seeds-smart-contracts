@@ -302,7 +302,8 @@ const main = async () => {
   await configure(settings)({
     tokenaccnt: encodeName(token.account, false),
     bankaccnt: encodeName(bank.account, false),
-    hrvstreward: 100000
+    hrvstreward: 100000,
+    propminstake: 100
   })
 }
 

@@ -150,6 +150,14 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   voice.modify(vitr, voter, [&](auto& voice) {
     voice.balance -= amount;
   });
+  
+  votes.emplace(_self, [&](auto& vote) {
+    vote.id = votes.available_primary_key();
+    vote.account = voter;
+    vote.amount = amount;
+    vote.favour = true;
+    vote.proposal_id = id;
+  });
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
@@ -173,6 +181,14 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
 
     voice.modify(vitr, voter, [&](auto& voice) {
         voice.balance -= amount;
+    });
+    
+    votes.emplace(_self, [&](auto& vote) {
+      vote.id = votes.available_primary_key();
+      vote.account = voter;
+      vote.amount = amount;
+      vote.favour = false;
+      vote.proposal_id = id;
     });
 }
 
