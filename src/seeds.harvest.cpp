@@ -40,6 +40,7 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 void harvest::sow(name from, name to, asset quantity) {
     require_auth(from);
     check_user(from);
+    check_user(to);
 
     init_balance(from);
     init_balance(to);
