@@ -24,8 +24,8 @@ describe("harvest", async assert => {
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '140.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -40,45 +40,4 @@ describe("harvest", async assert => {
   console.log('distribute seeds')
   await contracts.harvest.onperiod({ authorization: `${harvest}@active` })
 
-  assert({
-    given: 'harvest',
-    should: 'distribute rewards',
-    actual: await eos.getTableRows({
-      code: harvest,
-      scope: harvest,
-      table: 'balances',
-      json: true
-    }),
-    expected: {
-      rows: [
-        { account: 'firstuser', planted: '150.0000 SEEDS', reward: '66.6666 SEEDS' },
-        { account: 'harvest', planted: '250.0000 SEEDS', reward: '99.9999 SEEDS' },
-        { account: 'seconduser', planted: '100.0000 SEEDS', reward: '33.3333 SEEDS' }
-      ],
-      more: false
-    }
-  })
-
-  console.log('claim rewards')
-  await contracts.harvest.claimreward(firstuser, '66.6666 SEEDS', { authorization: `${firstuser}@active` })
-  await contracts.harvest.claimreward(seconduser, '33.3333 SEEDS', { authorization: `${seconduser}@active` })
-
-  assert({
-    given: 'harvest',
-    should: 'distribute rewards',
-    actual: await eos.getTableRows({
-      code: harvest,
-      scope: harvest,
-      table: 'balances',
-      json: true
-    }),
-    expected: {
-      rows: [
-        { account: 'firstuser', planted: '150.0000 SEEDS', reward: '0.0000 SEEDS' },
-        { account: 'harvest', planted: '250.0000 SEEDS', reward: '0.0000 SEEDS' },
-        { account: 'seconduser', planted: '100.0000 SEEDS', reward: '0.0000 SEEDS' }
-      ],
-      more: false
-    }
-  })
 })

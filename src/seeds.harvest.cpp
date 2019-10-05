@@ -38,8 +38,8 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 }
 
 void harvest::sow(name from, name to, asset quantity) {
-    // we allow to sow seeds for a friend before he has account
-    // check_user(from);
+    require_auth(from);
+    check_user(from);
 
     init_balance(from);
     init_balance(to);
@@ -189,9 +189,74 @@ void harvest::upbyplanted() {
 }
 
 void harvest::onperiod() {
-    require_auth(_self);
+  require_auth(_self);
 
-    withdraw(name("seedsuser555"), asset(20000, seeds_symbol));
+  auto users_by_planted = balances.get_index<"byplanted"_n>();
+
+  uint64_t np = 0;
+  auto pitr = users_by_planted.begin();
+  while (pitr != users_by_planted.end()) {
+    np++;
+    pitr++;
+  }
+  np--;
+  
+  uint64_t planted_total_reward = config.find(name("hrvstreward").value)->value;
+  uint64_t base_planted_reward = (2 * planted_total_reward) / (np * np + np);
+  uint64_t total_planted_reward = 0;
+
+  pitr = users_by_planted.begin();
+  uint64_t current_user_number = 1;
+
+  while (pitr != users_by_planted.end()) {
+    if (pitr->account != get_self()) {
+      uint64_t user_planted_reward = base_planted_reward * current_user_number;
+      uint64_t user_planted_score = current_user_number * 100 / np;
+      uint64_t user_transactions_score = user_planted_score;
+      uint64_t user_reputation_score = user_planted_score;
+      uint64_t user_contribution_score = user_planted_score;
+    
+      init_balance(pitr->account);
+
+      auto bitr = balances.find(pitr->account.value);
+      balances.modify(bitr, _self, [&](auto& user) {
+          user.reward += asset(user_planted_reward, seeds_symbol);
+      });
+      
+      auto hitr = harveststat.find(pitr->account.value);
+      if (hitr == harveststat.end()) {
+        harveststat.emplace(_self, [&](auto& user) {
+            user.account = pitr->account;
+            user.reputation_score = user_reputation_score;
+            user.planted_score = user_planted_score;
+            user.transactions_score = user_transactions_score;
+            user.contribution_score = user_contribution_score;
+        });
+      } else {
+        harveststat.modify(hitr, _self, [&](auto& user) {
+            user.reputation_score = user_reputation_score;
+            user.planted_score = user_planted_score;
+            user.transactions_score = user_transactions_score;
+            user.contribution_score = user_contribution_score;
+        });
+      }
+
+      total_planted_reward += user_planted_reward;
+    }
+   
+    pitr++;
+    current_user_number++;
+  }
+  
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "onperiod"_n,
+    std::make_tuple()
+  );
+  trx.delay_sec = 10;
+  trx.send(now(), _self);  
 }
 
 void harvest::init_balance(name account)
