@@ -22,7 +22,7 @@ void proposals::onperiod() {
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity);
-              withdraw(pitr->recipient, pitr->staked);
+              withdraw(pitr->recipient , pitr->staked);
 
               props.modify(pitr, _self, [&](auto& proposal) {
                   proposal.executed = true;
@@ -93,6 +93,19 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.creation_date = now();
       proposal.status = name("open");
   });
+  
+  auto litr = lastprops.find(creator.value);
+  if (litr == lastprops.end()) {
+    lastprops.emplace(_self, [&](auto& proposal) {
+      proposal.account = creator;
+      proposal.proposal_id = lastId+1;
+    });
+  } else {
+    lastprops.modify(litr, _self, [&](auto& proposal) {
+      proposal.account = creator;
+      proposal.proposal_id = lastId+1;
+    });
+  }
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
@@ -115,7 +128,16 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check_user(from);
       check_asset(quantity);
 
-      uint64_t id = std::stoi(memo);
+      uint64_t id = 0;
+      
+      if (memo.empty()) {
+        auto litr = lastprops.find(from.value);
+        check(litr != lastprops.end(), "no proposals");
+        
+        id = litr->proposal_id;
+      } else {
+        id = std::stoi(memo);
+      }
 
       auto pitr = props.find(id);
       check(pitr != props.end(), "no proposal");
@@ -150,7 +172,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   voice.modify(vitr, voter, [&](auto& voice) {
     voice.balance -= amount;
   });
-  
+
   votes.emplace(_self, [&](auto& vote) {
     vote.id = votes.available_primary_key();
     vote.account = voter;
@@ -182,7 +204,7 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     voice.modify(vitr, voter, [&](auto& voice) {
         voice.balance -= amount;
     });
-    
+
     votes.emplace(_self, [&](auto& vote) {
       vote.id = votes.available_primary_key();
       vote.account = voter;

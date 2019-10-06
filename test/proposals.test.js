@@ -28,11 +28,11 @@ describe('Proposals', async assert => {
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
 
-  console.log('deposit stake')
+  console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
 
-  console.log('deposit stake')
-  await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+  console.log('deposit stake (without memo)')
+  await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   const props = await getTableRows({
     code: proposals,
