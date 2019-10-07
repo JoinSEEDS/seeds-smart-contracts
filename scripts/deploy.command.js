@@ -7,9 +7,12 @@ const deploy = async (name) => {
   try {
     const { code, abi } = await source(name)
 
-    let account = accounts[name].name
+    let account = accounts[name]
+    let accountName = account.name
 
-    console.log("acct ", JSON.stringify(accounts[name]));
+    await createAccount(account)
+
+    //console.log("acct ", JSON.stringify(account));
 
     if (!code)
       throw new Error('code not found')
@@ -18,21 +21,21 @@ const deploy = async (name) => {
       throw new Error('abi not found')
 
     await eos.setcode({
-      account,
+      account: accountName,
       code,
       vmtype: 0,
       vmversion: 0
     }, {
-      authorization: `${account}@owner`
+      authorization: `${account.account}@owner`
     })
 
     await eos.setabi({
-      account,
+      account: accountName,
       abi: JSON.parse(abi)
     }, {
-      authorization: `${account}@owner`
+      authorization: `${account.account}@owner`
     })
-    console.log(`${name} deployed to ${account}`)
+    console.log(`${name} deployed to ${accountName}`)
   } catch (err) {
     console.error(`account ${name} already deployed`, err)
   }
@@ -51,5 +54,36 @@ const source = async (name) => {
 
   return Promise.all([code, abi]).then(([code, abi]) => ({ code, abi }))
 }
+
+const createAccount = async ({ account, publicKey, stakes, creator }) => {
+  try {
+    await eos.transaction(async trx => {
+      await trx.newaccount({
+        creator,
+        name: account,
+        owner: publicKey,
+        active: publicKey
+      })
+
+      await trx.buyrambytes({
+        payer: creator,
+        receiver: account,
+        bytes: stakes.ram
+      })
+
+      await trx.delegatebw({
+        from: creator,
+        receiver: account,
+        stake_net_quantity: stakes.net,
+        stake_cpu_quantity: stakes.cpu,
+        transfer: 0
+      })
+    })
+    console.log(`${account} created`)
+  } catch (err) {
+    console.error(`account ${account} already created`, err)
+  }
+}
+
 
 module.exports = deploy
