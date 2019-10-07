@@ -4,7 +4,6 @@ const path = require('path')
 const { eos, encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
 
 const deploy = async (name) => {
-  //try {
     const { code, abi } = await source(name)
 
     let account = accounts[name]
@@ -36,9 +35,6 @@ const deploy = async (name) => {
       authorization: `${account.account}@owner`
     })
     console.log(`Success: ${name} deployed to ${contractName}`)
-  //} catch (err) {
-  //  console.error(`account ${name} already deployed`, err)
-  //}
 }
 
 const source = async (name) => {

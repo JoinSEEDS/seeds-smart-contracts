@@ -45,7 +45,7 @@ program
     await deployAction(contract)
   })
 
-  program
+program
   .command('run <contract>')
   .description('compile and deploy custom contract')
   .action(async function (contract) {
