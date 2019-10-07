@@ -2,6 +2,7 @@
 
 const program = require('commander')
 const compile = require('./compile')
+const deploy = require('./deploy.command')
 
 program
   .command('compile <contract>')
@@ -13,6 +14,14 @@ program
     })
     
     console.log(`${contract} compiled`)
+  })
+
+program
+  .command('deploy <contract>')
+  .description('Deploy custom contract')
+  .action(async function (contract) {
+    await deploy(contract)
+    console.log(`${contract} deployed`)
   })
   
 program.parse(process.argv)
