@@ -9,7 +9,7 @@ program
   .action(async function (contract) {
     await compile({
       contract: contract,
-      source: `./src/${contract}.cpp`
+      source: `./src/seeds.${contract}.cpp`
     })
     
     console.log(`${contract} compiled`)
