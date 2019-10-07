@@ -4,15 +4,15 @@ const path = require('path')
 const { eos, encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
 
 const deploy = async (name) => {
-  try {
+  //try {
     const { code, abi } = await source(name)
 
     let account = accounts[name]
-    let accountName = account.name
+    let contractName = account.name
 
     await createAccount(account)
 
-    //console.log("acct ", JSON.stringify(account));
+    console.log("acct ", JSON.stringify(account));
 
     if (!code)
       throw new Error('code not found')
@@ -21,7 +21,7 @@ const deploy = async (name) => {
       throw new Error('abi not found')
 
     await eos.setcode({
-      account: accountName,
+      account: account.account,
       code,
       vmtype: 0,
       vmversion: 0
@@ -30,15 +30,15 @@ const deploy = async (name) => {
     })
 
     await eos.setabi({
-      account: accountName,
+      account: account.account,
       abi: JSON.parse(abi)
     }, {
       authorization: `${account.account}@owner`
     })
-    console.log(`${name} deployed to ${accountName}`)
-  } catch (err) {
-    console.error(`account ${name} already deployed`, err)
-  }
+    console.log(`Success: ${name} deployed to ${contractName}`)
+  //} catch (err) {
+  //  console.error(`account ${name} already deployed`, err)
+  //}
 }
 
 const source = async (name) => {
