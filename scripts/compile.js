@@ -14,6 +14,7 @@ const command = ({ contract, source, dir }) => {
 const compile = ({ contract, source }) => {
     return new Promise((resolve, reject) => {
 
+        // make sure source exists
         if (!fs.existsSync(source)) {
           throw new Error('Contract not found: '+contract+' No source file: '+source);
         }
