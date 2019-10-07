@@ -13,6 +13,11 @@ const command = ({ contract, source, dir }) => {
 
 const compile = ({ contract, source }) => {
     return new Promise((resolve, reject) => {
+
+        if (!fs.existsSync(source)) {
+          throw new Error('Contract not found: '+contract+' No source file: '+source);
+        }
+
         const dir = process.cwd() + "/"
         // check directory
         if (!dir.endsWith("seeds-contracts/")) {
