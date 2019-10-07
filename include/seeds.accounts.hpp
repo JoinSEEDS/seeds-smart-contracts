@@ -1,5 +1,5 @@
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
 #include <abieos_numeric.hpp>
 
 using namespace eosio;
