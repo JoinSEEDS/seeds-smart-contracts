@@ -8,14 +8,16 @@ const command = ({ contract, source }) => {
     return cmd
 }
 
-const compile = ({ contract, source }) => {
-    return new Promise((resolve, reject) => {
-        exec(command({ contract, source }), (error, stdout, stderr) => {
-          if (error) return reject(error)
+const compile = (contract) => {
+  const source = `./src/seeds.${contract}.cpp`
 
-          resolve()
-        })
-    })
+  return new Promise((resolve, reject) => {
+      exec(command({ contract, source }), (error, stdout, stderr) => {
+        if (error) return reject(error)
+
+        resolve()
+      })
+  })
 }
 
 module.exports = compile
