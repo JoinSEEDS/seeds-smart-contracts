@@ -31,8 +31,7 @@ const compile = ({ contract, source }) => {
         deleteIfExists(artifacts+"/"+contract+".wasm")
         deleteIfExists(artifacts+"/"+contract+".abi")
 
-        console.log("exec command...", contract, " source: ", source)
-        
+        // run compile        
         exec(command({ contract, source, dir }), (error, stdout, stderr) => {
           if (error) return reject(error)
 
@@ -45,6 +44,7 @@ const deleteIfExists = (file) => {
         if (fs.existsSync(file)){
           try {
             fs.unlinkSync(file)
+            console.log("deleted existing ", file)
           } catch(err) {
             console.error("delete file error: "+err)
           }
