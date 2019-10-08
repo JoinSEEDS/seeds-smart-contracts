@@ -1,56 +1,94 @@
 #!/usr/bin/env node
 
-
+const test = require('./test')
 const program = require('commander')
-
-const { eos, accounts, stakes } = require('./init')
-const create = require('./create')(eos)
-const test = require('./test')(eos)
-const deploy = require('./deploy')({ eos, accounts })
 const compile = require('./compile')
+const deploy = require('./deploy.command')
+const initContracts = require('./deploy')
+
+const compileAction = async (contract) => {
+    try {
+      await compile({
+        contract: contract,
+        source: `./src/seeds.${contract}.cpp`
+      })
+      console.log(`${contract} compiled`)
+    } catch (err) {
+        console.log("compile failed for " + contract + " error: " + err)
+    }
+}
+
+const deployAction = async (contract) => {
+    try {
+      await deploy(contract)
+      console.log(`${contract} deployed`)
+    } catch(err) {
+      console.log("error deploying ", contract)
+      console.log(err)
+    }
+}
+
+const runAction = async (contract) => {
+  await compileAction(contract)
+  await deployAction(contract)
+  await test(contract)
+}
+
+const initAction = async () => {
+
+  const arr = [
+    "accounts", 
+    "policy", 
+    "settings", 
+    "token", 
+    "harvest", 
+    "proposals", 
+    "subscription"
+  ]
+  for (i=0; i<arr.length; i++) {
+    let item = arr[i];
+    console.log("compile ... " + item);
+    await compileAction(item);
+  }
+
+  await initContracts()
+
+}
 
 program
   .command('compile <contract>')
   .description('Compile custom contract')
   .action(async function (contract) {
-    try {
-      await compile(contract)
-      console.log(`${contract} compiled`)
-    } catch (err) {
-      console.error(err)
-    }
+    await compileAction(contract)
   })
 
 program
   .command('deploy <contract>')
-  .description('Create account & deploy contract')
+  .description('Deploy custom contract')
   .action(async function (contract) {
-    try {
-      await create(accounts[contract])
-    } catch (err) {
-      console.error(err)
-    }
+    await deployAction(contract)
   })
-  
+
+program
+  .command('run <contract>')
+  .description('compile and deploy custom contract')
+  .action(async function (contract) {
+    await runAction(contract)
+  })
+
 program
   .command('test <contract>')
   .description('Run unit tests for deployed contract')
   .action(async function(contract) {
     await test(contract)
   })
-  
+
 program
-  .command('run <contract>')
-  .description('Compile & Deploy & Test contract')
+  .command('init')
+  .description('Initial creation of all accounts and contracts contract')
   .action(async function(contract) {
-    try {
-      await compile(contract)
-      await create(accounts[contract])
-      await deploy(contract)
-      await test(contract)
-    } catch (err) {
-      console.error(err)
-    }
+    await initAction()
   })
+
   
 program.parse(process.argv)

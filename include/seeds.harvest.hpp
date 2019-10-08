@@ -1,8 +1,8 @@
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/print.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/transaction.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/print.hpp>
+#include <eosio/time.hpp>
+#include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 
 using namespace eosio;

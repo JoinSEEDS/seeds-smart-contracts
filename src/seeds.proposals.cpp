@@ -1,4 +1,5 @@
 #include <seeds.proposals.hpp>
+#include <eosio/system.hpp>
 
 void proposals::reset() {
   require_auth(_self);
@@ -59,7 +60,7 @@ void proposals::onperiod() {
       std::make_tuple()
     );
     trx.delay_sec = 2548800;
-    trx.send(now(), _self);
+    trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url) {
@@ -90,7 +91,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.description = description;
       proposal.image = image;
       proposal.url = url;
-      proposal.creation_date = now();
+      proposal.creation_date = eosio::current_time_point().sec_since_epoch();
       proposal.status = name("open");
   });
   

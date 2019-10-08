@@ -2,11 +2,34 @@ const { describe } = require('riteway')
 const { eos, names } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const publicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
 const { accounts, harvest, token, application, firstuser, seconduser } = names
 
-describe('accounts', async assert => {
+describe('account creation', async assert => {
+  const contract = await eos.contract(accounts)
+
+  const newuser = 'newusername'
+
+  await contract.addrequest(application, newuser, publicKey, publicKey, { authorization: `${application}@active` })
+  await contract.fulfill(application, newuser, { authorization: `${accounts}@owner` })
+
+  const { required_auth: { keys } } =
+    (await eos.getAccount(newuser))
+      .permissions.find(p => p.perm_name == 'active')
+
+  assert({
+    given: 'created user',
+    should: 'have correct public key',
+    actual: keys,
+    expected: [{
+      key: publicKey,
+      weight: 1
+    }]
+  })
+})
+
+describe.only('accounts', async assert => {
   const contract = await eos.contract(accounts)
   const thetoken = await eos.contract(token)
 
@@ -45,7 +68,7 @@ describe('accounts', async assert => {
     table: 'users',
     json: true,
   })
-  
+
   const refs = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -63,7 +86,7 @@ describe('accounts', async assert => {
     actual: Math.abs(firstTimestamp - now) < 5,
     expected: true
   })
-  
+
   assert({
     given: 'invited user',
     should: 'have row in table',
