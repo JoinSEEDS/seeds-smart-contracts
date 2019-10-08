@@ -137,7 +137,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(onperiod)(unplant)(claimreward)(sow)(upbyplanted))
+          EOSIO_DISPATCH_HELPER(harvest, (reset)(onperiod)(unplant)(claimreward)(cancelrefund)(sow)(upbyplanted))
       }
   }
 }
