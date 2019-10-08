@@ -2,11 +2,6 @@
 
 const test = require('./test')
 const program = require('commander')
-
-const { eos, accounts, stakes } = require('./init')
-const create = require('./create')(eos)
-const test = require('./test')(eos)
-const deploy = require('./deploy')({ eos, accounts })
 const compile = require('./compile')
 const deploy = require('./deploy.command')
 const initContracts = require('./deploy')
@@ -68,7 +63,7 @@ program
 
 program
   .command('deploy <contract>')
-  .description('Create account & deploy contract')
+  .description('Deploy custom contract')
   .action(async function (contract) {
     await deployAction(contract)
   })
