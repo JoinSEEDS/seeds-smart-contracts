@@ -50,7 +50,7 @@ const initAction = async () => {
     await compileAction(item);
   }
 
-  //await initContracts()
+  await initContracts()
 
 }
 
