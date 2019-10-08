@@ -93,7 +93,7 @@ public_key string_to_public_key(std::string_view s)
 
 struct key_weight
 {
-   eosio::public_key key;
+   public_key key;
    uint16_t weight;
 };
 
@@ -123,12 +123,8 @@ authority keystring_authority(std::string key_str)
 
    authority ret_authority;
 
-   std::array<char, 33> key_char;
-
-   std::copy(key.data.begin(), key.data.end(), key_char.begin());
-
    key_weight kweight{
-      .key = {(uint8_t)key_type::k1, key_char},
+      .key = key,
       .weight = (uint16_t)1};
 
    ret_authority.threshold = 1;

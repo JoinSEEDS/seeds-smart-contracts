@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
+const { encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -187,6 +187,7 @@ const configure = ({ account }) => (params) =>
         .map(param =>
           contract.configure(param, params[param], { authorization: `${account}@active` })
             .then(() => console.log(`configure ${param} equal to ${params[param]}`))
+            .catch(err => console.error(`cannot configure ${param}`, err))
         )
     ))
 
@@ -254,7 +255,7 @@ const updatePrivateKeys = async () => {
   }
 }
 
-const initContracts = async () => {
+const init = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
     token, harvest, subscription, settings, proposals, policy,
@@ -307,4 +308,4 @@ const initContracts = async () => {
   })
 }
 
-module.exports = initContracts
+init()

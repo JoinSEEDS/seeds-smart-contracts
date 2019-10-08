@@ -18,6 +18,8 @@
   "dependencies": {
     "bignumber.js": "^8.1.1",
     "chai": "^4.2.0",
+    "commander": "^3.0.2",
+    "dotenv": "^8.1.0",
     "eosjs": "^16.0.9",
     "json": "^9.0.6",
     "mocha": "^6.1.4",

@@ -1,75 +1,63 @@
 const { exec } = require('child_process')
+const { promisify } = require('util')
+var fs = require('fs');
+var dir = './tmp';
 
-const command = ({ contract, source }) => {
-    const volume = '/home/sevenflash/apps/seeds-contracts'
+const existsAsync = promisify(fs.exists)
+const mkdirAsync = promisify(fs.mkdir)
+const unlinkAsync = promisify(fs.unlink)
+const execAsync = promisify(exec)
 
-    return `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
+const command = ({ contract, source, dir }) => {
+    const volume = dir
+    const cmd = `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
+    //const cmd = "eosio-cpp -abigen -I ./include -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
+    console.log("command: " + cmd);
+
+    return cmd
 }
 
-const compile = (contract) => {
-    return new Promise((resolve, reject) => {
-        exec(command(contract), (error, stdout, stderr) => {
-          if (error) return reject(error)
+const compile = async ({ contract, source }) => {
+  // make sure source exists
 
-          resolve()
-        })
-    })
+  const contractFound = await existsAsync(source)
+  if (!contractFound) {
+    throw new Error('Contract not found: '+contract+' No source file: '+source);
+  }
+
+  const dir = process.cwd() + "/"
+  // check directory
+  if (!dir.endsWith("seeds-contracts/")) {
+    throw new Error("You have to run from seeds-contracts directory")
+  }
+  const artifacts = dir + "artifacts"
+
+  // make sure artifacts exists
+  const artifactsFound = await existsAsync(artifacts)
+  if (!artifactsFound){
+    console.log("creating artifacts directory...")
+    await mkdirAsync(artifacts)
+  }
+
+  // clean build folder
+  await deleteIfExists(artifacts+"/"+contract+".wasm")
+  await deleteIfExists(artifacts+"/"+contract+".abi")
+
+  // run compile
+  const execCommand = command({ contract, source, dir })
+  await execAsync(execCommand)
 }
 
-const main = async () => {
-await compile({
-    contract: 'seeds.token',
-    source: './src/seeds.token.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
-
-await compile({
-    contract: 'harvest',
-    source: './src/seeds.harvest.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
-
-await compile({
-    contract: 'accounts',
-    source: './src/seeds.accounts.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
-
-await compile({
-    contract: 'proposals',
-    source: './src/seeds.proposals.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
-
-await compile({
-    contract: 'settings',
-    source: './src/seeds.settings.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
-
-await compile({
-    contract: 'subscription',
-    source: './src/seeds.subscription.cpp'
-}).then(result => {
-    console.log({ result })
-}).catch(err => {
-    console.error({ err })
-})
+const deleteIfExists = async (file) => {
+  const fileExists = await existsAsync(file)
+  if (fileExists) {
+    try {
+      await unlinkAsync(file)
+      console.log("deleted existing ", file)
+    } catch(err) {
+      console.error("delete file error: "+err)
+    }
+  }
 }
 
-main()
+module.exports = compile

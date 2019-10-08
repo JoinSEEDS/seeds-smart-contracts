@@ -1,11 +1,27 @@
 #include <seeds.accounts.hpp>
+#include <eosio/system.hpp>
 
 void accounts::reset() {
   require_auth(_self);
 
+  auto aitr = apps.begin();
+  while (aitr != apps.end()) {
+    aitr = apps.erase(aitr);
+  }
+
   auto uitr = users.begin();
   while (uitr != users.end()) {
     uitr = users.erase(uitr);
+  }
+
+  auto ritr = requests.begin();
+  while (ritr != requests.end()) {
+    ritr = requests.erase(ritr);
+  }
+  
+  auto refitr = refs.begin();
+  while (refitr != refs.end()) {
+    refitr = refs.erase(refitr);
   }
 }
 
@@ -19,7 +35,7 @@ void accounts::migrate(name account,
         string skills,
         string interests,
         uint64_t reputation
-) 
+)
 {
     require_auth(_self);
 
@@ -34,7 +50,7 @@ void accounts::migrate(name account,
     user.skills = skills;
     user.interests = interests;
     user.reputation = reputation;
-    user.timestamp = now();
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
@@ -50,7 +66,7 @@ void accounts::joinuser(name account)
     user.status = name("visitor");
     user.reputation = 0;
     user.type = name("individual");
-    user.timestamp = now();
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
@@ -69,7 +85,7 @@ void accounts::adduser(name account, string nickname)
       user.reputation = 0;
       user.type = name("individual");
       user.nickname = nickname;
-      user.timestamp = now();
+      user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
@@ -81,6 +97,18 @@ void accounts::addapp(name account)
   apps.emplace(_self, [&](auto& app) {
     app.account = account;
   });
+}
+
+void accounts::addref(name referrer, name invited)
+{
+    require_auth(_self);
+    check(is_account(referrer), "wrong referral");
+    check(is_account(invited), "wrong invited");
+
+    refs.emplace(_self, [&](auto& ref) {
+      ref.referrer = referrer;
+      ref.invited = invited;
+    });
 }
 
 void accounts::addrequest(name app, name user, string owner_key, string active_key)
@@ -148,8 +176,18 @@ void accounts::makeresident(name user)
     transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
+    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+/*
+    while (ritr != invited_users.end() && ritr->referrer == user) {
+      invited_users_number++;
+      ritr++;
+    }
+*/
+
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
+    check(invited_users_number >= 1, "user has less than required referrals");
+    check(uitr->reputation >= 100, "user has less than required reputation");
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("resident");
@@ -167,8 +205,12 @@ void accounts::makecitizen(name user)
     transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
+    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+
     check(bitr->planted.amount >= 100, "user has less than required seeds planted");
     check(titr->transactions_number >= 2, "user has less than required transactions number");
+    check(invited_users_number >= 3, "user has less than required referrals");
+    check(uitr->reputation >= 100, "user has less than required reputation");
 
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("citizen");
