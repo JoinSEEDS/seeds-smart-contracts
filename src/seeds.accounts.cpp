@@ -1,4 +1,5 @@
 #include <seeds.accounts.hpp>
+#include <eosio/system.hpp>
 
 void accounts::reset() {
   require_auth(_self);
@@ -49,7 +50,7 @@ void accounts::migrate(name account,
     user.skills = skills;
     user.interests = interests;
     user.reputation = reputation;
-    user.timestamp = now();
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
@@ -65,7 +66,7 @@ void accounts::joinuser(name account)
     user.status = name("visitor");
     user.reputation = 0;
     user.type = name("individual");
-    user.timestamp = now();
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
@@ -84,7 +85,7 @@ void accounts::adduser(name account, string nickname)
       user.reputation = 0;
       user.type = name("individual");
       user.nickname = nickname;
-      user.timestamp = now();
+      user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 

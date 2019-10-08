@@ -6,7 +6,7 @@ const command = ({ contract, source, dir }) => {
     const volume = dir
     //const cmd = `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
     const cmd = "eosio-cpp -abigen -I ./include -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
-    console.log("command: ", cmd);
+    console.log("command: " + cmd);
     
     return cmd
 }

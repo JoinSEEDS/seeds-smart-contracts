@@ -254,7 +254,7 @@ const updatePrivateKeys = async () => {
   }
 }
 
-const main = async () => {
+const initContracts = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
     token, harvest, subscription, settings, proposals, policy,
@@ -307,4 +307,4 @@ const main = async () => {
   })
 }
 
-main()
+module.exports = initContracts
