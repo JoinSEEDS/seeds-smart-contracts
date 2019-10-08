@@ -31,6 +31,7 @@ const deployAction = async (contract) => {
 const runAction = async (contract) => {
   await compileAction(contract)
   await deployAction(contract)
+  await test(contract)
 }
 
 const initAction = async () => {
