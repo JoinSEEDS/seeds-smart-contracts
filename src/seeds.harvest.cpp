@@ -15,6 +15,14 @@ void harvest::reset() {
     hitr = harveststat.erase(hitr);
   }
 
+  name user = name("seedsuser555");
+  refund_tables refunds(get_self(), user.value);
+
+  auto ritr = refunds.begin();
+  while (ritr != refunds.end()) {
+    ritr = refunds.erase(ritr);
+  }
+
   init_balance(_self);
 }
 
@@ -63,19 +71,22 @@ void harvest::claimrefund(name from, uint64_t request_id) {
   refund_tables refunds(get_self(), from.value);
 
   auto ritr = refunds.begin();
+  check(ritr != refunds.end(), "No refund found");
+
+  asset total = asset(0, seeds_symbol);
+  name beneficiary = ritr->account;
 
   while (ritr != refunds.end()) {
     if (request_id == ritr->request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
-
       if (refund_time < eosio::current_time_point().sec_since_epoch()) {
-        refunds.erase(ritr);
-        withdraw(ritr->account, ritr->amount);
+        total += ritr->amount;
+        ritr = refunds.erase(ritr);
       }
     }
-
-    ritr++;
   }
+
+  withdraw(beneficiary, total);
 }
 
 void harvest::cancelrefund(name from, uint64_t request_id) {
@@ -90,8 +101,6 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
       if (refund_time > eosio::current_time_point().sec_since_epoch()) {
-        refunds.erase(ritr);
-
         auto bitr = balances.find(from.value);
         balances.modify(bitr, _self, [&](auto& user) {
           user.planted += ritr->amount;
@@ -101,10 +110,10 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
         balances.modify(titr, _self, [&](auto& total) {
           total.planted += ritr->amount;
         });
+
+        ritr = refunds.erase(ritr);
       }
     }
-
-    ritr++;
   }
 }
 
@@ -122,13 +131,13 @@ void harvest::unplant(name from, asset quantity) {
     lastRequestId = ritr->request_id;
     lastRefundId = ritr->refund_id;
   }
-
+  asset fraction = asset( quantity.amount / 12, quantity.symbol );
   for (uint64_t week = 1; week <= 12; week++) {
     refunds.emplace(_self, [&](auto& refund) {
       refund.request_id = lastRequestId + 1;
       refund.refund_id = lastRefundId + week;
       refund.account = from;
-      refund.amount = quantity;
+      refund.amount = fraction;
       refund.weeks_delay = week;
       refund.request_time = eosio::current_time_point().sec_since_epoch();
     });
@@ -204,7 +213,7 @@ void harvest::onperiod() {
     pitr++;
   }
   np--;
-  
+
   uint64_t planted_total_reward = config.find(name("hrvstreward").value)->value;
   uint64_t base_planted_reward = (2 * planted_total_reward) / (np * np + np);
   uint64_t total_planted_reward = 0;
@@ -219,14 +228,14 @@ void harvest::onperiod() {
       uint64_t user_transactions_score = user_planted_score;
       uint64_t user_reputation_score = user_planted_score;
       uint64_t user_contribution_score = user_planted_score;
-    
+
       init_balance(pitr->account);
 
       auto bitr = balances.find(pitr->account.value);
       balances.modify(bitr, _self, [&](auto& user) {
           user.reward += asset(user_planted_reward, seeds_symbol);
       });
-      
+
       auto hitr = harveststat.find(pitr->account.value);
       if (hitr == harveststat.end()) {
         harveststat.emplace(_self, [&](auto& user) {
@@ -247,11 +256,11 @@ void harvest::onperiod() {
 
       total_planted_reward += user_planted_reward;
     }
-   
+
     pitr++;
     current_user_number++;
   }
-  
+
   transaction trx{};
   trx.actions.emplace_back(
     permission_level(_self, "active"_n),
@@ -260,7 +269,7 @@ void harvest::onperiod() {
     std::make_tuple()
   );
   trx.delay_sec = 10;
-  trx.send(eosio::current_time_point().sec_since_epoch(), _self);  
+  trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
 void harvest::init_balance(name account)
