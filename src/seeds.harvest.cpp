@@ -1,3 +1,5 @@
+#include <eosio/eosio.hpp>
+#include <eosio/system.hpp>
 #include <seeds.harvest.hpp>
 
 void harvest::reset() {
@@ -56,6 +58,7 @@ void harvest::sow(name from, name to, asset quantity) {
     });
 }
 
+
 void harvest::claimrefund(name from, uint64_t request_id) {
   refund_tables refunds(get_self(), from.value);
 
@@ -65,7 +68,7 @@ void harvest::claimrefund(name from, uint64_t request_id) {
     if (request_id == ritr->request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
-      if (refund_time < current_time()) {
+      if (refund_time < eosio::current_time_point().sec_since_epoch()) {
         refunds.erase(ritr);
         withdraw(ritr->account, ritr->amount);
       }
@@ -86,7 +89,7 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
     if (request_id == ritr->request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
-      if (refund_time > current_time()) {
+      if (refund_time > eosio::current_time_point().sec_since_epoch()) {
         refunds.erase(ritr);
 
         auto bitr = balances.find(from.value);
@@ -127,7 +130,7 @@ void harvest::unplant(name from, asset quantity) {
       refund.account = from;
       refund.amount = quantity;
       refund.weeks_delay = week;
-      refund.request_time = current_time();
+      refund.request_time = eosio::current_time_point().sec_since_epoch();
     });
   }
 
@@ -257,7 +260,7 @@ void harvest::onperiod() {
     std::make_tuple()
   );
   trx.delay_sec = 10;
-  trx.send(now(), _self);  
+  trx.send(eosio::current_time_point().sec_since_epoch(), _self);  
 }
 
 void harvest::init_balance(name account)
