@@ -41,9 +41,13 @@ const compile = ({ contract, source }) => {
         exec(command({ contract, source, dir }), (error, stdout, stderr) => {
           if (error) return reject(error)
 
-          resolve()
-        })
-    })
+  return new Promise((resolve, reject) => {
+      exec(command({ contract, source }), (error, stdout, stderr) => {
+        if (error) return reject(error)
+
+        resolve()
+      })
+  })
 }
 
 const deleteIfExists = (file) => {
