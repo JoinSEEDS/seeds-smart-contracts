@@ -28,8 +28,8 @@ describe("harvest", async assert => {
   await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
-  await contracts.token.transfer(firstuser, harvest, '140.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(seconduser, harvest, '210.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   console.log('unplant seeds')
   await contracts.harvest.unplant(seconduser, '100.0000 SEEDS', { authorization: `${seconduser}@active` })
@@ -69,8 +69,21 @@ describe("harvest", async assert => {
   console.log('sow seeds')
   await contracts.harvest.sow(seconduser, firstuser, '10.0000 SEEDS', { authorization: `${seconduser}@active` })
 
-  console.log('distribute seeds')
-  contracts.harvest.onperiod({ authorization: `${harvest}@active` })
+  console.log('calculate planted score')
+  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+
+  console.log('calculate transactions score')
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+
+  console.log('calculate reputation multiplier')
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+
+  const rewards = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true
+  })
 
   assert({
     given: 'unplant called',
@@ -98,5 +111,40 @@ describe("harvest", async assert => {
     should: 'not change user balance before timeout',
     actual: balanceAfterUnplanted,
     expected: balanceAfterClaimed
+  })
+
+  assert({
+    given: 'planted calculation',
+    should: 'assign planted score to each user',
+    actual: rewards.rows.map(row => ({
+      account: row.account,
+      score: row.planted_score
+    })),
+    expected: [{
+      account: firstuser,
+      score: 100
+    }, {
+      account: seconduser,
+      score: 50
+    }]
+  })
+
+  assert({
+    given: 'transactions calculation',
+    should: 'assign transactions score to each user',
+    actual: rewards.rows.map(({ transactions_score }) => transactions_score),
+    expected: [100, 50]
+  })
+
+  assert({
+    given: 'reputation calculation',
+    should: 'assign reputation multiplier to each user',
+    actual: rewards.rows.map(({ reputation_score }) => reputation_score),
+    expected: [50, 100]
+  })
+
+  assert({
+    given: 'harvest process',
+    should: 'distribute rewards based on contribution scores'
   })
 })

@@ -155,6 +155,143 @@ void harvest::unplant(name from, asset quantity) {
 
 }
 
+void harvest::runharvest() {}
+
+void harvest::calcrep() {
+  require_auth(_self);
+
+  auto usersrep = users.get_index<"byreputation"_n>();
+
+  auto users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+
+  auto uitr = usersrep.begin();
+
+  while (uitr != usersrep.end()) {
+    uint64_t score = (current_user * 100) / users_number;
+
+    auto hitr = harveststat.find(uitr->account.value);
+    if (hitr == harveststat.end()) {
+      harveststat.emplace(_self, [&](auto& user) {
+        user.account = uitr->account;
+        user.reputation_score = score;
+      });
+    } else {
+      harveststat.modify(hitr, _self, [&](auto& user) {
+        user.reputation_score = score;
+      });
+    }
+
+    current_user++;
+    uitr++;
+  }
+
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "calcrep"_n,
+    std::make_tuple()
+  );
+  trx.delay_sec = 10;
+  trx.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
+}
+
+void harvest::calctrx() {
+  require_auth(_self);
+
+  transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
+
+  auto userstrx = transactions.get_index<"bytrxvolume"_n>();
+
+  auto users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+
+  auto uitr = userstrx.begin();
+
+  while (uitr != userstrx.end()) {
+    auto aitr = users.find(uitr->account.value);
+    if (aitr != users.end()) {
+      uint64_t score = (current_user * 100) / users_number;
+
+      auto hitr = harveststat.find(uitr->account.value);
+      if (hitr == harveststat.end()) {
+        harveststat.emplace(_self, [&](auto& user) {
+          user.account = uitr->account;
+          user.transactions_score = score;
+        });
+      } else {
+        harveststat.modify(hitr, _self, [&](auto& user) {
+          user.transactions_score = score;
+        });
+      }
+
+      current_user++;
+    }
+
+    uitr++;
+  }
+
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "calctrx"_n,
+    std::make_tuple()
+  );
+  trx.delay_sec = 10;
+  trx.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+}
+
+void harvest::calcplanted() {
+  require_auth(_self);
+
+  auto users = balances.get_index<"byplanted"_n>();
+
+  uint64_t users_number = std::distance(users.begin(), users.end()) - 1;
+
+  uint64_t current_user = 1;
+
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    if (uitr->account != get_self()) {
+      uint64_t score = (current_user * 100) / users_number;
+
+      auto hitr = harveststat.find(uitr->account.value);
+      if (hitr == harveststat.end()) {
+        harveststat.emplace(_self, [&](auto& user) {
+          user.account = uitr->account;
+          user.planted_score = score;
+          user.transactions_score = 0;
+          user.reputation_score = 0;
+          user.contribution_score = 0;
+        });
+      } else {
+        harveststat.modify(hitr, _self, [&](auto& user) {
+          user.planted_score = score;
+        });
+      }
+
+      current_user++;
+    }
+
+    uitr++;
+  }
+
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "calcplanted"_n,
+    std::make_tuple()
+  );
+  trx.delay_sec = 10;
+  trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
+}
+
 void harvest::claimreward(name from, asset reward) {
   require_auth(from);
   check_user(from);
@@ -174,102 +311,6 @@ void harvest::claimreward(name from, asset reward) {
   });
 
   withdraw(from, reward);
-}
-
-void harvest::upbyplanted() {
-  require_auth(_self);
-
-  auto users = balances.get_index<"byplanted"_n>();
-
-  uint64_t total_participants = std::distance(users.begin(), users.end());
-
-  uint64_t current_participant = 1;
-
-  auto uitr = users.begin();
-
-  while (uitr != users.end()) {
-    if (uitr->account != get_self()) {
-      uint64_t user_score = current_participant * 100 / total_participants;
-
-      auto hsitr = harveststat.find(uitr->account.value);
-      harveststat.modify(hsitr, _self, [&](auto& stat) {
-        stat.planted_score = current_participant;
-      });
-
-      current_participant++;
-    }
-  }
-}
-
-void harvest::onperiod() {
-  require_auth(_self);
-
-  auto users_by_planted = balances.get_index<"byplanted"_n>();
-
-  uint64_t np = 0;
-  auto pitr = users_by_planted.begin();
-  while (pitr != users_by_planted.end()) {
-    np++;
-    pitr++;
-  }
-  np--;
-
-  uint64_t planted_total_reward = config.find(name("hrvstreward").value)->value;
-  uint64_t base_planted_reward = (2 * planted_total_reward) / (np * np + np);
-  uint64_t total_planted_reward = 0;
-
-  pitr = users_by_planted.begin();
-  uint64_t current_user_number = 1;
-
-  while (pitr != users_by_planted.end()) {
-    if (pitr->account != get_self()) {
-      uint64_t user_planted_reward = base_planted_reward * current_user_number;
-      uint64_t user_planted_score = current_user_number * 100 / np;
-      uint64_t user_transactions_score = user_planted_score;
-      uint64_t user_reputation_score = user_planted_score;
-      uint64_t user_contribution_score = user_planted_score;
-
-      init_balance(pitr->account);
-
-      auto bitr = balances.find(pitr->account.value);
-      balances.modify(bitr, _self, [&](auto& user) {
-          user.reward += asset(user_planted_reward, seeds_symbol);
-      });
-
-      auto hitr = harveststat.find(pitr->account.value);
-      if (hitr == harveststat.end()) {
-        harveststat.emplace(_self, [&](auto& user) {
-            user.account = pitr->account;
-            user.reputation_score = user_reputation_score;
-            user.planted_score = user_planted_score;
-            user.transactions_score = user_transactions_score;
-            user.contribution_score = user_contribution_score;
-        });
-      } else {
-        harveststat.modify(hitr, _self, [&](auto& user) {
-            user.reputation_score = user_reputation_score;
-            user.planted_score = user_planted_score;
-            user.transactions_score = user_transactions_score;
-            user.contribution_score = user_contribution_score;
-        });
-      }
-
-      total_planted_reward += user_planted_reward;
-    }
-
-    pitr++;
-    current_user_number++;
-  }
-
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "onperiod"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 10;
-  trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
 void harvest::init_balance(name account)
