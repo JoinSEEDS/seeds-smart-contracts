@@ -160,9 +160,9 @@ void harvest::runharvest() {}
 void harvest::calcrep() {
   require_auth(_self);
 
-  auto usersrep = users.get_index<"byreputation"_n>();
+  auto usersrep = reps.get_index<"byreputation"_n>();
 
-  auto users_number = std::distance(users.begin(), users.end());
+  auto users_number = std::distance(usersrep.begin(), usersrep.end());
 
   uint64_t current_user = 1;
 

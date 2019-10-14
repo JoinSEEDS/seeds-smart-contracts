@@ -16,7 +16,8 @@ CONTRACT harvest : public contract {
         balances(receiver, receiver.value),
         harveststat(receiver, receiver.value),
         config(name("seedsettings"), name("seedsettings").value),
-        users(name("seedsaccnts3"), name("seedsaccnts3").value)
+        users(name("seedsaccnts3"), name("seedsaccnts3").value),
+        reps(name("seedsaccnts3"), name("seedsaccnts3").value)
         {}
 
     ACTION reset();
@@ -80,13 +81,29 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return refund_id; }
     };
 
-    TABLE user_table {
-        name account;
-        name status;
-        uint64_t reputation;
+    TABLE rep_table {
+      name account;
+      uint64_t reputation;
 
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
+      uint64_t primary_key() const { return account.value; }
+      uint64_t by_reputation()const { return reputation; }
+    };
+
+    TABLE user_table {
+      name account;
+      name status;
+      name type;
+      string nickname;
+      string image;
+      string story;
+      string roles;
+      string skills;
+      string interests;
+      uint64_t reputation;
+      uint64_t timestamp;
+
+      uint64_t primary_key()const { return account.value; }
+      uint64_t by_reputation()const { return reputation; }
     };
 
     TABLE transaction_table {
@@ -107,6 +124,11 @@ CONTRACT harvest : public contract {
 
       uint64_t primary_key()const { return account.value; }
     };
+
+    typedef eosio::multi_index<"reputation"_n, rep_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
+    > rep_tables;
 
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
@@ -133,6 +155,7 @@ CONTRACT harvest : public contract {
     balance_tables balances;
     user_tables users;
     harvest_tables harveststat;
+    rep_tables reps;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

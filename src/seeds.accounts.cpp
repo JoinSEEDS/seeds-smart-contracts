@@ -18,7 +18,7 @@ void accounts::reset() {
   while (ritr != requests.end()) {
     ritr = requests.erase(ritr);
   }
-  
+
   auto refitr = refs.begin();
   while (refitr != refs.end()) {
     refitr = refs.erase(refitr);
@@ -150,11 +150,23 @@ void accounts::fulfill(name app, name user)
 void accounts::addrep(name user, uint64_t amount)
 {
   check(is_account(user), "non existing user");
-  
+
   auto uitr = users.find(user.value);
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
+
+  auto ritr = reps.find(user.value);
+  if (ritr == reps.end()) {
+    reps.emplace(_self, [&](auto& rep) {
+      rep.account = user;
+      rep.reputation = amount;
+    });
+  } else {
+    reps.modify(ritr, _self, [&](auto& rep) {
+      rep.reputation += amount;
+    });
+  }
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)

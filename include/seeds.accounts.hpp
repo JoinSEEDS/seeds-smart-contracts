@@ -17,6 +17,7 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           requests(receiver, receiver.value),
           refs(receiver, receiver.value),
+          reps(receiver, receiver.value),
           balances(name("seedshrvst11"), name("seedshrvst11").value)
           {}
 
@@ -73,6 +74,14 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return referrer.value; }
       };
 
+      TABLE rep_table {
+        name account;
+        uint64_t reputation;
+
+        uint64_t primary_key() const { return account.value; }
+        uint64_t by_reputation()const { return reputation; }
+      };
+
       TABLE user_table {
         name account;
         name status;
@@ -108,6 +117,10 @@ CONTRACT accounts : public contract {
       uint64_t by_planted()const { return planted.amount; }
     };
 
+    typedef eosio::multi_index<"reputation"_n, rep_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
+    > rep_tables;
     typedef eosio::multi_index<"users"_n, user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
@@ -121,6 +134,7 @@ CONTRACT accounts : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
+    rep_tables reps;
     ref_tables refs;
 
     balance_tables balances;
