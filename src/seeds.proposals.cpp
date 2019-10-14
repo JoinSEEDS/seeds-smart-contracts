@@ -114,7 +114,7 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
-  check(pitr->favour == 0, "Cannot alter proposal once voting has started")
+  check(pitr->favour == 0, "Cannot alter proposal once voting has started");
 
   props.modify(pitr, _self, [&](auto& proposal) {
     proposal.title = title;
