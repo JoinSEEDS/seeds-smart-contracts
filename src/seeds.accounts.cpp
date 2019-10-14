@@ -149,6 +149,8 @@ void accounts::fulfill(name app, name user)
 
 void accounts::addrep(name user, uint64_t amount)
 {
+  require_auth(_self);
+
   check(is_account(user), "non existing user");
 
   auto uitr = users.find(user.value);
