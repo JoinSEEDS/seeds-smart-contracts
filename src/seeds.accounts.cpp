@@ -177,6 +177,12 @@ void accounts::makeresident(name user)
     auto titr = transactions.find(user.value);
 
     uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+
+    //give bonus to organization to user
+    auto ritr = refs.find(user.value);
+    if(ritr != refs.end && ritr->resident_bonus == false){
+      // give bonuse
+    }
 /*
     while (ritr != invited_users.end() && ritr->referrer == user) {
       invited_users_number++;
@@ -192,6 +198,18 @@ void accounts::makeresident(name user)
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("resident");
     });
+
+    auto ritr = refs.find(user.value);
+    if(ritr != refs.end && ritr->resident_bonus == false){
+      if( ritr->is_organization == true){
+        // read from organization the bonus amount and transfer
+      }else {
+        // add referral bonus for users in the settings table
+      }
+      refs.modify(ritr,_self,[&](auto& ref){
+        ritr->resident_bonus == true;
+      });
+    }
 }
 
 void accounts::makecitizen(name user)
@@ -215,6 +233,19 @@ void accounts::makecitizen(name user)
     users.modify(uitr, _self, [&](auto& user) {
         user.status = name("citizen");
     });
+
+    auto ritr = refs.find(user.value);
+    if(ritr != refs.end && ritr->citizen_bonus == false){
+      if( ritr->is_organization == true){
+        // read from organization the bonus amount and transfer
+      }else {
+        // add referral bonus for users in the settings table
+      }
+      // set citizen bonus to true
+      refs.modify(ritr,_self,[&](auto& ref){
+        ritr->citizen_bonus == true;
+      });
+    }
 }
 
 void accounts::buyaccount(name account, string owner_key, string active_key)

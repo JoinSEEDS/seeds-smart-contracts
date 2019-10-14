@@ -40,6 +40,10 @@ CONTRACT accounts : public contract {
 
       ACTION addref(name referrer, name invited);
 
+      ACTION markcitizen(name account);
+      
+      ACTION markresident(name account);
+
       ACTION migrate(name account,
         name status,
         name type,
@@ -67,7 +71,9 @@ CONTRACT accounts : public contract {
       TABLE ref_table {
         name referrer;
         name invited;
-
+        bool citizen_bonus = false;
+        bool resident_bonus = false;
+        bool is_organization = false;
         uint64_t primary_key() const { return referrer.value; }
       };
 
