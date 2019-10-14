@@ -112,8 +112,9 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
   auto pitr = props.find(id);
 
-  check(pitr != props.end(), "no proposal");
+  check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
+  check(pitr->favour == 0, "Cannot alter proposal once voting has started")
 
   props.modify(pitr, _self, [&](auto& proposal) {
     proposal.title = title;
@@ -188,14 +189,14 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     check_user(voter);
 
     auto pitr = props.find(id);
-    check(pitr != props.end(), "no proposal");
-    check(pitr->executed == false, "already executed");
+    check(pitr != props.end(), "Proposal not found");
+    check(pitr->executed == false, "Proposal was already executed");
 
     uint64_t min_stake = config.find(name("propminstake").value)->value;
-    check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
+    check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
 
     auto vitr = voice.find(voter.value);
-    check(vitr != voice.end(), "no user voice");
+    check(vitr != voice.end(), "User does not have voice");
 
     props.modify(pitr, voter, [&](auto& proposal) {
         proposal.total += amount;
