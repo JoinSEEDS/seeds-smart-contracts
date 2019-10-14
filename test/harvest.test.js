@@ -76,6 +76,8 @@ describe("harvest", async assert => {
   await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
 
   console.log('calculate reputation multiplier')
+  await contracts.accounts.addrep(firstuser, 1, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
 
   const rewards = await getTableRows({

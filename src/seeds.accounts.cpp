@@ -147,6 +147,16 @@ void accounts::fulfill(name app, name user)
   });
 }
 
+void accounts::addrep(name user, uint64_t amount)
+{
+  check(is_account(user), "non existing user");
+  
+  auto uitr = users.find(user.value);
+  users.modify(uitr, _self, [&](auto& user) {
+    user.reputation += amount;
+  });
+}
+
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
 {
     require_auth(user);
