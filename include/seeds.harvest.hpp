@@ -50,6 +50,7 @@ CONTRACT harvest : public contract {
     using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
     using claimreward_action = action_wrapper<"claimreward"_n, &harvest::claimreward>;
   private:
+        
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
 
@@ -68,14 +69,6 @@ CONTRACT harvest : public contract {
       uint32_t request_time;
 
       uint64_t primary_key()const { return refund_id; }
-    };
-
-    TABLE rep_table {
-      name account;
-      uint64_t reputation;
-
-      uint64_t primary_key() const { return account.value; }
-      uint64_t by_reputation()const { return reputation; }
     };
 
     TABLE transaction_table {
@@ -106,10 +99,20 @@ CONTRACT harvest : public contract {
         const_mem_fun<transaction_table, uint64_t, &transaction_table::by_transaction_volume>>
     > transaction_tables;
 
-    config_tables config;
-    balance_tables balances;
-    user_tables users;
+    // Tables
     harvest_tables harveststat;
+    IMPORT_BALANCE_TABLE_ALL
+    balance_tables balances;
+
+    // Imported Tables
+
+    IMPORT_SETTINGS_TYPES
+    config_tables config;
+    
+    IMPORT_USER_TABLE_ALL
+    user_tables users;
+    
+    IMPORT_REP_TABLE_ALL
     rep_tables reps;
 };
 

@@ -14,9 +14,9 @@ CONTRACT subscription : public contract {
     subscription(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         providers(receiver, receiver.value),
-        config(name("settings"), name("settings").value),
-        users(name("accounts"), name("accounts").value),
-        apps(name("accounts"), name("accounts").value)
+        config(name("seedsettings"), name("seedsettings").value),
+        users(name("seedsaccnts3"), name("seedsaccnts3").value),
+        apps(name("seedsaccnts3"), name("seedsaccnts3").value)
         {}
 
     ACTION reset();
@@ -42,12 +42,6 @@ CONTRACT subscription : public contract {
     void deposit(asset quantity);
     void withdraw(name beneficiary, asset quantity);
 
-    TABLE app_table {
-      name account;
-
-      uint64_t primary_key()const { return account.value; }
-    };
-
     TABLE provider_table {
       name app;
       asset price;
@@ -66,12 +60,19 @@ CONTRACT subscription : public contract {
 
     typedef eosio::multi_index<"providers"_n, provider_table> provider_tables;
     typedef eosio::multi_index<"subs"_n, subscription_table> subscription_tables;
-    typedef eosio::multi_index<"apps"_n, app_table> app_tables;
 
-    config_tables config;
-    user_tables users;
-    app_tables apps;
+    // Tables
     provider_tables providers;
+
+    // Imported Tables
+    IMPORT_SETTINGS_TYPES
+    config_tables config;
+
+    IMPORT_USER_TABLE_ALL
+    user_tables users;
+
+    IMPORT_APP_TABLE_ALL
+    app_tables apps;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

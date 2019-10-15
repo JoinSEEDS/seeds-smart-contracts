@@ -18,7 +18,7 @@ CONTRACT settings : public contract {
 
       ACTION configure(name param, uint64_t value);
   private:
-
+      IMPORT_SETTINGS_TYPES
       config_tables config;
 };
 

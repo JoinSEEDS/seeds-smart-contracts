@@ -36,7 +36,7 @@ describe.only('accounts', async assert => {
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
 
-  console.log('join application')
+  console.log('add application')
   await contract.addapp(application, { authorization: `${accounts}@active` })
 
   try {
@@ -66,6 +66,13 @@ describe.only('accounts', async assert => {
     code: accounts,
     scope: accounts,
     table: 'users',
+    json: true,
+  })
+
+  const apps = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'apps',
     json: true,
   })
 
@@ -99,5 +106,18 @@ describe.only('accounts', async assert => {
       more: false
     }
   })
+
+  assert({
+    given: 'added app',
+    should: 'have row in table',
+    actual: apps,
+    expected: {
+      rows: [{
+        account: application
+      }],
+      more: false
+    }
+  })
+
 
 })

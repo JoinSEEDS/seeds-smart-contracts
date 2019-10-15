@@ -91,13 +91,21 @@ CONTRACT proposals : public contract {
       typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
       typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
       typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
-
-      config_tables config;
+      
+      // Tables
       proposal_tables props;
-      user_tables users;
       voice_tables voice;
       votes_tables votes;
       last_proposal_tables lastprops;
+
+      // Imported Tables
+      IMPORT_SETTINGS_TYPES
+      config_tables config;
+      
+      IMPORT_USER_TABLE
+      IMPORT_USER_TABLES
+      user_tables users;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

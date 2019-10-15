@@ -59,7 +59,7 @@ void accounts::joinuser(name account)
   require_auth(_self);
 
   auto uitr = users.find(account.value);
-  check(uitr == users.end(), "existing user");
+  check(uitr == users.end(), "Existing user");
 
   users.emplace(_self, [&](auto& user) {
     user.account = account;

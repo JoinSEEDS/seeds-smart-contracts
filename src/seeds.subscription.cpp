@@ -22,8 +22,9 @@ void subscription::create(name app, asset price)
 {
   require_auth(app);
   check_asset(price);
+  auto aitr = apps.find(app.value);
 
-  check(apps.find(app.value) != apps.end(), "no application");
+  check(aitr != apps.end(), "application not found, cannot create subscription");
   check(providers.find(app.value) == providers.end(), "existing provider");
 
   providers.emplace(app, [&](auto& provider) {
@@ -91,7 +92,7 @@ void subscription::enable(name user, name app)
   subs.modify(sitr, user, [&](auto& sub) {
     if (sub.deposit > sub.invoice && sub.deposit > price) {
       sub.active = true;
-    }
+    } // TODO else throw error here, enable didn't work
   });
 }
 
