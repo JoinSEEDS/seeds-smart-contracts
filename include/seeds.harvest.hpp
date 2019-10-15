@@ -5,6 +5,10 @@
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 
+#include "seeds.settings.types.hpp"
+#include "seeds.harvest.types.hpp"
+#include "seeds.accounts.types.hpp"
+
 using namespace eosio;
 using std::string;
 
@@ -55,21 +59,6 @@ CONTRACT harvest : public contract {
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
 
-    TABLE config_table {
-      name param;
-      uint64_t value;
-      uint64_t primary_key()const { return param.value; }
-    };
-
-    TABLE balance_table {
-      name account;
-      asset planted;
-      asset reward;
-
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_planted()const { return planted.amount; }
-    };
-
     TABLE refund_table {
       uint64_t request_id;
       uint64_t refund_id;
@@ -86,23 +75,6 @@ CONTRACT harvest : public contract {
       uint64_t reputation;
 
       uint64_t primary_key() const { return account.value; }
-      uint64_t by_reputation()const { return reputation; }
-    };
-
-    TABLE user_table {
-      name account;
-      name status;
-      name type;
-      string nickname;
-      string image;
-      string story;
-      string roles;
-      string skills;
-      string interests;
-      uint64_t reputation;
-      uint64_t timestamp;
-
-      uint64_t primary_key()const { return account.value; }
       uint64_t by_reputation()const { return reputation; }
     };
 
@@ -125,14 +97,7 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return account.value; }
     };
 
-    typedef eosio::multi_index<"reputation"_n, rep_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
-    > rep_tables;
-
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
-
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
 
@@ -140,16 +105,6 @@ CONTRACT harvest : public contract {
         indexed_by<"bytrxvolume"_n,
         const_mem_fun<transaction_table, uint64_t, &transaction_table::by_transaction_volume>>
     > transaction_tables;
-
-    typedef eosio::multi_index<"balances"_n, balance_table,
-        indexed_by<"byplanted"_n,
-        const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
-    > balance_tables;
-
-    typedef eosio::multi_index<"users"_n, user_table,
-        indexed_by<"byreputation"_n,
-        const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-    > user_tables;
 
     config_tables config;
     balance_tables balances;

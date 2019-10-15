@@ -1,6 +1,8 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <abieos_numeric.hpp>
+#include "seeds.harvest.types.hpp"
+#include "seeds.accounts.types.hpp"
 
 using namespace eosio;
 using std::string;
@@ -74,31 +76,6 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return referrer.value; }
       };
 
-      TABLE rep_table {
-        name account;
-        uint64_t reputation;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
-
-      TABLE user_table {
-        name account;
-        name status;
-        name type;
-        string nickname;
-        string image;
-        string story;
-        string roles;
-        string skills;
-        string interests;
-        uint64_t reputation;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
-
       TABLE request_table {
         name app;
         name user;
@@ -108,31 +85,9 @@ CONTRACT accounts : public contract {
         uint64_t primary_key()const { return user.value; }
       };
 
-    TABLE balance_table {
-      name account;
-      asset planted;
-      asset reward;
-
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_planted()const { return planted.amount; }
-    };
-
-    typedef eosio::multi_index<"reputation"_n, rep_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
-    > rep_tables;
-    typedef eosio::multi_index<"users"_n, user_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-    > user_tables;
     typedef eosio::multi_index<"apps"_n, app_table> app_tables;
     typedef eosio::multi_index<"requests"_n, request_table> request_tables;
     typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
-
-    typedef eosio::multi_index<"balances"_n, balance_table,
-        indexed_by<"byplanted"_n,
-        const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
-    > balance_tables;
 
     rep_tables reps;
     ref_tables refs;

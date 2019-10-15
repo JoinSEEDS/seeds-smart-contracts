@@ -1,6 +1,8 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 
+#include "seeds.settings.types.hpp"
+
 using namespace eosio;
 using std::string;
 
@@ -16,13 +18,6 @@ CONTRACT settings : public contract {
 
       ACTION configure(name param, uint64_t value);
   private:
-      TABLE config_table {
-        name param;
-        uint64_t value;
-        uint64_t primary_key()const { return param.value; }
-      };
-
-      typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
       config_tables config;
 };

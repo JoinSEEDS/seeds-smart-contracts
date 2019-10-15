@@ -3,6 +3,8 @@
 #include <eosio/print.hpp>
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
+#include "seeds.settings.types.hpp"
+#include "seeds.accounts.types.hpp"
 
 using namespace eosio;
 using std::string;
@@ -44,12 +46,6 @@ CONTRACT proposals : public contract {
       void withdraw(name account, asset quantity);
       void burn(asset quantity);
 
-      TABLE config_table {
-          name param;
-          uint64_t value;
-          uint64_t primary_key()const { return param.value; }
-      };
-
       TABLE proposal_table {
           uint64_t id;
           name creator;
@@ -68,11 +64,6 @@ CONTRACT proposals : public contract {
           name status;
           uint64_t creation_date;
           uint64_t primary_key()const { return id; }
-      };
-
-      TABLE user_table {
-          name account;
-          uint64_t primary_key()const { return account.value; }
       };
 
       TABLE vote_table {
@@ -98,8 +89,6 @@ CONTRACT proposals : public contract {
 
       typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
       typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
-      typedef eosio::multi_index<"config"_n, config_table> config_tables;
-      typedef eosio::multi_index<"users"_n, user_table> user_tables;
       typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
       typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
 

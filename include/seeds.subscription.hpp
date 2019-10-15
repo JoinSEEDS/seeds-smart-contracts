@@ -2,6 +2,8 @@
 #include <eosio/eosio.hpp>
 #include <eosio/print.hpp>
 #include <seeds.token.hpp>
+#include "seeds.settings.types.hpp"
+#include "seeds.accounts.types.hpp"
 
 using namespace eosio;
 using std::string;
@@ -46,18 +48,6 @@ CONTRACT subscription : public contract {
       uint64_t primary_key()const { return account.value; }
     };
 
-    TABLE user_table {
-      name account;
-
-      uint64_t primary_key()const { return account.value; }
-    };
-
-    TABLE config_table {
-      name param;
-      uint64_t value;
-      uint64_t primary_key()const { return param.value; }
-    };
-
     TABLE provider_table {
       name app;
       asset price;
@@ -74,10 +64,8 @@ CONTRACT subscription : public contract {
       uint64_t primary_key()const { return user.value; }
     };
 
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
     typedef eosio::multi_index<"providers"_n, provider_table> provider_tables;
     typedef eosio::multi_index<"subs"_n, subscription_table> subscription_tables;
-    typedef eosio::multi_index<"users"_n, user_table> user_tables;
     typedef eosio::multi_index<"apps"_n, app_table> app_tables;
 
     config_tables config;
