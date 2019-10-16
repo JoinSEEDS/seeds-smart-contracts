@@ -1,3 +1,4 @@
+require('dotenv').config()
 const { exec } = require('child_process')
 const { promisify } = require('util')
 var fs = require('fs');
@@ -10,10 +11,13 @@ const execAsync = promisify(exec)
 
 const command = ({ contract, source, dir }) => {
     const volume = dir
-    const cmd = `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
-    //const cmd = "eosio-cpp -abigen -I ./include -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
-    console.log("command: " + cmd);
-
+    let cmd = ""
+    if (process.env.COMPILER = 'local') {
+      cmd = "eosio-cpp -abigen -I ./include -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
+    } else {
+      cmd = `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
+    }
+    console.log("compiler command: " + cmd);
     return cmd
 }
 
@@ -53,7 +57,7 @@ const deleteIfExists = async (file) => {
   if (fileExists) {
     try {
       await unlinkAsync(file)
-      console.log("deleted existing ", file)
+      //console.log("deleted existing ", file)
     } catch(err) {
       console.error("delete file error: "+err)
     }
