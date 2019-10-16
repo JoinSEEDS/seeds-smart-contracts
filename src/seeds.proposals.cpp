@@ -94,7 +94,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.creation_date = eosio::current_time_point().sec_since_epoch();
       proposal.status = name("open");
   });
-  
+
   auto litr = lastprops.find(creator.value);
   if (litr == lastprops.end()) {
     lastprops.emplace(_self, [&](auto& proposal) {
@@ -131,11 +131,11 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check_asset(quantity);
 
       uint64_t id = 0;
-      
+
       if (memo.empty()) {
         auto litr = lastprops.find(from.value);
         check(litr != lastprops.end(), "no proposals");
-        
+
         id = litr->proposal_id;
       } else {
         id = std::stoi(memo);
@@ -154,7 +154,7 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
-  check_user(voter);
+  check_citizen(voter);
 
   auto pitr = props.find(id);
   check(pitr != props.end(), "no proposal");
@@ -186,7 +186,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
     require_auth(voter);
-    check_user(voter);
+    check_citizen(voter);
 
     auto pitr = props.find(id);
     check(pitr != props.end(), "Proposal not found");
@@ -277,4 +277,11 @@ void proposals::check_user(name account)
 {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
+}
+
+void proposals::check_citizen(name account)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(uitr->status == name("citizen"), "user is not a citizen");
 }

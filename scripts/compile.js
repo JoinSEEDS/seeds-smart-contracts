@@ -12,7 +12,7 @@ const execAsync = promisify(exec)
 const command = ({ contract, source, dir }) => {
     const volume = dir
     let cmd = ""
-    if (process.env.COMPILER = 'local') {
+    if (process.env.COMPILER === 'local') {
       cmd = "eosio-cpp -abigen -I ./include -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
     } else {
       cmd = `docker run --rm --name eosio.cdt_v1.6.1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.6.1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ./include -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`

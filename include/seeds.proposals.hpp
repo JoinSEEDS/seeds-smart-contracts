@@ -39,6 +39,7 @@ CONTRACT proposals : public contract {
       symbol seeds_symbol = symbol("SEEDS", 4);
 
       void check_user(name account);
+      void check_citizen(name account);
       void check_asset(asset quantity);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity);
@@ -71,8 +72,20 @@ CONTRACT proposals : public contract {
       };
 
       TABLE user_table {
-          name account;
-          uint64_t primary_key()const { return account.value; }
+        name account;
+        name status;
+        name type;
+        string nickname;
+        string image;
+        string story;
+        string roles;
+        string skills;
+        string interests;
+        uint64_t reputation;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return account.value; }
+        uint64_t by_reputation()const { return reputation; }
       };
 
       TABLE vote_table {
@@ -89,11 +102,11 @@ CONTRACT proposals : public contract {
         uint64_t balance;
         uint64_t primary_key()const { return account.value; }
       };
-      
+
       TABLE last_proposal_table {
         name account;
         uint64_t proposal_id;
-        uint64_t primary_key()const { return account.value; } 
+        uint64_t primary_key()const { return account.value; }
       };
 
       typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;

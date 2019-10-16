@@ -45,6 +45,10 @@ describe('Proposals', async assert => {
   await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
 
+  console.log('force status')
+  await contracts.accounts.forcestatus(firstuser, "citizen", { authorization: `${accounts}@active` })
+  await contracts.accounts.forcestatus(seconduser, "citizen", { authorization: `${accounts}@active` })
+
   console.log('favour first proposal')
   await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
 

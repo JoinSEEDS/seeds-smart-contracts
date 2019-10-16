@@ -37,6 +37,8 @@ CONTRACT accounts : public contract {
 
       ACTION makecitizen(name user);
 
+      ACTION forcestatus(name user, name status);
+
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
       ACTION addref(name referrer, name invited);
@@ -160,4 +162,4 @@ CONTRACT accounts : public contract {
       request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(forcestatus));

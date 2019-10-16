@@ -75,6 +75,9 @@ describe.only('accounts', async assert => {
   console.log('make resident')
   await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
 
+  console.log('force status')
+  await contract.forcestatus(seconduser, "citizen", { authorization: `${accounts}@active` })
+
   try {
     console.log('make citizen')
     await contract.makecitizen(firstuser, { authorization: `${firstuser}@active` })
@@ -145,7 +148,7 @@ describe.only('accounts', async assert => {
       reputation: 100,
     }, {
       account: seconduser,
-      status: 'visitor',
+      status: 'citizen',
       nickname: '',
       reputation: 0
     }]

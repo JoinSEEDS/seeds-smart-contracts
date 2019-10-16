@@ -279,6 +279,18 @@ void accounts::makecitizen(name user)
     });
 }
 
+void accounts::forcestatus(name user, name status)
+{
+  require_auth(_self);
+
+  auto uitr = users.find(user.value);
+  check(uitr != users.end(), "no user");
+
+  users.modify(uitr, _self, [&](auto& user) {
+    user.status = status;
+  });
+}
+
 void accounts::buyaccount(name account, string owner_key, string active_key)
 {
   check(is_account(account) == false, "existing account");
