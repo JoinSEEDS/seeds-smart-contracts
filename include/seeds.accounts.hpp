@@ -43,6 +43,8 @@ CONTRACT accounts : public contract {
 
       ACTION addrep(name user, uint64_t amount);
 
+      ACTION subrep(name user, uint64_t amount);
+
       ACTION migrate(name account,
         name status,
         name type,
@@ -158,4 +160,4 @@ CONTRACT accounts : public contract {
       request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep));

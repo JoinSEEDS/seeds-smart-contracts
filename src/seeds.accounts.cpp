@@ -23,6 +23,11 @@ void accounts::reset() {
   while (refitr != refs.end()) {
     refitr = refs.erase(refitr);
   }
+
+  auto repitr = reps.begin();
+  while (repitr != reps.end()) {
+    repitr = reps.erase(repitr);
+  }
 }
 
 void accounts::migrate(name account,
@@ -56,7 +61,7 @@ void accounts::migrate(name account,
 
 void accounts::joinuser(name account)
 {
-  require_auth(_self);
+  require_auth(account);
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
@@ -167,6 +172,39 @@ void accounts::addrep(name user, uint64_t amount)
   } else {
     reps.modify(ritr, _self, [&](auto& rep) {
       rep.reputation += amount;
+    });
+  }
+}
+
+void accounts::subrep(name user, uint64_t amount)
+{
+  require_auth(_self);
+
+  check(is_account(user), "non existing user");
+
+  auto uitr = users.find(user.value);
+  users.modify(uitr, _self, [&](auto& user) {
+    if (user.reputation < amount) {
+      user.reputation = 0;
+    } else {
+      user.reputation -= amount;
+    }
+  });
+
+  auto ritr = reps.find(user.value);
+
+  if (ritr == reps.end()) {
+    reps.emplace(_self, [&](auto& rep) {
+      rep.account = user;
+      rep.reputation = 0;
+    });
+  } else {
+    reps.modify(ritr, _self, [&](auto& rep) {
+      if (rep.reputation < amount) {
+        rep.reputation = 0;
+      } else {
+        rep.reputation -= amount;
+      }
     });
   }
 }
