@@ -14,7 +14,6 @@ CONTRACT proposals : public contract {
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
-          votes(receiver, receiver.value),
           lastprops(receiver, receiver.value),
           config(name("seedsettings"), name("seedsettings").value),
           users(name("seedsaccnts3"), name("seedsaccnts3").value)
@@ -67,6 +66,7 @@ CONTRACT proposals : public contract {
           string image;
           string url;
           name status;
+          name stage;
           uint64_t creation_date;
           uint64_t primary_key()const { return id; }
       };
@@ -89,12 +89,11 @@ CONTRACT proposals : public contract {
       };
 
       TABLE vote_table {
-          uint64_t id;
-          name account;
           uint64_t proposal_id;
+          name account;
           uint64_t amount;
           bool favour;
-          uint64_t primary_key()const { return id; }
+          uint64_t primary_key()const { return account.value; }
       };
 
       TABLE voice_table {
@@ -120,7 +119,6 @@ CONTRACT proposals : public contract {
       proposal_tables props;
       user_tables users;
       voice_tables voice;
-      votes_tables votes;
       last_proposal_tables lastprops;
 };
 

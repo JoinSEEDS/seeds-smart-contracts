@@ -34,13 +34,6 @@ describe('Proposals', async assert => {
   console.log('deposit stake (without memo)')
   await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-  const props = await getTableRows({
-    code: proposals,
-    scope: proposals,
-    table: 'props',
-    json: true
-  })
-
   console.log('add voice')
   await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
@@ -48,6 +41,21 @@ describe('Proposals', async assert => {
   console.log('force status')
   await contracts.accounts.forcestatus(firstuser, "citizen", { authorization: `${accounts}@active` })
   await contracts.accounts.forcestatus(seconduser, "citizen", { authorization: `${accounts}@active` })
+
+  try {
+    await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+  } catch (err) {
+    console.log('favour first proposal (failed)')
+  }
+
+  try {
+    await contracts.proposals.against(firstuser, 2, 1, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    console.log('against second proposal (failed)')
+  }
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   console.log('favour first proposal')
   await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
@@ -106,6 +114,7 @@ describe('Proposals', async assert => {
       total: 5,
       favour: 5,
       against: 0,
+      stage: 'done',
       title: 'title2',
       summary: 'summary2',
       description: 'description2',
@@ -129,6 +138,7 @@ describe('Proposals', async assert => {
       total: 1,
       favour: 0,
       against: 1,
+      stage: 'done',
       title: 'title',
       summary: 'summary',
       description: 'description',

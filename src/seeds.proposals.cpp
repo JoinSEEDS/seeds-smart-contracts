@@ -7,7 +7,14 @@ void proposals::reset() {
   auto pitr = props.begin();
 
   while (pitr != props.end()) {
-      pitr = props.erase(pitr);
+    votes_tables votes(get_self(), pitr->id);
+
+    auto voteitr = votes.begin();
+    while (voteitr != votes.end()) {
+      voteitr = votes.erase(voteitr);
+    }
+
+    pitr = props.erase(pitr);
   }
 }
 
@@ -20,6 +27,7 @@ void proposals::onperiod() {
     uint64_t min_stake = config.find(name("propminstake").value)->value;
 
     while (pitr != props.end()) {
+      if (pitr->stage == name("active")) {
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity);
@@ -29,6 +37,7 @@ void proposals::onperiod() {
                   proposal.executed = true;
                   proposal.staked = asset(0, seeds_symbol);
                   proposal.status = name("passed");
+                  proposal.stage = name("done");
               });
             }
         } else {
@@ -38,10 +47,18 @@ void proposals::onperiod() {
               proposal.executed = false;
               proposal.staked = asset(0, seeds_symbol);
               proposal.status = name("rejected");
+              proposal.stage = name("done");
           });
         }
+      }
 
-        pitr++;
+      if (pitr->stage == name("staged")) {
+        props.modify(pitr, _self, [&](auto& proposal) {
+          proposal.stage = name("active");
+        });
+      }
+
+      pitr++;
     }
 
     while (vitr != voice.end()) {
@@ -93,6 +110,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.url = url;
       proposal.creation_date = eosio::current_time_point().sec_since_epoch();
       proposal.status = name("open");
+      proposal.stage = name("staged");
   });
 
   auto litr = lastprops.find(creator.value);
@@ -162,9 +180,14 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
   uint64_t min_stake = config.find(name("propminstake").value)->value;
   check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
+  check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "no user voice");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+  check(voteitr == votes.end(), "only one vote");
 
   props.modify(pitr, voter, [&](auto& proposal) {
     proposal.total += amount;
@@ -176,7 +199,6 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   });
 
   votes.emplace(_self, [&](auto& vote) {
-    vote.id = votes.available_primary_key();
     vote.account = voter;
     vote.amount = amount;
     vote.favour = true;
@@ -194,9 +216,14 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
 
     uint64_t min_stake = config.find(name("propminstake").value)->value;
     check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
+    check(pitr->stage == name("active"), "not active stage");
 
     auto vitr = voice.find(voter.value);
     check(vitr != voice.end(), "User does not have voice");
+
+    votes_tables votes(get_self(), id);
+    auto voteitr = votes.find(voter.value);
+    check(voteitr == votes.end(), "only one vote");
 
     props.modify(pitr, voter, [&](auto& proposal) {
         proposal.total += amount;
@@ -208,7 +235,6 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     });
 
     votes.emplace(_self, [&](auto& vote) {
-      vote.id = votes.available_primary_key();
       vote.account = voter;
       vote.amount = amount;
       vote.favour = false;
