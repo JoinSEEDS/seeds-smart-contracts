@@ -8,22 +8,27 @@ describe('policy', async assert => {
 
   let accountField = firstuser
   let uuidField = '123'
+  let deviceField = '456'
   let signatureField = 'signature-string'
   let policyField = 'policy-string'
+
+  await contract.reset({ authorization: `${policy}@active` })
 
   await contract.create(
     accountField,
     uuidField,
+    deviceField,
     signatureField,
     policyField,
     { authorization: `${firstuser}@active` }
   )
-
+  
   policyField = 'updated-policy-string'
 
   await contract.update(
     accountField,
     uuidField,
+    deviceField,
     signatureField,
     policyField,
     { authorization: `${firstuser}@active` }
@@ -32,17 +37,18 @@ describe('policy', async assert => {
   const { rows } = await eos.getTableRows({
     code: policy,
     scope: firstuser,
-    table: 'policies',
+    table: 'policiesnew',
     json: true
   })
-
+  
   assert({
     given: 'created & updated policy',
     should: 'show created row in table',
     actual: rows,
     expected: [{
       account: accountField,
-      uuid: uuidField,
+      backend_user_id: uuidField,
+      device_id: deviceField,
       signature: signatureField,
       policy: policyField
     }]
