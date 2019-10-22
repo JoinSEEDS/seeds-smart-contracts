@@ -37,7 +37,9 @@ CONTRACT accounts : public contract {
 
       ACTION makecitizen(name user);
 
-      ACTION forcestatus(name user, name status);
+      ACTION testcitizen(name user);
+
+      ACTION testresident(name user);
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
@@ -46,6 +48,10 @@ CONTRACT accounts : public contract {
       ACTION addrep(name user, uint64_t amount);
 
       ACTION subrep(name user, uint64_t amount);
+
+      ACTION punish(name account);
+
+      ACTION vouch(name sponsor, name account);
 
       ACTION migrate(name account,
         name status,
@@ -57,11 +63,13 @@ CONTRACT accounts : public contract {
         string skills,
         string interests,
         uint64_t reputation);
-
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 
       void buyaccount(name account, string owner_key, string active_key);
+      void check_user(name account);
+      void vouchreward(name account);
+      void updatestatus(name account, name status);
 
       symbol network_symbol = symbol("TLOS", 4);
 
@@ -112,14 +120,22 @@ CONTRACT accounts : public contract {
         uint64_t primary_key()const { return user.value; }
       };
 
-    TABLE balance_table {
-      name account;
-      asset planted;
-      asset reward;
+      TABLE balance_table {
+        name account;
+        asset planted;
+        asset reward;
 
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_planted()const { return planted.amount; }
-    };
+        uint64_t primary_key()const { return account.value; }
+        uint64_t by_planted()const { return planted.amount; }
+      };
+
+      TABLE vouch_table {
+        name account;
+        name sponsor;
+        uint64_t reps;
+
+        uint64_t primary_key() const { return sponsor.value; }
+      };
 
     typedef eosio::multi_index<"reputation"_n, rep_table,
       indexed_by<"byreputation"_n,
@@ -132,6 +148,7 @@ CONTRACT accounts : public contract {
     typedef eosio::multi_index<"apps"_n, app_table> app_tables;
     typedef eosio::multi_index<"requests"_n, request_table> request_tables;
     typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
+    typedef eosio::multi_index<"vouch"_n, vouch_table> vouch_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
@@ -162,4 +179,4 @@ CONTRACT accounts : public contract {
       request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(forcestatus));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch));

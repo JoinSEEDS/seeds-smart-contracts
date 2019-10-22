@@ -11,6 +11,12 @@ void accounts::reset() {
 
   auto uitr = users.begin();
   while (uitr != users.end()) {
+    vouch_tables vouch(get_self(), uitr->account.value);
+    auto vitr = vouch.begin();
+    while (vitr != vouch.end()) {
+      vitr = vouch.erase(vitr);
+    }
+
     uitr = users.erase(uitr);
   }
 
@@ -92,6 +98,90 @@ void accounts::adduser(name account, string nickname)
       user.nickname = nickname;
       user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+}
+
+void accounts::vouch(name sponsor, name account) {
+  require_auth(sponsor);
+  check_user(sponsor);
+  check_user(account);
+
+  vouch_tables vouch(get_self(), account.value);
+
+  auto vitr = vouch.find(sponsor.value);
+
+  check(vitr == vouch.end(), "already vouched");
+
+  auto uitrs = users.find(sponsor.value);
+  auto uitra = users.find(account.value);
+
+  name sponsor_status = uitrs->status;
+  name account_status = uitra->status;
+
+  check(account_status == name("visitor"), "account should be visitor");
+  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor should be a citizen");
+
+  uint64_t reps = 0;
+  switch (sponsor_status) {
+    case name("resident"):
+      reps = 5;
+    case name("citizen"):
+      reps = 10;
+  }
+
+  vouch.emplace(_self, [&](auto& item) {
+    item.sponsor = sponsor;
+    item.account = account;
+    item.reps = reps;
+  });
+
+  users.modify(uitra, _self, [&](auto& item) {
+    item.reputation += reps;
+  });
+}
+
+void accounts::punish(name account) {
+  check_user(account);
+
+  auto uitr = users.find(account.value);
+
+  users.modify(uitr, _self, [&](auto& item) {
+    item.status = "visitor"_n;
+  });
+
+  vouch_tables vouch(get_self(), account.value);
+
+  auto vitr = vouch.begin();
+
+  while (vitr != vouch.end()) {
+    auto sponsor = vitr->sponsor;
+
+    auto uitr2 = users.find(sponsor.value);
+    users.modify(uitr2, _self, [&](auto& item) {
+      item.reputation -= 50;
+    });
+  }
+}
+
+void accounts::vouchreward(name account) {
+  check_user(account);
+
+  auto uitr = users.find(account.value);;
+  name status = uitr->status;
+
+  vouch_tables vouch(get_self(), account.value);
+
+  auto vitr = vouch.begin();
+
+  while (vitr != vouch.end()) {
+    auto sponsor = vitr->sponsor;
+
+    auto uitr2 = users.find(sponsor.value);
+    users.modify(uitr2, _self, [&](auto& item) {
+      item.reputation += 1;
+    });
+
+    vitr++;
+  }
 }
 
 void accounts::addapp(name account)
@@ -239,21 +329,24 @@ void accounts::makeresident(name user)
     auto titr = transactions.find(user.value);
 
     uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
-/*
-    while (ritr != invited_users.end() && ritr->referrer == user) {
-      invited_users_number++;
-      ritr++;
-    }
-*/
 
     check(bitr->planted.amount >= 50, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
     check(invited_users_number >= 1, "user has less than required referrals");
     check(uitr->reputation >= 100, "user has less than required reputation");
 
-    users.modify(uitr, _self, [&](auto& user) {
-        user.status = name("resident");
-    });
+    updatestatus(user, name("resident"));
+
+    vouchreward(user);
+}
+
+void accounts::updatestatus(name user, name status)
+{
+  auto uitr = users.find(user.value);
+
+  users.modify(uitr, _self, [&](auto& user) {
+    user.status = status;
+  });
 }
 
 void accounts::makecitizen(name user)
@@ -274,21 +367,27 @@ void accounts::makecitizen(name user)
     check(invited_users_number >= 3, "user has less than required referrals");
     check(uitr->reputation >= 100, "user has less than required reputation");
 
-    users.modify(uitr, _self, [&](auto& user) {
-        user.status = name("citizen");
-    });
+    updatestatus(user, name("citizen"));
+
+    vouchreward(user);
 }
 
-void accounts::forcestatus(name user, name status)
+void accounts::testresident(name user)
 {
   require_auth(_self);
 
-  auto uitr = users.find(user.value);
-  check(uitr != users.end(), "no user");
+  updatestatus(user, name("resident"));
 
-  users.modify(uitr, _self, [&](auto& user) {
-    user.status = status;
-  });
+  vouchreward(user);
+}
+
+void accounts::testcitizen(name user)
+{
+  require_auth(_self);
+
+  updatestatus(user, name("citizen"));
+
+  vouchreward(user);
 }
 
 void accounts::buyaccount(name account, string owner_key, string active_key)
@@ -319,4 +418,10 @@ void accounts::buyaccount(name account, string owner_key, string active_key)
     "eosio"_n, "delegatebw"_n,
     std::make_tuple(_self, account, net, cpu, 1))
     .send();
+}
+
+void accounts::check_user(name account)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
 }
