@@ -56,7 +56,7 @@ describe.only('accounts', async assert => {
   }
 
   console.log('join users')
-  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
+  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@api` })
   await contract.joinuser(seconduser, { authorization: `${seconduser}@active` })
 
   console.log('plant 50 seeds')
@@ -66,11 +66,11 @@ describe.only('accounts', async assert => {
   await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('add referral')
-  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@active` })
+  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
 
   console.log('update reputation')
-  await contract.addrep(firstuser, 100, { authorization: `${accounts}@active` })
-  await contract.subrep(seconduser, 1, { authorization: `${accounts}@active` })
+  await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
+  await contract.subrep(seconduser, 1, { authorization: `${accounts}@api` })
 
   console.log('make resident')
   await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
@@ -153,7 +153,7 @@ describe.only('accounts', async assert => {
       account: seconduser,
       status: 'resident',
       nickname: '',
-      reputation: 10
+      reputation: 5
     }]
   })
 })

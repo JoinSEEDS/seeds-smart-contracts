@@ -81,10 +81,9 @@ void accounts::joinuser(name account)
   });
 }
 
-
 void accounts::adduser(name account, string nickname)
 {
-  require_auth(_self);
+  require_auth(get_self());
   check(is_account(account), "no account");
 
   auto uitr = users.find(account.value);
@@ -120,13 +119,8 @@ void accounts::vouch(name sponsor, name account) {
   check(account_status == name("visitor"), "account should be visitor");
   check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor should be a citizen");
 
-  uint64_t reps = 0;
-  switch (sponsor_status) {
-    case name("resident"):
-      reps = 5;
-    case name("citizen"):
-      reps = 10;
-  }
+  uint64_t reps = 5;
+  if (sponsor_status == name("citizen")) reps = 10;
 
   vouch.emplace(_self, [&](auto& item) {
     item.sponsor = sponsor;
@@ -196,14 +190,15 @@ void accounts::addapp(name account)
 
 void accounts::addref(name referrer, name invited)
 {
-    require_auth(_self);
-    check(is_account(referrer), "wrong referral");
-    check(is_account(invited), "wrong invited");
+  require_auth(get_self());
 
-    refs.emplace(_self, [&](auto& ref) {
-      ref.referrer = referrer;
-      ref.invited = invited;
-    });
+  check(is_account(referrer), "wrong referral");
+  check(is_account(invited), "wrong invited");
+
+  refs.emplace(_self, [&](auto& ref) {
+    ref.referrer = referrer;
+    ref.invited = invited;
+  });
 }
 
 void accounts::addrequest(name app, name user, string owner_key, string active_key)
@@ -244,7 +239,7 @@ void accounts::fulfill(name app, name user)
 
 void accounts::addrep(name user, uint64_t amount)
 {
-  require_auth(_self);
+  require_auth(get_self());
 
   check(is_account(user), "non existing user");
 
@@ -268,7 +263,7 @@ void accounts::addrep(name user, uint64_t amount)
 
 void accounts::subrep(name user, uint64_t amount)
 {
-  require_auth(_self);
+  require_auth(get_self());
 
   check(is_account(user), "non existing user");
 

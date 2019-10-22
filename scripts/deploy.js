@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, accounts, ownerPublicKey, activePublicKey } = require('./helper')
+const { eos, encodeName, accounts, ownerPublicKey, activePublicKey, apiPublicKey } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -120,6 +120,42 @@ const changeKeyPermission = async (account, permission, key) => {
     console.log(`private keys updated for ${account}@${permission}`)
   } catch (err) {
     console.error(`failed keys update for ${account}@${permission}`, err)
+  }
+}
+
+const setupPermissionWithKey = async ({ account }, permission, key) => {
+  try {
+    await eos.updateauth({
+      account,
+      permission,
+      parent: 'active',
+      auth: {
+        threshold: 1,
+        waits: [],
+        accounts: [],
+        keys: [{
+          key,
+          weight: 1
+        }]
+      }
+    }, { authorization: `${account}@owner` })
+    console.log(`permission setup on ${account}@${permission} for ${key}`)
+  } catch (err) {
+    console.error(`failed permission setup`, err)
+  }
+}
+
+const allowAction = async ({ account }, action, permission) => {
+  try {
+    await eos.linkauth({
+      account,
+      code: account,
+      type: action,
+      requirement: permission
+    }, { authorization: `${account}@owner` })
+    console.log(`linkauth of ${account}@${action} for ${permission}`)
+  } catch (err) {
+    console.error(`failed allow action`, err)
   }
 }
 
@@ -297,6 +333,13 @@ const initContracts = async () => {
   await addPermission(bank, 'active', proposals, 'active')
   await addPermission(settings, 'active', accts, 'eosio.code')
 
+  await setupPermissionWithKey(accts, 'api', apiPublicKey)
+
+  await allowAction(accts, 'adduser', 'api')
+  await allowAction(accts, 'addrep', 'api')
+  await allowAction(accts, 'subrep', 'api')
+  await allowAction(accts, 'addref', 'api')
+
   await addCoins(token)([ firstuser, seconduser, bank ])
 
   await configure(settings)({
@@ -308,3 +351,4 @@ const initContracts = async () => {
 }
 
 module.exports = initContracts
+

@@ -40,9 +40,15 @@ const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6F3waTpq11VRFBTWUp6tif3u5GY6QGwBxhmq9CsdLi2NU1Rmdv', 'EOS6HL4bXo3aC1YF5xtkst2boyeCjkd9N5aKMcaF9khdq9HrxPJzu'],
   [networks.telosTestnet]: ['EOS6rHvstcM4f7fSgGo6ezvKVvmC2e2mGdTGpvn1V1gexsLqeAtm9', 'EOS6rHvstcM4f7fSgGo6ezvKVvmC2e2mGdTGpvn1V1gexsLqeAtm9']
-
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
+
+const apiKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.telosMainnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9',
+  [networks.telosTestnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9'
+}
+const apiPublicKey = apiKeys[chainId]
 
 const account = (accountName) => ({
   type: 'account',
@@ -179,5 +185,5 @@ const initContracts = (accounts) =>
 
 module.exports = {
   eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey
 }
