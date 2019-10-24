@@ -82,11 +82,17 @@ void harvest::claimrefund(name from, uint64_t request_id) {
       if (refund_time < eosio::current_time_point().sec_since_epoch()) {
         total += ritr->amount;
         ritr = refunds.erase(ritr);
+      } 
+      else{
+        ritr++;
       }
+    } else {
+      ritr++;
     }
   }
-
-  withdraw(beneficiary, total);
+  if (total.amount > 0) {
+    withdraw(beneficiary, total);
+  }
 }
 
 void harvest::cancelrefund(name from, uint64_t request_id) {
@@ -112,7 +118,11 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
         });
 
         ritr = refunds.erase(ritr);
+      } else {
+        ritr++;
       }
+    } else {
+      ritr++;
     }
   }
 }
@@ -131,13 +141,23 @@ void harvest::unplant(name from, asset quantity) {
     lastRequestId = ritr->request_id;
     lastRefundId = ritr->refund_id;
   }
-  asset fraction = asset( quantity.amount / 12, quantity.symbol );
+
+  uint64_t fraction = quantity.amount / 12;
+  uint64_t remainder = quantity.amount % 12;
+
   for (uint64_t week = 1; week <= 12; week++) {
+
+    uint64_t amt = fraction;
+
+    if (week == 12) {
+      amt = amt + remainder;
+    }
+
     refunds.emplace(_self, [&](auto& refund) {
       refund.request_id = lastRequestId + 1;
       refund.refund_id = lastRefundId + week;
       refund.account = from;
-      refund.amount = fraction;
+      refund.amount = asset( amt, quantity.symbol );
       refund.weeks_delay = week;
       refund.request_time = eosio::current_time_point().sec_since_epoch();
     });

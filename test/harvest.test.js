@@ -31,7 +31,15 @@ describe("harvest", async assert => {
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-  console.log('unplant seeds')
+
+  const plantedBalances = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true,
+    limit: 100
+  })
+
   await contracts.harvest.unplant(seconduser, '100.0000 SEEDS', { authorization: `${seconduser}@active` })
 
   const refundsAfterUnplanted = await getTableRows({
@@ -42,6 +50,16 @@ describe("harvest", async assert => {
     limit: 100
   })
   const balanceAfterUnplanted = await getBalance(seconduser)
+
+  const assetIt = (string) => {
+    let a = string.split(" ")
+    return {
+      amount: Number(a[0]) * 10000,
+      symbol: a[1]
+    }
+  }
+
+  const totalUnplanted = refundsAfterUnplanted.rows.reduce( (a, b) => a + assetIt(b.amount).amount, 0) / 10000
 
   console.log('claim refund')
   await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
@@ -85,6 +103,13 @@ describe("harvest", async assert => {
     scope: harvest,
     table: 'harvest',
     json: true
+  })
+
+  assert({
+    given: 'after unplanting 100 seeds',
+    should: 'refund rows add up to 100',
+    actual: totalUnplanted,
+    expected: 100
   })
 
   assert({
