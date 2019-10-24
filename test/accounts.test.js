@@ -56,7 +56,7 @@ describe.only('accounts', async assert => {
   }
 
   console.log('join users')
-  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@api` })
+  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
   await contract.joinuser(seconduser, { authorization: `${seconduser}@active` })
 
   console.log('plant 50 seeds')
