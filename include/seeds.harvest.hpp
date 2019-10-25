@@ -42,6 +42,12 @@ CONTRACT harvest : public contract {
 
     ACTION calcrep();
 
+    ACTION trackcancel(name from, uint64_t unplant_amount);
+
+    ACTION trackrefund(name from, uint64_t refund_amount);
+    
+    ACTION trackreward(name from, uint64_t reward_amount);
+
     using reset_action = action_wrapper<"reset"_n, &harvest::reset>;
     using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
     using claimreward_action = action_wrapper<"claimreward"_n, &harvest::claimreward>;

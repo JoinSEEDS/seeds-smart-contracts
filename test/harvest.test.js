@@ -49,6 +49,7 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
+  console.log("refunds " + JSON.stringify(refundsAfterUnplanted, null, 2) )
   const balanceAfterUnplanted = await getBalance(seconduser)
 
   const assetIt = (string) => {
@@ -97,6 +98,9 @@ describe("harvest", async assert => {
   await contracts.accounts.addrep(firstuser, 1, { authorization: `${accounts}@active` })
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+
+  //console.log('claim reward')
+  //await contracts.harvest.claimreward(seconduser, '7.0000 SEEDS', { authorization: `${seconduser}@active` })
 
   const rewards = await getTableRows({
     code: harvest,

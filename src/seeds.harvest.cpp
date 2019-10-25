@@ -92,6 +92,15 @@ void harvest::claimrefund(name from, uint64_t request_id) {
   }
   if (total.amount > 0) {
     withdraw(beneficiary, total);
+    
+    action(
+      permission_level(_self, "active"_n),
+      _self,
+      "trackrefund"_n, 
+      std::make_tuple(from, total.amount)
+    ).send();
+
+
   }
 }
 
@@ -102,6 +111,8 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
 
   auto ritr = refunds.begin();
 
+  uint64_t totalReplanted = 0;
+
   while (ritr != refunds.end()) {
     if (request_id == ritr->request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
@@ -110,6 +121,7 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
         auto bitr = balances.find(from.value);
         balances.modify(bitr, _self, [&](auto& user) {
           user.planted += ritr->amount;
+          totalReplanted += ritr->amount.amount;
         });
 
         auto titr = balances.find(_self.value);
@@ -125,6 +137,14 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
       ritr++;
     }
   }
+
+  action(
+    permission_level(_self, "active"_n),
+    _self,
+    "trackcancel"_n, 
+    std::make_tuple(from, totalReplanted)
+  ).send();
+
 }
 
 void harvest::unplant(name from, asset quantity) {
@@ -331,6 +351,15 @@ void harvest::claimreward(name from, asset reward) {
   });
 
   withdraw(from, reward);
+
+  action(
+    permission_level(_self, "active"_n),
+    _self,
+    "trackreward"_n, 
+    std::make_tuple(from, reward.amount)
+  ).send();
+
+
 }
 
 void harvest::init_balance(name account)
@@ -378,3 +407,8 @@ void harvest::withdraw(name beneficiary, asset quantity)
   token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), beneficiary, quantity, "");
 }
+
+// tracking actions that do nothing
+void harvest::trackcancel(name from, uint64_t unplant_amount) { }
+void harvest::trackrefund(name from, uint64_t refund_amount) { }
+void harvest::trackreward(name from, uint64_t reward_amount) { }
