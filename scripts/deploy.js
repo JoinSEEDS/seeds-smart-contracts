@@ -293,7 +293,7 @@ const updatePrivateKeys = async () => {
 const initContracts = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
-    token, harvest, subscription, settings, proposals, policy,
+    token, harvest, subscription, settings, proposals, policy, invites,
     accounts: accts
   } = accounts
 
@@ -315,6 +315,7 @@ const initContracts = async () => {
   await createAccount(settings)
   await createAccount(proposals)
   await createAccount(policy)
+  await createAccount(invites)
 
   await deploy(token)
   await deploy(accts)
@@ -323,6 +324,7 @@ const initContracts = async () => {
   await deploy(settings)
   await deploy(proposals)
   await deploy(policy)
+  await deploy(invites)
 
   await addPermission(accts, 'owner', accts, 'eosio.code')
   await addPermission(harvest, 'active', harvest, 'eosio.code')
@@ -332,13 +334,18 @@ const initContracts = async () => {
   await addPermission(bank, 'active', subscription, 'active')
   await addPermission(bank, 'active', proposals, 'active')
   await addPermission(settings, 'active', accts, 'eosio.code')
+  await addPermission(accts, 'active', invites, 'active')
+  await addPermission(invites, 'owner', invites, 'eosio.code')
+  await addPermission(invites, 'active', invites, 'eosio.code')
 
   await setupPermissionWithKey(accts, 'api', apiPublicKey)
+  await setupPermissionWithKey(invites, 'api', apiPublicKey)
 
-  await allowAction(accts, 'adduser', 'api')
   await allowAction(accts, 'addrep', 'api')
   await allowAction(accts, 'subrep', 'api')
   await allowAction(accts, 'addref', 'api')
+
+  await allowAction(invites, 'accept', 'api')
 
   await addCoins(token)([ firstuser, seconduser, bank ])
 
@@ -351,4 +358,3 @@ const initContracts = async () => {
 }
 
 module.exports = initContracts
-
