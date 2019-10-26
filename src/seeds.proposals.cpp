@@ -30,7 +30,7 @@ void proposals::onperiod() {
       if (pitr->stage == name("active")) {
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
-              withdraw(pitr->recipient, pitr->quantity);
+              //withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
               withdraw(pitr->recipient , pitr->staked);
 
               props.modify(pitr, _self, [&](auto& proposal) {
