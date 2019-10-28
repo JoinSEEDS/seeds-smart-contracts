@@ -90,6 +90,7 @@ const accountsMetadata = (network) => {
       proposals: contract('seedsprops12', 'proposals'),
       policy: contract('seedspolicy1', 'policy'),
       invites: contract('seedsinvites', 'invites'),
+      referendums: contract('seedsrfrndms', 'referendums'),
       token: {
         ...contract('seedstoken12', 'token'),
         issuer: owner,
@@ -110,6 +111,7 @@ const accountsMetadata = (network) => {
       settings: contract('settings11', 'settings'),
       proposals: contract('proposals11', 'proposals'),
       invites: contract('seedsinvites', 'invites'),
+      referendums: contract('seedsrfrndms', 'referendums'),
       token: {
         ...contract('seedstoken12', 'eosio.token'),
         issuer: owner,
@@ -131,6 +133,7 @@ const accountsMetadata = (network) => {
       settings: contract('seedsettings', 'settings'),
       proposals: contract('seedsprops12', 'proposals'),
       invites: contract('seedsinvites', 'invites'),
+      referendums: contract('seedsrfrndms', 'referendums'),
       token: {
         ...contract('seedstoken12', 'token'),
         issuer: owner,

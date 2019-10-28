@@ -293,7 +293,7 @@ const updatePrivateKeys = async () => {
 const initContracts = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
-    token, harvest, subscription, settings, proposals, policy, invites,
+    token, harvest, subscription, settings, proposals, policy, invites, referendums,
     accounts: accts
   } = accounts
 
@@ -316,6 +316,7 @@ const initContracts = async () => {
   await createAccount(proposals)
   await createAccount(policy)
   await createAccount(invites)
+  await createAccount(referendums)
 
   await deploy(token)
   await deploy(accts)
@@ -325,6 +326,7 @@ const initContracts = async () => {
   await deploy(proposals)
   await deploy(policy)
   await deploy(invites)
+  await deploy(referendums)
 
   await addPermission(accts, 'owner', accts, 'eosio.code')
   await addPermission(harvest, 'active', harvest, 'eosio.code')
@@ -333,10 +335,11 @@ const initContracts = async () => {
   await addPermission(bank, 'active', harvest, 'active')
   await addPermission(bank, 'active', subscription, 'active')
   await addPermission(bank, 'active', proposals, 'active')
-  await addPermission(settings, 'active', accts, 'eosio.code')
   await addPermission(accts, 'active', invites, 'active')
   await addPermission(invites, 'owner', invites, 'eosio.code')
   await addPermission(invites, 'active', invites, 'eosio.code')
+  await addPermission(referendums, 'active', referendums, 'eosio.code')
+  await addPermission(settings, 'active', referendums, 'active')
 
   await setupPermissionWithKey(accts, 'api', apiPublicKey)
   await setupPermissionWithKey(invites, 'api', apiPublicKey)
@@ -353,7 +356,9 @@ const initContracts = async () => {
     tokenaccnt: encodeName(token.account, false),
     bankaccnt: encodeName(bank.account, false),
     hrvstreward: 100000,
-    propminstake: 100
+    propminstake: 100,
+    refsmajority: 80,
+    refsnewprice: 1000 * 10000
   })
 }
 

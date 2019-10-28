@@ -14,6 +14,8 @@ void settings::reset() {
   configure(name("propsquota"), 0);
   configure(name("usercount"), 0);
   configure(name("propminstake"), 1000);
+  configure(name("refsnewprice"), 1000 * 10000);
+  configure(name("refsmajority"), 80);
 }
 
 void settings::configure(name param, uint64_t value) {

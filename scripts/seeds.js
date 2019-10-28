@@ -43,7 +43,9 @@ const initAction = async () => {
     "token", 
     "harvest", 
     "proposals", 
-    "subscription"
+    "subscription",
+    "invites",
+    "referendums"
   ]
   for (i=0; i<arr.length; i++) {
     let item = arr[i];
