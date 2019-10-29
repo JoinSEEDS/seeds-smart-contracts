@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
 #include <abieos_numeric.hpp>
 
 using namespace eosio;
@@ -18,8 +19,11 @@ CONTRACT invites : public contract {
         {}
 
     ACTION reset();
-    ACTION send(name from, name to, asset quantity, string memo);
-    ACTION accept(name sponsor, name account, string publicKey, asset quantity);
+    ACTION deposit(name from, name to, asset quantity, string memo);
+    ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
+    ACTION accept(name account, checksum256 invite_secret, string publicKey);
+    ACTION cancel(name sponsor, checksum256 invite_hash);
+    ACTION withdraw(name sponsor, asset quantity);
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol network_symbol = symbol("TLOS", 4);
@@ -30,6 +34,21 @@ CONTRACT invites : public contract {
     void transfer_seeds(name account, asset quantity);
     void plant_seeds(asset quantity);
     void sow_seeds(name account, asset quantity);
+    void add_referral(name sponsor, name account);
+
+    TABLE invite_table {
+      uint64_t invite_id;
+      asset transfer_quantity;
+      asset sow_quantity;
+      name sponsor;
+      name account;
+      checksum256 invite_hash;
+      checksum256 invite_secret;
+
+      uint64_t primary_key()const { return invite_id; }
+      uint64_t by_sponsor()const { return sponsor.value; }
+      checksum256 by_hash()const { return invite_hash; }
+    };
 
     TABLE sponsor_table {
       name account;
@@ -38,6 +57,11 @@ CONTRACT invites : public contract {
       uint64_t primary_key() const { return account.value; }
     };
 
+    typedef multi_index<"invites"_n, invite_table,
+      indexed_by<"byhash"_n,
+      const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>
+    > invite_tables;
+    
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
 
     sponsor_tables sponsors;
@@ -45,10 +69,10 @@ CONTRACT invites : public contract {
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == "seedstoken12"_n.value) {
-      execute_action<invites>(name(receiver), name(code), &invites::send);
+      execute_action<invites>(name(receiver), name(code), &invites::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(invites, (reset)(accept))
+      EOSIO_DISPATCH_HELPER(invites, (reset)(invite)(accept)(cancel)(withdraw))
       }
   }
 }

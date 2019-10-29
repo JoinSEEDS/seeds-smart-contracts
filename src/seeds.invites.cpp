@@ -62,6 +62,14 @@ void invites::sow_seeds(name account, asset quantity) {
   ).send();
 }
 
+void invites::add_referral(name sponsor, name account) {
+  action(
+    permission_level{_self, "active"_n},
+    "seedsaccnts3"_n, "addref"_n,
+    make_tuple(sponsor, account)
+  ).send();
+}
+
 void invites::reset() {
   require_auth(get_self());
 
@@ -72,7 +80,7 @@ void invites::reset() {
   }
 }
 
-void invites::send(name from, name to, asset quantity, string memo) {
+void invites::deposit(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
     auto sitr = sponsors.find(from.value);
 
@@ -89,23 +97,75 @@ void invites::send(name from, name to, asset quantity, string memo) {
   }
 }
 
-void invites::accept(name sponsor, name account, string publicKey, asset quantity) {
-  require_auth(get_self());
+void invites::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  require_auth(sponsor);
+
+  asset total_quantity = transfer_quantity + sow_quantity;
 
   auto sitr = sponsors.find(sponsor.value);
   check(sitr != sponsors.end(), "sponsor not found");
-  check(sitr->balance >= quantity, "not enough balance");
+  check(sitr->balance < total_quantity, "need deposit seeds to invites contract");
 
-  sponsors.modify(sitr, _self, [&](auto& sponsor) {
-    sponsor.balance -= quantity;
+  sponsors.modify(sitr, get_self(), [&](auto& sponsor) {
+    sponsor.balance -= total_quantity;
   });
 
-  asset transfer_quantity = asset(quantity.amount - sow_amount, seeds_symbol);
-  asset sow_quantity = asset(sow_amount, seeds_symbol);
+  invite_tables invites(get_self(), get_self().value);
+  auto invites_byhash = invites.get_index<"byhash"_n>();
+  auto iitr = invites_byhash.find(invite_hash);
+  check(iitr == invites_byhash.end(), "invite hash already exist");
 
+  checksum256 empty_checksum;
+
+  invites.emplace(get_self(), [&](auto& invite) {
+    invite.invite_id = invites.available_primary_key();
+    invite.transfer_quantity = transfer_quantity;
+    invite.sow_quantity = sow_quantity;
+    invite.sponsor = sponsor;
+    invite.account = name("");
+    invite.invite_hash = invite_hash;
+    invite.invite_secret = empty_checksum;
+  });
+}
+
+void invites::cancel(name sponsor, checksum256 invite_hash) {
+  require_auth(sponsor);
+  
+  asset 
+}
+
+void invites::withdraw(name sponsor, asset quantity) {
+  require_auth(sponsor);
+}
+
+void invites::accept(name account, checksum256 invite_secret, string publicKey) {
+  require_auth(get_self());
+
+  checksum256 empty_checksum;
+
+  auto invite_secret_bytes = invite_secret.extract_as_byte_array();
+
+  checksum256 invite_hash = sha256((char*)&invite_secret, sizeof(invite_secret));
+
+  invite_tables invites(get_self(), get_self().value);
+  auto invites_byhash = invites.get_index<"byhash"_n>();
+  auto iitr = invites_byhash.find(invite_hash);
+  check(iitr != invites_byhash.end(), "invite not found");
+  check(iitr->invite_secret == empty_checksum, "already accepted");
+
+  invites_byhash.modify(iitr, get_self(), [&](auto& invite) {
+    invite.account = account;
+    invite.invite_secret = invite_secret;
+  });
+  
+  name sponsor = iitr->sponsor;
+  asset transfer_quantity = iitr->transfer_quantity;
+  asset sow_quantity = iitr->sow_quantity;
+  
   create_account(account, publicKey);
   add_user(account);
   transfer_seeds(account, transfer_quantity);
   plant_seeds(sow_quantity);
   sow_seeds(account, sow_quantity);
+  add_referral(sponsor, account);
 }
