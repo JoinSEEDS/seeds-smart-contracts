@@ -2,7 +2,11 @@
 #include <eosio/system.hpp>
 
 void accounts::reset() {
-  require_auth(_self);
+  require_auth( get_self() );
+
+  // No need to validate table sizes
+  // empty tables would simply not reset
+  // without throwing exceptions
 
   auto aitr = apps.begin();
   while (aitr != apps.end()) {
@@ -48,30 +52,36 @@ void accounts::migrate(name account,
         uint64_t reputation
 )
 {
-    require_auth(_self);
+    require_auth( get_self() );
+    //
+    eosio_assert(is_account(account), "account supplied not valid!");
+    eosio_assert(is_account(status), "status name not valid!");
+    eosio_assert(is_account(type), "type name supplied, not valid!")
 
-  users.emplace(_self, [&](auto& user) {
-    user.account = account;
-    user.status = status;
-    user.type = type;
-    user.nickname = nickname;
-    user.image = image;
-    user.story = story;
-    user.roles = roles;
-    user.skills = skills;
-    user.interests = interests;
-    user.reputation = reputation;
-    user.timestamp = eosio::current_time_point().sec_since_epoch();
+    users.emplace(_self, [&](auto& user) {
+        user.account = account;
+        user.status = status;
+        user.type = type;
+        user.nickname = nickname;
+        user.image = image;
+        user.story = story;
+        user.roles = roles;
+        user.skills = skills;
+        user.interests = interests;
+        user.reputation = reputation;
+        user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 
+
 void accounts::joinuser(name account)
 {
+  require_auth( get_self() );
   require_auth(account);
-
+  //
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
-
+  //
   users.emplace(_self, [&](auto& user) {
     user.account = account;
     user.status = name("visitor");
@@ -101,6 +111,7 @@ void accounts::adduser(name account, string nickname)
 
 void accounts::vouch(name sponsor, name account) {
   require_auth(sponsor);
+  //
   check_user(sponsor);
   check_user(account);
 
@@ -112,6 +123,9 @@ void accounts::vouch(name sponsor, name account) {
 
   auto uitrs = users.find(sponsor.value);
   auto uitra = users.find(account.value);
+
+  eosio_assert(uitrs != users.end()), "user sponsors not found!");
+  eosio_asser(uitra != users.end()), "user account not found!");
 
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
@@ -133,10 +147,13 @@ void accounts::vouch(name sponsor, name account) {
   });
 }
 
+// check-point
+
 void accounts::punish(name account) {
   check_user(account);
 
   auto uitr = users.find(account.value);
+  check(uitr != users.end(), "account not found!");
 
   users.modify(uitr, _self, [&](auto& item) {
     item.status = "visitor"_n;
@@ -159,7 +176,8 @@ void accounts::punish(name account) {
 void accounts::vouchreward(name account) {
   check_user(account);
 
-  auto uitr = users.find(account.value);;
+  auto uitr = users.find(account.value);
+  eosio_assert(uitr == users.end(), "account not found!");
   name status = uitr->status;
 
   vouch_tables vouch(get_self(), account.value);
