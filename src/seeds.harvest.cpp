@@ -68,6 +68,10 @@ void harvest::sow(name from, name to, asset quantity) {
 
 
 void harvest::claimrefund(name from, uint64_t request_id) {
+  // anyone can claim refund, since we cannot tell
+  // the request_id is from user: from
+  // require_auth(from);
+  //
   refund_tables refunds(get_self(), from.value);
 
   auto ritr = refunds.begin();
@@ -184,11 +188,13 @@ void harvest::unplant(name from, asset quantity) {
   }
 
   auto bitr = balances.find(from.value);
+  check(bitr != balances.end(), "No balance object found for user!!");
   balances.modify(bitr, _self, [&](auto& user) {
     user.planted -= quantity;
   });
 
   auto titr = balances.find(_self.value);
+  check(titr !=  balances.end(), "No balance object found for contract!!");
   balances.modify(titr, _self, [&](auto& total) {
     total.planted -= quantity;
   });
@@ -201,11 +207,9 @@ void harvest::calcrep() {
   require_auth(_self);
 
   auto usersrep = reps.get_index<"byreputation"_n>();
-
   auto users_number = std::distance(usersrep.begin(), usersrep.end());
 
   uint64_t current_user = 1;
-
   auto uitr = usersrep.begin();
 
   while (uitr != usersrep.end()) {
