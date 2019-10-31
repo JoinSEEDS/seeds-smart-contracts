@@ -344,12 +344,15 @@ void harvest::claimreward(name from, asset reward) {
   init_balance(from);
 
   auto bitr = balances.find(from.value);
+  //
+  check(bitr != balances.end(), "no balance object found for this user");
   balances.modify(bitr, _self, [&](auto& user) {
     user.reward = user.reward - reward;
     check(user.reward >= asset(0, seeds_symbol), "no reward");
   });
 
   auto titr = balances.find(_self.value);
+  check(titr != balances.end(), "no balance objects found for this user");
   balances.modify(titr, _self, [&](auto& total) {
     total.reward -= reward;
   });
