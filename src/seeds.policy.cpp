@@ -13,12 +13,18 @@ void policy::reset() {
 }
 
 void policy::create(name account, string backend_user_id, string device_id, string signature, string policy) {
-  require_auth(account);
   
+  require_auth(account);
+  //
+  eosio_assert(backend_user_id.empty() != true, "backend_user_id not supplied");
+  eosio_assert(device_id.empty() != true, "device_id not supplied");
+  eosio_assert(signature.empty() != true, "signature not supplied");
+  eosio_assert(policy.empty() != true, "policy to use, not supplied");
+  //
   policy_tables_new policies(_self, account.value);
-
   auto pitr = policies.find(account.value);
   
+  //upsert
   if (pitr == policies.end()) {
     policies.emplace(_self, [&](auto& item) {
       item.account = account;
@@ -39,12 +45,14 @@ void policy::create(name account, string backend_user_id, string device_id, stri
 }
 
 void policy::update(name account, string backend_user_id, string device_id, string signature, string policy) {
+  
   require_auth(account);
   
   policy_tables_new policies(_self, account.value);
 
   auto pitr = policies.find(account.value);
   
+  //upsert
   if (pitr == policies.end()) {
     policies.emplace(_self, [&](auto& item) {
       item.account = account;
