@@ -5,8 +5,8 @@ void accounts::reset() {
   require_auth( get_self() );
 
   // No need to validate table sizes
-  // empty tables would simply not reset
-  // without throwing exceptions
+  // Empty tables would simply not reset
+  // and would not throwing exceptions
 
   auto aitr = apps.begin();
   while (aitr != apps.end()) {
@@ -54,9 +54,9 @@ void accounts::migrate(name account,
 {
     require_auth( get_self() );
     //
-    eosio_assert(is_account(account), "account supplied not valid!");
-    eosio_assert(is_account(status), "status name not valid!");
-    eosio_assert(is_account(type), "type name supplied, not valid!")
+    check(is_account(account), "account supplied not valid!");
+    check(is_account(status), "status name not valid!");
+    check(is_account(type), "type name supplied, not valid!")
 
     users.emplace(_self, [&](auto& user) {
         user.account = account;
@@ -94,6 +94,7 @@ void accounts::joinuser(name account)
 void accounts::adduser(name account, string nickname)
 {
   require_auth(get_self());
+  //
   check(is_account(account), "no account");
 
   auto uitr = users.find(account.value);
@@ -114,18 +115,15 @@ void accounts::vouch(name sponsor, name account) {
   //
   check_user(sponsor);
   check_user(account);
-
+  //
   vouch_tables vouch(get_self(), account.value);
-
   auto vitr = vouch.find(sponsor.value);
-
   check(vitr == vouch.end(), "already vouched");
-
   auto uitrs = users.find(sponsor.value);
   auto uitra = users.find(account.value);
 
-  eosio_assert(uitrs != users.end()), "user sponsors not found!");
-  eosio_asser(uitra != users.end()), "user account not found!");
+  check(uitrs != users.end()), "user sponsors not found!");
+  check(uitra != users.end()), "user account not found!");
 
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
@@ -150,6 +148,7 @@ void accounts::vouch(name sponsor, name account) {
 // check-point
 
 void accounts::punish(name account) {
+  require_auth(get_self() );
   check_user(account);
 
   auto uitr = users.find(account.value);
@@ -174,6 +173,7 @@ void accounts::punish(name account) {
 }
 
 void accounts::vouchreward(name account) {
+  require_auth(_self);
   check_user(account);
 
   auto uitr = users.find(account.value);
@@ -218,6 +218,7 @@ void accounts::addref(name referrer, name invited)
     ref.invited = invited;
   });
 }
+
 
 void accounts::addrequest(name app, name user, string owner_key, string active_key)
 {
@@ -281,41 +282,45 @@ void accounts::addrep(name user, uint64_t amount)
 
 void accounts::subrep(name user, uint64_t amount)
 {
-  require_auth(get_self());
+    require_auth(get_self());
 
-  check(is_account(user), "non existing user");
-
-  auto uitr = users.find(user.value);
-  users.modify(uitr, _self, [&](auto& user) {
-    if (user.reputation < amount) {
-      user.reputation = 0;
-    } else {
-      user.reputation -= amount;
-    }
-  });
-
-  auto ritr = reps.find(user.value);
-
-  if (ritr == reps.end()) {
-    reps.emplace(_self, [&](auto& rep) {
-      rep.account = user;
-      rep.reputation = 0;
-    });
-  } else {
-    reps.modify(ritr, _self, [&](auto& rep) {
-      if (rep.reputation < amount) {
-        rep.reputation = 0;
+    check(is_account(user), "non existing user");
+    auto uitr = users.find(user.value);
+    check(uitr != users.esnd(), "user not found");
+    //
+    users.modify(uitr, _self, [&](auto& user) {
+      if (user.reputation < amount) {
+        user.reputation = 0;
       } else {
-        rep.reputation -= amount;
+        user.reputation -= amount;
       }
     });
-  }
+
+    //upsert
+    auto ritr = reps.find(user.value);
+    if (ritr == reps.end()) 
+    {
+      reps.emplace(_self, [&](auto& rep) {
+        rep.account = user;
+        rep.reputation = 0;
+      });
+    } 
+    else 
+    {
+      reps.modify(ritr, _self, [&](auto& rep) {
+        if (rep.reputation < amount) {
+          rep.reputation = 0;
+        } else {
+          rep.reputation -= amount;
+        }
+      });
+    }
 }
+
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
 {
     require_auth(user);
-
     check(type == name("individual") || type == name("organization"), "invalid type");
 
     auto uitr = users.find(user.value);
@@ -332,6 +337,8 @@ void accounts::update(name user, name type, string nickname, string image, strin
 
 void accounts::makeresident(name user)
 {
+    require_auth(user);
+    //
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
     check(uitr->status == name("visitor"), "user is not a visitor");
@@ -355,15 +362,24 @@ void accounts::makeresident(name user)
 
 void accounts::updatestatus(name user, name status)
 {
-  auto uitr = users.find(user.value);
+    auto uitr = users.find(user.value);
+    //
+    if(uitr != users.end() )
+    {
 
-  users.modify(uitr, _self, [&](auto& user) {
-    user.status = status;
-  });
+        users.modify(uitr, _self, [&](auto& user) {
+          user.status = status;
+        });
+    }
 }
 
 void accounts::makecitizen(name user)
 {
+    eosio_assert(is_account(user), "invalid user account!");
+    //
+    require_auth(get_self() );
+    require_auth(user);
+    //
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
     check(uitr->status == name("resident"), "user is not a resident");
