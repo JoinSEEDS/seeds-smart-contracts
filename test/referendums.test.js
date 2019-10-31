@@ -9,15 +9,16 @@ describe('Referendums', async assert => {
   const contracts = await initContracts({ referendums, token, settings, accounts })
 
   const stake_price = '1000.0000 SEEDS'
-  const favour = 8
-  const against = 2
+  const favour = 4
+  const against = 1
   const referendumId = 0
+  const failedReferendumId = 1
 
   const settingName = "tempsetting"
   const settingValue = 21
   const settingInitialValue = 0
 
-  const addVoice = async () => {
+  const addVoice = () => async () => {
     console.log(`add ${favour} voice to ${firstuser}`)
     await contracts.referendums.addvoice(firstuser, favour, { authorization: `${referendums}@active` })
 
@@ -25,15 +26,18 @@ describe('Referendums', async assert => {
     await contracts.referendums.addvoice(seconduser, against, { authorization: `${referendums}@active` })
   }
 
-  const sendVotes = async () => {
+  const sendVotes = () => async () => {
     console.log(`send favour vote from ${firstuser} with value of ${favour} for #${referendumId}`)
     await contracts.referendums.favour(firstuser, referendumId, favour, { authorization: `${firstuser}@active` })
 
     console.log(`send against vote from ${seconduser} with value of ${against} for #${referendumId}`)
     await contracts.referendums.against(seconduser, referendumId, against, { authorization: `${seconduser}@active` })
+    
+    console.log(`send favour vote from ${firstuser} with value of ${favour} for #${failedReferendumId}`)
+    await contracts.referendums.favour(firstuser, failedReferendumId, favour, { authorization: `${firstuser}@active` })
   }
 
-  const executeReferendums = async () => {
+  const executeReferendums = () => async () => {
     console.log(`execute referendums`)
     await sleep(1000)
     await contracts.referendums.runcycle({ authorization: `${referendums}@active` })
@@ -113,17 +117,25 @@ describe('Referendums', async assert => {
   const saveState = stateHistory.save
   const table = stateHistory.find
 
-  const createReferendum = async () => {
+  const createReferendums = () => async () => {
+    const metadata = ['title', 'summary', 'description', 'image', 'url']
+    
     console.log(`create referendum from ${firstuser} to change ${settingName} to ${settingValue}`)
-    await contracts.referendums.create(firstuser, settingName, settingValue, 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+    await contracts.referendums.create(firstuser, settingName, settingValue, ...metadata, { authorization: `${firstuser}@active` })
+
+    console.log(`create referendum from ${seconduser} to change ${settingName} to ${settingValue}`)
+    await contracts.referendums.create(seconduser, settingName, settingValue, ...metadata, { authorization: `${seconduser}@active` })
   }
 
-  const stake = async () => {
+  const stake = () => async () => {
     console.log(`increase stake of ${firstuser} to ${stake_price}`)
     await contracts.token.transfer(firstuser, referendums, stake_price, '', { authorization: `${firstuser}@active` })
+    
+    console.log(`increase stake of ${seconduser} to ${stake_price}`)
+    await contracts.token.transfer(seconduser, referendums, stake_price, '', { authorization: `${seconduser}@active` })
   }
 
-  const reset = async () => {
+  const reset = () => async () => {
     console.log('referendums reset')
     await contracts.referendums.reset({ authorization: `${referendums}@active` })
 
@@ -139,7 +151,7 @@ describe('Referendums', async assert => {
     }
   }
 
-  const cancelVote = async () => {
+  const cancelVote = () => async () => {
     console.log(`cancel vote of ${seconduser} for #${referendumId}`)
     await contracts.referendums.cancelvote(seconduser, referendumId, { authorization: `${seconduser}@active` })
   }
@@ -155,11 +167,11 @@ describe('Referendums', async assert => {
     }
   }
 
-  const referendumRow = {
+  const referendumRow = (referendumId, creatorName) => ({
     referendum_id: referendumId,
     setting_name: settingName,
     setting_value: settingValue,
-    creator: firstuser,
+    creator: creatorName,
     staked: stake_price,
     favour: 0,
     against: 0,
@@ -168,20 +180,20 @@ describe('Referendums', async assert => {
     description: 'description',
     image: 'image',
     url: 'url',
-  }
+  })
 
   await runTransactions({
-    'reset': reset,
-    'addVoice': addVoice,
-    'failedReferendum': fail(createReferendum),
-    'stake': stake,
-    'createReferendum': createReferendum,
-    'failedSendVotes': fail(sendVotes),
-    'executeReferendumsActive': executeReferendums,
-    'sendVotes': sendVotes,
-    'executeReferendumsTesting': executeReferendums,
-    'cancelVote': cancelVote,
-    'executeReferendumsFinal': executeReferendums
+    'reset': reset(),
+    'addVoice': addVoice(),
+    'failedReferendum': fail(createReferendums()),
+    'stake': stake(),
+    'createReferendums': createReferendums(),
+    'failedSendVotes': fail(sendVotes()),
+    'executeReferendumsActive': executeReferendums(),
+    'sendVotes': sendVotes(),
+    'executeReferendumsTesting': executeReferendums(),
+    'cancelVote': cancelVote(),
+    'executeReferendumsFinal': executeReferendums(),
   })
 
   assert({
@@ -220,21 +232,23 @@ describe('Referendums', async assert => {
   })
 
   assert({
-    given: 'referendums table after created referendum',
-    should: 'have referendum with staged status',
-    actual: table('staged:createReferendum'),
-    expected: [{
-      ...referendumRow
-    }]
+    given: 'referendums table after created referendums',
+    should: 'have referendums with staged status',
+    actual: table('staged:createReferendums'),
+    expected: [
+      referendumRow(referendumId, firstuser),
+      referendumRow(failedReferendumId, seconduser)
+    ]
   })
 
   assert({
     given: 'referendums table after first execution',
-    should: 'have referendum with active status',
+    should: 'have referendums with active status',
     actual: table('active:executeReferendumsActive'),
-    expected: [{
-      ...referendumRow
-    }]
+    expected: [
+      referendumRow(referendumId, firstuser),
+      referendumRow(failedReferendumId, seconduser)
+    ]
   })
 
   assert({
@@ -242,7 +256,7 @@ describe('Referendums', async assert => {
     should: 'have referendums with testing status',
     actual: table('testing:executeReferendumsTesting'),
     expected: [{
-      ...referendumRow,
+      ...referendumRow(referendumId, firstuser),
       against,
       favour
     }]
@@ -253,7 +267,7 @@ describe('Referendums', async assert => {
     should: 'have referendums with passed status',
     actual: table('passed:executeReferendumsFinal'),
     expected: [{
-      ...referendumRow,
+      ...referendumRow(referendumId, firstuser),
       favour,
       against: 0
     }]
@@ -261,9 +275,12 @@ describe('Referendums', async assert => {
 
   assert({
     given: 'referendums table after third execution',
-    should: 'have no referendums with failed status',
+    should: 'have referendum with failed status',
     actual: table('failed:executeReferendumsFinal'),
-    expected: []
+    expected: [{
+      ...referendumRow(failedReferendumId, seconduser),
+      favour
+    }]
   })
 
   assert({

@@ -32,8 +32,15 @@ void referendums::send_runcycle() {
   ).send();
 }
 
-bool referendums::is_approved(uint64_t favour, uint64_t against, uint64_t majority) {
+bool referendums::is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority) {
   return favour >= (favour + against) * majority / 100;
+}
+
+bool referendums::is_valid_quorum(uint64_t voters_number, uint64_t quorum) {
+  uint64_t total_number = distance(balances.begin(), balances.end());
+  uint64_t voted_percentage = voters_number * 100 / total_number;
+  
+  return voted_percentage >= quorum;
 }
 
 void referendums::give_voice() {
@@ -58,9 +65,9 @@ void referendums::run_testing() {
   uint64_t majority = config.find(name("refsmajority").value)->value;
 
   while (titr != testing.end()) {
-    bool referendum_approved = is_approved(titr->favour, titr->against, majority);
+    bool referendum_passed = is_valid_majority(titr->favour, titr->against, majority);
 
-    if (referendum_approved) {
+    if (referendum_passed) {
       send_change_setting(titr->setting_name, titr->setting_value);
 
       passed.emplace(_self, [&](auto& item) {
@@ -86,11 +93,17 @@ void referendums::run_active() {
   auto aitr = active.begin();
 
   uint64_t majority = config.find(name("refsmajority").value)->value;
+  uint64_t quorum = config.find(name("refsquorum").value)->value;
 
   while (aitr != active.end()) {
-    bool referendum_approved = is_approved(aitr->favour, aitr->against, majority);
+    voter_tables voters(get_self(), aitr->referendum_id);
+    uint64_t voters_number = distance(voters.begin(), voters.end());
+    
+    bool valid_majority = is_valid_majority(aitr->favour, aitr->against, majority);
+    bool valid_quorum = is_valid_quorum(voters_number, quorum);
+    bool referendum_passed = valid_majority && valid_quorum;
 
-    if (referendum_approved) {
+    if (referendum_passed) {
       testing.emplace(_self, [&](auto& item) {
         MOVE_REFERENDUM(aitr, item)
       });

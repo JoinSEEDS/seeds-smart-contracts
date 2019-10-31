@@ -358,6 +358,7 @@ const initContracts = async () => {
     hrvstreward: 100000,
     propminstake: 100,
     refsmajority: 80,
+    refsquorum: 80,
     refsnewprice: 1000 * 10000
   })
 }

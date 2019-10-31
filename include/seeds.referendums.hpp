@@ -7,6 +7,7 @@
 using namespace eosio;
 using std::string;
 using std::make_tuple;
+using std::distance;
 
 #define MOVE_REFERENDUM(from, to) { \
   to.referendum_id = from->referendum_id; \
@@ -59,8 +60,9 @@ CONTRACT referendums : public contract {
       ACTION runcycle();
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
-
-    bool is_approved(uint64_t favour, uint64_t against, uint64_t majority);
+  
+    bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority);
+    bool is_valid_quorum(uint64_t voters_number, uint64_t quorum);
     void give_voice();
     void run_testing();
     void run_active();
@@ -111,7 +113,6 @@ CONTRACT referendums : public contract {
         uint64_t value;
         uint64_t primary_key()const { return param.value; }
     };
-
 
     typedef multi_index<"balances"_n, balance_table> balance_tables;
     typedef multi_index<"referendums"_n, referendum_table> referendum_tables;
