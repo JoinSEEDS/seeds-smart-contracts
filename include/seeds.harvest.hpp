@@ -30,7 +30,7 @@ CONTRACT harvest : public contract {
 
     ACTION cancelrefund(name from, uint64_t request_id);
 
-    ACTION claimreward(name from, asset reward);
+    ACTION claimreward(name from);
 
     ACTION sow(name from, name to, asset quantity);
 
@@ -42,11 +42,7 @@ CONTRACT harvest : public contract {
 
     ACTION calcrep();
 
-    ACTION trackcancel(name from, uint64_t unplant_amount);
-
-    ACTION trackrefund(name from, uint64_t refund_amount);
-    
-    ACTION trackreward(name from, uint64_t reward_amount);
+    ACTION testreward(name from);
 
     using reset_action = action_wrapper<"reset"_n, &harvest::reset>;
     using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
@@ -169,7 +165,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted))
+          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted))
       }
   }
 }

@@ -63,7 +63,7 @@ describe("harvest", async assert => {
   const totalUnplanted = refundsAfterUnplanted.rows.reduce( (a, b) => a + assetIt(b.amount).amount, 0) / 10000
 
   console.log('claim refund')
-  const transaction = await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
+  const transactionRefund = await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterClaimed = await getTableRows({
     code: harvest,
@@ -75,7 +75,7 @@ describe("harvest", async assert => {
   const balanceAfterClaimed = await getBalance(seconduser)
 
   console.log('cancel refund')
-  await contracts.harvest.cancelrefund(seconduser, 1, { authorization: `${seconduser}@active` })
+  const transactionCancelRefund = await contracts.harvest.cancelrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterCanceled = await getTableRows({
     code: harvest,
@@ -99,8 +99,20 @@ describe("harvest", async assert => {
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
 
-  //console.log('claim reward')
-  //await contracts.harvest.claimreward(seconduser, '7.0000 SEEDS', { authorization: `${seconduser}@active` })
+  console.log('claim reward')
+  await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
+
+
+  var balanceBefore = await getBalance(seconduser);
+  const transactionReward = await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
+  var balanceAfter = await getBalance(seconduser);
+
+  assert({
+    given: 'user received 10 refund',
+    should: 'after balance should be 10 bigger than before',
+    actual: balanceAfter,
+    expected: balanceBefore + 10
+  })
 
   const rewards = await getTableRows({
     code: harvest,
@@ -112,9 +124,25 @@ describe("harvest", async assert => {
   assert({
     given: 'claim refund transaction',
     should: 'call inline action to history',
-    actual: transaction.processed.action_traces[0].inline_traces[0].receiver,
+    actual: transactionRefund.processed.action_traces[0].inline_traces[0].receiver,
     expected: "seedshistory"
   })
+  
+  assert({
+    given: 'claim reward transaction',
+    should: 'call inline action to history',
+    actual: transactionReward.processed.action_traces[0].inline_traces[1].receiver,
+    expected: "seedshistory"
+  })
+
+  assert({
+    given: 'cancel refund transaction',
+    should: 'call inline action to history',
+    actual: transactionCancelRefund.processed.action_traces[0].inline_traces[0].receiver,
+    expected: "seedshistory"
+  })
+
+
 
   assert({
     given: 'after unplanting 100 seeds',
