@@ -70,7 +70,7 @@ const contract = (accountName, contractName) => ({
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
-    ram: 10000
+    ram: 300000
   }
 })
 
