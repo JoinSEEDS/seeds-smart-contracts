@@ -20,35 +20,41 @@ void proposals::reset() {
 
 void proposals::onperiod() {
     require_auth(_self);
-
+    //
+    eosio_assert(props.size() > 0, "props cache is empty");
+    eosio_assert(voice.size() > 0, "voice cache is empty");
+    //
     auto pitr = props.begin();
     auto vitr = voice.begin();
-
+    //
     uint64_t min_stake = config.find(name("propminstake").value)->value;
-
+    //
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
-        if (pitr->favour > pitr->against) {
-            if (pitr->staked >= asset(min_stake, seeds_symbol)) {
-              //withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
-              withdraw(pitr->recipient , pitr->staked);
+        if (pitr->favour > pitr->against) 
+        {
+          if (pitr->staked >= asset(min_stake, seeds_symbol)) {
+            //withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
+            withdraw(pitr->recipient , pitr->staked);
 
-              props.modify(pitr, _self, [&](auto& proposal) {
-                  proposal.executed = true;
-                  proposal.staked = asset(0, seeds_symbol);
-                  proposal.status = name("passed");
-                  proposal.stage = name("done");
-              });
-            }
-        } else {
-          burn(pitr->staked);
+            props.modify(pitr, _self, [&](auto& proposal) {
+                proposal.executed = true;
+                proposal.staked = asset(0, seeds_symbol);
+                proposal.status = name("passed");
+                proposal.stage = name("done");
+            });
+          }
+        } 
+        else 
+        {
+            burn(pitr->staked);
 
-          props.modify(pitr, _self, [&](auto& proposal) {
-              proposal.executed = false;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("rejected");
-              proposal.stage = name("done");
-          });
+            props.modify(pitr, _self, [&](auto& proposal) {
+                proposal.executed = false;
+                proposal.staked = asset(0, seeds_symbol);
+                proposal.status = name("rejected");
+                proposal.stage = name("done");
+            });
         }
       }
 
@@ -82,8 +88,8 @@ void proposals::onperiod() {
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url) {
   require_auth(creator);
-  // check_user(creator);
-  // check_user(recipient);
+  check_user(creator);
+  check_user(recipient);
   check_asset(quantity);
 
   uint64_t lastId = 0;
@@ -113,6 +119,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.stage = name("staged");
   });
 
+  //upsert
   auto litr = lastprops.find(creator.value);
   if (litr == lastprops.end()) {
     lastprops.emplace(_self, [&](auto& proposal) {
@@ -129,8 +136,8 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
   auto pitr = props.find(id);
-
   check(pitr != props.end(), "Proposal not found");
+  //
   require_auth(pitr->creator);
   check(pitr->favour == 0, "Cannot alter proposal once voting has started");
 
@@ -248,6 +255,7 @@ void proposals::addvoice(name user, uint64_t amount)
 
     auto vitr = voice.find(user.value);
 
+    //upsert
     if (vitr == voice.end()) {
         voice.emplace(_self, [&](auto& voice) {
             voice.account = user;

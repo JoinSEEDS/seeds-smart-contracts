@@ -126,21 +126,25 @@ void referendums::run_staged() {
 }
 
 void referendums::runcycle() {
+  require_auth(_self);
+  //
   run_testing();
   run_active();
   run_staged();
-
   give_voice();
 
 }
 
 void referendums::reset() {
+  require_auth(get_self());
+  eosio_assert(balances.size() > 0, "no balance objects found in balances!!");
+  //
   auto bitr = balances.begin();
-
+  //
   while (bitr != balances.end()) {
     bitr = balances.erase(bitr);
   }
-
+  ..
   referendum_tables staged(get_self(), name("staged").value);
   referendum_tables active(get_self(), name("active").value);
   referendum_tables testing(get_self(), name("testing").value);
@@ -221,6 +225,10 @@ void referendums::addvoice(name account, uint64_t amount) {
 }
 
 void referendums::stake(name from, name to, asset quantity, string memo) {
+  eosio_assert(is_account(from), "from account not valid");
+  eosio_assert(is_account(to), "to account not valid");
+  eosio_assert(from != to, "from & to accounts cannot be the same");
+  //
   if (to == get_self()) {
     auto bitr = balances.find(from.value);
 
@@ -248,6 +256,8 @@ void referendums::create(
   string image,
   string url
 ) {
+  check(is_account(creator), "creator is not a valid account");
+  check(is_account(setting_name), "setting_name is not a valid account");
   require_auth(creator);
 
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
@@ -281,6 +291,8 @@ void referendums::create(
 }
 
 void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
+  require_auth(voter);
+  //
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
   check(bitr->voice >= amount, "user has no enough voice");
