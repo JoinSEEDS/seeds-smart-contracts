@@ -82,8 +82,9 @@ void subscription::enable(name user, name app)
   require_auth(user);
 
   auto pitr = providers.find(app.value);
+  eosio_assert(pitr != providers.end(), "no provider");
   asset price = pitr->price;
-
+  //
   subscription_tables subs(_self, app.value);
   auto sitr = subs.find(user.value);
   check(sitr != subs.end(), "no subscription");
@@ -155,7 +156,6 @@ void subscription::claimpayout(name app)
 
   auto pitr = providers.find(app.value);
   check(pitr != providers.end(), "no provider");
-
   auto payout = pitr->balance;
 
   if (payout > asset(0, seeds_symbol)) {
