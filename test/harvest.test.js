@@ -49,7 +49,6 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
-  console.log("refunds " + JSON.stringify(refundsAfterUnplanted, null, 2) )
   const balanceAfterUnplanted = await getBalance(seconduser)
 
   const assetIt = (string) => {
@@ -124,25 +123,23 @@ describe("harvest", async assert => {
   assert({
     given: 'claim refund transaction',
     should: 'call inline action to history',
-    actual: transactionRefund.processed.action_traces[0].inline_traces[0].receiver,
-    expected: "seedshistory"
+    actual: transactionRefund.processed.action_traces[0].inline_traces[0].act.account,
+    expected: 'seedshistory'
   })
   
   assert({
     given: 'claim reward transaction',
     should: 'call inline action to history',
-    actual: transactionReward.processed.action_traces[0].inline_traces[1].receiver,
-    expected: "seedshistory"
+    actual: transactionReward.processed.action_traces[0].inline_traces[1].act.account,
+    expected: 'seedshistory'
   })
 
   assert({
     given: 'cancel refund transaction',
     should: 'call inline action to history',
-    actual: transactionCancelRefund.processed.action_traces[0].inline_traces[0].receiver,
-    expected: "seedshistory"
+    actual: transactionCancelRefund.processed.action_traces[0].inline_traces[0].act.account,
+    expected: 'seedshistory'
   })
-
-
 
   assert({
     given: 'after unplanting 100 seeds',
