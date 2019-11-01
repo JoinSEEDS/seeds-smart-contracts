@@ -161,6 +161,9 @@ const allowAction = async ({ account }, action, permission) => {
 
 const addPermission = async ({ account: target }, targetRole, { account: actor }, actorRole) => {
   try {
+
+console.log(`Add permission of ${actor}@${actorRole} for target ${target}@${targetRole}`)
+
     const { parent, required_auth: { threshold, waits, keys, accounts } } =
       (await eos.getAccount(target))
         .permissions.find(p => p.perm_name == targetRole)
@@ -293,7 +296,7 @@ const updatePrivateKeys = async () => {
 const initContracts = async () => {
   const {
     owner, firstuser, seconduser, thirduser, application, bank,
-    token, harvest, subscription, settings, proposals, policy, invites, referendums,
+    token, harvest, subscription, settings, proposals, policy, invites, referendums, history,
     accounts: accts
   } = accounts
 
@@ -317,6 +320,7 @@ const initContracts = async () => {
   await createAccount(policy)
   await createAccount(invites)
   await createAccount(referendums)
+  await createAccount(history)
 
   await deploy(token)
   await deploy(accts)
@@ -327,6 +331,7 @@ const initContracts = async () => {
   await deploy(policy)
   await deploy(invites)
   await deploy(referendums)
+  await deploy(history)
 
   await addPermission(accts, 'owner', accts, 'eosio.code')
   await addPermission(harvest, 'active', harvest, 'eosio.code')
@@ -340,6 +345,8 @@ const initContracts = async () => {
   await addPermission(invites, 'active', invites, 'eosio.code')
   await addPermission(referendums, 'active', referendums, 'eosio.code')
   await addPermission(settings, 'active', referendums, 'active')
+  
+ await addPermission(history, 'active', harvest, 'eosio.code')
 
   await setupPermissionWithKey(accts, 'api', apiPublicKey)
   await setupPermissionWithKey(invites, 'api', apiPublicKey)

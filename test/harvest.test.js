@@ -63,7 +63,7 @@ describe("harvest", async assert => {
   const totalUnplanted = refundsAfterUnplanted.rows.reduce( (a, b) => a + assetIt(b.amount).amount, 0) / 10000
 
   console.log('claim refund')
-  await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
+  const transaction = await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterClaimed = await getTableRows({
     code: harvest,
@@ -107,6 +107,13 @@ describe("harvest", async assert => {
     scope: harvest,
     table: 'harvest',
     json: true
+  })
+
+  assert({
+    given: 'claim refund transaction',
+    should: 'call inline action to history',
+    actual: transaction.processed.action_traces[0].inline_traces[0].receiver,
+    expected: "seedshistory"
   })
 
   assert({

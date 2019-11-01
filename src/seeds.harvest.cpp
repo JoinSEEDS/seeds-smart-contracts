@@ -92,16 +92,13 @@ void harvest::claimrefund(name from, uint64_t request_id) {
   }
   if (total.amount > 0) {
     withdraw(beneficiary, total);
-    
-    action(
-      permission_level(_self, "active"_n),
-      _self,
-      "trackrefund"_n, 
-      std::make_tuple(from, total.amount)
-    ).send();
-
-
   }
+  action(
+      permission_level("seedshistory"_n, "active"_n),
+      "seedshistory"_n,
+      "historyentry"_n, 
+      std::make_tuple(from, string("trackrefund"), total.amount, string(""))
+   ).send();
 }
 
 void harvest::cancelrefund(name from, uint64_t request_id) {
