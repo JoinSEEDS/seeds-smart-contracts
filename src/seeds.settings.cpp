@@ -20,9 +20,11 @@ void settings::reset() {
 
 void settings::configure(name param, uint64_t value) {
   require_auth(_self);
-
+  eosio_assert(is_account(param), "account supplied not valid!!");
+  //
   auto citr = config.find(param.value);
-
+  
+  // upsert
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
       item.param = param;
