@@ -128,8 +128,6 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosTestnet) {
     return {
       owner: account(owner),
-<<<<<<< HEAD
-=======
       firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
@@ -139,7 +137,6 @@ const accountsMetadata = (network) => {
       fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
       fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
       sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
->>>>>>> account_name_change
       bank: account('seedsbanksys'),
       accounts: contract('seedsaccntsx', 'accounts'),
       harvest: contract('seedshrvestx', 'harvest'),
