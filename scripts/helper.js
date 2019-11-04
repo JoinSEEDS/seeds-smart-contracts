@@ -70,7 +70,7 @@ const contract = (accountName, contractName, quantity = '0.0000 SEEDS') => ({
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
-    ram: 300000
+    ram: 700000
   }
 })
 
@@ -95,7 +95,7 @@ const accountsMetadata = (network) => {
       fifthbank: account('seedsbankeee', '62222222.2200 SEEDS'),
       sixthbank: account('seedsbankfff', '155555555.5500 SEEDS'),
       bank: account('seedsbanksys'),
-      accounts: contract('seedsaccntx', 'accounts'),
+      accounts: contract('seedsaccntsx', 'accounts'),
       harvest: contract('seedshrvestx', 'harvest'),
       settings: contract('seedsettingx', 'settings'),
       proposals: contract('seedsprpslsx', 'proposals'),
@@ -115,7 +115,7 @@ const accountsMetadata = (network) => {
       fifthbank: account('seedsbankeee', '62222222.2200 SEEDS'),
       sixthbank: account('seedsbankfff', '155555555.5500 SEEDS'),
       bank: account('seedsbanksys'),
-      accounts: contract('seedsaccntx', 'accounts'),
+      accounts: contract('seedsaccntsx', 'accounts'),
       harvest: contract('seedshrvestx', 'harvest'),
       settings: contract('seedsettingx', 'settings'),
       proposals: contract('seedsprpslsx', 'proposals'),
@@ -128,17 +128,8 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosTestnet) {
     return {
       owner: account(owner),
-      firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
-      seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
-      thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
-      firstbank: account('seedsbankaaa', '272222222.2200 SEEDS'),
-      secondbank: account('seedsbankbbb', '38888888.8900 SEEDS'),
-      thirdbank: account('seedsbankccc', '155555555.5500 SEEDS'),
-      fourthbank: account('seedsbankddd', '93333333.3300 SEEDS'),
-      fifthbank: account('seedsbankeee', '62222222.2200 SEEDS'),
-      sixthbank: account('seedsbankfff', '155555555.5500 SEEDS'),
       bank: account('seedsbanksys'),
-      accounts: contract('seedsaccntx', 'accounts'),
+      accounts: contract('seedsaccntsx', 'accounts'),
       harvest: contract('seedshrvestx', 'harvest'),
       settings: contract('seedsettingx', 'settings'),
       proposals: contract('seedsprpslsx', 'proposals'),

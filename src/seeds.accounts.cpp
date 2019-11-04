@@ -297,7 +297,7 @@ void accounts::makecitizen(name user)
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
+    transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
     uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));

@@ -238,7 +238,7 @@ const transferCoins = async (token, recipient) => {
       memo: ''
     }, { authorization: `${token.issuer}@active` })
     
-    console.log(`sent ${quantity} from ${token.issuer} to ${recipient.account}`)
+    console.log(`sent ${recipient.quantity} from ${token.issuer} to ${recipient.account}`)
   } catch (err) {
     console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})`, err)
   }
