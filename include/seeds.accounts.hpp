@@ -1,12 +1,9 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
-#include <abieos_numeric.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
-
-using abieos::keystring_authority;
-using abieos::authority;
 
 CONTRACT accounts : public contract {
   public:
@@ -18,7 +15,7 @@ CONTRACT accounts : public contract {
           requests(receiver, receiver.value),
           refs(receiver, receiver.value),
           reps(receiver, receiver.value),
-          balances(name("seedshrvst11"), name("seedshrvst11").value)
+          balances(contracts::harvest, contracts::harvest.value)
           {}
 
       ACTION reset();
@@ -26,12 +23,6 @@ CONTRACT accounts : public contract {
       ACTION joinuser(name account);
 
       ACTION adduser(name account, string nickname);
-
-      ACTION addapp(name account);
-
-      ACTION addrequest(name app, name user, string owner_key, string active_key);
-
-      ACTION fulfill(name app, name user);
 
       ACTION makeresident(name user);
 
@@ -179,4 +170,4 @@ CONTRACT accounts : public contract {
       request_tables requests;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(addapp)(addrequest)(fulfill)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch));
