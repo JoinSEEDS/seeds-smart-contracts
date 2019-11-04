@@ -8,22 +8,22 @@
 namespace eosio {
 
 void token::create( const name&   issuer,
-                    const asset&  maximum_supply )
+                    const asset&  initial_supply )
 {
     require_auth( get_self() );
 
-    auto sym = maximum_supply.symbol;
+    auto sym = initial_supply.symbol;
     check( sym.is_valid(), "invalid symbol name" );
-    check( maximum_supply.is_valid(), "invalid supply");
-    check( maximum_supply.amount > 0, "max-supply must be positive");
+    check( initial_supply.is_valid(), "invalid supply");
+    check( initial_supply.amount > 0, "max-supply must be positive");
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
     check( existing == statstable.end(), "token with symbol already exists" );
 
     statstable.emplace( get_self(), [&]( auto& s ) {
-       s.supply.symbol = maximum_supply.symbol;
-       s.max_supply    = maximum_supply;
+       s.supply.symbol = initial_supply.symbol;
+       s.initial_supply  = initial_supply;
        s.issuer        = issuer;
     });
 }
@@ -46,7 +46,6 @@ void token::issue( const name& to, const asset& quantity, const string& memo )
     check( quantity.amount > 0, "must issue positive quantity" );
 
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
-    check( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply += quantity;
@@ -89,11 +88,11 @@ void token::burn( const name& from, const asset& quantity )
   stats statstable(get_self(), sym.code().raw());
   auto sitr = statstable.find(sym.code().raw());
 
+  sub_balance(from, quantity);
+
   statstable.modify(sitr, from, [&](auto& stats) {
     stats.supply -= quantity;
   });
-
-  sub_balance(from, quantity);
 }
 
 void token::transfer( const name&    from,
@@ -111,6 +110,8 @@ void token::transfer( const name&    from,
     require_recipient( from );
     require_recipient( to );
 
+    // check_limit(from);
+
     check( quantity.is_valid(), "invalid quantity" );
     check( quantity.amount > 0, "must transfer positive quantity" );
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
@@ -120,7 +121,8 @@ void token::transfer( const name&    from,
 
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
-    update_stats( from, to, quantity );
+    
+    // update_stats( from, to, quantity );
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -149,38 +151,104 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
    }
 }
 
+void token::check_limit(const name& from) {
+  user_tables users(contracts::accounts, contracts::accounts.value);
+  auto uitr = users.find(from.value);
+
+  if (uitr == users.end()) {
+    return;
+  }
+
+  name status = uitr->status;
+
+  uint64_t limit = 10;
+  if (status == "resident"_n) {
+    limit = 50;
+  } else if (status == "citizen"_n) {
+    limit = 100;
+  }
+
+  transaction_tables transactions(get_self(), seeds_symbol.code().raw());
+  auto titr = transactions.find(from.value);
+  uint64_t current = titr->outgoing_transactions;
+
+  check(current < limit, "too many outgoing transactions");
+}
+
+void token::resetweekly() {
+  require_auth(get_self());
+  
+  auto sym_code_raw = seeds_symbol.code().raw();
+
+  transaction_tables transactions(get_self(), sym_code_raw);
+
+  auto titr = transactions.begin();
+  while (titr != transactions.end()) {
+    transactions.modify(titr, get_self(), [&](auto& user) {
+      user.incoming_transactions = 0;
+      user.outgoing_transactions = 0;
+      user.total_transactions = 0;
+      user.transactions_volume = asset(0, seeds_symbol);
+    });
+    titr++;
+  }
+
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "resetweekly"_n,
+    std::make_tuple()
+  );
+  trx.delay_sec = 3600 * 7;
+  trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+}
+
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
     auto sym_code_raw = quantity.symbol.code().raw();
 
     transaction_tables transactions(get_self(), sym_code_raw);
+    user_tables users(contracts::accounts, contracts::accounts.value);
 
     auto fromitr = transactions.find(from.value);
+    auto toitr = transactions.find(to.value);
+    
+    auto fromuser = users.find(from.value);
+    auto touser = users.find(to.value);
+    
+    if (fromuser == users.end() || touser == users.end()) {
+      return;
+    }
 
     if (fromitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {
         user.account = from;
         user.transactions_volume = quantity;
-        user.transactions_number = 1;
+        user.total_transactions = 1;
+        user.incoming_transactions = 0;
+        user.outgoing_transactions = 1;
       });
     } else {
       transactions.modify(fromitr, get_self(), [&](auto& user) {
           user.transactions_volume += quantity;
-          user.transactions_number += 1;
+          user.outgoing_transactions += 1;
+          user.total_transactions += 1;
       });
     }
-
-    auto toitr = transactions.find(to.value);
 
     if (toitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {
         user.account = to;
         user.transactions_volume = quantity;
-        user.transactions_number = 1;
+        user.total_transactions = 1;
+        user.incoming_transactions = 1;
+        user.outgoing_transactions = 0;
       });
     } else {
       transactions.modify(toitr, get_self(), [&](auto& user) {
         user.transactions_volume += quantity;
-        user.transactions_number += 1;
+        user.total_transactions += 1;
+        user.incoming_transactions += 1;
       });
     }
 }
@@ -216,4 +284,4 @@ void token::close( const name& owner, const symbol& symbol )
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly) )
