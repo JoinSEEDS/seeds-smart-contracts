@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, names, getTableRows } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, bank, settings } = names
+const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
 
 describe("harvest", async assert => {
   const contracts = await Promise.all([
@@ -19,6 +19,9 @@ describe("harvest", async assert => {
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('configure')
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
@@ -124,21 +127,21 @@ describe("harvest", async assert => {
     given: 'claim refund transaction',
     should: 'call inline action to history',
     actual: transactionRefund.processed.action_traces[0].inline_traces[0].act.account,
-    expected: 'seedshistory'
+    expected: history
   })
   
   assert({
     given: 'claim reward transaction',
     should: 'call inline action to history',
     actual: transactionReward.processed.action_traces[0].inline_traces[1].act.account,
-    expected: 'seedshistory'
+    expected: history
   })
 
   assert({
     given: 'cancel refund transaction',
     should: 'call inline action to history',
     actual: transactionCancelRefund.processed.action_traces[0].inline_traces[0].act.account,
-    expected: 'seedshistory'
+    expected: history
   })
 
   assert({
@@ -195,7 +198,7 @@ describe("harvest", async assert => {
   assert({
     given: 'transactions calculation',
     should: 'assign transactions score to each user',
-    actual: rewards.rows.map(({ transactions_score }) => transactions_score),
+    actual: rewards.rows.map(({ transactions_score }) => transactions_score).sort((a, b) => b - a),
     expected: [100, 50]
   })
 

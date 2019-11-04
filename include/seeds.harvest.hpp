@@ -4,6 +4,7 @@
 #include <eosio/time.hpp>
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
@@ -15,9 +16,9 @@ CONTRACT harvest : public contract {
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
         harveststat(receiver, receiver.value),
-        config(name("seedsettings"), name("seedsettings").value),
-        users(name("seedsaccnts3"), name("seedsaccnts3").value),
-        reps(name("seedsaccnts3"), name("seedsaccnts3").value)
+        config(contracts::settings, contracts::settings.value),
+        users(contracts::accounts, contracts::accounts.value),
+        reps(contracts::accounts, contracts::accounts.value)
         {}
 
     ACTION reset();
@@ -161,7 +162,7 @@ CONTRACT harvest : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
+  if (action == name("transfer").value && code == contracts::token.value) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {

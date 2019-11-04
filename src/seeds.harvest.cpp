@@ -15,6 +15,7 @@ void harvest::reset() {
     hitr = harveststat.erase(hitr);
   }
 
+  /*
   name user = name("seedsuser555");
   refund_tables refunds(get_self(), user.value);
 
@@ -22,6 +23,7 @@ void harvest::reset() {
   while (ritr != refunds.end()) {
     ritr = refunds.erase(ritr);
   }
+  */
 
   init_balance(_self);
 }
@@ -82,7 +84,7 @@ void harvest::claimrefund(name from, uint64_t request_id) {
       if (refund_time < eosio::current_time_point().sec_since_epoch()) {
         total += ritr->amount;
         ritr = refunds.erase(ritr);
-      } 
+      }
       else{
         ritr++;
       }
@@ -94,9 +96,9 @@ void harvest::claimrefund(name from, uint64_t request_id) {
     withdraw(beneficiary, total);
   }
   action(
-      permission_level("seedshistory"_n, "active"_n),
-      "seedshistory"_n,
-      "historyentry"_n, 
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
       std::make_tuple(from, string("trackrefund"), total.amount, string(""))
    ).send();
 }
@@ -136,9 +138,9 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
   }
 
   action(
-      permission_level("seedshistory"_n, "active"_n),
-      "seedshistory"_n,
-      "historyentry"_n, 
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
       std::make_tuple(from, string("trackcancel"), totalReplanted, string(""))
    ).send();
 }
@@ -237,7 +239,7 @@ void harvest::calcrep() {
 void harvest::calctrx() {
   require_auth(_self);
 
-  transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
+  transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
 
   auto userstrx = transactions.get_index<"bytrxvolume"_n>();
 
@@ -350,9 +352,9 @@ void harvest::claimreward(name from) {
   withdraw(from, reward);
 
   action(
-      permission_level("seedshistory"_n, "active"_n),
-      "seedshistory"_n,
-      "historyentry"_n, 
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
       std::make_tuple(from, string("trackreward"), reward.amount, string(""))
    ).send();
 
@@ -398,11 +400,8 @@ void harvest::deposit(asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
-
-  token::transfer_action action{name(token_account), {_self, "active"_n}};
-  action.send(_self, name(bank_account), quantity, "");
+  token::transfer_action action{contracts::token, {_self, "active"_n}};
+  action.send(_self, contracts::bank, quantity, "");
 }
 
 void harvest::withdraw(name beneficiary, asset quantity)
@@ -412,6 +411,6 @@ void harvest::withdraw(name beneficiary, asset quantity)
   auto token_account = config.find(name("tokenaccnt").value)->value;
   auto bank_account = config.find(name("bankaccnt").value)->value;
 
-  token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
-  action.send(name(bank_account), beneficiary, quantity, "");
+  token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
+  action.send(contracts::bank, beneficiary, quantity, "");
 }
