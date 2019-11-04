@@ -1,16 +1,14 @@
 {
-  "name": "seeds1",
-  "version": "1.0.0",
+  "name": "seeds-contracts",
+  "version": "1.2.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "riteway test/*.test.js | tap-nirvana",
-    "deploy": "node ./scripts/deploy.js",
-    "deploy:local": "EOSIO_NETWORK=local node ./scripts/deploy.js",
-    "deploy:kylin": "EOSIO_NETWORK=kylin node ./scripts/deploy.js",
-    "test:local:accounts": "EOSIO_NETWORK=local riteway test/accounts.test.js | tap-nirvana",
-    "test:local:harvest": "EOSIO_NETWORK=local riteway test/harvest.test.js | tap-nirvana",
-    "test:local:subscription": "EOSIO_NETWORK=local riteway test/subscription.test.js | tap-nirvana"
+    "deploy": "./scripts/seeds.js init",
+    "deploy:local": "EOSIO_NETWORK=local ./scripts/seeds.js init",
+    "deploy:testnet": "EOSIO_NETWORK=telosTestnet ./scripts/seeds.js init",
+    "deploy:mainnet": "EOSIO_NETWORK=telosMainnet ./scripts/seeds.js init"
   },
   "keywords": [],
   "author": "",
