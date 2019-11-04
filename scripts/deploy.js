@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, accounts, ownerPublicKey, activePublicKey, apiPublicKey } = require('./helper')
+const { eos, encodeName, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -35,7 +35,9 @@ const source = async (name) => {
   return Promise.all([code, abi]).then(([code, abi]) => ({ code, abi }))
 }
 
-const createAccount = async ({ account, publicKey, stakes, creator }) => {
+const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
+  if (!account) return
+
   try {
     await eos.transaction(async trx => {
       await trx.newaccount({
@@ -43,13 +45,13 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
         name: account,
         owner: publicKey,
         active: publicKey
-      })
+      }, { authorization: `${creator}@owner` })
 
       await trx.buyrambytes({
         payer: creator,
         receiver: account,
         bytes: stakes.ram
-      })
+      }, { authorization: `${creator}@owner` })
 
       await trx.delegatebw({
         from: creator,
@@ -57,7 +59,7 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
         stake_net_quantity: stakes.net,
         stake_cpu_quantity: stakes.cpu,
         transfer: 0
-      })
+      }, { authorization: `${creator}@owner` })
     })
     console.log(`${account} created`)
   } catch (err) {
@@ -123,12 +125,12 @@ const changeKeyPermission = async (account, permission, key) => {
   }
 }
 
-const setupPermissionWithKey = async ({ account }, permission, key) => {
+const createKeyPermission = async (account, role, parentRole = 'active', key) => {
   try {
     await eos.updateauth({
       account,
-      permission,
-      parent: 'active',
+      permission: role,
+      parent: parentRole,
       auth: {
         threshold: 1,
         waits: [],
@@ -139,31 +141,28 @@ const setupPermissionWithKey = async ({ account }, permission, key) => {
         }]
       }
     }, { authorization: `${account}@owner` })
-    console.log(`permission setup on ${account}@${permission} for ${key}`)
+    console.log(`permission setup on ${account}@${role}(/${parentRole}) for ${key}`)
   } catch (err) {
     console.error(`failed permission setup`, err)
   }
 }
 
-const allowAction = async ({ account }, action, permission) => {
+const allowAction = async (account, role, action) => {
   try {
     await eos.linkauth({
       account,
       code: account,
       type: action,
-      requirement: permission
+      requirement: role
     }, { authorization: `${account}@owner` })
-    console.log(`linkauth of ${account}@${action} for ${permission}`)
+    console.log(`linkauth of ${account}@${action} for ${role}`)
   } catch (err) {
     console.error(`failed allow action`, err)
   }
 }
 
-const addPermission = async ({ account: target }, targetRole, { account: actor }, actorRole) => {
+const addActorPermission = async (target, targetRole, actor, actorRole) => {
   try {
-
-console.log(`Add permission of ${actor}@${actorRole} for target ${target}@${targetRole}`)
-
     const { parent, required_auth: { threshold, waits, keys, accounts } } =
       (await eos.getAccount(target))
         .permissions.find(p => p.perm_name == targetRole)
@@ -205,169 +204,114 @@ console.log(`Add permission of ${actor}@${actorRole} for target ${target}@${targ
   }
 }
 
-const createAccounts = (accounts) => Promise.all(
-  accounts.map(createAccount)
-)
+const createCoins = async (token) => {
+  const { account, issuer, supply } = token
 
-const deployContracts = (contracts) => Promise.all(
-  contracts.map(deploy)
-)
+  const contract = await eos.contract(account)
 
-const addPermissions = (permissions) => Promise.all(
-  permissions.map(
-    permission => addPermission(...permission)
-  )
-)
+  try {
+    await contract.create({
+      issuer: issuer,
+      initial_supply: supply
+    }, { authorization: `${account}@active` })
 
-const configure = ({ account }) => (params) =>
-  eos.contract(account)
-    .then(contract => Promise.all(
-      Object.keys(params)
-        .map(param =>
-          contract.configure(param, params[param], { authorization: `${account}@active` })
-            .then(() => console.log(`configure ${param} equal to ${params[param]}`))
-        )
-    ))
-
-const addCoins = ({ account, issuer, supply }) => (accounts) =>
-  eos.contract(account)
-    .then(contract =>
-      contract.create({
-        issuer: issuer,
-        maximum_supply: supply
-      }, { authorization: `${account}@active` })
-        .then(() => {
-          console.log(`token created to ${issuer}`)
-          return contract.issue({
-            to: issuer,
-            quantity: supply,
-            memo: ''
-          }, { authorization: `${issuer}@active` })
-            .then(() => {
-              console.log(`token issued to ${issuer} (${supply})`)
-              return Promise.all(
-                accounts.map(({ account, quantity }) =>
-                  contract.transfer({
-                    from: issuer,
-                    to: account,
-                    quantity,
-                    memo: ''
-                  }, { authorization: `${issuer}@active` })
-                    .then(() => console.log(`token sent to ${user} (${quantity})`))
-                    .catch((err) => console.error(`failed to transfer from ${issuer} to ${user} on ${account}`, err))
-                )
-              )
-            })
-            .catch(() => console.log(`failed to issue tokens on ${account} to ${issuer}`))
-        })
-        .catch((err) => console.error(`token ${account} already created`, err))
-    )
-
-const joinUsers = ({ account }) => (users) =>
-  eos.contract(account)
-    .then(contract => Promise.all(
-      users.map(user =>
-        contract.adduser(user.account, { authorization: `${account}@active` })
-          .then(() => console.log(`joined user ${user.account} on ${account}`))
-          .catch((err) => console.error(`user ${user.account} already joined`, err))
-      )
-    ))
-
-const codeOwnerPermission = (account) =>
-  [account, 'owner', account, 'eosio.code']
-
-const codeActivePermission = (account) =>
-  [account, 'active', account, 'eosio.code']
-
-const accountActivePermission = (subject, object) =>
-  [subject, 'active', object, 'active']
-
-const updatePrivateKeys = async () => {
-  const targets = Object.keys(accounts).map(key => accounts[key].account)
-
-  for (let i = 0; i < targets.length; i++) {
-    if (targets[i] !== 'seedssubs222') {
-      await changeKeyPermission(targets[i], 'active', activePublicKey)
-      await changeKeyPermission(targets[i], 'owner', ownerPublicKey)
-    }
+    await contract.issue({
+      to: issuer,
+      quantity: supply,
+      memo: ''
+    }, { authorization: `${issuer}@active` })
+    
+    console.log(`coins successfully minted at ${account} (${supply})`)
+  } catch (err) {
+    console.error(`coins already created at ${account}`, err)
   }
 }
 
-const initContracts = async () => {
-  const {
-    owner, firstuser, seconduser, thirduser, application, bank,
-    token, harvest, subscription, settings, proposals, policy, invites, referendums, history,
-    accounts: accts
-  } = accounts
+const transferCoins = async (token, recipient) => {
+  const contract = await eos.contract(token)
 
   try {
-    await eos.getAccount(owner.account)
+    await contract.transfer({
+      from: token.issuer,
+      to: recipient.account,
+      quantity: recipient.quantity,
+      memo: ''
+    }, { authorization: `${token.issuer}@active` })
+    
+    console.log(`sent ${quantity} from ${token.issuer} to ${recipient.account}`)
   } catch (err) {
-    console.error(`Please, deploy owner account manually before running script`, err)
+    console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})`, err)
+  }
+}
+
+const isExistingAccount = async (account) => {
+  let exists = false
+
+  try {
+    await eos.getAccount(account)
+    exists = true
+  } catch (err) {
+    exists = false
+  }
+
+  return exists
+}
+
+const isActionPermission = permission => permission.action
+const isActorPermission = permission => permission.actor && !permission.key
+const isKeyPermission = permission => permission.key && !permission.actor
+
+const initContracts = async () => {
+  const ownerExists = await isExistingAccount(accounts.owner.account)
+
+  if (!ownerExists) {
+    console.log(`owner ${accounts.owner.account} should exist before deployment`)
     return
   }
 
-  await createAccount(firstuser)
-  await createAccount(seconduser)
-  await createAccount(application)
-  await createAccount(bank)
-  await createAccount(accts)
-  await createAccount(harvest)
-  await createAccount(subscription)
-  await createAccount(token)
-  await createAccount(settings)
-  await createAccount(proposals)
-  await createAccount(policy)
-  await createAccount(invites)
-  await createAccount(referendums)
-  await createAccount(history)
+  await createAccount(accounts.token)
+  await deploy(accounts.token)
+  await createCoins(accounts.token)
 
-  await deploy(token)
-  await deploy(accts)
-  await deploy(harvest)
-  await deploy(subscription)
-  await deploy(settings)
-  await deploy(proposals)
-  await deploy(policy)
-  await deploy(invites)
-  await deploy(referendums)
-  await deploy(history)
+  const accountNames = Object.keys(accounts)
+  for (let current = 0; current < accountNames.length; current++) {
+    const accountName = accountNames[current]
+    const account = accounts[accountName]
 
-  await addPermission(accts, 'owner', accts, 'eosio.code')
-  await addPermission(harvest, 'active', harvest, 'eosio.code')
-  await addPermission(subscription, 'active', subscription, 'eosio.code')
-  await addPermission(proposals, 'active', proposals, 'eosio.code')
-  await addPermission(bank, 'active', harvest, 'active')
-  await addPermission(bank, 'active', subscription, 'active')
-  await addPermission(bank, 'active', proposals, 'active')
-  await addPermission(accts, 'active', invites, 'active')
-  await addPermission(invites, 'owner', invites, 'eosio.code')
-  await addPermission(invites, 'active', invites, 'eosio.code')
-  await addPermission(referendums, 'active', referendums, 'eosio.code')
-  await addPermission(settings, 'active', referendums, 'active')
-  
- await addPermission(history, 'active', harvest, 'eosio.code')
+    await createAccount(account)
 
-  await setupPermissionWithKey(accts, 'api', apiPublicKey)
-  await setupPermissionWithKey(invites, 'api', apiPublicKey)
+    if (account.type === 'contract') {
+      await deploy(account)
+    }
 
-  await allowAction(accts, 'addrep', 'api')
-  await allowAction(accts, 'subrep', 'api')
-  await allowAction(accts, 'addref', 'api')
+    if (account.quantity && Number.parseFloat(account.quantity) > 0) {
+      await transferCoins(accounts.token, account)
+    }
+  }
 
-  await allowAction(invites, 'accept', 'api')
+  for (let current = 0; current < permissions.length; current++) {
+    const permission = permissions[current]
 
-  await addCoins(token)([ firstuser, seconduser, bank ])
+    if (isActionPermission(permission)) {
+      const { target, action } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
 
-  await configure(settings)({
-    tokenaccnt: encodeName(token.account, false),
-    bankaccnt: encodeName(bank.account, false),
-    hrvstreward: 100000,
-    propminstake: 100,
-    refsmajority: 80,
-    refsquorum: 80,
-    refsnewprice: 1000 * 10000
-  })
+      await allowAction(targetAccount, targetRole, action)
+    } else if (isActorPermission(permission)) {
+      const { target, actor } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+      const [ actorAccount, actorRole ] = actor.split('@')
+
+      await addActorPermission(targetAccount, targetRole, actorAccount, actorRole)
+    } else if (isKeyPermission(permission)) {
+      const { target, parent, key } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+
+      await createKeyPermission(targetAccount, targetRole, parent, key)
+    } else {
+      console.log(`invalid permission #${current}`)
+    }
+  }
 }
 
 module.exports = initContracts

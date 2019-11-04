@@ -42,8 +42,7 @@ const initAction = async () => {
     "settings", 
     "token", 
     "harvest", 
-    "proposals", 
-    "subscription",
+    "proposals",
     "invites",
     "referendums",
     "history"
