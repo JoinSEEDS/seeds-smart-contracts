@@ -24,8 +24,6 @@ describe("make a history entry", async (assert) => {
         json: true
     })
 
-console.log("result "+ JSON.stringify(rows))
-
     assert({ 
         given: "action was tracked",
         should: "have table entry",

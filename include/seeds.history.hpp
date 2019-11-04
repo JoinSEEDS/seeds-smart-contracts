@@ -1,4 +1,5 @@
 #include <eosio/eosio.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
@@ -26,7 +27,7 @@ CONTRACT history : public contract {
 
         uint64_t primary_key()const { return history_id; }
       };
-    
+
     typedef eosio::multi_index<"history"_n, history_table> history_tables;
 
 };

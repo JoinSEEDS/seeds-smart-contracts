@@ -1,8 +1,8 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
-#include <eosio/print.hpp>
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
@@ -15,8 +15,8 @@ CONTRACT proposals : public contract {
           props(receiver, receiver.value),
           voice(receiver, receiver.value),
           lastprops(receiver, receiver.value),
-          config(name("seedsettings"), name("seedsettings").value),
-          users(name("seedsaccnts3"), name("seedsaccnts3").value)
+          config(contracts::settings, contracts::settings.value),
+          users(contracts::accounts, contracts::accounts.value)
           {}
 
       ACTION reset();
@@ -123,7 +123,7 @@ CONTRACT proposals : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
+  if (action == name("transfer").value && code == contracts::token.value) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
