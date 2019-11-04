@@ -28,8 +28,8 @@ void invites::add_user(name account) {
   string nickname("");
 
   action(
-    permission_level{"seedsaccnts3"_n, "active"_n},
-    "seedsaccnts3"_n, "adduser"_n,
+    permission_level{contracts::accounts, "active"_n},
+    contracts::accounts, "adduser"_n,
     make_tuple(account, nickname)
   ).send();
 }
@@ -39,7 +39,7 @@ void invites::transfer_seeds(name account, asset quantity) {
 
   action(
     permission_level{_self, "active"_n},
-    "seedstoken12"_n, "transfer"_n,
+    contracts::token, "transfer"_n,
     make_tuple(_self, account, quantity, memo)
   ).send();
 }
@@ -49,15 +49,15 @@ void invites::plant_seeds(asset quantity) {
 
   action(
     permission_level{_self, "active"_n},
-    "seedstoken12"_n, "transfer"_n,
-    make_tuple(_self, "seedshrvst11"_n, quantity, memo)
+    contracts::token, "transfer"_n,
+    make_tuple(_self, contracts::harvest, quantity, memo)
   ).send();
 }
 
 void invites::sow_seeds(name account, asset quantity) {
   action(
     permission_level{_self, "active"_n},
-    "seedshrvst11"_n, "sow"_n,
+    contracts::harvest, "sow"_n,
     make_tuple(_self, account, quantity)
   ).send();
 }

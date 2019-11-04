@@ -1,6 +1,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
 #include <abieos_numeric.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
@@ -44,7 +45,7 @@ CONTRACT invites : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
+  if (action == name("transfer").value && code == contracts::token.value) {
       execute_action<invites>(name(receiver), name(code), &invites::send);
   } else if (code == receiver) {
       switch (action) {
