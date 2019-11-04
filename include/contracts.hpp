@@ -5,7 +5,7 @@
 using eosio::name;
 
 namespace contracts {
-  name accounts = "seedsaccntx"_n;
+  name accounts = "seedsaccntsx"_n;
   name harvest = "seedshrvestx"_n;
   name settings = "seedsettingx"_n;
   name proposals = "seedsprpslsx"_n;
