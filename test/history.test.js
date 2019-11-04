@@ -25,6 +25,8 @@ describe("make a history entry", async (assert) => {
     })
     let timestamp = rows[0].timestamp
 
+    let rowWithoutTimestamp = rows[0]
+    delete rowWithoutTimestamp.timestamp
     assert({ 
         given: "action was tracked",
         should: "have table entry",
