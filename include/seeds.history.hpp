@@ -1,4 +1,5 @@
 #include <eosio/eosio.hpp>
+#include <eosio/system.hpp>
 
 using namespace eosio;
 using std::string;
@@ -23,6 +24,7 @@ CONTRACT history : public contract {
         string action;
         uint64_t amount;
         string meta;
+        uint64_t timestamp;
 
         uint64_t primary_key()const { return history_id; }
       };

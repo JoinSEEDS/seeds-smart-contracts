@@ -1,6 +1,5 @@
 #include <seeds.history.hpp>
 
-
 void history::reset(name account) {
   require_auth(get_self());
 
@@ -23,5 +22,6 @@ void history::historyentry(name account, string action, uint64_t amount, string 
     item.action = action;
     item.amount = amount;
     item.meta = meta;
+    item.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }

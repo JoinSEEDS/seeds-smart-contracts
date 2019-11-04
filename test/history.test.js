@@ -23,20 +23,29 @@ describe("make a history entry", async (assert) => {
         table: "history",
         json: true
     })
+    let timestamp = rows[0].timestamp
 
-console.log("result "+ JSON.stringify(rows))
-
+    let rowWithoutTimestamp = rows[0]
+    delete rowWithoutTimestamp.timestamp
     assert({ 
         given: "action was tracked",
         should: "have table entry",
-        actual: rows,
-        expected: [{
+        actual: rowWithoutTimestamp,
+        expected: {
             history_id: 0,
             account: firstuser,
             action: "tracktest",
             amount: 77,
-            meta: "vasily"
-        }]
+            meta: "vasily",
+        }
     })
+
+    assert({ 
+        given: "action was tracked",
+        should: "timestamp is kinda close",
+        actual: Math.round(timestamp/10),
+        expected: Math.round(new Date()/10000),
+    })
+
 
 })
