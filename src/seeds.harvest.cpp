@@ -386,6 +386,9 @@ void harvest::init_balance(name account)
 
 void harvest::check_user(name account)
 {
+  if (account == contracts::invites) {
+    return;
+  }
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
 }
