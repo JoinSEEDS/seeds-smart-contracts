@@ -100,12 +100,17 @@ void invites::accept(name sponsor, name account, string publicKey, asset quantit
     sponsor.balance -= quantity;
   });
 
-  asset transfer_quantity = asset(quantity.amount - sow_amount, seeds_symbol);
-  asset sow_quantity = asset(sow_amount, seeds_symbol);
+  if (quantity.amount == 0 && is_account(account) ) {
+    // special feature - existing telos users get to "link" their account with 0 seeds
+    add_user(account);
+  } else {
+    asset transfer_quantity = asset(quantity.amount - sow_amount, seeds_symbol);
+    asset sow_quantity = asset(sow_amount, seeds_symbol);
 
-  create_account(account, publicKey);
-  add_user(account);
-  transfer_seeds(account, transfer_quantity);
-  plant_seeds(sow_quantity);
-  sow_seeds(account, sow_quantity);
+    create_account(account, publicKey);
+    add_user(account);
+    transfer_seeds(account, transfer_quantity);
+    plant_seeds(sow_quantity);
+    sow_seeds(account, sow_quantity);
+  }
 }

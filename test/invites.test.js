@@ -1,7 +1,7 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows } = require('../scripts/helper')
 
-const { accounts, harvest, token, invites, firstuser, seconduser } = names
+const { accounts, harvest, token, invites, firstuser, seconduser, thirduser } = names
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
@@ -40,9 +40,6 @@ describe('Invites', async assert => {
     json: true
   })
 
-  console.log('add invites account as user')
-  await contracts.accounts.adduser(invites, '', { authorization: `${accounts}@active` })
-
   console.log(`send invite from ${firstuser}`)
   await contracts.token.transfer(firstuser, invites, '12.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
@@ -55,6 +52,38 @@ describe('Invites', async assert => {
 
   console.log(`accept invite from ${inviteduser}`)
   await contracts.invites.accept(firstuser, inviteduser, publicKey, '12.0000 SEEDS', { authorization: `${invites}@api` })
+
+  const nonTelosAccount = randomAccountName()
+
+  console.log(`accept invite from ${inviteduser} with 0 seeds non account`)
+  var hasError = false
+  try {
+    await contracts.invites.accept(firstuser, nonTelosAccount, publicKey, '0.0000 SEEDS', { authorization: `${invites}@api` })
+  } catch (err) {
+    hasError = true
+  }
+
+  assert({
+    given: 'random account invite with 0 seeds',
+    should: 'fail',
+    actual: hasError,
+    expected: true
+  })
+
+  console.log(`accept invite from ${inviteduser} with 0 seeds Telos account`)
+  hasError = false
+  try {
+    await contracts.invites.accept(firstuser, thirduser, publicKey, '0.0000 SEEDS', { authorization: `${invites}@api` })
+  } catch (err) {
+    hasError = true
+  }
+
+  assert({
+    given: 'Telos account creation with 0 seeds',
+    should: 'succeed',
+    actual: hasError,
+    expected: false
+  })
 
   const sponsorsClaimed = await getTableRows({
     code: invites,
@@ -69,6 +98,10 @@ describe('Invites', async assert => {
     table: 'users',
     json: true
   })
+
+  let accountsClaimedNames = accountsClaimed.rows.map( (item) => item.account ).sort()
+
+console.log("accountsClaimed: "+JSON.stringify(accountsClaimedNames, null, 2))
 
   const harvestClaimed = await getTableRows({
     code: harvest,
@@ -111,12 +144,17 @@ describe('Invites', async assert => {
     }]
   })
 
+  const acctAfterClaimed = [
+    inviteduser,
+    thirduser
+  ].sort()
   assert({
     given: 'accounts after claimed',
     should: 'be created account',
-    actual: accountsClaimed.rows[0].account,
-    expected: `${inviteduser}`
+    actual: accountsClaimedNames,
+    expected: acctAfterClaimed
   })
+
 
   assert({
     given: 'planted balance after claimed',

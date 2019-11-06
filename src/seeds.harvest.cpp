@@ -390,7 +390,7 @@ void harvest::check_user(name account)
     return;
   }
   auto uitr = users.find(account.value);
-  check(uitr != users.end(), "no user");
+  check(uitr != users.end(), "harvest: no user");
 }
 
 void harvest::check_asset(asset quantity)
