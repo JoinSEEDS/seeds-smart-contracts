@@ -91,19 +91,18 @@ void invites::send(name from, name to, asset quantity, string memo) {
 
 void invites::accept(name sponsor, name account, string publicKey, asset quantity) {
   require_auth(get_self());
-
-  auto sitr = sponsors.find(sponsor.value);
-  check(sitr != sponsors.end(), "sponsor not found");
-  check(sitr->balance >= quantity, "not enough balance");
-
-  sponsors.modify(sitr, _self, [&](auto& sponsor) {
-    sponsor.balance -= quantity;
-  });
-
   if (quantity.amount == 0 && is_account(account) ) {
-    // special feature - existing telos users get to "link" their account with 0 seeds
+    // special feature - existing telos users get to "link" their account with 0 seedsto
+    // TODO move this to its own action.
     add_user(account);
   } else {
+    auto sitr = sponsors.find(sponsor.value);
+    check(sitr != sponsors.end(), "sponsor not found");
+    check(sitr->balance >= quantity, "not enough balance");
+
+    sponsors.modify(sitr, _self, [&](auto& sponsor) {
+      sponsor.balance -= quantity;
+    });
     asset transfer_quantity = asset(quantity.amount - sow_amount, seeds_symbol);
     asset sow_quantity = asset(sow_amount, seeds_symbol);
 
