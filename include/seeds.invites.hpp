@@ -2,6 +2,7 @@
 #include <eosio/asset.hpp>
 #include <abieos_numeric.hpp>
 #include <contracts.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -40,28 +41,10 @@ CONTRACT invites : public contract {
       uint64_t primary_key() const { return account.value; }
     };
 
-    // imported
-    TABLE user_table {
-        name account;
-        name status;
-        name type;
-        string nickname;
-        string image;
-        string story;
-        string roles;
-        string skills;
-        string interests;
-        uint64_t reputation;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
-
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
-    typedef eosio::multi_index<"users"_n, user_table,
+    typedef eosio::multi_index<"users"_n, tables::user_table,
       indexed_by<"byreputation"_n,
-      const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
+      const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
     > user_tables;
 
     sponsor_tables sponsors;
