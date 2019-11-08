@@ -411,8 +411,8 @@ void harvest::withdraw(name beneficiary, asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
+  auto token_account = contracts::token;
+  auto bank_account = contracts::bank;
 
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
   action.send(contracts::bank, beneficiary, quantity, "");

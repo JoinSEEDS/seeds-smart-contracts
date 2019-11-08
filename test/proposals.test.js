@@ -2,12 +2,15 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, token, bank, firstuser, seconduser, thirduser } = names
+const { harvest, accounts, proposals, settings, token, bank, firstuser, seconduser, thirduser } = names
 
 describe('Proposals', async assert => {
-  const contracts = await initContracts({ accounts, proposals, token, harvest })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
 
   const secondUserInitialBalance = await getBalance(seconduser)
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -39,8 +42,8 @@ describe('Proposals', async assert => {
   await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
 
   console.log('force status')
-  await contracts.accounts.forcestatus(firstuser, "citizen", { authorization: `${accounts}@active` })
-  await contracts.accounts.forcestatus(seconduser, "citizen", { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
 
   try {
     await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
