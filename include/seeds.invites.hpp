@@ -15,7 +15,8 @@ CONTRACT invites : public contract {
     using contract::contract;
     invites(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
-        sponsors(receiver, receiver.value)
+        sponsors(receiver, receiver.value),
+        users(contracts::accounts, contracts::accounts.value)
         {}
 
     ACTION reset();
@@ -39,9 +40,33 @@ CONTRACT invites : public contract {
       uint64_t primary_key() const { return account.value; }
     };
 
+    // imported
+    TABLE user_table {
+        name account;
+        name status;
+        name type;
+        string nickname;
+        string image;
+        string story;
+        string roles;
+        string skills;
+        string interests;
+        uint64_t reputation;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return account.value; }
+        uint64_t by_reputation()const { return reputation; }
+      };
+
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
+    typedef eosio::multi_index<"users"_n, user_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
+    > user_tables;
 
     sponsor_tables sponsors;
+    user_tables users;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {

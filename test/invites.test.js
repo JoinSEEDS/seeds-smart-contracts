@@ -23,7 +23,7 @@ const initContracts = (contractAccounts) =>
 const randomAccountName = () => Math.random().toString(36).substring(2).replace(/\d/g, '').toString()
 
 describe('Invites', async assert => {
-  const contracts = await initContracts({ accounts, invites, token })
+  const contracts = await initContracts({ accounts, invites, token, harvest })
 
   const inviteduser = randomAccountName()
 
@@ -32,6 +32,9 @@ describe('Invites', async assert => {
 
   console.log('reset invites')
   await contracts.invites.reset({ authorization: `${invites}@active` })
+
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
   const sponsorsInitial = await getTableRows({
     code: invites,
@@ -51,6 +54,7 @@ describe('Invites', async assert => {
   })
 
   console.log(`accept invite from ${inviteduser}`)
+
   await contracts.invites.accept(firstuser, inviteduser, publicKey, '12.0000 SEEDS', { authorization: `${invites}@api` })
 
   const nonTelosAccount = randomAccountName()
@@ -100,8 +104,6 @@ describe('Invites', async assert => {
   })
 
   let accountsClaimedNames = accountsClaimed.rows.map( (item) => item.account ).sort()
-
-console.log("accountsClaimed: "+JSON.stringify(accountsClaimedNames, null, 2))
 
   const harvestClaimed = await getTableRows({
     code: harvest,
@@ -175,4 +177,44 @@ console.log("accountsClaimed: "+JSON.stringify(accountsClaimedNames, null, 2))
       balance: '7.0000 SEEDS'
     }]
   })
+
+  // accept another invite
+  await contracts.token.transfer(seconduser, invites, '22.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.invites.accept(seconduser, inviteduser, publicKey, '22.0000 SEEDS', { authorization: `${invites}@api` })
+
+  const harvestClaimed2 = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true
+  })
+
+  const tokenClaimed2 = await getTableRows({
+    code: token,
+    scope: inviteduser,
+    table: 'accounts',
+    json: true
+  })
+
+  assert({
+    given: 'planted balance after 2nd claimed',
+    should: 'be positive amount',
+    actual: harvestClaimed2.rows.find(user => user.account == inviteduser),
+    expected: {
+      account: inviteduser,
+      planted: '10.0000 SEEDS',
+      reward: '0.0000 SEEDS'
+    }
+  })
+
+  assert({
+    given: 'current balance after 2nd claimed',
+    should: 'be positive amount',
+    actual: tokenClaimed2.rows,
+    expected: [{
+      balance: '24.0000 SEEDS'
+    }]
+  })
+
+
 })

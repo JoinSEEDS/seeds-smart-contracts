@@ -26,6 +26,11 @@ void invites::create_account(name account, string publicKey) {
 
 void invites::add_user(name account) {
   string nickname("");
+  auto uitr = users.find(account.value);
+  if (uitr != users.end()) {
+    // user exists, no need to create
+    return;
+  }
 
   action(
     permission_level{contracts::accounts, "active"_n},
