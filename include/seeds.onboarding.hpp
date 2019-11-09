@@ -12,10 +12,10 @@ using std::make_tuple;
 using abieos::keystring_authority;
 using abieos::authority;
 
-CONTRACT invites : public contract {
+CONTRACT onboarding : public contract {
   public:
     using contract::contract;
-    invites(name receiver, name code, datastream<const char*> ds)
+    onboarding(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         sponsors(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value)
@@ -26,7 +26,6 @@ CONTRACT invites : public contract {
     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION cancel(name sponsor, checksum256 invite_hash);
-    ACTION withdraw(name sponsor, asset quantity);
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol network_symbol = symbol("TLOS", 4);
@@ -64,24 +63,25 @@ CONTRACT invites : public contract {
       indexed_by<"byhash"_n,
       const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>
     > invite_tables;
-    
+
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
+
+    sponsor_tables sponsors;
+
     typedef eosio::multi_index<"users"_n, tables::user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
     > user_tables;
 
-    sponsor_tables sponsors;
     user_tables users;
-
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::token.value) {
-      execute_action<invites>(name(receiver), name(code), &invites::send);
+      execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(invites, (reset)(invite)(accept)(cancel)(withdraw))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(accept)(cancel))
       }
   }
 }

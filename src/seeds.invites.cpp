@@ -72,6 +72,14 @@ void invites::sow_seeds(name account, asset quantity) {
   ).send();
 }
 
+void invites::add_referral(name sponsor, name account) {
+  action(
+    permission_level{_self, "active"_n},
+    "seedsaccnts3"_n, "addref"_n,
+    make_tuple(sponsor, account)
+  ).send();
+}
+
 void invites::reset() {
   require_auth(get_self());
 
@@ -82,7 +90,7 @@ void invites::reset() {
   }
 }
 
-void invites::send(name from, name to, asset quantity, string memo) {
+void invites::deposit(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
     auto sitr = sponsors.find(from.value);
 

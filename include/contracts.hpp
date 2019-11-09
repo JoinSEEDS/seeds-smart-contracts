@@ -15,4 +15,5 @@ namespace contracts {
   name token = "seedstokennx"_n;
   name policy = "seedspolicyx"_n;
   name bank = "seedsbanksys"_n;
+  name onboarding = "seedsjoinusx"_n;
 }

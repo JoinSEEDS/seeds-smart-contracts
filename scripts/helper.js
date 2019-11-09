@@ -50,6 +50,13 @@ const apiKeys = {
 }
 const apiPublicKey = apiKeys[chainId]
 
+const applicationKeys = {
+  [networks.local]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U',
+  [networks.telosMainnet]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U',
+  [networks.telosTestnet]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U'
+}
+const applicationPublicKey = applicationKeys[chainId]
+
 const account = (accountName, quantity = '0.0000 SEEDS') => ({
   type: 'account',
   account: accountName,
@@ -103,7 +110,8 @@ const accountsMetadata = (network) => {
       referendums: contract('seedsrfrndmx', 'referendums'),
       history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
-      policy: contract('seedspolicyx', 'policy')
+      policy: contract('seedspolicyx', 'policy'),
+      onboarding: contract('seedsjoinusx', 'onboarding')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -123,7 +131,8 @@ const accountsMetadata = (network) => {
       referendums: contract('seedsrfrndmx', 'referendums'),
       history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '777777777.7600 SEEDS'),
-      policy: contract('seedspolicyx', 'policy')
+      policy: contract('seedspolicyx', 'policy'),
+      onboarding: contract('seedsjoinusx', 'onboarding')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -146,7 +155,8 @@ const accountsMetadata = (network) => {
       referendums: contract('seedsrfrndmx', 'referendums'),
       history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
-      policy: contract('seedspolicyx', 'policy')
+      policy: contract('seedspolicyx', 'policy'),
+      onboarding: contract('seedsjoinusx', 'onboarding')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -214,6 +224,22 @@ const permissions = [{
 }, {
   target: `${accounts.invites.account}@api`,
   action: 'accept'
+}, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.onboarding.account}@eosio.code`
+}, {
+  target: `${accounts.onboarding.account}@owner`,
+  actor: `${accounts.onboarding.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.onboarding.account}@active`,
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  key: applicationPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'accept'
 }]
 
 const keyProviders = {
@@ -253,8 +279,10 @@ const initContracts = (accounts) =>
       })
     ))
   )
+  
+const sha256 = Eos.modules.ecc.sha256
 
 module.exports = {
   eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256
 }
