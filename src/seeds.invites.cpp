@@ -40,6 +40,11 @@ void invites::add_user(name account) {
 }
 
 void invites::transfer_seeds(name account, asset quantity) {
+
+  if (quantity.amount == 0) {
+    return;
+  }
+
   string memo("");
 
   action(
@@ -112,6 +117,7 @@ void invites::accept(name sponsor, name account, string publicKey, asset quantit
     auto sitr = sponsors.find(sponsor.value);
     check(sitr != sponsors.end(), "sponsor not found");
     check(sitr->balance >= quantity, "not enough balance");
+    check(quantity.amount >= sow_amount, "quantity must be greater or equal to minimum sow amount");
 
     sponsors.modify(sitr, _self, [&](auto& sponsor) {
       sponsor.balance -= quantity;
