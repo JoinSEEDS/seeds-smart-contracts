@@ -30,7 +30,7 @@ void proposals::onperiod() {
       if (pitr->stage == name("active")) {
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
-              //withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
+              withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
               withdraw(pitr->recipient , pitr->staked);
 
               props.modify(pitr, _self, [&](auto& proposal) {
@@ -264,8 +264,8 @@ void proposals::deposit(asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
+  auto token_account = contracts::token;
+  auto bank_account = contracts::bank;
 
   token::transfer_action action{name(token_account), {_self, "active"_n}};
   action.send(_self, name(bank_account), quantity, "");
@@ -275,8 +275,8 @@ void proposals::withdraw(name beneficiary, asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
+  auto token_account = contracts::token;
+  auto bank_account = contracts::bank;
 
   token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), beneficiary, quantity, "");
@@ -286,8 +286,8 @@ void proposals::burn(asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
+  auto token_account = contracts::token;
+  auto bank_account = contracts::bank;
 
   token::burn_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), quantity);

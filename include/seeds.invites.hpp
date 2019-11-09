@@ -2,6 +2,8 @@
 #include <eosio/asset.hpp>
 #include <eosio/crypto.hpp>
 #include <abieos_numeric.hpp>
+#include <contracts.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -15,7 +17,8 @@ CONTRACT invites : public contract {
     using contract::contract;
     invites(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
-        sponsors(receiver, receiver.value)
+        sponsors(receiver, receiver.value),
+        users(contracts::accounts, contracts::accounts.value)
         {}
 
     ACTION reset();
@@ -63,13 +66,19 @@ CONTRACT invites : public contract {
     > invite_tables;
     
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
+    typedef eosio::multi_index<"users"_n, tables::user_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
+    > user_tables;
 
     sponsor_tables sponsors;
+    user_tables users;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
-      execute_action<invites>(name(receiver), name(code), &invites::deposit);
+  if (action == name("transfer").value && code == contracts::token.value) {
+      execute_action<invites>(name(receiver), name(code), &invites::send);
   } else if (code == receiver) {
       switch (action) {
       EOSIO_DISPATCH_HELPER(invites, (reset)(invite)(accept)(cancel)(withdraw))

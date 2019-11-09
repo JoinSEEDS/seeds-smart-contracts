@@ -4,6 +4,7 @@
 #include <eosio/time.hpp>
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
+#include <contracts.hpp>
 
 using namespace eosio;
 using std::string;
@@ -15,9 +16,9 @@ CONTRACT harvest : public contract {
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
         harveststat(receiver, receiver.value),
-        config(name("seedsettings"), name("seedsettings").value),
-        users(name("seedsaccnts3"), name("seedsaccnts3").value),
-        reps(name("seedsaccnts3"), name("seedsaccnts3").value)
+        config(contracts::settings, contracts::settings.value),
+        users(contracts::accounts, contracts::accounts.value),
+        reps(contracts::accounts, contracts::accounts.value)
         {}
 
     ACTION reset();
@@ -30,7 +31,7 @@ CONTRACT harvest : public contract {
 
     ACTION cancelrefund(name from, uint64_t request_id);
 
-    ACTION claimreward(name from, asset reward);
+    ACTION claimreward(name from);
 
     ACTION sow(name from, name to, asset quantity);
 
@@ -42,11 +43,7 @@ CONTRACT harvest : public contract {
 
     ACTION calcrep();
 
-    ACTION trackcancel(name from, uint64_t unplant_amount);
-
-    ACTION trackrefund(name from, uint64_t refund_amount);
-    
-    ACTION trackreward(name from, uint64_t reward_amount);
+    ACTION testreward(name from);
 
     using reset_action = action_wrapper<"reset"_n, &harvest::reset>;
     using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
@@ -165,11 +162,11 @@ CONTRACT harvest : public contract {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == "seedstoken12"_n.value) {
+  if (action == name("transfer").value && code == contracts::token.value) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted))
+          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted))
       }
   }
 }

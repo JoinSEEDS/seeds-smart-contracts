@@ -15,6 +15,7 @@ void harvest::reset() {
     hitr = harveststat.erase(hitr);
   }
 
+  /*
   name user = name("seedsuser555");
   refund_tables refunds(get_self(), user.value);
 
@@ -22,6 +23,7 @@ void harvest::reset() {
   while (ritr != refunds.end()) {
     ritr = refunds.erase(ritr);
   }
+  */
 
   init_balance(_self);
 }
@@ -82,7 +84,7 @@ void harvest::claimrefund(name from, uint64_t request_id) {
       if (refund_time < eosio::current_time_point().sec_since_epoch()) {
         total += ritr->amount;
         ritr = refunds.erase(ritr);
-      } 
+      }
       else{
         ritr++;
       }
@@ -92,16 +94,13 @@ void harvest::claimrefund(name from, uint64_t request_id) {
   }
   if (total.amount > 0) {
     withdraw(beneficiary, total);
-    
-    action(
-      permission_level(_self, "active"_n),
-      _self,
-      "trackrefund"_n, 
-      std::make_tuple(from, total.amount)
-    ).send();
-
-
   }
+  action(
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
+      std::make_tuple(from, string("trackrefund"), total.amount, string(""))
+   ).send();
 }
 
 void harvest::cancelrefund(name from, uint64_t request_id) {
@@ -139,12 +138,11 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
   }
 
   action(
-    permission_level(_self, "active"_n),
-    _self,
-    "trackcancel"_n, 
-    std::make_tuple(from, totalReplanted)
-  ).send();
-
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
+      std::make_tuple(from, string("trackcancel"), totalReplanted, string(""))
+   ).send();
 }
 
 void harvest::unplant(name from, asset quantity) {
@@ -241,7 +239,7 @@ void harvest::calcrep() {
 void harvest::calctrx() {
   require_auth(_self);
 
-  transaction_tables transactions(name("seedstoken12"), seeds_symbol.code().raw());
+  transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
 
   auto userstrx = transactions.get_index<"bytrxvolume"_n>();
 
@@ -332,17 +330,18 @@ void harvest::calcplanted() {
   trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
 }
 
-void harvest::claimreward(name from, asset reward) {
+void harvest::claimreward(name from) {
   require_auth(from);
   check_user(from);
-  check_asset(reward);
-
-  init_balance(from);
 
   auto bitr = balances.find(from.value);
+  check(bitr != balances.end(), "no balance");
+  check(bitr->reward > asset(0, seeds_symbol), "no reward available");
+
+  asset reward = asset(bitr->reward.amount, seeds_symbol);
+
   balances.modify(bitr, _self, [&](auto& user) {
-    user.reward = user.reward - reward;
-    check(user.reward >= asset(0, seeds_symbol), "no reward");
+    user.reward = asset(0, seeds_symbol);
   });
 
   auto titr = balances.find(_self.value);
@@ -353,12 +352,23 @@ void harvest::claimreward(name from, asset reward) {
   withdraw(from, reward);
 
   action(
-    permission_level(_self, "active"_n),
-    _self,
-    "trackreward"_n, 
-    std::make_tuple(from, reward.amount)
-  ).send();
+      permission_level(contracts::history, "active"_n),
+      contracts::history,
+      "historyentry"_n,
+      std::make_tuple(from, string("trackreward"), reward.amount, string(""))
+   ).send();
 
+}
+
+void harvest::testreward(name from) {
+  require_auth(get_self());
+  init_balance(from);
+
+  auto bitr = balances.find(from.value);
+
+  balances.modify(bitr, _self, [&](auto& user) {
+    user.reward = asset(100000, seeds_symbol);
+  });
 
 }
 
@@ -376,8 +386,11 @@ void harvest::init_balance(name account)
 
 void harvest::check_user(name account)
 {
+  if (account == contracts::invites) {
+    return;
+  }
   auto uitr = users.find(account.value);
-  check(uitr != users.end(), "no user");
+  check(uitr != users.end(), "harvest: no user");
 }
 
 void harvest::check_asset(asset quantity)
@@ -390,25 +403,17 @@ void harvest::deposit(asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
-
-  token::transfer_action action{name(token_account), {_self, "active"_n}};
-  action.send(_self, name(bank_account), quantity, "");
+  token::transfer_action action{contracts::token, {_self, "active"_n}};
+  action.send(_self, contracts::bank, quantity, "");
 }
 
 void harvest::withdraw(name beneficiary, asset quantity)
 {
   check_asset(quantity);
 
-  auto token_account = config.find(name("tokenaccnt").value)->value;
-  auto bank_account = config.find(name("bankaccnt").value)->value;
+  auto token_account = contracts::token;
+  auto bank_account = contracts::bank;
 
-  token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
-  action.send(name(bank_account), beneficiary, quantity, "");
+  token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
+  action.send(contracts::bank, beneficiary, quantity, "");
 }
-
-// tracking actions that do nothing
-void harvest::trackcancel(name from, uint64_t unplant_amount) { }
-void harvest::trackrefund(name from, uint64_t refund_amount) { }
-void harvest::trackreward(name from, uint64_t reward_amount) { }

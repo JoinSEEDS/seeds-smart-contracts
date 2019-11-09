@@ -36,24 +36,8 @@ describe.only('accounts', async assert => {
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
 
-  console.log('join application')
-  await contract.addapp(application, { authorization: `${accounts}@active` })
-
-  try {
-    console.log(`create account ${firstuser}`)
-    await contract.addrequest(application, firstuser, publicKey, publicKey, { authorization: `${application}@active` })
-    await contract.fulfill(application, firstuser, { authorization: `${accounts}@owner` })
-  } catch (err) {
-    console.log(`${firstuser} account already exists`)
-  }
-
-  try {
-    console.log(`create account ${seconduser}`)
-    await contract.addrequest(application, seconduser, publicKey, publicKey, { authorization: `${application}@active` })
-    await contract.fulfill(application, seconduser, { authorization: `${accounts}@owner` })
-  } catch (err) {
-    console.log(`${seconduser} account already exists`)
-  }
+  console.log('reset token stats')
+  await thetoken.resetweekly({ authorization: `${token}@active` })
 
   console.log('join users')
   await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
@@ -72,11 +56,8 @@ describe.only('accounts', async assert => {
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
   await contract.subrep(seconduser, 1, { authorization: `${accounts}@api` })
 
-  console.log('make resident')
-  await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
-
-  console.log('vouch user')
-  await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
+  console.log('test citizen')
+  await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
@@ -146,14 +127,14 @@ describe.only('accounts', async assert => {
     actual: users.rows.map(({ account, status, nickname, reputation }) => ({ account, status, nickname, reputation })),
     expected: [{
       account: firstuser,
-      status: 'resident',
+      status: 'citizen',
       nickname: 'First user',
-      reputation: 101,
+      reputation: 100,
     }, {
       account: seconduser,
       status: 'resident',
       nickname: '',
-      reputation: 5
+      reputation: 0
     }]
   })
 })

@@ -26,10 +26,15 @@ void invites::create_account(name account, string publicKey) {
 
 void invites::add_user(name account) {
   string nickname("");
+  auto uitr = users.find(account.value);
+  if (uitr != users.end()) {
+    // user exists, no need to create
+    return;
+  }
 
   action(
-    permission_level{"seedsaccnts3"_n, "active"_n},
-    "seedsaccnts3"_n, "adduser"_n,
+    permission_level{contracts::accounts, "active"_n},
+    contracts::accounts, "adduser"_n,
     make_tuple(account, nickname)
   ).send();
 }
@@ -39,7 +44,7 @@ void invites::transfer_seeds(name account, asset quantity) {
 
   action(
     permission_level{_self, "active"_n},
-    "seedstoken12"_n, "transfer"_n,
+    contracts::token, "transfer"_n,
     make_tuple(_self, account, quantity, memo)
   ).send();
 }
@@ -49,15 +54,15 @@ void invites::plant_seeds(asset quantity) {
 
   action(
     permission_level{_self, "active"_n},
-    "seedstoken12"_n, "transfer"_n,
-    make_tuple(_self, "seedshrvst11"_n, quantity, memo)
+    contracts::token, "transfer"_n,
+    make_tuple(_self, contracts::harvest, quantity, memo)
   ).send();
 }
 
 void invites::sow_seeds(name account, asset quantity) {
   action(
     permission_level{_self, "active"_n},
-    "seedshrvst11"_n, "sow"_n,
+    contracts::harvest, "sow"_n,
     make_tuple(_self, account, quantity)
   ).send();
 }
@@ -97,75 +102,27 @@ void invites::deposit(name from, name to, asset quantity, string memo) {
   }
 }
 
-void invites::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
-  require_auth(sponsor);
-
-  asset total_quantity = transfer_quantity + sow_quantity;
-
-  auto sitr = sponsors.find(sponsor.value);
-  check(sitr != sponsors.end(), "sponsor not found");
-  check(sitr->balance < total_quantity, "need deposit seeds to invites contract");
-
-  sponsors.modify(sitr, get_self(), [&](auto& sponsor) {
-    sponsor.balance -= total_quantity;
-  });
-
-  invite_tables invites(get_self(), get_self().value);
-  auto invites_byhash = invites.get_index<"byhash"_n>();
-  auto iitr = invites_byhash.find(invite_hash);
-  check(iitr == invites_byhash.end(), "invite hash already exist");
-
-  checksum256 empty_checksum;
-
-  invites.emplace(get_self(), [&](auto& invite) {
-    invite.invite_id = invites.available_primary_key();
-    invite.transfer_quantity = transfer_quantity;
-    invite.sow_quantity = sow_quantity;
-    invite.sponsor = sponsor;
-    invite.account = name("");
-    invite.invite_hash = invite_hash;
-    invite.invite_secret = empty_checksum;
-  });
-}
-
-void invites::cancel(name sponsor, checksum256 invite_hash) {
-  require_auth(sponsor);
-  
-  asset 
-}
-
-void invites::withdraw(name sponsor, asset quantity) {
-  require_auth(sponsor);
-}
-
-void invites::accept(name account, checksum256 invite_secret, string publicKey) {
+void invites::accept(name sponsor, name account, string publicKey, asset quantity) {
   require_auth(get_self());
+  if (quantity.amount == 0 && is_account(account) ) {
+    // special feature - existing telos users get to "link" their account with 0 seedsto
+    // TODO move this to its own action.
+    add_user(account);
+  } else {
+    auto sitr = sponsors.find(sponsor.value);
+    check(sitr != sponsors.end(), "sponsor not found");
+    check(sitr->balance >= quantity, "not enough balance");
 
-  checksum256 empty_checksum;
+    sponsors.modify(sitr, _self, [&](auto& sponsor) {
+      sponsor.balance -= quantity;
+    });
+    asset transfer_quantity = asset(quantity.amount - sow_amount, seeds_symbol);
+    asset sow_quantity = asset(sow_amount, seeds_symbol);
 
-  auto invite_secret_bytes = invite_secret.extract_as_byte_array();
-
-  checksum256 invite_hash = sha256((char*)&invite_secret, sizeof(invite_secret));
-
-  invite_tables invites(get_self(), get_self().value);
-  auto invites_byhash = invites.get_index<"byhash"_n>();
-  auto iitr = invites_byhash.find(invite_hash);
-  check(iitr != invites_byhash.end(), "invite not found");
-  check(iitr->invite_secret == empty_checksum, "already accepted");
-
-  invites_byhash.modify(iitr, get_self(), [&](auto& invite) {
-    invite.account = account;
-    invite.invite_secret = invite_secret;
-  });
-  
-  name sponsor = iitr->sponsor;
-  asset transfer_quantity = iitr->transfer_quantity;
-  asset sow_quantity = iitr->sow_quantity;
-  
-  create_account(account, publicKey);
-  add_user(account);
-  transfer_seeds(account, transfer_quantity);
-  plant_seeds(sow_quantity);
-  sow_seeds(account, sow_quantity);
-  add_referral(sponsor, account);
+    create_account(account, publicKey);
+    add_user(account);
+    transfer_seeds(account, transfer_quantity);
+    plant_seeds(sow_quantity);
+    sow_seeds(account, sow_quantity);
+  }
 }

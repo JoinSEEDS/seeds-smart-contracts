@@ -8,7 +8,7 @@ const networks = {
   jungle: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473',
   kylin: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191',
   local: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
-  telosTestnet: 'e17615decaecd202a365f4c029f206eee98511979de8a5756317e2469f2289e3',
+  telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
 
@@ -22,7 +22,7 @@ const endpoints = {
 const ownerAccounts = {
   local: 'owner',
   kylin: 'seedsowner11',
-  telosTestnet: 'seedstestnet',
+  telosTestnet: 's33dst3stn3t',
   telosMainnet: 'seedsharvest'
 }
 
@@ -39,7 +39,7 @@ const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6F3waTpq11VRFBTWUp6tif3u5GY6QGwBxhmq9CsdLi2NU1Rmdv', 'EOS6HL4bXo3aC1YF5xtkst2boyeCjkd9N5aKMcaF9khdq9HrxPJzu'],
-  [networks.telosTestnet]: ['EOS6rHvstcM4f7fSgGo6ezvKVvmC2e2mGdTGpvn1V1gexsLqeAtm9', 'EOS6rHvstcM4f7fSgGo6ezvKVvmC2e2mGdTGpvn1V1gexsLqeAtm9']
+  [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
 
@@ -50,111 +50,176 @@ const apiKeys = {
 }
 const apiPublicKey = apiKeys[chainId]
 
-const account = (accountName) => ({
+const account = (accountName, quantity = '0.0000 SEEDS') => ({
   type: 'account',
   account: accountName,
   creator: owner,
   publicKey: activePublicKey,
   stakes: {
-    cpu: '1.0000 EOS',
-    net: '1.0000 EOS',
+    cpu: '1.0000 TLOS',
+    net: '1.0000 TLOS',
     ram: 10000
   },
-  quantity: '100000.0000 SEEDS'
+  quantity
 })
 
-const contract = (accountName, contractName) => ({
-  ...account(accountName),
+const contract = (accountName, contractName, quantity = '0.0000 SEEDS') => ({
+  ...account(accountName, quantity),
   type: 'contract',
   name: contractName,
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
-    ram: 10000
+    ram: 700000
   }
+})
+
+const token = (accountName, issuer, supply) => ({
+  ...contract(accountName, 'token'),
+  type: 'token',
+  issuer,
+  supply
 })
 
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      firstuser: account('seedsuser444'),
-      seconduser: account('seedsuser555'),
-      thirduser: account('seedsuser333'),
-      application: account('seedsapp2222'),
-      bank: account('seedsbank222'),
-      accounts: contract('seedsaccnts3', 'accounts'),
-      harvest: contract('seedshrvst11', 'harvest'),
-      subscription: contract('seedssubs222', 'subscription'),
-      settings: contract('seedsettings', 'settings'),
-      proposals: contract('seedsprops12', 'proposals'),
-      policy: contract('seedspolicy1', 'policy'),
-      invites: contract('seedsinvites', 'invites'),
-      referendums: contract('seedsrfrndms', 'referendums'),
-      token: {
-        ...contract('seedstoken12', 'token'),
-        issuer: owner,
-        supply: '1000000.0000 SEEDS',
-      }
-    }
-  } else if (network == networks.kylin) {
-    return {
-      owner: account(owner),
-      firstuser: account('seedsuser444'),
-      seconduser: account('seedsuser555'),
-      thirduser: account('seedsuser333'),
-      application: account('seedsapp2222'),
-      bank: account('seedsbank222'),
-      accounts: contract('seedsaccnts3', 'accounts'),
-      harvest: contract('seedshrvst11', 'harvest'),
-      subscription: contract('seedssubs222', 'subscription'),
-      settings: contract('settings11', 'settings'),
-      proposals: contract('proposals11', 'proposals'),
-      invites: contract('seedsinvites', 'invites'),
-      referendums: contract('seedsrfrndms', 'referendums'),
-      token: {
-        ...contract('seedstoken12', 'eosio.token'),
-        issuer: owner,
-        supply: '100000000.0000 SEEDS'
-      },
-      policy: contract('seedspolicy1', 'policy')
+      firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
+      seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
+      thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
+      firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
+      secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
+      thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
+      fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
+      fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
+      sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
+      bank: account('seedsbanksys'),
+      accounts: contract('seedsaccntsx', 'accounts'),
+      harvest: contract('seedshrvestx', 'harvest'),
+      settings: contract('seedsettingx', 'settings'),
+      proposals: contract('seedsprpslsx', 'proposals'),
+      invites: contract('seedsinvitex', 'invites'),
+      referendums: contract('seedsrfrndmx', 'referendums'),
+      history: contract('seedshistorx', 'history'),
+      token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
+      policy: contract('seedspolicyx', 'policy')
     }
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      firstuser: account('seedsuser444'),
-      seconduser: account('seedsuser555'),
-      thirduser: account('seedsuser333'),
-      application: account('seedsapp2222'),
-      bank: account('seedsbank222'),
-      accounts: contract('seedsaccnts3', 'accounts'),
-      harvest: contract('seedshrvst11', 'harvest'),
-      subscription: contract('seedssubs222', 'subscription'),
-      settings: contract('seedsettings', 'settings'),
-      proposals: contract('seedsprops12', 'proposals'),
-      invites: contract('seedsinvites', 'invites'),
-      referendums: contract('seedsrfrndms', 'referendums'),
-      token: {
-        ...contract('seedstoken12', 'token'),
-        issuer: owner,
-        supply: '100000000.0000 SEEDS'
-      },
-      policy: contract('seedspolicy1', 'policy')
+      firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
+      secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
+      thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
+      fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
+      fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
+      sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
+      bank: account('seedsbanksys'),
+      accounts: contract('seedsaccntsx', 'accounts'),
+      harvest: contract('seedshrvestx', 'harvest'),
+      settings: contract('seedsettingx', 'settings'),
+      proposals: contract('seedsprpslsx', 'proposals'),
+      invites: contract('seedsinvitex', 'invites'),
+      referendums: contract('seedsrfrndmx', 'referendums'),
+      history: contract('seedshistorx', 'history'),
+      token: token('seedstokennx', owner, '777777777.7600 SEEDS'),
+      policy: contract('seedspolicyx', 'policy')
     }
   } else if (network == networks.telosTestnet) {
-    return {}
+    return {
+      owner: account(owner),
+      firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
+      seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
+      thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
+      firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
+      secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
+      thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
+      fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
+      fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
+      sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
+      bank: account('seedsbanksys'),
+      accounts: contract('seedsaccntsx', 'accounts'),
+      harvest: contract('seedshrvestx', 'harvest'),
+      settings: contract('seedsettingx', 'settings'),
+      proposals: contract('seedsprpslsx', 'proposals'),
+      invites: contract('seedsinvitex', 'invites'),
+      referendums: contract('seedsrfrndmx', 'referendums'),
+      history: contract('seedshistorx', 'history'),
+      token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
+      policy: contract('seedspolicyx', 'policy')
+    }
+  } else if (network == networks.kylin) {
+    throw new Error('Kylin deployment currently disabled')
   } else {
-    throw new Error(`${network} is not supported network`)
+    throw new Error(`${network} deployment not supported`)
   }
 }
 
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
+const permissions = [{
+  target: `${accounts.accounts.account}@owner`,
+  actor: `${accounts.accounts.account}@eosio.code`
+}, {
+  target: `${accounts.harvest.account}@active`,
+  actor: `${accounts.harvest.account}@eosio.code`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.proposals.account}@eosio.code`
+}, {
+  target: `${accounts.bank.account}@active`,
+  actor: `${accounts.harvest.account}@active`
+}, {
+  target: `${accounts.bank.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.invites.account}@active`
+}, {
+  target: `${accounts.invites.account}@owner`,
+  actor: `${accounts.invites.account}@eosio.code`
+}, {
+  target: `${accounts.invites.account}@active`,
+  actor: `${accounts.invites.account}@eosio.code`
+}, {
+  target: `${accounts.referendums.account}@active`,
+  actor: `${accounts.referendums.account}@eosio.code`
+}, {
+  target: `${accounts.settings.account}@active`,
+  actor: `${accounts.referendums.account}@active`
+}, {
+  target: `${accounts.history.account}@active`,
+  actor: `${accounts.harvest.account}@active`
+}, {
+  target: `${accounts.token.account}@active`,
+  actor: `${accounts.token.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@api`,
+  key: apiPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.invites.account}@api`,
+  key: apiPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.accounts.account}@api`,
+  action: 'addrep'
+}, {
+  target: `${accounts.accounts.account}@api`,
+  action: 'subrep'
+}, {
+  target: `${accounts.accounts.account}@api`,
+  action: 'addref'
+}, {
+  target: `${accounts.invites.account}@api`,
+  action: 'accept'
+}]
+
 const keyProviders = {
   [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY],
   [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY],
-  [networks.telosTestnet]: [process.env.TELOS_TESTNET_PRIVATE_KEY, process.env.TELOS_TESTNET_PRIVATE_KEY]
+  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY]
 }
 
 const keyProvider = keyProviders[chainId]
@@ -191,5 +256,5 @@ const initContracts = (accounts) =>
 
 module.exports = {
   eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions
 }

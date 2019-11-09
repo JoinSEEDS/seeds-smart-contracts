@@ -6,6 +6,9 @@
 
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/transaction.hpp>
+#include <contracts.hpp>
+#include <tables.hpp>
 
 #include <string>
 
@@ -20,10 +23,10 @@ namespace eosio {
    /**
     * @defgroup eosiotoken eosio.token
     * @ingroup eosiocontracts
-    * 
+    *
     * eosio.token contract
-    * 
-    * @details eosio.token contract defines the structures and actions that allow users to create, issue, and manage 
+    *
+    * @details eosio.token contract defines the structures and actions that allow users to create, issue, and manage
     * tokens on eosio based blockchains.
     * @{
     */
@@ -33,28 +36,27 @@ namespace eosio {
 
          /**
           * Create action.
-          * 
+          *
           * @details Allows `issuer` account to create a token in supply of `maximum_supply`.
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token created.
-          * 
+          *
           * @pre Token symbol has to be valid,
           * @pre Token symbol must not be already created,
-          * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
-          * @pre Maximum supply must be positive; 
-          * 
+          * @pre initial_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
+          * @pre Initial supply must be positive;
+          *
           * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
-         void create( const name&   issuer,
-                      const asset&  maximum_supply);
+         void create( const name&   issuer, const asset&  initial_supply );
          /**
           * Issue action.
-          * 
+          *
           * @details This action issues to `to` account a `quantity` of tokens.
-          * 
+          *
           * @param to - the account to issue tokens to, it must be the same as the issuer,
-          * @param quntity - the amount of tokens to be issued,
+          * @param quantity - the amount of tokens to be issued,
           * @memo - the memo string that accompanies the token issue transaction.
           */
          [[eosio::action]]
@@ -62,25 +64,34 @@ namespace eosio {
 
          /**
           * Retire action.
-          * 
-          * @details The opposite for create action, if all validations succeed, 
+          *
+          * @details The opposite for create action, if all validations succeed,
           * it debits the statstable.supply amount.
-          * 
+          *
           * @param quantity - the quantity of tokens to retire,
           * @param memo - the memo string to accompany the transaction.
           */
          [[eosio::action]]
          void retire( const asset& quantity, const string& memo );
 
+        /**
+         * Burn action.
+         *
+         * @details The opposite for issue action, if all validations succeed,
+         * it debits the statstable.supply amount.
+         *
+         * @param from - the account to burn from,
+         * @param quantity - the quantity of tokens to be burned.
+         */
          [[eosio::action]]
          void burn( const name& from, const asset& quantity );
 
          /**
           * Transfer action.
-          * 
+          *
           * @details Allows `from` account to transfer to `to` account the `quantity` tokens.
           * One account is debited and the other is credited with quantity tokens.
-          * 
+          *
           * @param from - the account to transfer from,
           * @param to - the account to be transferred to,
           * @param quantity - the quantity of tokens to be transferred,
@@ -91,18 +102,18 @@ namespace eosio {
                         const name&    to,
                         const asset&   quantity,
                         const string&  memo );
-                        
+
          /**
           * Open action.
-          * 
-          * @details Allows `ram_payer` to create an account `owner` with zero balance for 
+          *
+          * @details Allows `ram_payer` to create an account `owner` with zero balance for
           * token `symbol` at the expense of `ram_payer`.
-          * 
+          *
           * @param owner - the account to be created,
           * @param symbol - the token to be payed with by `ram_payer`,
           * @param ram_payer - the account that supports the cost of this action.
-          * 
-          * More information can be read [here](https://github.com/EOSIO/eosio.contracts/issues/62) 
+          *
+          * More information can be read [here](https://github.com/EOSIO/eosio.contracts/issues/62)
           * and [here](https://github.com/EOSIO/eosio.contracts/issues/61).
           */
          [[eosio::action]]
@@ -110,13 +121,13 @@ namespace eosio {
 
          /**
           * Close action.
-          * 
-          * @details This action is the opposite for open, it closes the account `owner` 
+          *
+          * @details This action is the opposite for open, it closes the account `owner`
           * for token `symbol`.
-          * 
+          *
           * @param owner - the owner account to execute the close action for,
           * @param symbol - the symbol of the token to execute the close action for.
-          * 
+          *
           * @pre The pair of owner plus symbol has to exist otherwise no action is executed,
           * @pre If the pair of owner plus symbol exists, the balance has to be zero.
           */
@@ -125,9 +136,9 @@ namespace eosio {
 
          /**
           * Get supply method.
-          * 
-          * @details Gets the supply for token `sym_code`, created by `token_contract_account` account. 
-          * 
+          *
+          * @details Gets the supply for token `sym_code`, created by `token_contract_account` account.
+          *
           * @param token_contract_account - the account to get the supply for,
           * @param sym_code - the symbol to get the supply for.
           */
@@ -140,10 +151,10 @@ namespace eosio {
 
          /**
           * Get balance method.
-          * 
+          *
           * @details Get the balance for a token `sym_code` created by `token_contract_account` account,
           * for account `owner`.
-          * 
+          *
           * @param token_contract_account - the token creator account,
           * @param owner - the account for which the token balance is returned,
           * @param sym_code - the token for which the balance is returned.
@@ -155,6 +166,9 @@ namespace eosio {
             return ac.balance;
          }
 
+         [[eosio::action]]
+         void resetweekly();
+
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &token::retire>;
@@ -163,6 +177,8 @@ namespace eosio {
          using open_action = eosio::action_wrapper<"open"_n, &token::open>;
          using close_action = eosio::action_wrapper<"close"_n, &token::close>;
       private:
+          symbol seeds_symbol = symbol("SEEDS", 4);
+
          struct [[eosio::table]] account {
             asset    balance;
 
@@ -171,7 +187,7 @@ namespace eosio {
 
          struct [[eosio::table]] currency_stats {
             asset    supply;
-            asset    max_supply;
+            asset    initial_supply;
             name     issuer;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
@@ -180,7 +196,9 @@ namespace eosio {
          struct [[eosio::table]] transaction_stats {
             name account;
             asset transactions_volume;
-            uint64_t transactions_number;
+            uint64_t total_transactions;
+            uint64_t incoming_transactions;
+            uint64_t outgoing_transactions;
 
             uint64_t primary_key()const { return account.value; }
             uint64_t by_transaction_volume()const { return transactions_volume.amount; }
@@ -193,9 +211,15 @@ namespace eosio {
             const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
          > transaction_tables;
 
+          typedef eosio::multi_index<"users"_n, tables::user_table,
+            indexed_by<"byreputation"_n,
+            const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
+          > user_tables;
+
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
          void update_stats( const name& from, const name& to, const asset& quantity );
+         void check_limit( const name& from );
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

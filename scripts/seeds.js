@@ -42,10 +42,10 @@ const initAction = async () => {
     "settings", 
     "token", 
     "harvest", 
-    "proposals", 
-    "subscription",
+    "proposals",
     "invites",
-    "referendums"
+    "referendums",
+    "history"
   ]
   for (i=0; i<arr.length; i++) {
     let item = arr[i];

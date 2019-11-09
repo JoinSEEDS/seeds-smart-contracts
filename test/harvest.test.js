@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, names, getTableRows } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, bank, settings } = names
+const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
 
 describe("harvest", async assert => {
   const contracts = await Promise.all([
@@ -19,6 +19,9 @@ describe("harvest", async assert => {
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('configure')
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
@@ -49,7 +52,6 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
-  console.log("refunds " + JSON.stringify(refundsAfterUnplanted, null, 2) )
   const balanceAfterUnplanted = await getBalance(seconduser)
 
   const assetIt = (string) => {
@@ -63,7 +65,7 @@ describe("harvest", async assert => {
   const totalUnplanted = refundsAfterUnplanted.rows.reduce( (a, b) => a + assetIt(b.amount).amount, 0) / 10000
 
   console.log('claim refund')
-  await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
+  const transactionRefund = await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterClaimed = await getTableRows({
     code: harvest,
@@ -75,7 +77,7 @@ describe("harvest", async assert => {
   const balanceAfterClaimed = await getBalance(seconduser)
 
   console.log('cancel refund')
-  await contracts.harvest.cancelrefund(seconduser, 1, { authorization: `${seconduser}@active` })
+  const transactionCancelRefund = await contracts.harvest.cancelrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterCanceled = await getTableRows({
     code: harvest,
@@ -99,14 +101,47 @@ describe("harvest", async assert => {
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
 
-  //console.log('claim reward')
-  //await contracts.harvest.claimreward(seconduser, '7.0000 SEEDS', { authorization: `${seconduser}@active` })
+  console.log('claim reward')
+  await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
+
+
+  var balanceBefore = await getBalance(seconduser);
+  const transactionReward = await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
+  var balanceAfter = await getBalance(seconduser);
+
+  assert({
+    given: 'user received 10 refund',
+    should: 'after balance should be 10 bigger than before',
+    actual: balanceAfter,
+    expected: balanceBefore + 10
+  })
 
   const rewards = await getTableRows({
     code: harvest,
     scope: harvest,
     table: 'harvest',
     json: true
+  })
+
+  assert({
+    given: 'claim refund transaction',
+    should: 'call inline action to history',
+    actual: transactionRefund.processed.action_traces[0].inline_traces[0].act.account,
+    expected: history
+  })
+  
+  assert({
+    given: 'claim reward transaction',
+    should: 'call inline action to history',
+    actual: transactionReward.processed.action_traces[0].inline_traces[1].act.account,
+    expected: history
+  })
+
+  assert({
+    given: 'cancel refund transaction',
+    should: 'call inline action to history',
+    actual: transactionCancelRefund.processed.action_traces[0].inline_traces[0].act.account,
+    expected: history
   })
 
   assert({
@@ -163,7 +198,7 @@ describe("harvest", async assert => {
   assert({
     given: 'transactions calculation',
     should: 'assign transactions score to each user',
-    actual: rewards.rows.map(({ transactions_score }) => transactions_score),
+    actual: rewards.rows.map(({ transactions_score }) => transactions_score).sort((a, b) => b - a),
     expected: [100, 50]
   })
 
