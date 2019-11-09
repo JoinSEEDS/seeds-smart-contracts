@@ -23,7 +23,7 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '100000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${seconduser}@active` })

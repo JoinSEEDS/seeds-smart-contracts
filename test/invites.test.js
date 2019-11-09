@@ -216,5 +216,23 @@ describe('Invites', async assert => {
     }]
   })
 
+  await contracts.token.transfer(seconduser, invites, '5.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  let lowBalanceFail = false
+  try {
+    await contracts.invites.accept(seconduser, inviteduser, publicKey, '4.0000 SEEDS', { authorization: `${invites}@api` })
+  } catch (err) {
+    lowBalanceFail = true
+  }
+  assert({
+    given: 'accept invite with amount less than min planted',
+    should: 'fail',
+    actual: lowBalanceFail,
+    expected: true
+  })
+
+  console.log("accept with min planted (5) should work and transfer no tokens")
+  await contracts.invites.accept(seconduser, inviteduser, publicKey, '5.0000 SEEDS', { authorization: `${invites}@api` })
+
 
 })
