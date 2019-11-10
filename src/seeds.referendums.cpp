@@ -139,7 +139,8 @@ void referendums::reset() {
   require_auth(get_self());
   //
   auto bitr = balances.begin();
-  check(bitr != balances.end(), "no balance objects found in balances!!");
+  // an empty balance is not an exception
+  //check(bitr != balances.end(), "no balance objects found in balances!!");
   //
   while (bitr != balances.end()) {
     bitr = balances.erase(bitr);
@@ -257,7 +258,7 @@ void referendums::create(
   string url
 ) {
   check(is_account(creator), "creator is not a valid account");
-  check(is_account(setting_name), "setting_name is not a valid account");
+  //check(is_account(setting_name), "setting_name is not a valid account");
   require_auth(creator);
 
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;

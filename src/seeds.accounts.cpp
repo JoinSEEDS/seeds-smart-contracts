@@ -54,7 +54,7 @@ void accounts::migrate(name account,
 {
     require_auth( get_self() );
     //
-    check(is_account(account), "account supplied not valid!");
+    //check(is_account(account), "account supplied not valid!");
     check(is_account(status), "status name not valid!");
     check(is_account(type), "type name supplied, not valid!");
 
@@ -421,7 +421,7 @@ void accounts::testcitizen(name user)
 
 void accounts::buyaccount(name account, string owner_key, string active_key)
 {
-  check(is_account(account) == false, "existing account");
+  //check(is_account(account) == false, "existing account");
 
   asset ram = asset(28000, network_symbol);
   asset cpu = asset(900, network_symbol);

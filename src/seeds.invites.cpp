@@ -1,8 +1,13 @@
 #include <seeds.invites.hpp>
+//#include <print.h>
 
 void invites::create_account(name account, string publicKey) {
-  //if (is_account(account)) return;
-  check(is_account(account), "account supplied already exist!!");
+  if (is_account(account)) 
+  {
+     print("account supplied already exists!!");
+     return;
+  }
+  //check(is_account(account), "account supplied already exist!!");
 
   authority auth = keystring_authority(publicKey);
 
