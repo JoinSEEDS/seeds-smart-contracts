@@ -21,11 +21,11 @@ void proposals::reset() {
 void proposals::onperiod() {
     require_auth(_self);
     //
-    eosio_assert(props.size() > 0, "props cache is empty");
-    eosio_assert(voice.size() > 0, "voice cache is empty");
-    //
     auto pitr = props.begin();
     auto vitr = voice.begin();
+    //
+    check(pitr != props.end(), "props cache is empty");
+    check(vitr != voice.end(), "voice cache is empty");
     //
     uint64_t min_stake = config.find(name("propminstake").value)->value;
     //

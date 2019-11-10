@@ -137,14 +137,14 @@ void referendums::runcycle() {
 
 void referendums::reset() {
   require_auth(get_self());
-  eosio_assert(balances.size() > 0, "no balance objects found in balances!!");
   //
   auto bitr = balances.begin();
+  check(bitr != balances.end(), "no balance objects found in balances!!");
   //
   while (bitr != balances.end()) {
     bitr = balances.erase(bitr);
   }
-  ..
+  // 
   referendum_tables staged(get_self(), name("staged").value);
   referendum_tables active(get_self(), name("active").value);
   referendum_tables testing(get_self(), name("testing").value);
@@ -225,9 +225,9 @@ void referendums::addvoice(name account, uint64_t amount) {
 }
 
 void referendums::stake(name from, name to, asset quantity, string memo) {
-  eosio_assert(is_account(from), "from account not valid");
-  eosio_assert(is_account(to), "to account not valid");
-  eosio_assert(from != to, "from & to accounts cannot be the same");
+  check(is_account(from), "from account not valid");
+  check(is_account(to), "to account not valid");
+  check(from != to, "from & to accounts cannot be the same");
   //
   if (to == get_self()) {
     auto bitr = balances.find(from.value);

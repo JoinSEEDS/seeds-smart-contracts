@@ -56,7 +56,7 @@ void accounts::migrate(name account,
     //
     check(is_account(account), "account supplied not valid!");
     check(is_account(status), "status name not valid!");
-    check(is_account(type), "type name supplied, not valid!")
+    check(is_account(type), "type name supplied, not valid!");
 
     users.emplace(_self, [&](auto& user) {
         user.account = account;
@@ -122,8 +122,8 @@ void accounts::vouch(name sponsor, name account) {
   auto uitrs = users.find(sponsor.value);
   auto uitra = users.find(account.value);
 
-  check(uitrs != users.end()), "user sponsors not found!");
-  check(uitra != users.end()), "user account not found!");
+  check(uitrs != users.end(), "user sponsors not found!");
+  check(uitra != users.end(), "user account not found!");
 
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
@@ -177,7 +177,7 @@ void accounts::vouchreward(name account) {
   check_user(account);
 
   auto uitr = users.find(account.value);
-  eosio_assert(uitr == users.end(), "account not found!");
+  check(uitr == users.end(), "account not found!");
   name status = uitr->status;
 
   vouch_tables vouch(get_self(), account.value);
@@ -286,7 +286,7 @@ void accounts::subrep(name user, uint64_t amount)
 
     check(is_account(user), "non existing user");
     auto uitr = users.find(user.value);
-    check(uitr != users.esnd(), "user not found");
+    check(uitr != users.end(), "user not found");
     //
     users.modify(uitr, _self, [&](auto& user) {
       if (user.reputation < amount) {
@@ -375,7 +375,7 @@ void accounts::updatestatus(name user, name status)
 
 void accounts::makecitizen(name user)
 {
-    eosio_assert(is_account(user), "invalid user account!");
+    check(is_account(user), "invalid user account!");
     //
     require_auth(get_self() );
     require_auth(user);

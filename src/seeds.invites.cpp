@@ -2,7 +2,7 @@
 
 void invites::create_account(name account, string publicKey) {
   //if (is_account(account)) return;
-  eosio_assert(is_account(account), "account supplied already exist!!");
+  check(is_account(account), "account supplied already exist!!");
 
   authority auth = keystring_authority(publicKey);
 

@@ -82,7 +82,7 @@ void subscription::enable(name user, name app)
   require_auth(user);
 
   auto pitr = providers.find(app.value);
-  eosio_assert(pitr != providers.end(), "no provider");
+  check(pitr != providers.end(), "no provider");
   asset price = pitr->price;
   //
   subscription_tables subs(_self, app.value);

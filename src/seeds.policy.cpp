@@ -16,10 +16,10 @@ void policy::create(name account, string backend_user_id, string device_id, stri
   
   require_auth(account);
   //
-  eosio_assert(backend_user_id.empty() != true, "backend_user_id not supplied");
-  eosio_assert(device_id.empty() != true, "device_id not supplied");
-  eosio_assert(signature.empty() != true, "signature not supplied");
-  eosio_assert(policy.empty() != true, "policy to use, not supplied");
+  check(backend_user_id.empty() != true, "backend_user_id not supplied");
+  check(device_id.empty() != true, "device_id not supplied");
+  check(signature.empty() != true, "signature not supplied");
+  check(policy.empty() != true, "policy to use, not supplied");
   //
   policy_tables_new policies(_self, account.value);
   auto pitr = policies.find(account.value);
