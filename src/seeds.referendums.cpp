@@ -293,6 +293,33 @@ void referendums::create(
   });
 }
 
+void referendums::update(
+  uint64_t referendum_id,
+  name setting_name,
+  uint64_t setting_value,
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  referendum_tables staged(get_self(), name("staged").value);
+  auto sitr = staged.find(referendum_id);
+  check (sitr != staged.end(), "referendum not found " + referendum_id);
+
+  require_auth(sitr->creator);
+
+  staged.modify(sitr, get_self(), [&](auto& item) {
+    item.setting_name = setting_name;
+    item.setting_value = setting_value;
+    item.title = title;
+    item.summary = summary;
+    item.description = description;
+    item.image = image;
+    item.url = url;
+  });
+}
+
 void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
