@@ -44,6 +44,10 @@ CONTRACT invites : public contract {
     };
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
+    typedef eosio::multi_index<"users"_n, tables::user_table,
+      indexed_by<"byreputation"_n,
+      const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
+    > user_tables;
 
     sponsor_tables sponsors;
     user_tables users;
