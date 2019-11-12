@@ -49,7 +49,7 @@ CONTRACT referendums : public contract {
       );
 
       ACTION update(
-        uint64_t referendum_id,
+        name creator,
         name setting_name,
         uint64_t setting_value,
         string title,
@@ -118,6 +118,7 @@ CONTRACT referendums : public contract {
       string url;
 
       uint64_t primary_key()const { return referendum_id; }
+      uint64_t by_name()const { return setting_name.value; }
     };
 
     TABLE config_table {
@@ -127,7 +128,10 @@ CONTRACT referendums : public contract {
     };
 
     typedef multi_index<"balances"_n, balance_table> balance_tables;
-    typedef multi_index<"referendums"_n, referendum_table> referendum_tables;
+    typedef multi_index<"referendums"_n, referendum_table,
+      indexed_by<"byname"_n,
+      const_mem_fun<referendum_table, uint64_t, &referendum_table::by_name>>
+    > referendum_tables;
     typedef multi_index<"voters"_n, voter_table> voter_tables;
     typedef multi_index<"config"_n, config_table> config_tables;
 

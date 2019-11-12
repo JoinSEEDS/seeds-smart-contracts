@@ -294,7 +294,7 @@ void referendums::create(
 }
 
 void referendums::update(
-  uint64_t referendum_id,
+  name creator,
   name setting_name,
   uint64_t setting_value,
   string title,
@@ -304,12 +304,23 @@ void referendums::update(
   string url
 ) {
   referendum_tables staged(get_self(), name("staged").value);
-  auto sitr = staged.find(referendum_id);
-  check (sitr != staged.end(), "referendum not found " + referendum_id);
+  auto refs = staged.get_index<"byname"_n>();
+  auto sitr = refs.find(setting_name.value);
+  
+  check (sitr != refs.end(), "referendum setting not found " + setting_name.to_string());
+
+  while (sitr != refs.end()) {
+    if (sitr->creator == creator) {
+      break;
+    }
+    sitr++;
+  }
+  
+  check (sitr != refs.end(), "referendum creator not found " + creator.to_string());
 
   require_auth(sitr->creator);
 
-  staged.modify(sitr, get_self(), [&](auto& item) {
+  refs.modify(sitr, get_self(), [&](auto& item) {
     item.setting_name = setting_name;
     item.setting_value = setting_value;
     item.title = title;

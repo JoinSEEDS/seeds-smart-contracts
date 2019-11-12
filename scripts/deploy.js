@@ -244,6 +244,17 @@ const transferCoins = async (token, recipient) => {
   }
 }
 
+const reset = async ({ account }) => {
+  const contract = await eos.contract(account)
+  
+  try {
+    await contract.reset({ authorization: `${account}@active` })
+    console.log(`reset contract ${account}`)
+  } catch (err) {
+    console.error(`cannot reset contract ${account}`, err)
+  }
+}
+
 const isExistingAccount = async (account) => {
   let exists = false
 
@@ -312,6 +323,8 @@ const initContracts = async () => {
       console.log(`invalid permission #${current}`)
     }
   }
+  
+  await reset(accounts.settings)
 }
 
 module.exports = initContracts
