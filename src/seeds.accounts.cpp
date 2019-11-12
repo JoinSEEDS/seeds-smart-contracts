@@ -124,6 +124,8 @@ void accounts::vouch(name sponsor, name account) {
 }
 
 void accounts::punish(name account) {
+  require_auth(get_self());
+  
   check_user(account);
 
   auto uitr = users.find(account.value);
