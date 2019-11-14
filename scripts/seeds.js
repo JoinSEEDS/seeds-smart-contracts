@@ -4,7 +4,20 @@ const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
 const deploy = require('./deploy.command')
-const initContracts = require('./deploy')
+const { initContracts, resetByName } = require('./deploy')
+
+const allContracts = [
+  "accounts", 
+  "policy", 
+  "settings", 
+  "token", 
+  "harvest", 
+  "proposals",
+  "invites",
+  "referendums",
+  "history"
+].sort()
+
 
 const compileAction = async (contract) => {
     try {
@@ -28,27 +41,42 @@ const deployAction = async (contract) => {
     }
 }
 
+const resetAction = async (contract) => {
+  if (contract == "history") {
+    console.log("history can't be reset, skipping...")
+    console.log("TODO: Add reset action for history that resets all tables")
+    return
+  }
+  try {
+    await resetByName(contract)
+    console.log(`${contract} reset`)
+  } catch(err) {
+    console.log("error deploying ", contract)
+    console.log(err)
+  }
+}
+
+
 const runAction = async (contract) => {
   await compileAction(contract)
   await deployAction(contract)
   await test(contract)
 }
 
+const batchCallFunc = async (contract, func) => {
+  if (contract == 'all') {
+    for (const contract of allContracts) {
+      await func(contract)
+    }
+  } else {
+    await func(contract)
+  }
+}
+
 const initAction = async () => {
 
-  const arr = [
-    "accounts", 
-    "policy", 
-    "settings", 
-    "token", 
-    "harvest", 
-    "proposals",
-    "invites",
-    "referendums",
-    "history"
-  ]
-  for (i=0; i<arr.length; i++) {
-    let item = arr[i];
+  for (i=0; i<allContracts.length; i++) {
+    let item = allContracts[i];
     console.log("compile ... " + item);
     await compileAction(item);
   }
@@ -61,28 +89,35 @@ program
   .command('compile <contract>')
   .description('Compile custom contract')
   .action(async function (contract) {
-    await compileAction(contract)
+    await batchCallFunc(contract, compileAction)
   })
 
 program
   .command('deploy <contract>')
   .description('Deploy custom contract')
   .action(async function (contract) {
-    await deployAction(contract)
+    await batchCallFunc(contract, deployAction)
   })
 
 program
   .command('run <contract>')
   .description('compile and deploy custom contract')
   .action(async function (contract) {
-    await runAction(contract)
+    await batchCallFunc(contract, runAction)
   })
 
-program
+  program
   .command('test <contract>')
   .description('Run unit tests for deployed contract')
   .action(async function(contract) {
-    await test(contract)
+    await batchCallFunc(contract, test)
+  })
+
+  program
+  .command('reset <contract>')
+  .description('Reset deployed contract')
+  .action(async function(contract) {
+    await batchCallFunc(contract, resetAction)
   })
 
 program
