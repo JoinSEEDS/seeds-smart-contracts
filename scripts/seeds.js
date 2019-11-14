@@ -3,6 +3,7 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
+const { isLocal } = require('./helper')
 const deploy = require('./deploy.command')
 const { initContracts, resetByName } = require('./deploy')
 
@@ -47,6 +48,12 @@ const resetAction = async (contract) => {
     console.log("TODO: Add reset action for history that resets all tables")
     return
   }
+
+  if (!isLocal()) {
+    console.log("Don't reset contracts on testnet or mainnet!")
+    return
+  }
+
   try {
     await resetByName(contract)
     console.log(`${contract} reset`)
@@ -55,7 +62,6 @@ const resetAction = async (contract) => {
     console.log(err)
   }
 }
-
 
 const runAction = async (contract) => {
   await compileAction(contract)

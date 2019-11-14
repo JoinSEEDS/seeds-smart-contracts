@@ -282,7 +282,9 @@ const initContracts = (accounts) =>
   
 const sha256 = Eos.modules.ecc.sha256
 
+const isLocal = () => { return chainId == networks.local }
+
 module.exports = {
   eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal
 }

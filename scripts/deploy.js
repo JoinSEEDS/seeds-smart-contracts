@@ -63,7 +63,7 @@ const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
     })
     console.log(`${account} created`)
   } catch (err) {
-    console.error(`account ${account} already created`, err)
+    console.error(`account ${account} already created\n* error: ` + err + `\n`)
   }
 }
 
@@ -94,7 +94,7 @@ const deploy = async ({ name, account }) => {
     })
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
-    console.error(`account ${name} already deployed`, err)
+    console.error(`account ${name} already deployed\n* error: ` + err + `\n`)
   }
 }
 
@@ -121,7 +121,7 @@ const changeKeyPermission = async (account, permission, key) => {
     await eos.updateauth(newPermissions, { authorization: `${account}@owner` })
     console.log(`private keys updated for ${account}@${permission}`)
   } catch (err) {
-    console.error(`failed keys update for ${account}@${permission}`, err)
+    console.error(`failed keys update for ${account}@${permission}\n* error: ` + err + `\n`)
   }
 }
 
@@ -143,7 +143,7 @@ const createKeyPermission = async (account, role, parentRole = 'active', key) =>
     }, { authorization: `${account}@owner` })
     console.log(`permission setup on ${account}@${role}(/${parentRole}) for ${key}`)
   } catch (err) {
-    console.error(`failed permission setup`, err)
+    console.error(`failed permission setup\n* error: ` + err + `\n`)
   }
 }
 
@@ -157,7 +157,7 @@ const allowAction = async (account, role, action) => {
     }, { authorization: `${account}@owner` })
     console.log(`linkauth of ${account}@${action} for ${role}`)
   } catch (err) {
-    console.error(`failed allow action`, err)
+    console.error(`failed allow action\n* error: ` + err + `\n`)
   }
 }
 
@@ -200,7 +200,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     await eos.updateauth(permissions, { authorization: `${target}@owner` })
     console.log(`permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
   } catch (err) {
-    console.error(`failed permission update on ${target} for ${actor}`, err)
+    console.error(`failed permission update on ${target} for ${actor}\n* error: ` + err + `\n`)
   }
 }
 
@@ -223,7 +223,7 @@ const createCoins = async (token) => {
     
     console.log(`coins successfully minted at ${account} (${supply})`)
   } catch (err) {
-    console.error(`coins already created at ${account}`, err)
+    console.error(`coins already created at ${account}\n* error: ` + err + "\n")
   }
 }
 
@@ -240,7 +240,7 @@ const transferCoins = async (token, recipient) => {
     
     console.log(`sent ${recipient.quantity} from ${token.issuer} to ${recipient.account}`)
   } catch (err) {
-    console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})`, err)
+    console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})\n* error: ` + err + `\n`)
   }
 }
 
@@ -252,7 +252,8 @@ const reset = async ({ account }) => {
     await contract.reset({ authorization: `${account}@active` })
     console.log(`reset contract ${account}`)
   } catch (err) {
-    console.error(`cannot reset contract ${account}`, err)
+    console.error(`cannot reset contract ${account}\n* error: ` + err + `\n`)
+
   }
 }
 
@@ -260,7 +261,7 @@ const resetByName = async ( contractName ) => {
   try {
     await reset(accounts[contractName])
   } catch (err) {
-    console.error(`cannot resetByName contract ${contractName}`, err)
+    console.error(`cannot resetByName contract ${contractName}\n* error: ` + err + `\n`)
   }
 }
 
