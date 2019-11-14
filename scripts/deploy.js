@@ -248,10 +248,19 @@ const reset = async ({ account }) => {
   const contract = await eos.contract(account)
   
   try {
+    console.log(`will reset contract ${account}`)
     await contract.reset({ authorization: `${account}@active` })
     console.log(`reset contract ${account}`)
   } catch (err) {
     console.error(`cannot reset contract ${account}`, err)
+  }
+}
+
+const resetByName = async ( contractName ) => {
+  try {
+    await reset(accounts[contractName])
+  } catch (err) {
+    console.error(`cannot resetByName contract ${contractName}`, err)
   }
 }
 
@@ -327,4 +336,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = initContracts
+module.exports = { initContracts, resetByName }
