@@ -270,6 +270,11 @@ const getBalance = async (user) => {
   return Number.parseInt(balance[0])
 }
 
+const getBalanceFloat = async (user) => {
+  const balance = await eos.getCurrencyBalance(names.token, user, 'SEEDS')
+  return parseFloat(balance[0])
+}
+
 const initContracts = (accounts) =>
   Promise.all(
     Object.values(accounts).map(
@@ -288,6 +293,6 @@ const sha256 = Eos.modules.ecc.sha256
 const isLocal = () => { return chainId == networks.local }
 
 module.exports = {
-  eos, encodeName, decodeName, getBalance, getTableRows, initContracts,
+  eos, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal
 }

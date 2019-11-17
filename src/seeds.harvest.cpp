@@ -15,15 +15,15 @@ void harvest::reset() {
     hitr = harveststat.erase(hitr);
   }
 
-  /*
-  name user = name("seedsuser555");
+  
+  name user = name("seedsuserbbb");
   refund_tables refunds(get_self(), user.value);
 
   auto ritr = refunds.begin();
   while (ritr != refunds.end()) {
     ritr = refunds.erase(ritr);
   }
-  */
+  
 
   init_balance(_self);
 }
@@ -360,18 +360,6 @@ void harvest::claimreward(name from) {
 
 }
 
-void harvest::testreward(name from) {
-  require_auth(get_self());
-  init_balance(from);
-
-  auto bitr = balances.find(from.value);
-
-  balances.modify(bitr, _self, [&](auto& user) {
-    user.reward = asset(100000, seeds_symbol);
-  });
-
-}
-
 void harvest::init_balance(name account)
 {
   auto bitr = balances.find(account.value);
@@ -417,3 +405,33 @@ void harvest::withdraw(name beneficiary, asset quantity)
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
   action.send(contracts::bank, beneficiary, quantity, "");
 }
+
+void harvest::testreward(name from) {
+  require_auth(get_self());
+  init_balance(from);
+
+  auto bitr = balances.find(from.value);
+
+  balances.modify(bitr, _self, [&](auto& user) {
+    user.reward = asset(100000, seeds_symbol);
+  });
+}
+
+void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
+  require_auth(get_self());
+  refund_tables refunds(get_self(), from.value);
+
+  auto ritr = refunds.begin();
+  check(ritr != refunds.end(), "No refund found");
+
+  while (ritr != refunds.end()) {
+    if (request_id == ritr->request_id) {
+      refunds.modify(ritr, _self, [&](auto& refund) {
+        refund.request_time = eosio::current_time_point().sec_since_epoch() - sec_rewind;
+      });
+    }
+    ritr++;
+  }
+  
+}
+
