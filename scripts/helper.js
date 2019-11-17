@@ -92,6 +92,7 @@ const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
+      history: contract('seedshistorx', 'history'),
       firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
@@ -108,7 +109,6 @@ const accountsMetadata = (network) => {
       proposals: contract('seedsprpslsx', 'proposals'),
       invites: contract('seedsinvitex', 'invites'),
       referendums: contract('seedsrfrndmx', 'referendums'),
-      history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
       policy: contract('seedspolicyx', 'policy'),
       onboarding: contract('seedsjoinusx', 'onboarding')
@@ -116,6 +116,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
+      history: contract('seedshistorx', 'history'),
       firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
       secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
       thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
@@ -129,7 +130,6 @@ const accountsMetadata = (network) => {
       proposals: contract('seedsprpslsx', 'proposals'),
       invites: contract('seedsinvitex', 'invites'),
       referendums: contract('seedsrfrndmx', 'referendums'),
-      history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '777777777.7600 SEEDS'),
       policy: contract('seedspolicyx', 'policy'),
       onboarding: contract('seedsjoinusx', 'onboarding')
@@ -137,6 +137,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosTestnet) {
     return {
       owner: account(owner),
+      history: contract('seedshistorx', 'history'),
       firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
@@ -153,7 +154,6 @@ const accountsMetadata = (network) => {
       proposals: contract('seedsprpslsx', 'proposals'),
       invites: contract('seedsinvitex', 'invites'),
       referendums: contract('seedsrfrndmx', 'referendums'),
-      history: contract('seedshistorx', 'history'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
       policy: contract('seedspolicyx', 'policy'),
       onboarding: contract('seedsjoinusx', 'onboarding')
@@ -240,6 +240,9 @@ const permissions = [{
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'accept'
+}, {
+  target: `${accounts.history.account}@active`,
+  actor: `${accounts.token.account}@active`
 }]
 
 const keyProviders = {

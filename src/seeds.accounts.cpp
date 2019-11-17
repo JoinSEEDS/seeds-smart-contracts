@@ -286,6 +286,8 @@ void accounts::updatestatus(name user, name status)
 {
   auto uitr = users.find(user.value);
 
+  check(uitr != users.end(), "updatestatus: user not found - " + user.to_string());
+
   users.modify(uitr, _self, [&](auto& user) {
     user.status = status;
   });

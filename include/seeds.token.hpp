@@ -168,6 +168,8 @@ namespace eosio {
 
          [[eosio::action]]
          void resetweekly();
+         
+         void save_transaction(name from, name to, asset quantity, string memo);
 
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
@@ -203,7 +205,7 @@ namespace eosio {
             uint64_t primary_key()const { return account.value; }
             uint64_t by_transaction_volume()const { return transactions_volume.amount; }
          };
-
+         
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
          typedef eosio::multi_index< "trxstat"_n, transaction_stats,

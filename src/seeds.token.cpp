@@ -122,6 +122,8 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
+    save_transaction(from, to, quantity, memo);
+    
     // update_stats( from, to, quantity );
 }
 
@@ -149,6 +151,18 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
         a.balance += value;
       });
    }
+}
+
+void token::save_transaction(name from, name to, asset quantity, string memo) {
+  if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
+    check(false, "error");
+  }
+  
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, "trxentry"_n,
+    std::make_tuple(from, to, quantity, memo)
+  ).send();
 }
 
 void token::check_limit(const name& from) {
