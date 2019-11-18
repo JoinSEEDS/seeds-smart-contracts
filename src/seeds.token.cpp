@@ -122,7 +122,7 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity, memo);
+    // save_transaction(from, to, quantity, memo); // This times out in mainnet - removed for now
     
     // update_stats( from, to, quantity );
 }
