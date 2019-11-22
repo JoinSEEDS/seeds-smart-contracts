@@ -1,5 +1,5 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, names, getTableRows } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows } = require("../scripts/helper")
 const { equals } = require("ramda")
 
 const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
@@ -34,7 +34,6 @@ describe("harvest", async assert => {
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-
   const plantedBalances = await getTableRows({
     code: harvest,
     scope: harvest,
@@ -43,7 +42,10 @@ describe("harvest", async assert => {
     limit: 100
   })
 
-  await contracts.harvest.unplant(seconduser, '100.0000 SEEDS', { authorization: `${seconduser}@active` })
+  const balanceBeforeUnplanted = await getBalanceFloat(seconduser)
+
+  let num_seeds_unplanted = 100
+  await contracts.harvest.unplant(seconduser, num_seeds_unplanted + '.0000 SEEDS', { authorization: `${seconduser}@active` })
 
   const refundsAfterUnplanted = await getTableRows({
     code: harvest,
@@ -52,7 +54,10 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
-  const balanceAfterUnplanted = await getBalance(seconduser)
+
+  //console.log("results after unplanted" + JSON.stringify(refundsAfterUnplanted, null, 2))
+
+  const balanceAfterUnplanted = await getBalanceFloat(seconduser)
 
   const assetIt = (string) => {
     let a = string.split(" ")
@@ -64,7 +69,15 @@ describe("harvest", async assert => {
 
   const totalUnplanted = refundsAfterUnplanted.rows.reduce( (a, b) => a + assetIt(b.amount).amount, 0) / 10000
 
-  console.log('claim refund')
+  console.log('claim refund\n')
+  const balanceBeforeClaimed = await getBalanceFloat(seconduser)
+
+  // rewind 16 days
+  let day_seconds = 60 * 60 * 24
+  let num_days_expired = 16
+  let weeks_expired = parseInt(num_days_expired/7)
+  await contracts.harvest.testclaim(seconduser, 1, day_seconds * num_days_expired, { authorization: `${harvest}@active` })
+
   const transactionRefund = await contracts.harvest.claimrefund(seconduser, 1, { authorization: `${seconduser}@active` })
 
   const refundsAfterClaimed = await getTableRows({
@@ -74,7 +87,21 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
-  const balanceAfterClaimed = await getBalance(seconduser)
+
+  const balanceAfterClaimed = await getBalanceFloat(seconduser)
+
+  //console.log(weeks_expired + " balance before claim "+balanceBeforeClaimed)
+  //console.log("balance after claim  "+balanceAfterClaimed)
+
+  let difference = balanceAfterClaimed - balanceBeforeClaimed
+  let expectedDifference = num_seeds_unplanted * weeks_expired / 12
+
+  assert({
+    given: 'claim refund after '+num_days_expired+' days',
+    should: 'be able to claim '+weeks_expired+'/12 of total unplanted',
+    actual: Math.floor(difference * 1000)/1000,
+    expected: Math.floor(expectedDifference * 1000)/1000
+  })
 
   console.log('cancel refund')
   const transactionCancelRefund = await contracts.harvest.cancelrefund(seconduser, 1, { authorization: `${seconduser}@active` })
@@ -123,12 +150,18 @@ describe("harvest", async assert => {
     json: true
   })
 
+  let transactionAsString = JSON.stringify(transactionRefund.processed)
+
+  console.log("includes history "+transactionAsString.includes(history))
+  console.log("includes history "+transactionAsString.includes("trxentry"))
+
   assert({
     given: 'claim refund transaction',
     should: 'call inline action to history',
-    actual: transactionRefund.processed.action_traces[0].inline_traces[0].act.account,
-    expected: history
+    actual: transactionAsString.includes(history) && transactionAsString.includes("trxentry") ,
+    expected: true
   })
+  
   
   assert({
     given: 'claim reward transaction',
@@ -162,7 +195,7 @@ describe("harvest", async assert => {
     given: 'claimed refund',
     should: 'keep refunds rows',
     actual: refundsAfterClaimed.rows.length,
-    expected: 12
+    expected: 10
   })
 
   assert({
@@ -176,7 +209,7 @@ describe("harvest", async assert => {
     given: 'unplanting process',
     should: 'not change user balance before timeout',
     actual: balanceAfterUnplanted,
-    expected: balanceAfterClaimed
+    expected: balanceBeforeUnplanted
   })
 
   assert({
@@ -201,6 +234,8 @@ describe("harvest", async assert => {
     actual: rewards.rows.map(({ transactions_score }) => transactions_score).sort((a, b) => b - a),
     expected: [100, 50]
   })
+
+console.log("REWWW "+JSON.stringify(rewards, null, 2))
 
   assert({
     given: 'reputation calculation',

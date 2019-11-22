@@ -17,50 +17,50 @@ const getSupply = async () => {
   return Number.parseInt(rows[0].supply)
 }
 
-describe.only('token.transfer', async assert => {
-  const contract = await eos.contract(token)
-  const historyContract = await eos.contract(history)
-  const accountsContract = await eos.contract(accounts)
+// describe.only('token.transfer.history', async assert => {
+//   const contract = await eos.contract(token)
+//   const historyContract = await eos.contract(history)
+//   const accountsContract = await eos.contract(accounts)
   
-  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+//   const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
-  console.log('reset history')
-  await historyContract.reset(firstuser, { authorization: `${history}@active` })
+//   console.log('reset history')
+//   await historyContract.reset(firstuser, { authorization: `${history}@active` })
 
-  console.log('accounts reset')
-  await accountsContract.reset({ authorization: `${accounts}@active` })
+//   console.log('accounts reset')
+//   await accountsContract.reset({ authorization: `${accounts}@active` })
 
-  console.log('update status')
-  await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
-  await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
-  await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+//   console.log('update status')
+//   await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
+//   await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
+//   await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
+//   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
-  console.log('transfer token')
-  await transfer()
+//   console.log('transfer token')
+//   await transfer()
   
-  const { rows } = await getTableRows({
-    code: history,
-    scope: history,
-    table: 'transactions',
-    json: true
-  })
+//   const { rows } = await getTableRows({
+//     code: history,
+//     scope: history,
+//     table: 'transactions',
+//     json: true
+//   })
   
-  assert({
-    given: 'transactions table',
-    should: 'have transaction entry',
-    actual: rows,
-    expected: [{
-      id: 0,
-      from: firstuser,
-      to: seconduser,
-      quantity: '10.0000 SEEDS',
-      fromstatus: 'resident',
-      tostatus: 'citizen',
-      memo: '',
-    }]
-  })
-})
+//   assert({
+//     given: 'transactions table',
+//     should: 'have transaction entry',
+//     actual: rows,
+//     expected: [{
+//       id: 0,
+//       from: firstuser,
+//       to: seconduser,
+//       quantity: '10.0000 SEEDS',
+//       fromstatus: 'resident',
+//       tostatus: 'citizen',
+//       memo: '',
+//     }]
+//   })
+// })
 
 describe('token.transfer', async assert => {
   const contract = await eos.contract(token)
