@@ -20,7 +20,7 @@ void invites::create_account(name account, string publicKey) {
   action(
     permission_level{_self, "owner"_n},
     "eosio"_n, "delegatebw"_n,
-    make_tuple(_self, account, asset(100, network_symbol), asset(1000, network_symbol), 0)
+    make_tuple(_self, account, asset(1000, network_symbol), asset(20000, network_symbol), 0)
   ).send();
 }
 
