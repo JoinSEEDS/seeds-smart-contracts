@@ -1,5 +1,5 @@
 const { describe } = require('riteway')
-const { eos, names } = require('../scripts/helper')
+const { eos, names, isLocal } = require('../scripts/helper')
 const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
@@ -30,6 +30,12 @@ describe('account creation', async assert => {
 })
 
 describe.only('accounts', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contract = await eos.contract(accounts)
   const thetoken = await eos.contract(token)
 
