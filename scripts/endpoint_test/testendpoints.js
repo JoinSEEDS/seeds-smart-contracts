@@ -1,7 +1,7 @@
 const fs = require('fs')
 const { names, getEOSWithEndpoint } = require('../helper')
 
-const { accounts } = names
+const { accounts, invites } = names
 
 const resultsArray = []
 
@@ -23,11 +23,17 @@ const testEndpoint = async (endpoint) => {
         const time = end - start
         console.log("found "+rows.length + " users in "+time)
 
+        let {actions} = await eos.getActions(invites, 0, 20)
+
+        console.log("HISTORY LENGTH: "+actions.length)
+        console.log("HISTORY "+JSON.stringify(actions, null, 2))
+
         resultsArray.push(
             {
                 numResults: rows.length,
                 time: time,
                 endpoint: endpoint,
+                actions: actions,
                 error: ""
             }
         )
@@ -42,6 +48,7 @@ const testEndpoint = async (endpoint) => {
                 numResults: -1,
                 time: time,
                 endpoint: endpoint,
+                actions: [],
                 error: "" + error
             }
         )
@@ -88,7 +95,8 @@ const main = async () => {
 
     for (let ix = 0; ix < sortedResults.length; ix++) {
         let r = sortedResults[ix]
-        console.log(fillString(r.endpoint, 50) + "results: "+ fillString(r.numResults + "", 10) + "\ttime: "+ (r.time / 1000.0) + " seconds")
+        let actionString = "history items: "+ fillString(r.actions.length + "", 5)
+        console.log(fillString(r.endpoint, 40) + "results: "+ fillString(r.numResults + "", 10) +actionString+ "\ttime: "+ (r.time / 1000.0) + " seconds")
         str = str + r.endpoint + "," + r.numResults + "," + r.time + "\n"
         if (r.error != undefined && r.error != "") {
             let errStr = "error: "+r.error 
