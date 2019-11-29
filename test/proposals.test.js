@@ -1,10 +1,16 @@
 const { describe } = require('riteway')
 const R = require('ramda')
-const { eos, names, getTableRows, getBalance, initContracts } = require('../scripts/helper')
+const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
 const { harvest, accounts, proposals, settings, token, bank, firstuser, seconduser, thirduser } = names
 
 describe('Proposals', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
 
   const secondUserInitialBalance = await getBalance(seconduser)
