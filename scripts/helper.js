@@ -16,7 +16,7 @@ const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://testnet.eos.miami',
-  telosMainnet: 'https://api.eos.miami'
+  telosMainnet: 'https://telos.eos.barcelona'
 }
 
 const ownerAccounts = {
@@ -261,6 +261,15 @@ const config = {
 
 const eos = Eos(config)
 
+const getEOSWithEndpoint = (ep) => {
+  const config = {
+    keyProvider,
+    httpEndpoint: ep,
+    chainId
+  }
+  return Eos(config)
+}
+
 const encodeName = Eos.modules.format.encodeName
 const decodeName = Eos.modules.format.decodeName
 const getTableRows = eos.getTableRows
@@ -293,6 +302,6 @@ const sha256 = Eos.modules.ecc.sha256
 const isLocal = () => { return chainId == networks.local }
 
 module.exports = {
-  eos, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
+  eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal
 }
