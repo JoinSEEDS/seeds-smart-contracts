@@ -97,7 +97,7 @@ const main = async () => {
         let r = sortedResults[ix]
         let actionString = "history items: "+ fillString(r.actions.length + "", 5)
         console.log(fillString(r.endpoint, 40) + "results: "+ fillString(r.numResults + "", 10) +actionString+ "\ttime: "+ (r.time / 1000.0) + " seconds")
-        str = str + r.endpoint + "," + r.numResults + "," + r.time + "\n"
+        str = str + r.endpoint + "," + r.numResults + "," +r.actions.length + "," + r.time + "\n"
         if (r.error != undefined && r.error != "") {
             let errStr = "error: "+r.error 
             //console.log(errStr.substr(0, 160))
