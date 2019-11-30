@@ -1,3 +1,4 @@
+endpoint,number of users returned, number of history items returned,time (lower is better)
 https://telos.eosphere.io,156,21,580
 https://telos.eos.barcelona,156,21,786
 https://full.teloscanton.io,156,0,826
