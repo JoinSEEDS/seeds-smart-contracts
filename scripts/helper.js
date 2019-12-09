@@ -57,6 +57,8 @@ const applicationKeys = {
 }
 const applicationPublicKey = applicationKeys[chainId]
 
+const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
+
 const account = (accountName, quantity = '0.0000 SEEDS') => ({
   type: 'account',
   account: accountName,
@@ -156,7 +158,8 @@ const accountsMetadata = (network) => {
       referendums: contract('seedsrfrndmx', 'referendums'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
       policy: contract('seedspolicyx', 'policy'),
-      onboarding: contract('seedsjoinusx', 'onboarding')
+      onboarding: contract('seedsjoinusx', 'onboarding'),
+      acctcreator: contract('seedfreeacct', 'acctcreator')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -243,6 +246,16 @@ const permissions = [{
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.token.account}@active`
+}, {
+  target: `${accounts.acctcreator.account}@active`,
+  actor: `${accounts.acctcreator.account}@eosio.code`
+}, {
+  target: `${accounts.acctcreator.account}@free`,
+  key: freePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.acctcreator.account}@free`,
+  action: 'create'
 }]
 
 const keyProviders = {
