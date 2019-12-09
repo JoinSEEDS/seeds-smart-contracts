@@ -37,7 +37,7 @@ void acctcreator::create ( const name& account_to_create, const string& owner_ke
    config_table      config_s (get_self(), get_self().value);
    config c = config_s.get_or_create (get_self(), config());
 
-   require_auth (c.account_creator_oracle);
+//   require_auth (c.account_creator_oracle);
 
    uint8_t paused = c.settings[name("active")];
    check (c.settings["active"_n] == 1, "Contract is not active. Exiting.");
