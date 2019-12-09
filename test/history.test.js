@@ -1,10 +1,16 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, names, getTableRows } = require("../scripts/helper")
+const { eos, encodeName, getBalance, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
 const { harvest, firstuser, seconduser, history, accounts } = names
 
 describe.only('make a transaction entry', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const historyContract = await eos.contract(history)
   const accountsContract = await eos.contract(accounts)
   

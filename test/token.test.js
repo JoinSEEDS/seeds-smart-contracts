@@ -1,6 +1,6 @@
 const { describe } = require('riteway')
 
-const { eos, names, getTableRows, getBalance, initContracts } = require('../scripts/helper')
+const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
 const { token, firstuser, seconduser, history, accounts } = names
 
@@ -17,52 +17,64 @@ const getSupply = async () => {
   return Number.parseInt(rows[0].supply)
 }
 
-// describe.only('token.transfer.history', async assert => {
-//   const contract = await eos.contract(token)
-//   const historyContract = await eos.contract(history)
-//   const accountsContract = await eos.contract(accounts)
-  
-//   const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
-  
-//   console.log('reset history')
-//   await historyContract.reset(firstuser, { authorization: `${history}@active` })
+describe.only('token.transfer.history', async assert => {
 
-//   console.log('accounts reset')
-//   await accountsContract.reset({ authorization: `${accounts}@active` })
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
 
-//   console.log('update status')
-//   await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
-//   await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
-//   await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
-//   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  const contract = await eos.contract(token)
+  const historyContract = await eos.contract(history)
+  const accountsContract = await eos.contract(accounts)
   
-//   console.log('transfer token')
-//   await transfer()
+  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
-//   const { rows } = await getTableRows({
-//     code: history,
-//     scope: history,
-//     table: 'transactions',
-//     json: true
-//   })
+  console.log('reset history')
+  await historyContract.reset(firstuser, { authorization: `${history}@active` })
+
+  console.log('accounts reset')
+  await accountsContract.reset({ authorization: `${accounts}@active` })
+
+  console.log('update status')
+  await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
+  await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
+  await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
+  await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
-//   assert({
-//     given: 'transactions table',
-//     should: 'have transaction entry',
-//     actual: rows,
-//     expected: [{
-//       id: 0,
-//       from: firstuser,
-//       to: seconduser,
-//       quantity: '10.0000 SEEDS',
-//       fromstatus: 'resident',
-//       tostatus: 'citizen',
-//       memo: '',
-//     }]
-//   })
-// })
+  console.log('transfer token')
+  await transfer()
+  
+  const { rows } = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'transactions',
+    json: true
+  })
+  
+  assert({
+    given: 'transactions table',
+    should: 'have transaction entry',
+    actual: rows,
+    expected: [{
+      id: 0,
+      from: firstuser,
+      to: seconduser,
+      quantity: '10.0000 SEEDS',
+      fromstatus: 'resident',
+      tostatus: 'citizen',
+      memo: '',
+    }]
+  })
+})
 
 describe('token.transfer', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contract = await eos.contract(token)
 
   let limit = 10;
@@ -96,6 +108,12 @@ describe('token.transfer', async assert => {
 })
 
 describe('token.burn', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contract = await eos.contract(token)
 
   const balances = []

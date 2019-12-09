@@ -1,10 +1,16 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
 const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
 
 describe("harvest", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contracts = await Promise.all([
     eos.contract(token),
     eos.contract(accounts),

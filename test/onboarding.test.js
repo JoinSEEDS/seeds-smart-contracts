@@ -1,5 +1,5 @@
 const { describe } = require('riteway')
-const { eos, names, getTableRows, initContracts, sha256 } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, isLocal } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser } = names
 
@@ -9,6 +9,12 @@ const fromHexString = hexString =>
   new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 describe('Onboarding', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+    
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
     const transferQuantity = `10.0000 SEEDS`

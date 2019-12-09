@@ -1,5 +1,5 @@
 const { describe } = require('riteway')
-const { eos, names, getTableRows } = require('../scripts/helper')
+const { eos, names, getTableRows, isLocal } = require('../scripts/helper')
 
 const { accounts, harvest, token, invites, firstuser, seconduser, thirduser } = names
 
@@ -23,6 +23,12 @@ const initContracts = (contractAccounts) =>
 const randomAccountName = () => Math.random().toString(36).substring(2).replace(/\d/g, '').toString()
 
 describe('Invites', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contracts = await initContracts({ accounts, invites, token, harvest })
 
   const inviteduser = randomAccountName()

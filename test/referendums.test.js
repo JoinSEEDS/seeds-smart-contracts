@@ -1,11 +1,17 @@
 const { describe } = require('riteway')
-const { eos, names, getTableRows, initContracts } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 
 const { referendums, token, settings, accounts, firstuser, seconduser } = names
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 describe('Referendums', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
   const contracts = await initContracts({ referendums, token, settings, accounts })
 
   const stake_price = '25.0000 SEEDS'

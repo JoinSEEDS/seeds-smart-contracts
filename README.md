@@ -1,4 +1,8 @@
-## Deploy Tools
+# Contract Names
+
+See here: https://gitlab.com/seeds-project/seeds-contracts/issues/25
+
+# Deploy Tools
 
 Use the seeds.js script to 
 
