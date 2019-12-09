@@ -112,6 +112,20 @@
             ]
         },
         {
+            "name": "log_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "log",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "newday",
             "base": "",
             "fields": []
@@ -120,6 +134,20 @@
             "name": "onperiod",
             "base": "",
             "fields": []
+        },
+        {
+            "name": "operations_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "operation",
+                    "type": "name"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
         },
         {
             "name": "postcomment_table",
@@ -163,6 +191,25 @@
             "name": "reset",
             "base": "",
             "fields": []
+        },
+        {
+            "name": "testaction",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "timeout",
+            "base": "",
+            "fields": [
+                {
+                    "name": "action",
+                    "type": "name"
+                },
+                {
+                    "name": "delay",
+                    "type": "uint64"
+                }
+            ]
         },
         {
             "name": "upvotecomt",
@@ -336,6 +383,16 @@
             "ricardian_contract": ""
         },
         {
+            "name": "testaction",
+            "type": "testaction",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "timeout",
+            "type": "timeout",
+            "ricardian_contract": ""
+        },
+        {
             "name": "upvotecomt",
             "type": "upvotecomt",
             "ricardian_contract": ""
@@ -357,6 +414,20 @@
         {
             "name": "forumrep",
             "type": "forum_rep_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "log",
+            "type": "log_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "operations",
+            "type": "operations_table",
             "index_type": "i64",
             "key_names": [],
             "key_types": []

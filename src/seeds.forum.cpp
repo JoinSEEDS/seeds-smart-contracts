@@ -1,6 +1,16 @@
 #include <seeds.forum.hpp>
 #include <eosio/eosio.hpp>
-#include <string> 
+#include <eosio/transaction.hpp>
+#include <eosio/name.hpp>
+#include <eosio/print.hpp>
+
+
+void forum::print_log(string log) {
+    logs.emplace(_self, [&](auto& new_log) {
+        new_log.id = logs.available_primary_key();
+        new_log.log = log;
+    });
+}
 
 
 void forum::createpostcomment(name account, uint64_t post_id, uint64_t backend_id, string url, string body) {
@@ -23,6 +33,28 @@ void forum::createpostcomment(name account, uint64_t post_id, uint64_t backend_i
         new_post.timestamp = eosio::current_time_point().sec_since_epoch();
         new_post.reputation = 0;
     });
+}
+
+
+bool forum::check_operation(name operation){
+    uint64_t t = eosio::current_time_point().sec_since_epoch();
+    auto itr = operations.find(operation.value);
+    
+    if (itr == operations.end()){
+        operations.emplace(_self, [&](auto & new_op) {
+            new_op.operation = operation;
+            new_op.timestamp = 0;
+        });
+        return false;
+    }
+
+    uint64_t p = getdperiods(itr -> timestamp);
+
+    if(p > 0){
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -115,37 +147,86 @@ int64_t forum::getpoints(name account) {
 }
 
 
-/*
-int forum::updatevote(name account, uint64_t id, int64_t factor){
+int forum::updatevote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id, int64_t factor){
     vote_tables votes(get_self(), id);
 
-    auto itr = votes.get(account.value, "Post/comment does not exists.");
-    double new_points = 0;
-
-    check( factor < 0 && itr.points >= 0,  );
+    auto itr = votes.get(account.value, "Vote does not exist.");
+    int64_t points = 0;
+    uint64_t periods = 0;
 
     if(factor < 0){
         check(itr.points >= 0, "A user can not downvote twice the same post/comment.");
     }
     else{
-        check(itr.points < 0, "A user can not downvote twice the same post/comment.");
+        check(itr.points < 0, "A user can not upvote twice the same post/comment.");
     }
 
-    new_points = itr.points * factor * ;
+    periods = getdperiods(itr.timestamp);
+    points = abs(getdpoints(itr.points, periods));
+    // check(1 > 2, std::to_string(points));
+    print_log("Uvote: periods = " + std::to_string(periods) + ", points = " + std::to_string(points) );
 
+    auto pcitr = postcomments.find(id);
+    check(pcitr != postcomments.end(), "Post/comment does not exist.");
+    postcomments.modify(pcitr, _self, [&](auto& pcmodified) {
+        pcmodified.reputation += factor * abs(itr.points);
+    });
 
+    auto pcit = postcomments.find(id);
+    auto fritr = forum_reps.find(pcit -> author_name_account.value);
+    forum_reps.modify(fritr, _self, [&](auto& frmodified) {
+        print_log("Uvote modify forum rep: current rep = " + std::to_string(frmodified.reputation ) + ", factor = " + std::to_string(factor) + ", points = " + std::to_string(points));
+        frmodified.reputation += factor * points;
+    });
 
     auto vitr = votes.find(account.value);
-    votes.modify(vitr, _self, [&](auto& uvote) {
-        uvote.points = -1 * itr.points;
-    });
+    votes.erase(vitr);
+    
+    vote(account, id, post_id, comment_id, factor * getpoints(account));
+    return 0;
+}
+
+
+int64_t forum::getdpoints(int64_t points, uint64_t periods){
+    auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
+    uint64_t total_d = 10000;
+    int64_t total = 0;
+    for(uint64_t i = 0; i < periods; i++){
+        total_d *= ditr.value / 10000.0;
+    }
+
+    total = points * (total_d / 10000.0);
+    print_log("GetPoints: points = " + std::to_string(points) + ", total_d = " + std::to_string(total_d) + ", total = " + std::to_string(total));
+    
+    return total;
+}
+
+
+uint64_t forum::getdperiods(uint64_t timestamp) {
+    uint64_t t = eosio::current_time_point().sec_since_epoch();
+    auto itr = config.get(depreciations.value, "Depreciations value is not configured.");
+    uint64_t v = (t - timestamp) / itr.value;
+
+    print_log("GetPeriods: dps = " + std::to_string(itr.value) + ", t = " + std::to_string(t) + ", timestamp = " + std::to_string(timestamp));
+
+    return v;
+}
+
+
+/*
+ACTION forum::testepoch(name account) {
+
+    uint64_t t = eosio::current_time_point().sec_since_epoch();
+    auto userit = users.get(account.value, "User not found.");
+
+    uint64_t secpassed = t - userit.timestamp;
+    uint64_t weeks = secpassed / 60;
+
+    check(1 > 2, std::to_string(weeks) );
+
 
 }
 */
-
-int forum::updatevote(name account, uint64_t id, int64_t factor){
-    return 0;
-}
 
 
 ACTION forum::reset() {
@@ -167,6 +248,11 @@ ACTION forum::reset() {
     auto fritr = forum_reps.begin();
     while (fritr != forum_reps.end()) {
         fritr = forum_reps.erase(fritr);
+    }
+
+    auto logss = logs.begin();
+    while (logss != logs.end()) {
+        logss = logs.erase(logss);
     }
 
 }
@@ -203,11 +289,15 @@ ACTION forum::createcomt(name account, uint64_t post_id, uint64_t backend_id, st
 ACTION forum::upvotepost(name account, uint64_t id) {
     require_auth(account);
 
-    uint64_t points = getpoints(account); // function to determine how many points to asign
-    int exists = vote(account, id, id, 0, points);
+    vote_tables votes(get_self(), id);
 
-    if(exists != -1){
-        updatevote(account, id, 1);
+    auto itr = votes.find(account.value);
+    if(itr != votes.end()){
+        updatevote(account, id, id, 0, 1);
+    }
+    else{
+        int64_t points = getpoints(account); // function to determine how many points to asign
+        int exists = vote(account, id, id, 0, points);
     }
 }
 
@@ -215,43 +305,90 @@ ACTION forum::upvotepost(name account, uint64_t id) {
 ACTION forum::upvotecomt(name account, uint64_t post_id, uint64_t comment_id) {
     require_auth(account);
 
-    uint64_t points = getpoints(account);; // function to determine how many points to asign
-    int exists = vote(account, comment_id, post_id, comment_id, points);
+    vote_tables votes(get_self(), comment_id);
 
-    if(exists != -1){
-        updatevote(account, comment_id, 1);
+    auto itr = votes.find(account.value);
+    if(itr != votes.end()){
+        updatevote(account, comment_id, post_id, comment_id, 1);
     }
-
+    else{
+        int64_t points = getpoints(account);; // function to determine how many points to asign
+        int exists = vote(account, comment_id, post_id, comment_id, points);
+    }
 }
 
 
 ACTION forum::downvotepost(name account, uint64_t id) {
     require_auth(account);
 
-    uint64_t points = getpoints(account);; // function to determine how many points to asign
-    int exists = vote(account, id, id, 0, -1 * points);
+    vote_tables votes(get_self(), id);
 
-    if(exists != -1){
-        updatevote(account, id, -1);
+    auto itr = votes.find(account.value);
+    if(itr != votes.end()){
+        updatevote(account, id, id, 0, -1);
     }
-
+    else{
+        int64_t points = getpoints(account);; // function to determine how many points to asign
+        int exists = vote(account, id, id, 0, -1 * points);
+    }
 }
 
 
 ACTION forum::downvotecomt(name account, uint64_t post_id, uint64_t comment_id) {
     require_auth(account);
 
-    uint64_t points = getpoints(account);; // function to determine how many points to asign
-    int exists = vote(account, comment_id, post_id, comment_id, -1 * points);
+    vote_tables votes(get_self(), comment_id);
 
-    if(exists != -1){
-        updatevote(account, comment_id, -1);
+    auto itr = votes.find(account.value);
+    if(itr != votes.end()){
+        updatevote(account, comment_id, post_id,comment_id, -1);
     }
+    else{
+        int64_t points = getpoints(account);; // function to determine how many points to asign
+        int exists = vote(account, comment_id, post_id, comment_id, -1 * points);
+    }
+}
+
+
+ACTION forum::timeout(name a, uint64_t delay) {
+
+    eosio::transaction txn;
+
+    if(!check_operation(a)){
+        action(
+            permission_level{get_self(),"active"_n},
+            get_self(),
+            a,
+            std::make_tuple()
+        ).send();
+        
+        auto itr = operations.find(a.value);
+        operations.modify(itr, _self, [&](auto & moperation) {
+            moperation.timestamp = eosio::current_time_point().sec_since_epoch();
+        });
+    }
+
+    // auto sttingsitr = config.get();
+
+    txn.actions.emplace_back(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "timeout"_n,
+        std::make_tuple(a, delay)
+    );
+    txn.delay_sec = delay;
+    txn.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
 
 }
 
 
-ACTION forum::onperiod(){
+ACTION forum::testaction(){
+    check(1 > 2, "Hola");
+}
+
+
+
+ACTION forum::onperiod() {
     require_auth(_self);
 
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
@@ -260,7 +397,7 @@ ACTION forum::onperiod(){
     auto itr = forum_reps.begin();
     while(itr != forum_reps.end()){
         forum_reps.modify(itr, _self, [&](auto& new_frep) {
-            new_frep.reputation *= depreciation;
+            new_frep.reputation *= depreciation / 10000.0;
         });
         itr++;
     }
@@ -268,7 +405,7 @@ ACTION forum::onperiod(){
 }
 
 
-ACTION forum::newday(){
+ACTION forum::newday() {
     require_auth(_self);
 
 
@@ -279,19 +416,8 @@ ACTION forum::newday(){
 
 }
 
-/*
-ACTION forum::testpost(name account){
-    votes_tables votes(get_self(), 1);
-    auto v = votes.find(account.value);
-    check(v != votes.end(), "There are no data to display");
-    while(v != votes.end()){
-        print(v -> account);
-    }
-}
-*/
 
-
-EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday));
+EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday)(timeout)(testaction));
 
 
 

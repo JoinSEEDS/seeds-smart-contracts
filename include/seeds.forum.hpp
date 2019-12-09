@@ -1,6 +1,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/system.hpp>
 #include <contracts.hpp>
+#include <string>
 
 using namespace eosio;
 using std::string;
@@ -14,7 +15,9 @@ CONTRACT forum : public contract {
               forum_reps(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
-              votes_power(receiver, receiver.value)
+              votes_power(receiver, receiver.value),
+              logs(receiver, receiver.value),
+              operations(receiver, receiver.value)
               {}
         
         ACTION reset();
@@ -31,12 +34,29 @@ CONTRACT forum : public contract {
 
         ACTION downvotecomt(name account, uint64_t post_id, uint64_t comment_id);
 
+        ACTION timeout(name action, uint64_t delay);
+
+        ACTION testaction();
+
         ACTION onperiod();
 
         ACTION newday();
 
     private:
         // symbol seeds_symbol = symbol("SEEDS", 4);
+
+        void send_summary(name a){
+            action(
+                //permission_level,
+                permission_level{get_self(),"active"_n},
+                //code,
+                get_self(),
+                //action,
+                a,
+                //data
+                std::make_tuple()
+            ).send();   
+        }
 
         TABLE postcomment_table {
             uint64_t id;
@@ -102,6 +122,21 @@ CONTRACT forum : public contract {
             uint64_t primary_key() const { return param.value; }
         };
 
+        TABLE log_table {
+            uint64_t id;
+            string log;
+
+            uint64_t primary_key() const { return id; }
+        };
+
+
+        TABLE operations_table {
+            name operation;
+            uint64_t timestamp;
+
+            uint64_t primary_key() const { return operation.value; }
+        };
+
         typedef eosio::multi_index <"postcomment"_n, postcomment_table, 
             indexed_by<"backendid"_n, const_mem_fun < postcomment_table, 
             uint64_t, &postcomment_table::get_backend_id >>> postcomment_tables;
@@ -117,25 +152,38 @@ CONTRACT forum : public contract {
 
         typedef eosio::multi_index <"votepower"_n, vote_power_table> vote_power_tables;
 
-        typedef eosio::multi_index<"config"_n, config_table> config_tables;
+        typedef eosio::multi_index <"config"_n, config_table> config_tables;
+
+        typedef eosio::multi_index <"log"_n, log_table> log_tables;
+
+        typedef eosio::multi_index <"operations"_n, operations_table> operations_tables;
 
         postcomment_tables postcomments;
         forum_rep_tables forum_reps;
         user_tables users;
         vote_power_tables votes_power;
         config_tables config;
+        log_tables logs;
+        operations_tables operations;
 
-        const name maxpoints = "maxpoints"_n;
-        const name vbp = "vbp"_n;
-        const name cutoff = "cutoff"_n;
-        const name cutoffz = "cutoffz"_n;
-        const name depreciation = "depreciation"_n;
+        // all these values are expected to be configured in settings
+        const name maxpoints = "maxpoints"_n; // max points
+        const name vbp = "vbp"_n; // value based points
+        const name cutoff = "cutoff"_n; // cut off to start the dilution
+        const name cutoffz = "cutoffz"_n; // cut off to consider as 0 the points value
+        const name depreciation = "depreciation"_n; // depreciation factor
+        const name depreciations = "dps"_n; // the depreciation period in seconds
+
 
         void createpostcomment(name account, uint64_t post_id, uint64_t backend_id, string url, string body);
         int vote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id, int64_t points);
-        int updatevote(name account, uint64_t id, int64_t factor);
+        int updatevote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id, int64_t factor);
         int64_t getpoints(name account);
         int64_t pointsfunction(name account, int64_t points_left, uint64_t vbp, uint64_t rep, uint64_t cutoff, uint64_t cutoff_zero);
+        uint64_t getdperiods(uint64_t timestamp);
+        int64_t getdpoints(int64_t points, uint64_t periods);
+        void print_log(string log);
+        bool check_operation(name operation);
 };
 
 
