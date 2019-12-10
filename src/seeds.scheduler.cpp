@@ -15,7 +15,7 @@ ACTION scheduler::reset() {
 
 
 ACTION scheduler::configop(name action, name contract, uint64_t period) {
-    // require_auth(_self);
+    require_auth(_self);
 
     auto itr = operations.find(action.value);
 
@@ -40,6 +40,31 @@ ACTION scheduler::configop(name action, name contract, uint64_t period) {
 
 ACTION scheduler::execute() {
     // require_auth(_self);
+
+    /*
+        Just as quick reminder.
+        
+        1.- To run inline actions from an external contract eosio.code permission is needed, the way to add it is:
+                
+                cleos set account permission YOUR_ACCOUNT active 
+                '{"threshold": 1,"keys": [{"key": "YOUR_PUBLIC_KEY","weight": 1}], 
+                "accounts": [{"permission":{"actor":"YOUR_ACCOUNT","permission":"eosio.code"},"weight":1}]}' 
+                -p YOUR_ACCOUNT@owner
+
+
+        2.- This function does not require authorization from _self, to make this function more secure, 
+            a custom permission for running this function is needed,
+            the way we can assing a custom permission to an account is:
+                
+                cleos set account permission YOUR_ACCOUNT CUSTOM_PERMISSION 
+                '{"threshold":1,"keys":[{"key":"YOUR_PUBLIC_KEY","weight":1}]}' "active" -p YOUR_ACCOUNT@active
+
+            Then we need to link the permission to an action, this is the way:
+
+                cleos set action permission YOUR_ACCOUNT CONTRACT ACTION CUSTOM_PERMISSION
+            
+            By doing this, we are restricting the ACTION to be callable only for an account who has the CUSTOM_PERMISSION
+    */
 
     auto itr = operations.begin();
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
