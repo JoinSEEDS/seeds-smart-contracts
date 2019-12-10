@@ -36,11 +36,10 @@ CONTRACT forum : public contract {
 
         ACTION timeout(name action, uint64_t delay);
 
-        ACTION testaction();
-
         ACTION onperiod();
 
         ACTION newday();
+
 
     private:
         // symbol seeds_symbol = symbol("SEEDS", 4);

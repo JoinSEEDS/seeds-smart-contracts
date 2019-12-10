@@ -76,11 +76,6 @@ int forum::vote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id
         new_vote.points = points; 
     });
 
-    auto pcitr = postcomments.find(id);
-    postcomments.modify(pcitr, _self, [&](auto& postcomment) {
-        postcomment.reputation += points;
-    });
-
     auto pcit = postcomments.find(id);
     auto fritr = forum_reps.find(pcit -> author_name_account.value);
     forum_reps.modify(fritr, _self, [&](auto& frep) {
@@ -164,18 +159,12 @@ int forum::updatevote(name account, uint64_t id, uint64_t post_id, uint64_t comm
     periods = getdperiods(itr.timestamp);
     points = abs(getdpoints(itr.points, periods));
     // check(1 > 2, std::to_string(points));
-    print_log("Uvote: periods = " + std::to_string(periods) + ", points = " + std::to_string(points) );
-
-    auto pcitr = postcomments.find(id);
-    check(pcitr != postcomments.end(), "Post/comment does not exist.");
-    postcomments.modify(pcitr, _self, [&](auto& pcmodified) {
-        pcmodified.reputation += factor * abs(itr.points);
-    });
+    // print_log("Uvote: periods = " + std::to_string(periods) + ", points = " + std::to_string(points) );
 
     auto pcit = postcomments.find(id);
     auto fritr = forum_reps.find(pcit -> author_name_account.value);
     forum_reps.modify(fritr, _self, [&](auto& frmodified) {
-        print_log("Uvote modify forum rep: current rep = " + std::to_string(frmodified.reputation ) + ", factor = " + std::to_string(factor) + ", points = " + std::to_string(points));
+        // print_log("Uvote modify forum rep: current rep = " + std::to_string(frmodified.reputation ) + ", factor = " + std::to_string(factor) + ", points = " + std::to_string(points));
         frmodified.reputation += factor * points;
     });
 
@@ -196,7 +185,7 @@ int64_t forum::getdpoints(int64_t points, uint64_t periods){
     }
 
     total = points * (total_d / 10000.0);
-    print_log("GetPoints: points = " + std::to_string(points) + ", total_d = " + std::to_string(total_d) + ", total = " + std::to_string(total));
+    // print_log("GetPoints: points = " + std::to_string(points) + ", total_d = " + std::to_string(total_d) + ", total = " + std::to_string(total));
     
     return total;
 }
@@ -207,26 +196,10 @@ uint64_t forum::getdperiods(uint64_t timestamp) {
     auto itr = config.get(depreciations.value, "Depreciations value is not configured.");
     uint64_t v = (t - timestamp) / itr.value;
 
-    print_log("GetPeriods: dps = " + std::to_string(itr.value) + ", t = " + std::to_string(t) + ", timestamp = " + std::to_string(timestamp));
+    // print_log("GetPeriods: dps = " + std::to_string(itr.value) + ", t = " + std::to_string(t) + ", timestamp = " + std::to_string(timestamp));
 
     return v;
 }
-
-
-/*
-ACTION forum::testepoch(name account) {
-
-    uint64_t t = eosio::current_time_point().sec_since_epoch();
-    auto userit = users.get(account.value, "User not found.");
-
-    uint64_t secpassed = t - userit.timestamp;
-    uint64_t weeks = secpassed / 60;
-
-    check(1 > 2, std::to_string(weeks) );
-
-
-}
-*/
 
 
 ACTION forum::reset() {
@@ -382,14 +355,8 @@ ACTION forum::timeout(name a, uint64_t delay) {
 }
 
 
-ACTION forum::testaction(){
-    check(1 > 2, "Hola");
-}
-
-
-
 ACTION forum::onperiod() {
-    require_auth(_self);
+    require_auth("scheduler"_n);
 
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
     uint64_t depreciation = ditr.value;
@@ -417,7 +384,7 @@ ACTION forum::newday() {
 }
 
 
-EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday)(timeout)(testaction));
+EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday)(timeout));
 
 
 

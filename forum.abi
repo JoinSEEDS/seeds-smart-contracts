@@ -193,11 +193,6 @@
             "fields": []
         },
         {
-            "name": "testaction",
-            "base": "",
-            "fields": []
-        },
-        {
             "name": "timeout",
             "base": "",
             "fields": [
@@ -380,11 +375,6 @@
         {
             "name": "reset",
             "type": "reset",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "testaction",
-            "type": "testaction",
             "ricardian_contract": ""
         },
         {
