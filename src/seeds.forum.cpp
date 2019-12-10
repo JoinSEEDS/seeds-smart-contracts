@@ -356,8 +356,6 @@ ACTION forum::timeout(name a, uint64_t delay) {
 
 
 ACTION forum::onperiod() {
-    require_auth("scheduler"_n);
-
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
     uint64_t depreciation = ditr.value;
 

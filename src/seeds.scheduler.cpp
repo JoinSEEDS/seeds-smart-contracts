@@ -48,8 +48,7 @@ ACTION scheduler::execute() {
     while(itr != operations.end()) {
         periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
 
-        // check(1 > 2, "Periods: " + std::to_string(periods) + ", t = " + std::to_string(timestamp) + ", timestamp  = " + std::to_string(itr -> timestamp) + ", period = " + std::to_string(itr -> period) + ", t-t = " + std::to_string(timestamp-(itr->timestamp)));
-        
+        print("Mira: " + std::to_string(periods));
         if(periods > 0){
             
             action a = action(
