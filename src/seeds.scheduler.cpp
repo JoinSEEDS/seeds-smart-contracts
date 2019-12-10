@@ -53,7 +53,7 @@ ACTION scheduler::execute() {
         if(periods > 0){
             
             action a = action(
-                permission_level{"forum"_n, "active"_n},
+                permission_level{get_self(), "active"_n},
                 itr -> contract,
                 itr -> operation,
                 std::make_tuple()
