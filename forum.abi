@@ -193,20 +193,6 @@
             "fields": []
         },
         {
-            "name": "timeout",
-            "base": "",
-            "fields": [
-                {
-                    "name": "action",
-                    "type": "name"
-                },
-                {
-                    "name": "delay",
-                    "type": "uint64"
-                }
-            ]
-        },
-        {
             "name": "upvotecomt",
             "base": "",
             "fields": [
@@ -375,11 +361,6 @@
         {
             "name": "reset",
             "type": "reset",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "timeout",
-            "type": "timeout",
             "ricardian_contract": ""
         },
         {

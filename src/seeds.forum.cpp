@@ -36,28 +36,6 @@ void forum::createpostcomment(name account, uint64_t post_id, uint64_t backend_i
 }
 
 
-bool forum::check_operation(name operation){
-    uint64_t t = eosio::current_time_point().sec_since_epoch();
-    auto itr = operations.find(operation.value);
-    
-    if (itr == operations.end()){
-        operations.emplace(_self, [&](auto & new_op) {
-            new_op.operation = operation;
-            new_op.timestamp = 0;
-        });
-        return false;
-    }
-
-    uint64_t p = getdperiods(itr -> timestamp);
-
-    if(p > 0){
-        return false;
-    }
-
-    return true;
-}
-
-
 int forum::vote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id, int64_t points) {
 
     vote_tables votes(get_self(), id);
@@ -323,38 +301,6 @@ ACTION forum::downvotecomt(name account, uint64_t post_id, uint64_t comment_id) 
 }
 
 
-ACTION forum::timeout(name a, uint64_t delay) {
-
-    eosio::transaction txn;
-
-    if(!check_operation(a)){
-        action(
-            permission_level{get_self(),"active"_n},
-            get_self(),
-            a,
-            std::make_tuple()
-        ).send();
-        
-        auto itr = operations.find(a.value);
-        operations.modify(itr, _self, [&](auto & moperation) {
-            moperation.timestamp = eosio::current_time_point().sec_since_epoch();
-        });
-    }
-
-    // auto sttingsitr = config.get();
-
-    txn.actions.emplace_back(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "timeout"_n,
-        std::make_tuple(a, delay)
-    );
-    txn.delay_sec = delay;
-    txn.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
-
-}
-
-
 ACTION forum::onperiod() {
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
     uint64_t depreciation = ditr.value;
@@ -382,7 +328,7 @@ ACTION forum::newday() {
 }
 
 
-EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday)(timeout));
+EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday));
 
 
 

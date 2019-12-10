@@ -15,7 +15,7 @@ ACTION scheduler::reset() {
 
 
 ACTION scheduler::configop(name action, name contract, uint64_t period) {
-    require_auth(_self);
+    // require_auth(_self);
 
     auto itr = operations.find(action.value);
 
@@ -39,7 +39,7 @@ ACTION scheduler::configop(name action, name contract, uint64_t period) {
 
 
 ACTION scheduler::execute() {
-    require_auth(_self);
+    // require_auth(_self);
 
     auto itr = operations.begin();
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();

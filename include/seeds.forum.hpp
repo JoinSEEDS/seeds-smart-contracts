@@ -34,8 +34,6 @@ CONTRACT forum : public contract {
 
         ACTION downvotecomt(name account, uint64_t post_id, uint64_t comment_id);
 
-        ACTION timeout(name action, uint64_t delay);
-
         ACTION onperiod();
 
         ACTION newday();
@@ -182,7 +180,6 @@ CONTRACT forum : public contract {
         uint64_t getdperiods(uint64_t timestamp);
         int64_t getdpoints(int64_t points, uint64_t periods);
         void print_log(string log);
-        bool check_operation(name operation);
 };
 
 
