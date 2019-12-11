@@ -10,9 +10,7 @@ CONTRACT accounts : public contract {
       using contract::contract;
       accounts(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
-          apps(receiver, receiver.value),
           users(receiver, receiver.value),
-          requests(receiver, receiver.value),
           refs(receiver, receiver.value),
           reps(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value)
@@ -64,12 +62,6 @@ CONTRACT accounts : public contract {
 
       symbol network_symbol = symbol("TLOS", 4);
 
-      TABLE app_table {
-        name account;
-
-        uint64_t primary_key()const { return account.value; }
-      };
-
       TABLE ref_table {
         name referrer;
         name invited;
@@ -102,15 +94,6 @@ CONTRACT accounts : public contract {
         uint64_t by_reputation()const { return reputation; }
       };
 
-      TABLE request_table {
-        name app;
-        name user;
-        string owner_key;
-        string active_key;
-
-        uint64_t primary_key()const { return user.value; }
-      };
-
       TABLE balance_table {
         name account;
         asset planted;
@@ -136,8 +119,6 @@ CONTRACT accounts : public contract {
       indexed_by<"byreputation"_n,
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
     > user_tables;
-    typedef eosio::multi_index<"apps"_n, app_table> app_tables;
-    typedef eosio::multi_index<"requests"_n, request_table> request_tables;
     typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
     typedef eosio::multi_index<"vouch"_n, vouch_table> vouch_tables;
 
@@ -166,8 +147,6 @@ CONTRACT accounts : public contract {
          > transaction_tables;
 
       user_tables users;
-      app_tables apps;
-      request_tables requests;
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch));
