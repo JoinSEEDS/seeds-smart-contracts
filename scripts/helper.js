@@ -113,7 +113,8 @@ const accountsMetadata = (network) => {
       referendums: contract('seedsrfrndmx', 'referendums'),
       token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
       policy: contract('seedspolicyx', 'policy'),
-      onboarding: contract('seedsjoinusx', 'onboarding')
+      onboarding: contract('seedsjoinusx', 'onboarding'),
+      acctcreator: contract('seedfreeacct', 'acctcreator')
     }
   } else if (network == networks.telosMainnet) {
     return {
