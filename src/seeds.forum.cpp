@@ -210,7 +210,7 @@ ACTION forum::reset() {
 
 
 ACTION forum::createpost(name account, uint64_t backend_id, string url, string body) {
-    require_auth(account);
+    //require_auth(account);
 
     auto user = users.get(account.value, "User does not exist.");
     createpostcomment(account, 0, backend_id, url, body);

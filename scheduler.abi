@@ -41,6 +41,11 @@
             "fields": []
         },
         {
+            "name": "noop",
+            "base": "",
+            "fields": []
+        },
+        {
             "name": "operations_table",
             "base": "",
             "fields": [
@@ -77,6 +82,11 @@
         {
             "name": "execute",
             "type": "execute",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "noop",
+            "type": "noop",
             "ricardian_contract": ""
         },
         {

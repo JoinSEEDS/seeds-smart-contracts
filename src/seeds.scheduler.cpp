@@ -38,6 +38,13 @@ ACTION scheduler::configop(name action, name contract, uint64_t period) {
 }
 
 
+ACTION scheduler::noop(){
+    //require_auth(_self);
+    print("HOLAAAA!");
+    return;
+}
+
+
 ACTION scheduler::execute() {
     // require_auth(_self);
 
@@ -97,5 +104,5 @@ ACTION scheduler::execute() {
 
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(noop));
 

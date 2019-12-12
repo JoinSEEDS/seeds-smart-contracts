@@ -21,6 +21,8 @@ CONTRACT scheduler : public contract {
 
         ACTION configop(name action, name contract, uint64_t period);
 
+        ACTION noop();
+
     private:
         TABLE operations_table {
             name operation;
