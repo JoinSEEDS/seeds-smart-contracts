@@ -21,6 +21,7 @@ void settings::reset() {
   setcontract(name("history"), "histry.seeds"_n);
   setcontract(name("policy"), "policy.seeds"_n);
   setcontract(name("token"), "token.seeds"_n);
+  setcontract(name("acctcreator"), "free.seeds"_n);
 }
 
 void settings::configure(name param, uint64_t value) {
