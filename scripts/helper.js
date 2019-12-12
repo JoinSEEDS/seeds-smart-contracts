@@ -93,12 +93,13 @@ const token = (accountName, issuer, supply) => ({
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
-      firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
-      seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
-      thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
+      firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
+      seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
+      thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
 
       owner: account(owner),
-      firstbank: account(   'giftsxxseeds',  '525000000.0000 SEEDS'),
+      // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
+      firstbank: account(   'giftsxxseeds',  '500000000.0000 SEEDS'),
       secondbank: account(  'milestxseeds', '75000000.0000 SEEDS'),
       thirdbank: account(   'hyphaxxseeds',  '300000000.0000 SEEDS'),
       fourthbank: account(  'alliesxseeds','180000000.0000 SEEDS'),
@@ -141,12 +142,13 @@ const accountsMetadata = (network) => {
     }
   } else if (network == networks.telosTestnet) {
     return {
-      firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
-      seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
-      thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
+      firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
+      seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
+      thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
 
       owner: account(owner),
-      firstbank: account(   'giftsxxseeds',  '525000000.0000 SEEDS'),
+      // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
+      firstbank: account(   'giftsxxseeds',  '500000000.0000 SEEDS'),
       secondbank: account(  'milestxseeds', '75000000.0000 SEEDS'),
       thirdbank: account(   'hyphaxxseeds',  '300000000.0000 SEEDS'),
       fourthbank: account(  'alliesxseeds','180000000.0000 SEEDS'),
