@@ -23,7 +23,7 @@ const ownerAccounts = {
   local: 'owner',
   kylin: 'seedsowner11',
   telosTestnet: 's33dst3stn3t',
-  telosMainnet: 'seedsharvest'
+  telosMainnet: 'seed.seeds'
 }
 
 const {
@@ -118,48 +118,50 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      history: contract('seedshistorx', 'history'),
-      firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
-      secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
-      thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
-      fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
-      fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
-      sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
-      bank: account('seedsbanksys'),
-      accounts: contract('seedsaccntsx', 'accounts'),
-      harvest: contract('seedshrvestx', 'harvest'),
-      settings: contract('seedsettingx', 'settings'),
-      proposals: contract('seedsprpslsx', 'proposals'),
-      invites: contract('seedsinvitex', 'invites'),
-      referendums: contract('seedsrfrndmx', 'referendums'),
-      token: token('seedstokennx', owner, '777777777.7600 SEEDS'),
-      policy: contract('seedspolicyx', 'policy'),
-      onboarding: contract('seedsjoinusx', 'onboarding')
+      firstbank: account('gifts.seeds',  '525000000.0000 SEEDS'),
+      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
+      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
+      bank: account('system.seeds'),
+      history: contract('histry.seeds', 'history'),
+      accounts: contract('accts.seeds', 'accounts'),
+      harvest: contract('harvst.seeds', 'harvest'),
+      settings: contract('settgs.seeds', 'settings'),
+      proposals: contract('funds.seeds', 'proposals'),
+      invites: contract('invite.seeds', 'invites'),
+      referendums: contract('rules.seeds', 'referendums'),
+      token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
+      policy: contract('policy.seeds', 'policy'),
+      onboarding: contract('join.seeds', 'onboarding'),
+      acctcreator: contract('free.seeds', 'acctcreator')
     }
   } else if (network == networks.telosTestnet) {
     return {
-      owner: account(owner),
-      history: contract('seedshistorx', 'history'),
       firstuser: account('seedsuseraaa', '34000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '33000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '33000000.0000 SEEDS'),
-      firstbank: account('giftingseeds', '272222222.2200 SEEDS'),
-      secondbank: account('mlstoneseeds', '38888888.8900 SEEDS'),
-      thirdbank: account('hyphasseedsx', '155555555.5500 SEEDS'),
-      fourthbank: account('partnerseeds', '93333333.3300 SEEDS'),
-      fifthbank: account('refrralseeds', '62222222.2200 SEEDS'),
-      sixthbank: account('theseedsbank', '155555555.5500 SEEDS'),
-      bank: account('seedsbanksys'),
-      accounts: contract('seedsaccntsx', 'accounts'),
-      harvest: contract('seedshrvestx', 'harvest'),
-      settings: contract('seedsettingx', 'settings'),
-      proposals: contract('seedsprpslsx', 'proposals'),
-      invites: contract('seedsinvitex', 'invites'),
-      referendums: contract('seedsrfrndmx', 'referendums'),
-      token: token('seedstokennx', owner, '877777777.7600 SEEDS'),
-      policy: contract('seedspolicyx', 'policy'),
-      onboarding: contract('seedsjoinusx', 'onboarding'),
-      acctcreator: contract('seedfreeacct', 'acctcreator')
+
+      owner: account(owner),
+      firstbank: account(   'giftsxxseeds',  '525000000.0000 SEEDS'),
+      secondbank: account(  'milestxseeds', '75000000.0000 SEEDS'),
+      thirdbank: account(   'hyphaxxseeds',  '300000000.0000 SEEDS'),
+      fourthbank: account(  'alliesxseeds','180000000.0000 SEEDS'),
+      fifthbank: account(   'referxxseeds',  '120000000.0000 SEEDS'),
+      sixthbank: account(   'bankxxxseeds',   '300000000.0000 SEEDS'),
+      bank: account(        'systemxseeds'),
+      history: contract(    'histryxseeds', 'history'),
+      accounts: contract(   'acctsxxseeds', 'accounts'),
+      harvest: contract(    'harvstxseeds', 'harvest'),
+      settings: contract(   'settgsxseeds', 'settings'),
+      proposals: contract(  'fundsxxseeds', 'proposals'),
+      invites: contract(    'invitexseeds', 'invites'),
+      referendums: contract('rulesxxseeds', 'referendums'),
+      token: token(         'tokenxxseeds', owner, '1500000000.0000 SEEDS'),
+      policy: contract(     'policyxseeds', 'policy'),
+      onboarding: contract( 'joinxxxseeds', 'onboarding'),
+      acctcreator: contract('freexxxseeds', 'acctcreator')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
