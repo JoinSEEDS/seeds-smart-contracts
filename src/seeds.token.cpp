@@ -155,14 +155,17 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
 
 void token::save_transaction(name from, name to, asset quantity, string memo) {
   if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
-    check(false, "error");
+    // Before our accounts are created, don't record anything
+    return;
   }
   
   action(
     permission_level{contracts::history, "active"_n},
-    contracts::history, "trxentry"_n,
+    contracts::history, 
+    "trxentry"_n,
     std::make_tuple(from, to, quantity, memo)
   ).send();
+
 }
 
 void token::check_limit(const name& from) {
