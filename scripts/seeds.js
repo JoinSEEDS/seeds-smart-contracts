@@ -16,7 +16,8 @@ const allContracts = [
   "proposals",
   "invites",
   "referendums",
-  "history"
+  "history",
+  "acctcreator",
 ].sort()
 
 
