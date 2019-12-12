@@ -34,8 +34,9 @@ namespace eosio {
       public:
          using contract::contract;
          
-         void migrate( const name&  account, const asset& balance );
-
+         [[eosio::action]]
+         void migrateall();
+         
          /**
           * Create action.
           *

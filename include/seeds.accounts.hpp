@@ -152,4 +152,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch)(migrateall));

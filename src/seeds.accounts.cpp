@@ -49,7 +49,7 @@ void accounts::migrateall()
       olduser.interests,
       olduser.reputation,
       olduser.timestamp
-      );
+    );
     
     uitr++;
   }

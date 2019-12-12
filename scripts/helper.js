@@ -16,11 +16,11 @@ const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://testnet.eos.miami',
-  telosMainnet: 'https://telos.eos.barcelona'
+  telosMainnet: 'https://node.hypha.earth'
 }
 
 const ownerAccounts = {
-  local: 'owner',
+  local: 'seed.seeds',
   kylin: 'seedsowner11',
   telosTestnet: 's33dst3stn3t',
   telosMainnet: 'seed.seeds'
@@ -38,7 +38,7 @@ const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
 
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
-  [networks.telosMainnet]: ['EOS6F3waTpq11VRFBTWUp6tif3u5GY6QGwBxhmq9CsdLi2NU1Rmdv', 'EOS6HL4bXo3aC1YF5xtkst2boyeCjkd9N5aKMcaF9khdq9HrxPJzu'],
+  [networks.telosMainnet]: ['EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj', 'EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj'],
   [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
@@ -93,35 +93,34 @@ const token = (accountName, issuer, supply) => ({
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
+      owner: account(owner),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
-
-      owner: account(owner),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
-      firstbank: account(   'giftsxxseeds',  '500000000.0000 SEEDS'),
-      secondbank: account(  'milestxseeds', '75000000.0000 SEEDS'),
-      thirdbank: account(   'hyphaxxseeds',  '300000000.0000 SEEDS'),
-      fourthbank: account(  'alliesxseeds','180000000.0000 SEEDS'),
-      fifthbank: account(   'referxxseeds',  '120000000.0000 SEEDS'),
-      sixthbank: account(   'bankxxxseeds',   '300000000.0000 SEEDS'),
-      bank: account(        'systemxseeds'),
-      history: contract(    'histryxseeds', 'history'),
-      accounts: contract(   'acctsxxseeds', 'accounts'),
-      harvest: contract(    'harvstxseeds', 'harvest'),
-      settings: contract(   'settgsxseeds', 'settings'),
-      proposals: contract(  'fundsxxseeds', 'proposals'),
-      invites: contract(    'invitexseeds', 'invites'),
-      referendums: contract('rulesxxseeds', 'referendums'),
-      token: token(         'tokenxxseeds', owner, '1500000000.0000 SEEDS'),
-      policy: contract(     'policyxseeds', 'policy'),
-      onboarding: contract( 'joinxxxseeds', 'onboarding'),
-      acctcreator: contract('freexxxseeds', 'acctcreator')
+      firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
+      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
+      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
+      bank: account('system.seeds'),
+      history: contract('histry.seeds', 'history'),
+      accounts: contract('accts.seeds', 'accounts'),
+      harvest: contract('harvst.seeds', 'harvest'),
+      settings: contract('settgs.seeds', 'settings'),
+      proposals: contract('funds.seeds', 'proposals'),
+      invites: contract('invite.seeds', 'invites'),
+      referendums: contract('rules.seeds', 'referendums'),
+      token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
+      policy: contract('policy.seeds', 'policy'),
+      onboarding: contract('join.seeds', 'onboarding'),
+      acctcreator: contract('free.seeds', 'acctcreator')
     }
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      firstbank: account('gifts.seeds',  '525000000.0000 SEEDS'),
+      firstbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       fourthbank: account('allies.seeds','180000000.0000 SEEDS'),

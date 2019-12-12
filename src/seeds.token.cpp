@@ -95,6 +95,54 @@ void token::burn( const name& from, const asset& quantity )
   });
 }
 
+void token::migrateall()
+{
+  require_auth(get_self());
+ 
+  name old_token_account = name("seedstokennx"); 
+  name gift_account = name("gift.seeds");
+
+  user_tables users(contracts::accounts, contracts::accounts.value);
+
+  asset total_distributed(0, seeds_symbol);
+
+  auto uitr = users.begin();
+  
+  while (uitr != users.end()) {
+    name user_account = uitr->account;
+    
+    accounts user_old_balances(old_token_account, user_account.value);
+    
+    accounts user_new_balances(get_self(), user_account.value);
+    
+    auto oitr = user_old_balances.find(seeds_symbol.code().raw());
+    
+    if (oitr != user_old_balances.end()) {
+      asset user_balance = oitr->balance;
+      
+      auto nitr = user_new_balances.find(seeds_symbol.code().raw());
+      
+      if (nitr == user_new_balances.end()) {
+        user_new_balances.emplace(get_self(), [&](auto& user) {
+          user.balance = user_balance;
+        });
+        
+        total_distributed += user_balance;
+      }
+    }
+
+    uitr++;
+  }
+  
+  accounts gift_balances(get_self(), gift_account.value);
+
+  auto gitr = gift_balances.find(seeds_symbol.code().raw());
+  
+  gift_balances.modify(gitr, get_self(), [&](auto& gift) {
+    gift.balance -= total_distributed;
+  });  
+}
+
 void token::transfer( const name&    from,
                       const name&    to,
                       const asset&   quantity,
@@ -301,4 +349,4 @@ void token::close( const name& owner, const symbol& symbol )
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(migrateall) )
