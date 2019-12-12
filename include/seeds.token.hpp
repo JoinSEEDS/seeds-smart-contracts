@@ -33,6 +33,8 @@ namespace eosio {
    class [[eosio::contract("token")]] token : public contract {
       public:
          using contract::contract;
+         
+         void migrate( const name&  account, const asset& balance );
 
          /**
           * Create action.
