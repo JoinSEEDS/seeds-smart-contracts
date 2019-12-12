@@ -5,15 +5,15 @@
 using eosio::name;
 
 namespace contracts {
-  name accounts = "seedsaccntsx"_n;
-  name harvest = "seedshrvestx"_n;
-  name settings = "seedsettingx"_n;
-  name proposals = "seedsprpslsx"_n;
-  name invites = "seedsinvitex"_n;
-  name referendums = "seedsrfrndmx"_n;
-  name history = "seedshistorx"_n;
-  name token = "seedstokennx"_n;
-  name policy = "seedspolicyx"_n;
-  name bank = "seedsbanksys"_n;
-  name onboarding = "seedsjoinusx"_n;
+  name accounts = "accts.seeds"_n;
+  name harvest = "harvst.seeds"_n;
+  name settings = "settgs.seeds"_n;
+  name proposals = "funds.seeds"_n;
+  name invites = "invite.seeds"_n;
+  name referendums = "rules.seeds"_n;
+  name history = "histry.seeds"_n;
+  name token = "token.seeds"_n;
+  name policy = "policy.seeds"_n;
+  name bank = "system.seeds"_n;
+  name onboarding = "join.seeds"_n;
 }
