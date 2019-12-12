@@ -42,6 +42,8 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
+      ACTION migrateall();
+
       ACTION migrate(name account,
         name status,
         name type,
@@ -51,7 +53,8 @@ CONTRACT accounts : public contract {
         string roles,
         string skills,
         string interests,
-        uint64_t reputation);
+        uint64_t reputation,
+        uint64_t timestamp);
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 

@@ -28,16 +28,28 @@ void accounts::reset() {
 
 void accounts::migrateall()
 {
-  name accounts_old = name("seedsaccntsx")
+  name accounts_old = name("seedsaccntsx");
   
-  user_tables users_old(accounts_old, accounts_old)
+  user_tables users_old(accounts_old, accounts_old.value);
   
   auto uitr = users_old.begin();
   
   while (uitr != users_old.end()) {
     auto olduser = *uitr;
     
-    migrate(olduser.account, olduser.status, olduser.type, etc tired)
+    migrate(
+      olduser.account, 
+      olduser.status, 
+      olduser.type, 
+      olduser.nickname,
+      olduser.image,
+      olduser.story,
+      olduser.roles,
+      olduser.skills,
+      olduser.interests,
+      olduser.reputation,
+      olduser.timestamp
+      );
     
     uitr++;
   }
@@ -52,10 +64,13 @@ void accounts::migrate(name account,
         string roles,
         string skills,
         string interests,
-        uint64_t reputation
+        uint64_t reputation,
+        uint64_t timestamp
 )
 {
   require_auth(_self);
+
+  user_tables users(contracts::accounts, contracts::accounts.value);
 
   users.emplace(_self, [&](auto& user) {
     user.account = account;
@@ -68,7 +83,7 @@ void accounts::migrate(name account,
     user.skills = skills;
     user.interests = interests;
     user.reputation = reputation;
-    user.timestamp = eosio::current_time_point().sec_since_epoch();
+    user.timestamp = timestamp;
   });
 }
 
