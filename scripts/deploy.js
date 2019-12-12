@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
+const { eos, encodeName, getBalance, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -244,7 +244,6 @@ const createCoins = async (token) => {
 
 const transferCoins = async (token, recipient) => {
   const contract = await eos.contract(token)
-
   try {
     await contract.transfer({
       from: token.issuer,
@@ -254,6 +253,10 @@ const transferCoins = async (token, recipient) => {
     }, { authorization: `${token.issuer}@active` })
     
     console.log(`sent ${recipient.quantity} from ${token.issuer} to ${recipient.account}`)
+
+    console.log("remaining balance for "+token.issuer +" "+ JSON.stringify(await getBalance(token.issuer), null, 2))
+
+
   } catch (err) {
     console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})\n* error: ` + err + `\n`)
   }
