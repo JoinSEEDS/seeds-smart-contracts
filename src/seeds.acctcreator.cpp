@@ -1,6 +1,6 @@
 // https://gitlab.com/telos-kitchen/telos-account-creator-contract/blob/master/src/acctcreator.cpp
 
-#include <acctcreator.hpp>
+#include <seeds.acctcreator.hpp>
 
 void acctcreator::setconfig ( const name& account_creator_contract, const name& account_creator_oracle ) {
    require_auth (get_self());
