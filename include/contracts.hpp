@@ -17,6 +17,7 @@ namespace contracts {
   name referendums = "rulesxxseeds"_n;
   name history =     "histryxseeds"_n;
   name token =       "tokenxxseeds"_n;
+  name tlostoken = "eosio.token"_n;
   name policy =      "policyxseeds"_n;
   name bank =        "systemxseeds"_n;
   name onboarding =  "joinxxxseeds"_n;
@@ -32,6 +33,7 @@ namespace contracts {
   name referendums = "rules.seeds"_n;
   name history = "histry.seeds"_n;
   name token = "token.seeds"_n;
+  name tlostoken = "eosio.token"_n;
   name policy = "policy.seeds"_n;
   name bank = "system.seeds"_n;
   name onboarding = "join.seeds"_n;
