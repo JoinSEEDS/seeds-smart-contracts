@@ -40,6 +40,20 @@
             ]
         },
         {
+            "name": "balances_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "balance",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
             "name": "changeowner",
             "base": "",
             "fields": [
@@ -80,6 +94,62 @@
             ]
         },
         {
+            "name": "config_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "param",
+                    "type": "name"
+                },
+                {
+                    "name": "value",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "create",
+            "base": "",
+            "fields": [
+                {
+                    "name": "orgname",
+                    "type": "name"
+                },
+                {
+                    "name": "sponsor",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "createbalance",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "quantity",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "destroy",
+            "base": "",
+            "fields": [
+                {
+                    "name": "orgname",
+                    "type": "name"
+                },
+                {
+                    "name": "sponsor",
+                    "type": "name"
+                }
+            ]
+        },
+        {
             "name": "members_table",
             "base": "",
             "fields": [
@@ -111,7 +181,7 @@
                 },
                 {
                     "name": "regen",
-                    "type": "uint64"
+                    "type": "int64"
                 },
                 {
                     "name": "reputation",
@@ -120,6 +190,24 @@
                 {
                     "name": "voice",
                     "type": "uint64"
+                },
+                {
+                    "name": "fee",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "refund",
+            "base": "",
+            "fields": [
+                {
+                    "name": "beneficiary",
+                    "type": "name"
+                },
+                {
+                    "name": "quantity",
+                    "type": "asset"
                 }
             ]
         },
@@ -159,6 +247,74 @@
                     "type": "name"
                 }
             ]
+        },
+        {
+            "name": "user_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "status",
+                    "type": "name"
+                },
+                {
+                    "name": "type",
+                    "type": "name"
+                },
+                {
+                    "name": "nickname",
+                    "type": "string"
+                },
+                {
+                    "name": "image",
+                    "type": "string"
+                },
+                {
+                    "name": "story",
+                    "type": "string"
+                },
+                {
+                    "name": "roles",
+                    "type": "string"
+                },
+                {
+                    "name": "skills",
+                    "type": "string"
+                },
+                {
+                    "name": "interests",
+                    "type": "string"
+                },
+                {
+                    "name": "reputation",
+                    "type": "uint64"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "vote_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                },
+                {
+                    "name": "regen_points",
+                    "type": "int64"
+                }
+            ]
         }
     ],
     "actions": [
@@ -183,6 +339,26 @@
             "ricardian_contract": ""
         },
         {
+            "name": "create",
+            "type": "create",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "createbalance",
+            "type": "createbalance",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "destroy",
+            "type": "destroy",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "refund",
+            "type": "refund",
+            "ricardian_contract": ""
+        },
+        {
             "name": "removemember",
             "type": "removemember",
             "ricardian_contract": ""
@@ -200,6 +376,20 @@
     ],
     "tables": [
         {
+            "name": "balances",
+            "type": "balances_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "config",
+            "type": "config_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
             "name": "members",
             "type": "members_table",
             "index_type": "i64",
@@ -209,6 +399,20 @@
         {
             "name": "organization",
             "type": "organization_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "users",
+            "type": "user_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "votes",
+            "type": "vote_table",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
