@@ -33,6 +33,12 @@ int64_t organization::getregenp(name account) {
 }
 
 
+void organization::check_asset(asset quantity) {
+    check(quantity.is_valid(), "invalid asset");
+    check(quantity.symbol == seeds_symbol, "invalid asset");
+}
+
+
 void organization::deposit(name from, name to, asset quantity, string memo) {
     if(to == _self){
         check_user(from);
@@ -53,20 +59,13 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
 }
 
 
+// this function is just for testing
 ACTION organization::createbalance(name user, asset quantity) {
     
     balances.emplace(_self, [&](auto & nbalance) {
         nbalance.account = user;
         nbalance.balance = quantity;
     });
-    
-    /*
-    asset n(1000000, seeds_symbol);
-    balances.emplace(_self, [&](auto & nbalance) {
-        nbalance.account = user;
-        nbalance.balance = n;
-    });
-    */
 }
 
 
@@ -152,7 +151,31 @@ ACTION organization::destroy(name organization, name owner) {
 
 
 ACTION organization::refund(name beneficiary, asset quantity) {
-    return;
+    require_auth(beneficiary);
+    
+    check_asset(quantity);
+
+    auto itr = balances.find(beneficiary.value);
+    check(itr != balances.end(), "organization: user has no entry in the balance table.");
+    check(itr -> balance >= quantity, "organization: user has not enough balance.");
+
+    string memo = "refund";
+
+    action(
+        permission_level(_self, "active"_n),
+        contracts::token,
+        "transfer"_n,
+        std::make_tuple(_self, beneficiary, quantity, memo)
+    ).send();
+
+    auto bitr = balances.find(_self.value);
+    balances.modify(bitr, _self, [&](auto & mbalance) {
+        mbalance.balance -= quantity;
+    });
+
+    balances.modify(itr, _self, [&](auto & mbalance) {
+        mbalance.balance -= quantity;
+    });
 }
 
 

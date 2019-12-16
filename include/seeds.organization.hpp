@@ -133,6 +133,7 @@ CONTRACT organization : public contract {
         int64_t getregenp(name account);
         void check_user(name account);
         void vote(name organization, name account, int64_t regen);
+        void check_asset(asset quantity);
 };
 
 
