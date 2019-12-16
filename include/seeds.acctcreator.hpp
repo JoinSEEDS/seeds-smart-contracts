@@ -8,6 +8,12 @@
 using std::string;
 using namespace eosio;
 
+/*
+* This account is whitelisted by free.tf
+* It can therefore use free.tf to create accounts for free
+* The number of free accounts it is allotted is limited to initially 10,000 but can be 
+* increased later.
+*/
 CONTRACT acctcreator : public contract {
    public:
       using contract::contract;
