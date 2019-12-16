@@ -115,7 +115,9 @@ const accountsMetadata = (network) => {
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
-      acctcreator: contract('free.seeds', 'acctcreator')
+      acctcreator: contract('free.seeds', 'acctcreator'),
+      tlostoken: contract('eosio.token', 'eosio.token'),
+      exchange: contract('tlosto.seeds', 'exchange')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -137,7 +139,8 @@ const accountsMetadata = (network) => {
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
-      acctcreator: contract('free.seeds', 'acctcreator')
+      acctcreator: contract('free.seeds', 'acctcreator'),
+      exchange: contract('tlosto.seeds', 'exchange')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -164,7 +167,8 @@ const accountsMetadata = (network) => {
       token: token(         'tokenxxseeds', owner, '1500000000.0000 SEEDS'),
       policy: contract(     'policyxseeds', 'policy'),
       onboarding: contract( 'joinxxxseeds', 'onboarding'),
-      acctcreator: contract('freexxxseeds', 'acctcreator')
+      acctcreator: contract('freexxxseeds', 'acctcreator'),
+      exchange: contract('tlostoxseeds', 'exchange')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
