@@ -234,6 +234,15 @@ ACTION forum::createcomt(name account, uint64_t post_id, uint64_t backend_id, st
     check(itr.parent_id == 0, "Comments can not be commentted.");
     
     createpostcomment(account, post_id, backend_id, url, body);
+
+    auto repitr = forum_reps.find(account.value);
+
+    if(repitr == forum_reps.end()){
+        forum_reps.emplace(_self, [&](auto& new_forum_rep) {
+            new_forum_rep.account = account;
+            new_forum_rep.reputation = 0;
+        });
+    }
 }
 
 
