@@ -20,7 +20,7 @@ const endpoints = {
 }
 
 const ownerAccounts = {
-  local: 'seed.seeds',
+  local: 'owner',
   kylin: 'seedsowner11',
   telosTestnet: 's33dst3stn3t',
   telosMainnet: 'seed.seeds'
