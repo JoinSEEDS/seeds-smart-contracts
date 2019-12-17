@@ -69,7 +69,7 @@ CONTRACT accounts : public contract {
         name referrer;
         name invited;
 
-        uint64_t primary_key() const { return referrer.value; }
+        uint64_t primary_key() const { return invited.value; }
       };
 
       TABLE rep_table {
