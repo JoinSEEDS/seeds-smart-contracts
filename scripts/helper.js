@@ -51,9 +51,9 @@ const apiKeys = {
 const apiPublicKey = apiKeys[chainId]
 
 const applicationKeys = {
-  [networks.local]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U',
-  [networks.telosMainnet]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U',
-  [networks.telosTestnet]: 'EOS5YrX3Frxtqz76VFMB3WJhfHw9dmarfHuwSp6ugDtbHXrexyy7U'
+  [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
 }
 const applicationPublicKey = applicationKeys[chainId]
 
