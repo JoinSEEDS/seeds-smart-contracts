@@ -1,11 +1,20 @@
 const { describe } = require('riteway')
 
-const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser } = names
 
-const randomAccountName = () => Math.random().toString(36).substring(2).replace(/\d/g, '').toString()
-
+const randomAccountName = () => {
+    let length = 12
+    var result           = '';
+    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+ }
+ 
 const fromHexString = hexString =>
   new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
@@ -23,12 +32,23 @@ describe('Onboarding', async assert => {
     const totalQuantity = '15.0000 SEEDS'
     
     const newAccount = randomAccountName()
-    const newAccountPublicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
+    console.log("New account "+newAccount)
 
-    const inviteSecret = '9e7a0c24cb284ed7939e5d37901428fb1b293e56445c571a176fad2b948c0aaa'
+    const keyPair = await createKeypair()
+
+    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+
+    const newAccountPublicKey = keyPair.public
+
+    const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
     const reset = async () => {
+        if (!isLocal()) {
+            console.log("Don't reset contracts on mainnet or testnet")
+            return
+        }
+    
         console.log(`reset ${accounts}`)
         await contracts.accounts.reset({ authorization: `${accounts}@active` })
     
@@ -40,8 +60,12 @@ describe('Onboarding', async assert => {
     }
 
     const adduser = async () => {
-        console.log(`${accounts}.adduser (${firstuser})`)
-        await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })    
+        try {
+            console.log(`${accounts}.adduser (${firstuser})`)
+            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+        } catch (error) {
+            console.log("user exists")
+        }
     }
 
     const deposit = async () => {
@@ -104,25 +128,20 @@ describe('Use application permission to accept', async assert => {
     const totalQuantity = '15.0000 SEEDS'
     
     const newAccount = randomAccountName()
-    const newAccountPublicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
-
+    console.log("New account "+newAccount)
+    const keyPair = await createKeypair()
+    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    const newAccountPublicKey = keyPair.public
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
-    const reset = async () => {
-        console.log(`reset ${accounts}`)
-        await contracts.accounts.reset({ authorization: `${accounts}@active` })
-    
-        console.log(`reset ${onboarding}`)
-        await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
-    
-        console.log(`reset ${harvest}`)
-        await contracts.harvest.reset({ authorization: `${harvest}@active` })    
-    }
-
     const adduser = async () => {
-        console.log(`${accounts}.adduser (${firstuser})`)
-        await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })    
+        try {
+            console.log(`${accounts}.adduser (${firstuser})`)
+            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+        } catch (error) {
+            console.log("user exists")
+        }
     }
 
     const deposit = async () => {
@@ -139,8 +158,6 @@ describe('Use application permission to accept', async assert => {
         console.log(`${onboarding}.accept from Application`)
         await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
     }
-
-    await reset()
 
     await adduser()
 
@@ -170,15 +187,3 @@ describe('Use application permission to accept', async assert => {
         }
     })
 })
-
-// const ramdom64ByteHexString = async () => {
-//     let privateKey = await ecc.randomKey()
-//     const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
-//     console.log('Private Key:\t', privateKey) // wif
-//     console.log('Public Key:\t', ecc.privateToPublic(privateKey)) // EOSkey...
-//     console.log('Encoded:\t', encoded) // wif
-//     return encoded
-// }
-
-//  let foo = ramdom64ByteHexString()
-// console.log(foo)
