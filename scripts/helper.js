@@ -2,6 +2,7 @@ require('dotenv').config()
 
 const Eos = require('eosjs')
 const R = require('ramda')
+const ecc = require('eosjs-ecc')
 
 const networks = {
   mainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
@@ -268,7 +269,7 @@ const permissions = [{
 }]
 
 const keyProviders = {
-  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY],
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
   [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY],
   [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY]
 }
@@ -323,7 +324,13 @@ const sha256 = Eos.modules.ecc.sha256
 
 const isLocal = () => { return chainId == networks.local }
 
+const ramdom64ByteHexString = async () => {
+  let privateKey = await ecc.randomKey()
+  const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
+  return encoded
+}
+
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString
 }
