@@ -18,7 +18,7 @@ CONTRACT exchange : public contract {
       
     ACTION dailyreset();
     
-    ACTION purchase(name buyer, name exchange, asset tlos_quantity, string memo);
+    ACTION purchase(name buyer, name contract, asset tlos_quantity, string memo);
     
     ACTION updaterate(uint64_t seeds_per_tlos);
     
@@ -27,26 +27,26 @@ CONTRACT exchange : public contract {
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
   
-    TABLE config_table {
+    TABLE configtable {
       uint64_t rate;
       uint64_t limit;
-      uint64_t rate_timestamp;
+      uint64_t timestamp;
     };
     
-    TABLE daily_stat_table {
+    TABLE stattable {
       name buyer_account;
       uint64_t seeds_purchased;
       
       uint64_t primary_key()const { return buyer_account.value; }
     };
     
-    typedef singleton<"config"_n, config_table> config_tables;
+    typedef singleton<"config"_n, configtable> configtables;
     
-    typedef multi_index<"dailystats"_n, daily_stat_table> daily_stat_tables;
+    typedef multi_index<"dailystats"_n, stattable> stattables;
     
-    config_tables config;
+    configtables config;
     
-    daily_stat_tables dailystats;
+    stattables dailystats;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
