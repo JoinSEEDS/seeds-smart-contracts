@@ -1,0 +1,19 @@
++  acct 
++  error deploying 
++  AssertionError [ERR_ASSERTION]: Invalid public key
+    at Object.PublicKey (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/eosjs-ecc/lib/key_public.js:37:12)
+    at /home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/eosjs/lib/index.js:268:38
+    at Array.map (<anonymous>)
+    at Object._callee$ (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/eosjs/lib/index.js:262:25)
+    at tryCatch (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:62:40)
+    at Generator.invoke [as _invoke] (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:296:22)
+    at Generator.prototype.<computed> [as next] (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:114:21)
+    at tryCatch (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:62:40)
+    at invoke (/home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:152:20)
+    at /home/ianonsio/Documents/seeds_proyect/seeds-contracts/node_modules/regenerator-runtime/runtime.js:162:13 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'undefined',
+  expected: 'object',
+  operator: '=='
+}

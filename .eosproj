@@ -1,6 +1,6 @@
 {
-  "main": "src/seeds.scheduler.cpp",
-  "contract": "scheduler",
+  "main": "src/seeds.forum.cpp",
+  "contract": "forum",
   "include": "",
   "resource": "",
   "cdt": "v1.6.3",

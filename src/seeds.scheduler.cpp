@@ -105,4 +105,3 @@ ACTION scheduler::execute() {
 
 
 EOSIO_DISPATCH(scheduler,(configop)(execute)(noop));
-

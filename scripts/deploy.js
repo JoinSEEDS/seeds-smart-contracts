@@ -38,6 +38,11 @@ const source = async (name) => {
 const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
   if (!account) return
 
+  console.log(`account: ` + `${account}`);
+  console.log(`publicKey: ` + `${publicKey}`);
+  console.log(`stakes: ` + `${stakes}`);
+  console.log(`creator: ` + `${creator}`);
+
   try {
     await eos.transaction(async trx => {
       await trx.newaccount({

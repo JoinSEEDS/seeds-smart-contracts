@@ -338,8 +338,3 @@ ACTION forum::newday() {
 
 
 EOSIO_DISPATCH(forum, (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday));
-
-
-
-
-

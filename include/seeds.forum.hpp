@@ -181,12 +181,3 @@ CONTRACT forum : public contract {
         int64_t getdpoints(int64_t points, uint64_t periods);
         void print_log(string log);
 };
-
-
-
-
-
-
-
-
-

@@ -48,6 +48,3 @@ CONTRACT scheduler : public contract {
         operations_tables operations;
         config_tables config;
 };
-
-
-
