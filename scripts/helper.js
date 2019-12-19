@@ -116,7 +116,6 @@ const accountsMetadata = (network) => {
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
-      tlostoken: contract('eosio.token', 'eosio.token'),
       exchange: contract('tlosto.seeds', 'exchange')
     }
   } else if (network == networks.telosMainnet) {
@@ -184,6 +183,9 @@ const permissions = [{
   target: `${accounts.accounts.account}@owner`,
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.accounts.account}@eosio.code`
+}, {
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.harvest.account}@eosio.code`
 }, {
@@ -216,6 +218,9 @@ const permissions = [{
 }, {
   target: `${accounts.token.account}@active`,
   actor: `${accounts.token.account}@eosio.code`
+}, {
+  target: `${accounts.history.account}@active`,
+  actor: `${accounts.accounts.account}@active`
 }, {
   target: `${accounts.accounts.account}@api`,
   key: apiPublicKey,

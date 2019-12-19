@@ -62,6 +62,8 @@ CONTRACT accounts : public contract {
       void check_user(name account);
       void vouchreward(name account);
       void updatestatus(name account, name status);
+      void history_add_resident(name account);
+      void history_add_citizen(name account);
 
       symbol network_symbol = symbol("TLOS", 4);
 

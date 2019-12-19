@@ -16,6 +16,40 @@ void history::reset(name account) {
   while (titr != transactions.end()) {
     titr = transactions.erase(titr);
   }
+  
+  auto citr = citizens.begin();
+  while (citr != citizens.end()) {
+    citr = citizens.erase(citr);
+  }
+  
+  auto ritr = residents.begin();
+  while (ritr != residents.end()) {
+    ritr = residents.erase(ritr);
+  }
+}
+
+void history::addresident(name account) {
+  require_auth(get_self());
+  
+  check_user(account);
+  
+  residents.emplace(get_self(), [&](auto& user) {
+    user.id = residents.available_primary_key();
+    user.account = account;
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+}
+
+void history::addcitizen(name account) {
+  require_auth(get_self());
+  
+  check_user(account);
+  
+  citizens.emplace(get_self(), [&](auto& user) {
+    user.id = citizens.available_primary_key();
+    user.account = account;
+    user.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
 }
 
 void history::historyentry(name account, string action, uint64_t amount, string meta) {
@@ -57,4 +91,10 @@ void history::trxentry(name from, name to, asset quantity, string memo) {
     item.fromstatus = fromstatus;
     item.tostatus = tostatus;
   });
+}
+
+void history::check_user(name account)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
 }

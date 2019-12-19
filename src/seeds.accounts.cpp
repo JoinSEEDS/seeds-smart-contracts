@@ -87,6 +87,22 @@ void accounts::migrate(name account,
   });
 }
 
+void accounts::history_add_resident(name account) {
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, "addresident"_n,
+    std::make_tuple(account)
+  ).send();
+}
+
+void accounts::history_add_citizen(name account) {
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, "addcitizen"_n,
+    std::make_tuple(account)
+  ).send();
+}
+
 void accounts::joinuser(name account)
 {
   require_auth(account);
@@ -312,6 +328,8 @@ void accounts::makeresident(name user)
     updatestatus(user, name("resident"));
 
     vouchreward(user);
+    
+    history_add_resident(user);
 }
 
 void accounts::updatestatus(name user, name status)
@@ -346,6 +364,8 @@ void accounts::makecitizen(name user)
     updatestatus(user, name("citizen"));
 
     vouchreward(user);
+    
+    history_add_citizen(user);
 }
 
 void accounts::testresident(name user)
@@ -355,6 +375,8 @@ void accounts::testresident(name user)
   updatestatus(user, name("resident"));
 
   vouchreward(user);
+  
+  history_add_resident(user);
 }
 
 void accounts::testcitizen(name user)
@@ -364,6 +386,8 @@ void accounts::testcitizen(name user)
   updatestatus(user, name("citizen"));
 
   vouchreward(user);
+  
+  history_add_citizen(user);
 }
 
 void accounts::check_user(name account)
