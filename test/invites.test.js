@@ -1,24 +1,9 @@
 const { describe } = require('riteway')
-const { eos, names, getTableRows, isLocal } = require('../scripts/helper')
+const { eos, names, getTableRows, isLocal, initContracts } = require('../scripts/helper')
 
 const { accounts, harvest, token, invites, firstuser, seconduser, thirduser } = names
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
-
-const initContracts = (contractAccounts) =>
-  Promise.all(
-    Object.keys(contractAccounts)
-      .map(contractName =>
-        eos.contract(contractAccounts[contractName])
-      )
-  )
-  .then(contractsArr => contractsArr.reduce(
-    (acc, cur, idx) => ({
-      ...acc,
-      [Object.keys(contractAccounts)[idx]]: cur
-    }),
-    {}
-  ))
 
 const randomAccountName = () => Math.random().toString(36).substring(2).replace(/\d/g, '').toString()
 
