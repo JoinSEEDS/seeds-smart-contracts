@@ -18,6 +18,7 @@ const allContracts = [
   "referendums",
   "history",
   "acctcreator",
+  "exchange",
 ].sort()
 
 
@@ -95,7 +96,7 @@ const initAction = async () => {
   for (i=0; i<allContracts.length; i++) {
     let item = allContracts[i];
     console.log("compile ... " + item);
-    await compileAction(item);
+    // await compileAction(item);
   }
 
   await initContracts()
