@@ -4,7 +4,7 @@ const { equals } = require("ramda")
 
 const { harvest, firstuser, seconduser, history, accounts } = names
 
-describe.only('make a transaction entry', async assert => {
+describe('make a transaction entry', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -95,5 +95,38 @@ describe("make a history entry", async (assert) => {
         expected: Math.round(new Date()/10000),
     })
 
+  console.log('add resident')
+  await history_contract.addresident(firstuser, { authorization: `${history}@active` })
+  
+  console.log('add citizen')
+  await history_contract.addcitizen(seconduser, { authorization: `${history}@active` })
+
+  const residents = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'residents',
+    json: true
+  })
+  
+  const citizens = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'citizens',
+    json: true
+  })
+  
+  assert({
+    given: 'add resident entry',
+    should: 'have resident row',
+    actual: residents.rows[0].account,
+    expected: firstuser
+  })
+  
+  assert({
+    given: 'add citizen entry',
+    should: 'have resident row',
+    actual: citizens.rows[0].account,
+    expected: seconduser
+  })
 
 })

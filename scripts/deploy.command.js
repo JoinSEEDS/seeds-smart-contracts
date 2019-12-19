@@ -11,7 +11,7 @@ const deploy = async (name) => {
 
     await createAccount(account)
 
-    console.log("acct ", JSON.stringify(account));
+    console.log("createAccount ", JSON.stringify(account.account));
 
     if (!code)
       throw new Error('code not found')
@@ -34,7 +34,7 @@ const deploy = async (name) => {
     }, {
       authorization: `${account.account}@owner`
     })
-    console.log(`Success: ${name} deployed to ${contractName}`)
+    console.log(`Success: ${name} deployed to ${account.account}`)
 }
 
 const source = async (name) => {

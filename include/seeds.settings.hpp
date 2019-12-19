@@ -10,12 +10,16 @@ CONTRACT settings : public contract {
       using contract::contract;
       settings(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
-          config(receiver, receiver.value)
+          config(receiver, receiver.value),
+          contracts(receiver, receiver.value)
           {}
 
       ACTION reset();
 
       ACTION configure(name param, uint64_t value);
+
+      ACTION setcontract(name contract, name account);
+
   private:
       TABLE config_table {
         name param;
@@ -26,6 +30,27 @@ CONTRACT settings : public contract {
       typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
       config_tables config;
+
+      /*
+      * Information for clients as to where to find our contracts
+      * 
+      * Settings contract itself is in this table as well - when settings is migrated the old location
+      * will be updated the new account. ("settings")
+      * 
+      * E.g.
+      * contract - the internal name, e.g. "token"
+      * account - the Telos account, e.g. "seedstokennx"
+      */
+      TABLE contracts_table {
+        name contract;
+        name account;
+        uint64_t primary_key()const { return contract.value; }
+      };
+
+      typedef eosio::multi_index<"contracts"_n, contracts_table> contracts_tables;
+
+      contracts_tables contracts;
+
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract));

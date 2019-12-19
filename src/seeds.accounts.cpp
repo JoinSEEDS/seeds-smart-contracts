@@ -26,6 +26,35 @@ void accounts::reset() {
   }
 }
 
+void accounts::migrateall()
+{
+  name accounts_old = name("seedsaccntsx");
+  
+  user_tables users_old(accounts_old, accounts_old.value);
+  
+  auto uitr = users_old.begin();
+  
+  while (uitr != users_old.end()) {
+    auto olduser = *uitr;
+    
+    migrate(
+      olduser.account, 
+      olduser.status, 
+      olduser.type, 
+      olduser.nickname,
+      olduser.image,
+      olduser.story,
+      olduser.roles,
+      olduser.skills,
+      olduser.interests,
+      olduser.reputation,
+      olduser.timestamp
+    );
+    
+    uitr++;
+  }
+}
+
 void accounts::migrate(name account,
         name status,
         name type,
@@ -35,10 +64,13 @@ void accounts::migrate(name account,
         string roles,
         string skills,
         string interests,
-        uint64_t reputation
+        uint64_t reputation,
+        uint64_t timestamp
 )
 {
-    require_auth(_self);
+  require_auth(_self);
+
+  user_tables users(contracts::accounts, contracts::accounts.value);
 
   users.emplace(_self, [&](auto& user) {
     user.account = account;
@@ -51,8 +83,24 @@ void accounts::migrate(name account,
     user.skills = skills;
     user.interests = interests;
     user.reputation = reputation;
-    user.timestamp = eosio::current_time_point().sec_since_epoch();
+    user.timestamp = timestamp;
   });
+}
+
+void accounts::history_add_resident(name account) {
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, "addresident"_n,
+    std::make_tuple(account)
+  ).send();
+}
+
+void accounts::history_add_citizen(name account) {
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, "addcitizen"_n,
+    std::make_tuple(account)
+  ).send();
 }
 
 void accounts::joinuser(name account)
@@ -280,6 +328,8 @@ void accounts::makeresident(name user)
     updatestatus(user, name("resident"));
 
     vouchreward(user);
+    
+    history_add_resident(user);
 }
 
 void accounts::updatestatus(name user, name status)
@@ -314,6 +364,8 @@ void accounts::makecitizen(name user)
     updatestatus(user, name("citizen"));
 
     vouchreward(user);
+    
+    history_add_citizen(user);
 }
 
 void accounts::testresident(name user)
@@ -323,6 +375,8 @@ void accounts::testresident(name user)
   updatestatus(user, name("resident"));
 
   vouchreward(user);
+  
+  history_add_resident(user);
 }
 
 void accounts::testcitizen(name user)
@@ -332,6 +386,8 @@ void accounts::testcitizen(name user)
   updatestatus(user, name("citizen"));
 
   vouchreward(user);
+  
+  history_add_citizen(user);
 }
 
 void accounts::check_user(name account)

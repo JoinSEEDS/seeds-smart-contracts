@@ -20,6 +20,8 @@ CONTRACT harvest : public contract {
         users(contracts::accounts, contracts::accounts.value),
         reps(contracts::accounts, contracts::accounts.value)
         {}
+        
+    ACTION migrateall();
 
     ACTION reset();
 
@@ -167,7 +169,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted))
+          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
       }
   }
 }
