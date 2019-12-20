@@ -1,5 +1,6 @@
 #include <seeds.scheduler.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/transaction.hpp>
 #include <string>
 
 
@@ -80,7 +81,7 @@ ACTION scheduler::execute() {
     while(itr != operations.end()) {
         periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
 
-        print("Mira: " + std::to_string(periods));
+        print("Mira: " + std::to_string(periods) + ", timestamp = " + std::to_string(timestamp) + ", t = " + std::to_string(itr -> timestamp) + ", period = " + std::to_string(itr -> period));
         if(periods > 0){
             
             action a = action(
@@ -91,6 +92,10 @@ ACTION scheduler::execute() {
             );
 
             a.send();
+
+            //transaction tx;
+            //tx.actions.emplace_back(a);
+            //tx.send(eosio::current_time_point().sec_since_epoch() + 10, _self, false);
 
             operations.modify(itr, _self, [&](auto & moperation) {
                 moperation.timestamp = current_time_point().sec_since_epoch();
@@ -104,4 +109,4 @@ ACTION scheduler::execute() {
 
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(noop));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset));

@@ -12,12 +12,10 @@ CONTRACT forum : public contract {
         forum(name receiver, name code, datastream<const char*> ds)
             : contract(receiver, code, ds),
               postcomments(receiver, receiver.value),
-              forum_reps(receiver, receiver.value),
+              forumreps(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
-              votes_power(receiver, receiver.value),
-              logs(receiver, receiver.value),
-              operations(receiver, receiver.value)
+              votespower(receiver, receiver.value)
               {}
         
         ACTION reset();
@@ -119,20 +117,6 @@ CONTRACT forum : public contract {
             uint64_t primary_key() const { return param.value; }
         };
 
-        TABLE log_table {
-            uint64_t id;
-            string log;
-
-            uint64_t primary_key() const { return id; }
-        };
-
-
-        TABLE operations_table {
-            name operation;
-            uint64_t timestamp;
-
-            uint64_t primary_key() const { return operation.value; }
-        };
 
         typedef eosio::multi_index <"postcomment"_n, postcomment_table, 
             indexed_by<"backendid"_n, const_mem_fun < postcomment_table, 
@@ -151,17 +135,11 @@ CONTRACT forum : public contract {
 
         typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
-        typedef eosio::multi_index <"log"_n, log_table> log_tables;
-
-        typedef eosio::multi_index <"operations"_n, operations_table> operations_tables;
-
         postcomment_tables postcomments;
-        forum_rep_tables forum_reps;
+        forum_rep_tables forumreps;
         user_tables users;
-        vote_power_tables votes_power;
+        vote_power_tables votespower;
         config_tables config;
-        log_tables logs;
-        operations_tables operations;
 
         // all these values are expected to be configured in settings
         const name maxpoints = "maxpoints"_n; // max points
@@ -179,5 +157,4 @@ CONTRACT forum : public contract {
         int64_t pointsfunction(name account, int64_t points_left, uint64_t vbp, uint64_t rep, uint64_t cutoff, uint64_t cutoff_zero);
         uint64_t getdperiods(uint64_t timestamp);
         int64_t getdpoints(int64_t points, uint64_t periods);
-        void print_log(string log);
 };

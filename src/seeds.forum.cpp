@@ -5,14 +5,6 @@
 #include <eosio/print.hpp>
 
 
-void forum::print_log(string log) {
-    logs.emplace(_self, [&](auto& new_log) {
-        new_log.id = logs.available_primary_key();
-        new_log.log = log;
-    });
-}
-
-
 void forum::createpostcomment(name account, uint64_t post_id, uint64_t backend_id, string url, string body) {
     auto backendid_index = postcomments.get_index<name("backendid")>();
     auto itr = backendid_index.find(backend_id);
@@ -55,9 +47,9 @@ int forum::vote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id
     });
 
     auto pcit = postcomments.find(id);
-    auto fritr = forum_reps.find(pcit -> author_name_account.value);
-    forum_reps.modify(fritr, _self, [&](auto& frep) {
-        frep.reputation += points; // function to update rep?
+    auto fritr = forumreps.find(pcit -> author_name_account.value);
+    forumreps.modify(fritr, _self, [&](auto& frep) {
+        frep.reputation += points; 
     });
     
     return 0;
@@ -65,10 +57,10 @@ int forum::vote(name account, uint64_t id, uint64_t post_id, uint64_t comment_id
 
 
 int64_t forum::pointsfunction(name account, int64_t points_left, uint64_t vbp, uint64_t rep, uint64_t cutoff, uint64_t cutoff_zero){
-    auto itr = votes_power.find(account.value);
+    auto itr = votespower.find(account.value);
 
     if(points_left <= 0){
-        votes_power.modify(itr, _self, [&](auto& entry) {
+        votespower.modify(itr, _self, [&](auto& entry) {
             entry.num_votes += 1;
         });
         return 0;
@@ -85,7 +77,7 @@ int64_t forum::pointsfunction(name account, int64_t points_left, uint64_t vbp, u
         points_left = points;
     }
     
-    votes_power.modify(itr, _self, [&](auto& entry) {
+    votespower.modify(itr, _self, [&](auto& entry) {
         entry.num_votes += 1;
         entry.points_left = points_left - points;
     });
@@ -95,21 +87,21 @@ int64_t forum::pointsfunction(name account, int64_t points_left, uint64_t vbp, u
 
 int64_t forum::getpoints(name account) {
 
-    auto itr = votes_power.find(account.value);
+    auto itr = votespower.find(account.value);
     auto userit = users.get(account.value, "User does not exist.");
     auto vbpitr = config.get(vbp.value, "Vote Base Point value is not configured.");
     auto cutoffitr = config.get(cutoff.value, "Cut off value is not configured.");
     auto cutoffzitr = config.get(cutoffz.value, "Cut off zero value is not configured.");
 
-    if(itr == votes_power.end()){
+    if(itr == votespower.end()){
         auto maxpitr = config.get(maxpoints.value, "Max points value is not configured.");
         int64_t max_points = (maxpitr.value) * (vbpitr.value / 10000.0) * (userit.reputation / 10000.0);
 
-        votes_power.emplace(_self, [&](auto& new_vote) {
+        votespower.emplace(_self, [&](auto& new_vote) {
             new_vote.account = account;
             new_vote.num_votes = 0;
             new_vote.points_left = max_points;
-            new_vote.max_points = max_points; // purely for information purposes because we dont need it
+            new_vote.max_points = max_points;
         });
 
         return pointsfunction(account, max_points, vbpitr.value, userit.reputation, cutoffitr.value, cutoffzitr.value);
@@ -136,13 +128,10 @@ int forum::updatevote(name account, uint64_t id, uint64_t post_id, uint64_t comm
 
     periods = getdperiods(itr.timestamp);
     points = abs(getdpoints(itr.points, periods));
-    // check(1 > 2, std::to_string(points));
-    // print_log("Uvote: periods = " + std::to_string(periods) + ", points = " + std::to_string(points) );
 
     auto pcit = postcomments.find(id);
-    auto fritr = forum_reps.find(pcit -> author_name_account.value);
-    forum_reps.modify(fritr, _self, [&](auto& frmodified) {
-        // print_log("Uvote modify forum rep: current rep = " + std::to_string(frmodified.reputation ) + ", factor = " + std::to_string(factor) + ", points = " + std::to_string(points));
+    auto fritr = forumreps.find(pcit -> author_name_account.value);
+    forumreps.modify(fritr, _self, [&](auto& frmodified) {
         frmodified.reputation += factor * points;
     });
 
@@ -163,8 +152,7 @@ int64_t forum::getdpoints(int64_t points, uint64_t periods){
     }
 
     total = points * (total_d / 10000.0);
-    // print_log("GetPoints: points = " + std::to_string(points) + ", total_d = " + std::to_string(total_d) + ", total = " + std::to_string(total));
-    
+
     return total;
 }
 
@@ -173,9 +161,6 @@ uint64_t forum::getdperiods(uint64_t timestamp) {
     uint64_t t = eosio::current_time_point().sec_since_epoch();
     auto itr = config.get(depreciations.value, "Depreciations value is not configured.");
     uint64_t v = (t - timestamp) / itr.value;
-
-    // print_log("GetPeriods: dps = " + std::to_string(itr.value) + ", t = " + std::to_string(t) + ", timestamp = " + std::to_string(timestamp));
-
     return v;
 }
 
@@ -196,29 +181,29 @@ ACTION forum::reset() {
         }
     }
 
-    auto fritr = forum_reps.begin();
-    while (fritr != forum_reps.end()) {
-        fritr = forum_reps.erase(fritr);
+    auto fritr = forumreps.begin();
+    while (fritr != forumreps.end()) {
+        fritr = forumreps.erase(fritr);
     }
 
-    auto logss = logs.begin();
-    while (logss != logs.end()) {
-        logss = logs.erase(logss);
+    auto dayitr = votespower.begin();
+    while(dayitr != votespower.end()){
+        dayitr = votespower.erase(dayitr);
     }
 
 }
 
 
 ACTION forum::createpost(name account, uint64_t backend_id, string url, string body) {
-    //require_auth(account);
+    require_auth(account);
 
     auto user = users.get(account.value, "User does not exist.");
     createpostcomment(account, 0, backend_id, url, body);
 
-    auto repitr = forum_reps.find(account.value);
+    auto repitr = forumreps.find(account.value);
 
-    if(repitr == forum_reps.end()){
-        forum_reps.emplace(_self, [&](auto& new_forum_rep) {
+    if(repitr == forumreps.end()){
+        forumreps.emplace(_self, [&](auto& new_forum_rep) {
             new_forum_rep.account = account;
             new_forum_rep.reputation = 0;
         });
@@ -235,10 +220,10 @@ ACTION forum::createcomt(name account, uint64_t post_id, uint64_t backend_id, st
     
     createpostcomment(account, post_id, backend_id, url, body);
 
-    auto repitr = forum_reps.find(account.value);
+    auto repitr = forumreps.find(account.value);
 
-    if(repitr == forum_reps.end()){
-        forum_reps.emplace(_self, [&](auto& new_forum_rep) {
+    if(repitr == forumreps.end()){
+        forumreps.emplace(_self, [&](auto& new_forum_rep) {
             new_forum_rep.account = account;
             new_forum_rep.reputation = 0;
         });
@@ -314,9 +299,9 @@ ACTION forum::onperiod() {
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
     uint64_t depreciation = ditr.value;
 
-    auto itr = forum_reps.begin();
-    while(itr != forum_reps.end()){
-        forum_reps.modify(itr, _self, [&](auto& new_frep) {
+    auto itr = forumreps.begin();
+    while(itr != forumreps.end()){
+        forumreps.modify(itr, _self, [&](auto& new_frep) {
             new_frep.reputation *= depreciation / 10000.0;
         });
         itr++;
@@ -328,10 +313,9 @@ ACTION forum::onperiod() {
 ACTION forum::newday() {
     require_auth(_self);
 
-
-    auto itr = votes_power.begin();
-    while(itr != votes_power.end()){
-        itr = votes_power.erase(itr);
+    auto itr = votespower.begin();
+    while(itr != votespower.end()){
+        itr = votespower.erase(itr);
     }
 
 }
