@@ -181,6 +181,9 @@ const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
 const permissions = [{
+  target: `${accounts.secondbank.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {

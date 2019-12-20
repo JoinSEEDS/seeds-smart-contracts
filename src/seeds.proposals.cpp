@@ -30,8 +30,8 @@ void proposals::onperiod() {
       if (pitr->stage == name("active")) {
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
-              withdraw(pitr->recipient, pitr->quantity);// TODO limit by amount available
-              withdraw(pitr->recipient , pitr->staked);
+              withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
+              withdraw(pitr->recipient, pitr->staked, contracts::bank);
 
               props.modify(pitr, _self, [&](auto& proposal) {
                   proposal.executed = true;
@@ -80,7 +80,7 @@ void proposals::onperiod() {
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
-void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url) {
+void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
   require_auth(creator);
   // check_user(creator);
   // check_user(recipient);
@@ -111,6 +111,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.creation_date = eosio::current_time_point().sec_since_epoch();
       proposal.status = name("open");
       proposal.stage = name("staged");
+      proposal.fund = fund;
   });
 
   auto litr = lastprops.find(creator.value);
@@ -272,15 +273,16 @@ void proposals::deposit(asset quantity)
   action.send(_self, name(bank_account), quantity, "");
 }
 
-void proposals::withdraw(name beneficiary, asset quantity)
+void proposals::withdraw(name beneficiary, asset quantity, name sender)
 {
+  if (quantity.amount == 0) return;
+
   check_asset(quantity);
 
   auto token_account = contracts::token;
-  auto bank_account = contracts::bank;
 
-  token::transfer_action action{name(token_account), {name(bank_account), "active"_n}};
-  action.send(name(bank_account), beneficiary, quantity, "");
+  token::transfer_action action{name(token_account), {sender, "active"_n}};
+  action.send(sender, beneficiary, quantity, "");
 }
 
 void proposals::burn(asset quantity)
