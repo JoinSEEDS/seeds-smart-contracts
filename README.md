@@ -1,4 +1,20 @@
-## Deploy Tools
+# Contract Names
+
+See here: https://gitlab.com/seeds-project/seeds-contracts/issues/25
+
+# Compiler Setup - Docker or native
+
+Set up env file by copying the example to .env
+
+```
+cp .env.example .env
+```
+
+See here: https://gitlab.com/seeds-project/seeds-contracts/blob/master/.env.example
+
+The COMPILER variable can either be docker or local - if you have eos-cpp installed on your local machine you can use local, if you want to use a docker container make sure docker is running and it'll do everything for you.
+
+# Deploy Tools
 
 Use the seeds.js script to 
 

@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, token, bank, firstuser, seconduser, thirduser } = names
+const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser } = names
 
 describe('Proposals', async assert => {
 
@@ -29,10 +29,10 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.create(firstuser, firstuser, '100000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
-  await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
@@ -74,7 +74,8 @@ describe('Proposals', async assert => {
 
   const balancesBefore = [
     await getBalance(firstuser),
-    await getBalance(seconduser)
+    await getBalance(seconduser),
+    await getBalance(secondbank),
   ]
 
   console.log('execute proposals')
@@ -82,7 +83,8 @@ describe('Proposals', async assert => {
 
   const balancesAfter = [
     await getBalance(firstuser),
-    await getBalance(seconduser)
+    await getBalance(seconduser),
+    await getBalance(secondbank),
   ]
 
   const { rows } = await getTableRows({
@@ -129,7 +131,8 @@ describe('Proposals', async assert => {
       description: 'description2',
       image: 'image2',
       url: 'url2',
-      status: 'passed'
+      status: 'passed',
+      fund: secondbank,
     }
   })
 
@@ -153,7 +156,15 @@ describe('Proposals', async assert => {
       description: 'description',
       image: 'image',
       url: 'url',
-      status: 'rejected'
+      status: 'rejected',
+      fund: secondbank,
     }
+  })
+
+  assert({
+    given: 'executed proposal',
+    should: 'decrease bank balance',
+    actual: balancesAfter[2] - balancesBefore[2],
+    expected: -100
   })
 })

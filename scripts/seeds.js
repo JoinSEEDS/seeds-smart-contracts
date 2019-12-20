@@ -16,7 +16,9 @@ const allContracts = [
   "proposals",
   "invites",
   "referendums",
-  "history"
+  "history",
+  "acctcreator",
+  "exchange",
 ].sort()
 
 
@@ -37,8 +39,13 @@ const deployAction = async (contract) => {
       await deploy(contract)
       console.log(`${contract} deployed`)
     } catch(err) {
-      console.log("error deploying ", contract)
-      console.log(err)
+      let errStr = "" + err
+      if (errStr.includes("Contract is already running this version of code")) {
+        console.log(`${contract} was already deployed`)
+      } else {
+        console.log("error deploying ", contract)
+        console.log(err)          
+      }
     }
 }
 
@@ -58,9 +65,14 @@ const resetAction = async (contract) => {
     await resetByName(contract)
     console.log(`${contract} reset`)
   } catch(err) {
-    console.log("error deploying ", contract)
-    console.log(err)
-  }
+    let errStr = "" + err
+    if (errStr.includes("Contract is already running this version of code")) {
+      console.log(`${contract} was already deployed`)
+    } else {
+      console.log("error deploying ", contract)
+      console.log(err)          
+    }
+}
 }
 
 const runAction = async (contract) => {
@@ -84,7 +96,7 @@ const initAction = async () => {
   for (i=0; i<allContracts.length; i++) {
     let item = allContracts[i];
     console.log("compile ... " + item);
-    await compileAction(item);
+    // await compileAction(item);
   }
 
   await initContracts()

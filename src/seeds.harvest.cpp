@@ -2,6 +2,28 @@
 #include <eosio/system.hpp>
 #include <seeds.harvest.hpp>
 
+void harvest::migrateall() {
+  require_auth(_self);
+
+  name old_harvest = name("seedshrvestx");
+
+  balance_tables balances_old(old_harvest, old_harvest.value);
+
+  auto bitr = balances_old.begin();
+  
+  while (bitr != balances_old.end()) {
+    auto user_balance = *bitr;
+    
+    balances.emplace(get_self(), [&](auto& balance) {
+      balance.account = user_balance.account;
+      balance.planted = user_balance.planted;
+      balance.reward = user_balance.reward;
+    });
+    
+    bitr++;
+  }
+}
+
 void harvest::reset() {
   require_auth(_self);
 
@@ -232,7 +254,7 @@ void harvest::calcrep() {
     "calcrep"_n,
     std::make_tuple()
   );
-  trx.delay_sec = 10;
+  trx.delay_sec = 60;
   trx.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
 }
 
@@ -279,7 +301,7 @@ void harvest::calctrx() {
     "calctrx"_n,
     std::make_tuple()
   );
-  trx.delay_sec = 10;
+  trx.delay_sec = 60;
   trx.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 }
 
@@ -326,7 +348,7 @@ void harvest::calcplanted() {
     "calcplanted"_n,
     std::make_tuple()
   );
-  trx.delay_sec = 10;
+  trx.delay_sec = 60;
   trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
 }
 
