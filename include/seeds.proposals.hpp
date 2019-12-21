@@ -21,7 +21,7 @@ CONTRACT proposals : public contract {
 
       ACTION reset();
 
-      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url);
+      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund);
 
       ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
 
@@ -41,7 +41,7 @@ CONTRACT proposals : public contract {
       void check_citizen(name account);
       void check_asset(asset quantity);
       void deposit(asset quantity);
-      void withdraw(name account, asset quantity);
+      void withdraw(name account, asset quantity, name sender);
       void burn(asset quantity);
 
       TABLE config_table {
@@ -67,6 +67,7 @@ CONTRACT proposals : public contract {
           string url;
           name status;
           name stage;
+          name fund;
           uint64_t creation_date;
           uint64_t primary_key()const { return id; }
       };
