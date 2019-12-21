@@ -5,11 +5,11 @@
 using namespace eosio;
 using std::string;
 
-CONTRACT organization : public contract {
+CONTRACT orgtns : public contract {
 
     public:
         using contract::contract;
-        organization(name receiver, name code, datastream<const char*> ds)
+        orgtns(name receiver, name code, datastream<const char*> ds)
             : contract(receiver, code, ds),
               organizations(receiver, receiver.value),
               balances(receiver, receiver.value),
@@ -39,8 +39,6 @@ CONTRACT organization : public contract {
         ACTION destroy(name orgname, name sponsor);
 
         ACTION refund(name beneficiary, asset quantity);
-
-        ACTION createbalance(name user, asset quantity);
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
@@ -139,10 +137,10 @@ CONTRACT organization : public contract {
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::token.value) {
-      execute_action<organization>(name(receiver), name(code), &organization::deposit);
+      execute_action<orgtns>(name(receiver), name(code), &orgtns::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund)(createbalance))
+          EOSIO_DISPATCH_HELPER(orgtns, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund))
       }
   }
 }

@@ -117,7 +117,8 @@ const accountsMetadata = (network) => {
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
-      exchange: contract('tlosto.seeds', 'exchange')
+      exchange: contract('tlosto.seeds', 'exchange'),
+      orgtns: contract('orgtns.seeds', 'orgtns')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -140,7 +141,8 @@ const accountsMetadata = (network) => {
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
-      exchange: contract('tlosto.seeds', 'exchange')
+      exchange: contract('tlosto.seeds', 'exchange'),
+      organization: contract('orgtns.seeds', 'orgtns')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -168,7 +170,8 @@ const accountsMetadata = (network) => {
       policy: contract(     'policyxseeds', 'policy'),
       onboarding: contract( 'joinxxxseeds', 'onboarding'),
       acctcreator: contract('freexxxseeds', 'acctcreator'),
-      exchange: contract('tlostoxseeds', 'exchange')
+      exchange: contract('tlostoxseeds', 'exchange'),
+      organization: contract('orgxxxxseeds', 'orgtns')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -280,6 +283,9 @@ const permissions = [{
 }, {
   target: `${accounts.acctcreator.account}@free`,
   action: 'create'
+}, {
+  target: `${accounts.orgtns.account}@active`,
+  actor: `${accounts.orgtns.account}@eosio.code`
 }]
 
 const keyProviders = {

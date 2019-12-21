@@ -2,7 +2,7 @@
 #include <eosio/system.hpp>
 
 
-void organization::check_owner(name organization, name owner) {
+void orgtns::check_owner(name organization, name owner) {
     require_auth(owner);
     auto itr = organizations.get(organization.value, "The organization does not exist.");
     check(itr.owner == owner, "Only the organization's owner can do that.");
@@ -10,7 +10,7 @@ void organization::check_owner(name organization, name owner) {
 }
 
 
-void organization::init_balance(name account) {
+void orgtns::init_balance(name account) {
     auto itr = balances.find(account.value);
     if(itr == balances.end()){
         balances.emplace(_self, [&](auto & nbalance) {
@@ -21,25 +21,25 @@ void organization::init_balance(name account) {
 }
 
 
-void organization::check_user(name account) {
+void orgtns::check_user(name account) {
     auto uitr = users.find(account.value);
     check(uitr != users.end(), "organization: no user.");
 }
 
 
-int64_t organization::getregenp(name account) {
+int64_t orgtns::getregenp(name account) {
     auto itr = users.find(account.value);
     return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
 
-void organization::check_asset(asset quantity) {
+void orgtns::check_asset(asset quantity) {
     check(quantity.is_valid(), "invalid asset");
     check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
 
-void organization::deposit(name from, name to, asset quantity, string memo) {
+void orgtns::deposit(name from, name to, asset quantity, string memo) {
     if(to == _self){
         check_user(from);
 
@@ -60,16 +60,18 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
 
 
 // this function is just for testing
-ACTION organization::createbalance(name user, asset quantity) {
+/*
+ACTION orgtns::createbalance(name user, asset quantity) {
     
     balances.emplace(_self, [&](auto & nbalance) {
         nbalance.account = user;
         nbalance.balance = quantity;
     });
 }
+*/
 
 
-ACTION organization::reset() {
+ACTION orgtns::reset() {
     require_auth(_self);
 
     auto itr = organizations.begin();
@@ -98,7 +100,7 @@ ACTION organization::reset() {
 }
 
 
-ACTION organization::create(name orgname, name sponsor) {
+ACTION orgtns::create(name orgname, name sponsor) {
     require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
 
     auto itr = balances.find(sponsor.value);
@@ -126,7 +128,7 @@ ACTION organization::create(name orgname, name sponsor) {
 }
 
 
-ACTION organization::destroy(name organization, name owner) {
+ACTION orgtns::destroy(name organization, name owner) {
     check_owner(organization, owner);
 
     auto orgitr = organizations.find(organization.value);
@@ -150,7 +152,7 @@ ACTION organization::destroy(name organization, name owner) {
 }
 
 
-ACTION organization::refund(name beneficiary, asset quantity) {
+ACTION orgtns::refund(name beneficiary, asset quantity) {
     require_auth(beneficiary);
     
     check_asset(quantity);
@@ -179,7 +181,7 @@ ACTION organization::refund(name beneficiary, asset quantity) {
 }
 
 
-ACTION organization::addmember(name organization, name owner, name account, name role) {
+ACTION orgtns::addmember(name organization, name owner, name account, name role) {
     check_owner(organization, owner);
     check_user(account);
     
@@ -191,7 +193,7 @@ ACTION organization::addmember(name organization, name owner, name account, name
 }
 
 
-ACTION organization::removemember(name organization, name owner, name account) {
+ACTION orgtns::removemember(name organization, name owner, name account) {
     check_owner(organization, owner);
 
     auto itr = organizations.find(organization.value);
@@ -203,7 +205,7 @@ ACTION organization::removemember(name organization, name owner, name account) {
 }
 
 
-ACTION organization::changerole(name organization, name owner, name account, name new_role) {
+ACTION orgtns::changerole(name organization, name owner, name account, name new_role) {
     check_owner(organization, owner);
 
     members_tables members(get_self(), organization.value);
@@ -217,7 +219,7 @@ ACTION organization::changerole(name organization, name owner, name account, nam
 }
 
 
-ACTION organization::changeowner(name organization, name owner, name account) {
+ACTION orgtns::changeowner(name organization, name owner, name account) {
     check_owner(organization, owner);
     check_user(account);
 
@@ -242,7 +244,7 @@ ACTION organization::changeowner(name organization, name owner, name account) {
 }
 
 
-void organization::vote(name organization, name account, int64_t regen) {
+void orgtns::vote(name organization, name account, int64_t regen) {
     vote_tables votes(get_self(), organization.value);
 
     auto itr = organizations.find(organization.value);
@@ -260,7 +262,7 @@ void organization::vote(name organization, name account, int64_t regen) {
 }
 
 
-ACTION organization::addregen(name organization, name account) {
+ACTION orgtns::addregen(name organization, name account) {
     require_auth(account); // is that required ???
     check_user(account);
 
@@ -281,7 +283,7 @@ ACTION organization::addregen(name organization, name account) {
 }
 
 
-ACTION organization::subregen(name organization, name account) {
+ACTION orgtns::subregen(name organization, name account) {
     require_auth(account); // is that required ???
     check_user(account);
 
