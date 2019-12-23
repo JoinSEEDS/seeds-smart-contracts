@@ -8,6 +8,8 @@ void settings::reset() {
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);
+  configure(name("propmajority"), 80);
+  configure(name("propquorum"), 5);
   configure(name("hrvstreward"), 100000);
 
   // contracts
