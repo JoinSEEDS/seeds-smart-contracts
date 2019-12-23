@@ -106,6 +106,7 @@ const accountsMetadata = (network) => {
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      freeaccount: account('seedfreeacct'),
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -129,6 +130,7 @@ const accountsMetadata = (network) => {
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      freeaccount: account('seedfreeacct'),
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -140,7 +142,8 @@ const accountsMetadata = (network) => {
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
-      exchange: contract('tlosto.seeds', 'exchange')
+      exchange: contract('tlosto.seeds', 'exchange'),
+
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -157,6 +160,7 @@ const accountsMetadata = (network) => {
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      freeaccount: account('seedfreeacct'),
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -256,6 +260,9 @@ const permissions = [{
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.onboarding.account}@owner`,
+  actor: `${accounts.onboarding.account}@eosio.code`
+}, {
+  target: `${accounts.freeseedacct}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,

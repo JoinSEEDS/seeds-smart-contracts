@@ -5,11 +5,23 @@ void onboarding::create_account(name account, string publicKey) {
 
   authority auth = keystring_authority(publicKey);
 
-  action(
-    permission_level{_self, "owner"_n},
-    "eosio"_n, "newaccount"_n,
-    make_tuple(_self, account, auth, auth)
-  ).send();
+  // TODO we might need to create accounts when we run out of quota
+  // action(
+  //   permission_level{_self, "owner"_n},
+  //   "eosio"_n, "newaccount"_n,
+  //   make_tuple(_self, account, auth, auth)
+  // ).send();
+
+  // TODO: 
+  // Deplot free.tf contract on local net
+  // Run unit tests
+   string prefix("EOS");
+
+   action (
+      permission_level{"seedfreeacct"_n, "active"_n},
+      contracts::free_tf, "create"_n,
+      std::make_tuple(get_self(), account, publicKey, publicKey, prefix))
+   .send();
 
   action(
     permission_level{_self, "owner"_n},
