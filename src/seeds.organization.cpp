@@ -1,4 +1,4 @@
-#include <seeds.orgtns.hpp>
+#include <seeds.organization.hpp>
 #include <eosio/system.hpp>
 
 
@@ -60,6 +60,7 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
 
 
 // this function is just for testing
+/*
 ACTION organization::createbalance(name user, asset quantity) {
     
     balances.emplace(_self, [&](auto & nbalance) {
@@ -67,6 +68,7 @@ ACTION organization::createbalance(name user, asset quantity) {
         nbalance.balance = quantity;
     });
 }
+*/
 
 
 ACTION organization::reset() {
@@ -226,7 +228,7 @@ ACTION organization::changeowner(name organization, name owner, name account) {
     auto orgitr = organizations.find(organization.value);
 
     check(aitr != balances.end(), "organization: the account does not have an entry in the balance table.");
-    check(aitr -> balance >= orgitr -> fee, "organization: the account does not hace enough balance.");
+    check(aitr -> balance >= orgitr -> fee, "organization: the account does not have enough balance.");
 
     balances.modify(bitr, _self, [&](auto & mbalace) {
         mbalace.balance += orgitr ->fee;
@@ -261,7 +263,7 @@ void organization::vote(name organization, name account, int64_t regen) {
 
 
 ACTION organization::addregen(name organization, name account) {
-    require_auth(account); // is that required ???
+    require_auth(account);
     check_user(account);
 
     vote_tables votes(get_self(), organization.value);
@@ -282,7 +284,7 @@ ACTION organization::addregen(name organization, name account) {
 
 
 ACTION organization::subregen(name organization, name account) {
-    require_auth(account); // is that required ???
+    require_auth(account);
     check_user(account);
 
     vote_tables votes(get_self(), organization.value);
