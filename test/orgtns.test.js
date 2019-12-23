@@ -63,10 +63,12 @@ describe('organization', async assert => {
     console.log('add member')
     await contracts.orgtns.addmember('testorg1', firstuser, seconduser, 'admin', { authorization: `${firstuser}@active` })
     await contracts.orgtns.addmember('testorg3', seconduser, firstuser, 'admin', { authorization: `${seconduser}@active` })
+    */
+
     
     console.log('destroy organization')
     await contracts.orgtns.destroy('testorg2', firstuser, { authorization: `${firstuser}@active` })
-
+/*
     console.log('change owner')
     await contracts.orgtns.changeowner('testorg3', seconduser, firstuser, { authorization: `${seconduser}@active` })
     await contracts.orgtns.changerole('testorg3', firstuser, seconduser, 'testrole', { authorization: `${firstuser}@active` })
