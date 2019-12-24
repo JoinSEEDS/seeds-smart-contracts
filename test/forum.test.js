@@ -83,7 +83,7 @@ describe('forum', async assert => {
     await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
 
     try{
-        console.log('vote an inexisting post')
+        console.log('vote a non existing post')
         await contracts.forum.upvotepost(firstuser, 20, { authorization: `${firstuser}@active` })
     }
     catch(err){
