@@ -67,10 +67,28 @@ describe('forum', async assert => {
 
     console.log('vote post')
     await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+
+    try{
+        console.log('vote twice')
+        await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+    }
+    catch(err){
+        console.log('an user can not upvote twice the same post')
+    }
+
+
     await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
     await contracts.forum.downvotepost(seconduser, 2, { authorization: `${seconduser}@active` })
     await contracts.forum.upvotepost(firstuser, 1, { authorization: `${firstuser}@active` })
     await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
+
+    try{
+        console.log('vote an inexisting post')
+        await contracts.forum.upvotepost(firstuser, 20, { authorization: `${firstuser}@active` })
+    }
+    catch(err){
+        console.log('the post does not exists')
+    }
 
     console.log('vote comments')
     await contracts.forum.upvotecomt(firstuser, 1, 4, { authorization: `${firstuser}@active` })
@@ -85,7 +103,7 @@ describe('forum', async assert => {
 
     console.log('depreciate')
     await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
-    await sleep(9000)
+    await sleep(10000)
     await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
 
     console.log('vote comments')
