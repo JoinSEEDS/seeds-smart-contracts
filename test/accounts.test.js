@@ -96,6 +96,16 @@ describe.only('accounts', async assert => {
     json: true
   })
 
+  console.log('test testremove')
+  await contract.testremove(seconduser, { authorization: `${accounts}@active` })
+
+  const usersAfterRemove = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+  })
+
   const now = new Date() / 1000
 
   const firstTimestamp = users.rows[0].timestamp
@@ -143,4 +153,12 @@ describe.only('accounts', async assert => {
       reputation: 0
     }]
   })
+
+  assert({
+    given: 'test-removed user',
+    should: 'have 1 fewer users than before',
+    actual: usersAfterRemove.rows.length,
+    expected: users.rows.length - 1
+  })
+
 })

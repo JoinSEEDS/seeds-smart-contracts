@@ -390,6 +390,17 @@ void accounts::testcitizen(name user)
   history_add_citizen(user);
 }
 
+void accounts::testremove(name user)
+{
+  require_auth(_self);
+
+  auto uitr = users.find(user.value);
+
+  check(uitr != users.end(), "testremove: user not found - " + user.to_string());
+
+  users.erase(uitr);
+}
+
 void accounts::check_user(name account)
 {
   auto uitr = users.find(account.value);

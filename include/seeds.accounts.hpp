@@ -30,6 +30,8 @@ CONTRACT accounts : public contract {
 
       ACTION testresident(name user);
 
+      ACTION testremove(name user);
+
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
       ACTION addref(name referrer, name invited);
@@ -154,4 +156,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(testremove)(punish)(vouch)(migrateall));
