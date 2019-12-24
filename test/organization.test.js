@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { organization, accounts, token, firstuser, seconduser, bank, settings, history } = names
+const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, history } = names
 
 describe('organization', async assert => {
 
@@ -94,6 +94,15 @@ describe('organization', async assert => {
     })
 
     console.log('change owner')
+
+    try{
+        console.log('remove owner')
+        await contracts.organization.removemember('testorg3', firstuser, firstuser, { authorization: `${firstuser}@active` })
+    }
+    catch(err){
+        console.log('You can not remove de owner')
+    }
+
     await contracts.organization.changeowner('testorg3', seconduser, firstuser, { authorization: `${seconduser}@active` })
     await contracts.organization.changerole('testorg3', firstuser, seconduser, 'testrole', { authorization: `${firstuser}@active` })
 
@@ -124,6 +133,26 @@ describe('organization', async assert => {
         table: 'organization',
         json: true
     })
+
+
+    try{
+        console.log('create organization')
+        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+    }
+    catch(err){
+        console.log('user thoes not have a balance entry')
+    }
+
+    try{
+        console.log('create organization')
+        await contracts.token.transfer(thirduser, organization, "20.0000 SEEDS", "Initial supply", { authorization: `${thirduser}@active` })
+        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+    }
+    catch(err){
+        console.log('user has not enough balance')
+    }
+
+
 
     assert({
         given: 'firstuser and second user transfer to organization contract',

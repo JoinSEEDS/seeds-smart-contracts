@@ -1,6 +1,6 @@
 {
-  "main": "src/seeds.orgtns.cpp",
-  "contract": "orgtns",
+  "main": "src/seeds.organization.cpp",
+  "contract": "organization",
   "include": "",
   "resource": "",
   "cdt": "v1.6.3",
