@@ -17,7 +17,7 @@ const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://testnet.eos.miami',
-  telosMainnet: 'https://node.hypha.earth'
+  telosMainnet: 'https://api.telos.eosindex.io'
 }
 
 const ownerAccounts = {
