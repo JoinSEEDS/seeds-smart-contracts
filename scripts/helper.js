@@ -23,7 +23,7 @@ const endpoints = {
 const ownerAccounts = {
   local: 'owner',
   kylin: 'seedsowner11',
-  telosTestnet: 's33dst3stn3t',
+  telosTestnet: 'seeds',
   telosMainnet: 'seed.seeds'
 }
 
@@ -118,8 +118,8 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      forum: contract('seedsforumtx', 'forum'),
-      scheduler: contract('seedschdulrx', 'scheduler')
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler')
 
     }
   } else if (network == networks.telosMainnet) {
@@ -144,8 +144,8 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      forum: contract('seedsforumtx', 'forum'),
-      scheduler: contract('seedschdulrx', 'scheduler')
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler')
 
     }
   } else if (network == networks.telosTestnet) {
@@ -156,28 +156,27 @@ const accountsMetadata = (network) => {
 
       owner: account(owner),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
-      firstbank: account(   'giftsxxseeds',  '500000000.0000 SEEDS'),
-      secondbank: account(  'milestxseeds', '75000000.0000 SEEDS'),
-      thirdbank: account(   'hyphaxxseeds',  '300000000.0000 SEEDS'),
-      fourthbank: account(  'alliesxseeds','180000000.0000 SEEDS'),
-      fifthbank: account(   'referxxseeds',  '120000000.0000 SEEDS'),
-      sixthbank: account(   'bankxxxseeds',   '300000000.0000 SEEDS'),
-      bank: account(        'systemxseeds'),
-      history: contract(    'histryxseeds', 'history'),
-      accounts: contract(   'acctsxxseeds', 'accounts'),
-      harvest: contract(    'harvstxseeds', 'harvest'),
-      settings: contract(   'settgsxseeds', 'settings'),
-      proposals: contract(  'fundsxxseeds', 'proposals'),
-      invites: contract(    'invitexseeds', 'invites'),
-      referendums: contract('rulesxxseeds', 'referendums'),
-      token: token(         'tokenxxseeds', owner, '1500000000.0000 SEEDS'),
-      policy: contract(     'policyxseeds', 'policy'),
-      onboarding: contract( 'joinxxxseeds', 'onboarding'),
-      acctcreator: contract('freexxxseeds', 'acctcreator'),
-      exchange: contract('tlostoxseeds', 'exchange'),
-      forum: contract('seedsforumtx', 'forum'),
-      scheduler: contract('seedschdulrx', 'scheduler')
-
+      firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
+      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
+      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
+      bank: account('system.seeds'),
+      history: contract('histry.seeds', 'history'),
+      accounts: contract('accts.seeds', 'accounts'),
+      harvest: contract('harvst.seeds', 'harvest'),
+      settings: contract('settgs.seeds', 'settings'),
+      proposals: contract('funds.seeds', 'proposals'),
+      invites: contract('invite.seeds', 'invites'),
+      referendums: contract('rules.seeds', 'referendums'),
+      token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
+      policy: contract('policy.seeds', 'policy'),
+      onboarding: contract('join.seeds', 'onboarding'),
+      acctcreator: contract('free.seeds', 'acctcreator'),
+      exchange: contract('tlosto.seeds', 'exchange'),
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')

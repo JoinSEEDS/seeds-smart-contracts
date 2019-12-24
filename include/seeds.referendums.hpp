@@ -4,6 +4,7 @@
 #include <eosio/time.hpp>
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;
@@ -73,8 +74,6 @@ CONTRACT referendums : public contract {
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
-    bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority);
-    bool is_valid_quorum(uint64_t voters_number, uint64_t quorum);
     void give_voice();
     void run_testing();
     void run_active();
