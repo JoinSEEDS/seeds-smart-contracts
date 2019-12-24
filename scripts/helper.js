@@ -290,6 +290,11 @@ const keyProviders = {
 
 const keyProvider = keyProviders[chainId]
 
+
+if (keyProvider.length == 0 || keyProvider[0] == null) {
+  console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
+}
+
 const config = {
   keyProvider,
   httpEndpoint,
