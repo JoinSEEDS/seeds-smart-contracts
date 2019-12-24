@@ -26,8 +26,13 @@ void proposals::onperiod() {
 
     uint64_t min_stake = config.find(name("propminstake").value)->value;
 
+    uint64_t majority = config.find(name("propmajority").value)->value;
+    uint64_t quorum = config.find(name("propquorum").value)->value;
+
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
+        voter_tables voters(get_self(), pitr->id);
+        uint64_t voters_number = distance(voters.begin(), voters.end());
         if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
@@ -61,9 +66,10 @@ void proposals::onperiod() {
       pitr++;
     }
 
+    uint64_t voice = config.find(name("propvoice").value)->value;
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance = 1000;
+            voice.balance = voice;
         });
 
         vitr++;
