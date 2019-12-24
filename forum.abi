@@ -1,0 +1,395 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.1",
+    "types": [],
+    "structs": [
+        {
+            "name": "config_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "param",
+                    "type": "name"
+                },
+                {
+                    "name": "value",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "createcomt",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "post_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "backend_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "url",
+                    "type": "string"
+                },
+                {
+                    "name": "body",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "createpost",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "backend_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "url",
+                    "type": "string"
+                },
+                {
+                    "name": "body",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "downvotecomt",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "post_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "comment_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "downvotepost",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "forum_rep_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "reputation",
+                    "type": "int64"
+                }
+            ]
+        },
+        {
+            "name": "newday",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "onperiod",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "postcomment_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "parent_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "backend_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "author_name_account",
+                    "type": "name"
+                },
+                {
+                    "name": "url",
+                    "type": "string"
+                },
+                {
+                    "name": "body_content",
+                    "type": "string"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                },
+                {
+                    "name": "reputation",
+                    "type": "int64"
+                }
+            ]
+        },
+        {
+            "name": "reset",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "upvotecomt",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "post_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "comment_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "upvotepost",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "user_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "status",
+                    "type": "name"
+                },
+                {
+                    "name": "type",
+                    "type": "name"
+                },
+                {
+                    "name": "nickname",
+                    "type": "string"
+                },
+                {
+                    "name": "image",
+                    "type": "string"
+                },
+                {
+                    "name": "story",
+                    "type": "string"
+                },
+                {
+                    "name": "roles",
+                    "type": "string"
+                },
+                {
+                    "name": "skills",
+                    "type": "string"
+                },
+                {
+                    "name": "interests",
+                    "type": "string"
+                },
+                {
+                    "name": "reputation",
+                    "type": "uint64"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "vote_power_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "num_votes",
+                    "type": "uint32"
+                },
+                {
+                    "name": "points_left",
+                    "type": "int64"
+                },
+                {
+                    "name": "max_points",
+                    "type": "int64"
+                }
+            ]
+        },
+        {
+            "name": "vote_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                },
+                {
+                    "name": "author",
+                    "type": "name"
+                },
+                {
+                    "name": "post_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "comment_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "points",
+                    "type": "int64"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "createcomt",
+            "type": "createcomt",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "createpost",
+            "type": "createpost",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "downvotecomt",
+            "type": "downvotecomt",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "downvotepost",
+            "type": "downvotepost",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "newday",
+            "type": "newday",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "onperiod",
+            "type": "onperiod",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "reset",
+            "type": "reset",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "upvotecomt",
+            "type": "upvotecomt",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "upvotepost",
+            "type": "upvotepost",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "config",
+            "type": "config_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "forumrep",
+            "type": "forum_rep_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "postcomment",
+            "type": "postcomment_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "users",
+            "type": "user_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "vote",
+            "type": "vote_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "votepower",
+            "type": "vote_power_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "ricardian_clauses": [],
+    "variants": []
+}

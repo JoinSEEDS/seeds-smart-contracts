@@ -87,7 +87,7 @@ describe('forum', async assert => {
         await contracts.forum.upvotepost(firstuser, 20, { authorization: `${firstuser}@active` })
     }
     catch(err){
-        console.log('the post does not exists')
+        console.log('the post does not exist')
     }
 
     console.log('vote comments')
@@ -107,6 +107,15 @@ describe('forum', async assert => {
     await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
 
     console.log('vote comments')
+
+    try{
+        console.log('downvote a non existing comment')
+        await contracts.forum.downvotecomt(seconduser, 1, 40, { authorization: `${seconduser}@active` })
+    }
+    catch(err){
+        console.log('the comment does not exist')
+    }
+
     await contracts.forum.downvotecomt(seconduser, 1, 4, { authorization: `${seconduser}@active` })
 
     const repAfterDepreciation = await getTableRows({
