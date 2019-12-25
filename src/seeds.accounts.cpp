@@ -390,6 +390,17 @@ void accounts::testcitizen(name user)
   history_add_citizen(user);
 }
 
+void accounts::genesis(name user) // Remove this after Feb 2020
+{ 
+  require_auth(_self);
+
+  updatestatus(user, name("citizen"));
+
+  vouchreward(user);
+  
+  history_add_citizen(user);
+}
+
 void accounts::testremove(name user)
 {
   require_auth(_self);

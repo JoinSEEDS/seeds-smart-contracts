@@ -28,6 +28,8 @@ CONTRACT accounts : public contract {
 
       ACTION testcitizen(name user);
 
+      ACTION genesis(name user);
+
       ACTION testresident(name user);
 
       ACTION testremove(name user);
@@ -156,4 +158,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(testremove)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));

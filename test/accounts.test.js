@@ -4,32 +4,37 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, harvest, token, application, firstuser, seconduser } = names
+const { accounts, harvest, token, application, firstuser, seconduser, thirduser } = names
 
-describe('account creation', async assert => {
+describe('genesis testing', async assert => {
   const contract = await eos.contract(accounts)
 
-  const newuser = 'newusername'
+  console.log('reset accounts')
+  await contract.reset({ authorization: `${accounts}@active` })
 
-  await contract.addrequest(application, newuser, publicKey, publicKey, { authorization: `${application}@active` })
-  await contract.fulfill(application, newuser, { authorization: `${accounts}@owner` })
+  console.log('test genesis')
+  await contract.adduser(thirduser, 'First user', { authorization: `${accounts}@active` })
+  await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
-  const { required_auth: { keys } } =
-    (await eos.getAccount(newuser))
-      .permissions.find(p => p.perm_name == 'active')
+  const users = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+  })
+
+  let user = users.rows[0]
 
   assert({
-    given: 'created user',
-    should: 'have correct public key',
-    actual: keys,
-    expected: [{
-      key: publicKey,
-      weight: 1
-    }]
+    given: 'genesis',
+    should: 'be citizen',
+    actual: user.status,
+    expected: "citizen"
   })
+
 })
 
-describe.only('accounts', async assert => {
+describe('accounts', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -162,3 +167,4 @@ describe.only('accounts', async assert => {
   })
 
 })
+
