@@ -4,21 +4,8 @@ const fs = require('fs')
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser } = names
-
-const randomAccountName = () => {
-    let length = 12
-    var result           = '';
-    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
-    var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
-       result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
- }
  
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
-
-
 
 const bulk_invite = async (sponsor, num, totalAmount) => {
     var secrets = "Secret,Hash,Seeds (total)\n"
