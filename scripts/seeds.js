@@ -5,7 +5,7 @@ const program = require('commander')
 const compile = require('./compile')
 const { isLocal } = require('./helper')
 const deploy = require('./deploy.command')
-const { initContracts, resetByName } = require('./deploy')
+const { initContracts, updatePermissions, resetByName } = require('./deploy')
 
 const allContracts = [
   "accounts", 
@@ -104,6 +104,10 @@ const initAction = async () => {
 
 }
 
+const updatePermissionAction = async () => {
+  await updatePermissions()
+}
+
 program
   .command('compile <contract>')
   .description('Compile custom contract')
@@ -139,11 +143,18 @@ program
     await batchCallFunc(contract, resetAction)
   })
 
-program
+  program
   .command('init')
   .description('Initial creation of all accounts and contracts contract')
   .action(async function(contract) {
     await initAction()
+  })
+
+  program
+  .command('updatePermissions')
+  .description('Update all permissions of all contracts')
+  .action(async function(contract) {
+    await updatePermissionAction()
   })
 
   

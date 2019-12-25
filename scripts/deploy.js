@@ -137,6 +137,17 @@ const changeKeyPermission = async (account, permission, key) => {
 
 const createKeyPermission = async (account, role, parentRole = 'active', key) => {
   try {
+    const { permissions } = await eos.getAccount(account)
+
+    const { parent, required_auth } = permissions.find(p => p.perm_name === role)
+
+    const { keys } = required_auth
+
+    if (keys.find(item => item.key === key)) {
+      console.log("createKeyPermission key already exists "+key)
+      return;
+    }
+
     await eos.updateauth({
       account,
       permission: role,
@@ -307,6 +318,9 @@ const isActorPermission = permission => permission.actor && !permission.key
 const isKeyPermission = permission => permission.key && !permission.actor
 
 const updatePermissions = async () => {
+
+  console.log("Updating permissions...")
+
   for (let current = 0; current < permissions.length; current++) {
     const permission = permissions[current]
 
@@ -365,4 +379,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, resetByName }
+module.exports = { initContracts, updatePermissions, resetByName }
