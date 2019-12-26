@@ -59,6 +59,21 @@ void accounts::migrateall()
     
     uitr++;
   }
+
+  ref_tables refs_old(accounts_old, accounts_old.value);
+  ref_tables refs_new(contracts::accounts, contracts::accounts.value);
+
+  auto ritr = refs_old.begin();
+
+  while(ritr != refs_old.end()) {
+    auto oldref = *ritr;
+    refs_new.emplace(_self, [&](auto& ref) {
+      ref.referrer = oldref.referrer;
+      ref.invited = oldref.invited;
+    });
+    ritr++;
+  }
+
 }
 
 void accounts::migrate(name account,
@@ -458,9 +473,9 @@ void accounts::genesis(name user) // Remove this after Feb 2020
 
   updatestatus(user, name("citizen"));
 
-  vouchreward(user);
+  //rewards(user);
   
-  history_add_citizen(user);
+  //history_add_citizen(user);
 }
 
 void accounts::testremove(name user)
