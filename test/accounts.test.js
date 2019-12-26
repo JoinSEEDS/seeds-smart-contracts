@@ -80,6 +80,9 @@ describe('accounts', async assert => {
     console.log('user not ready to become citizen')
   }
 
+  console.log(" ")
+  console.log(" ")
+
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -123,6 +126,13 @@ describe('accounts', async assert => {
   })
 
   assert({
+    given: 'changed inviter community building score',
+    should: 'have correct values',
+    actual: cbs.rows.map(({ community_building_score }) => community_building_score),
+    expected: [1]
+  })
+
+  assert({
     given: 'created user',
     should: 'have correct timestamp',
     actual: Math.abs(firstTimestamp - now) < 5,
@@ -150,7 +160,7 @@ describe('accounts', async assert => {
       account: firstuser,
       status: 'citizen',
       nickname: 'First user',
-      reputation: 100,
+      reputation: 100 + 1,
     }, {
       account: seconduser,
       status: 'resident',
