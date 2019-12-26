@@ -60,11 +60,11 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
-const account = (accountName, quantity = '0.0000 SEEDS') => ({
+const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
   type: 'account',
   account: accountName,
   creator: owner,
-  publicKey: activePublicKey,
+  publicKey: pubkey,
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
@@ -83,6 +83,8 @@ const contract = (accountName, contractName, quantity = '0.0000 SEEDS') => ({
     ram: 700000
   }
 })
+
+const testnetUserPubkey = "EOS8M3bWwv7jvDGpS2avYRiYh2BGJxt5VhfjXhbyAhFXmPtrSd591"
 
 const token = (accountName, issuer, supply) => ({
   ...contract(accountName, 'token'),
@@ -147,6 +149,10 @@ const accountsMetadata = (network) => {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
+
+      fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
+      fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
