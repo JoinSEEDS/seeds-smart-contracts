@@ -75,6 +75,37 @@ void onboarding::add_referral(name sponsor, name account) {
   ).send();
 }
 
+void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey) {
+  require_auth(get_self());
+
+  auto _invite_secret = invite_secret.extract_as_byte_array();
+  checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
+  
+  checksum256 empty_checksum;
+
+  invite_tables invites(get_self(), get_self().value);
+  auto invites_byhash = invites.get_index<"byhash"_n>();
+  auto iitr = invites_byhash.find(invite_hash);
+  check(iitr != invites_byhash.end(), "invite not found ");
+  check(iitr->invite_secret == empty_checksum, "already accepted");
+
+  invites_byhash.modify(iitr, get_self(), [&](auto& invite) {
+    invite.account = account;
+    invite.invite_secret = invite_secret;
+  });
+
+  name sponsor = iitr->sponsor;
+  asset transfer_quantity = iitr->transfer_quantity;
+  asset sow_quantity = iitr->sow_quantity;
+
+  create_account(account, publicKey);
+  add_user(account);
+  transfer_seeds(account, transfer_quantity);
+  plant_seeds(sow_quantity);
+  sow_seeds(account, sow_quantity);
+  add_referral(sponsor, account);  
+}
+
 void onboarding::reset() {
   require_auth(get_self());
 
@@ -153,33 +184,21 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   invites_byhash.erase(iitr);
 }
 
+// accept invite with creating new account
+void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey) {
+  check(is_account(account) == false, "Account already exists " + account.to_string());
+
+  accept_invite(account, invite_secret, publicKey);
+}
+
+// accept invite using already existing account
+void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey) {
+  check(is_account(account) == true, "Account does not exist " + account.to_string());
+
+  accept_invite(account, invite_secret, publicKey);
+}
+
+// accept invite using already existing account or creating new account
 void onboarding::accept(name account, checksum256 invite_secret, string publicKey) {
-  require_auth(get_self());
-
-  auto _invite_secret = invite_secret.extract_as_byte_array();
-  checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
-  
-  checksum256 empty_checksum;
-
-  invite_tables invites(get_self(), get_self().value);
-  auto invites_byhash = invites.get_index<"byhash"_n>();
-  auto iitr = invites_byhash.find(invite_hash);
-  check(iitr != invites_byhash.end(), "invite not found ");
-  check(iitr->invite_secret == empty_checksum, "already accepted");
-
-  invites_byhash.modify(iitr, get_self(), [&](auto& invite) {
-    invite.account = account;
-    invite.invite_secret = invite_secret;
-  });
-
-  name sponsor = iitr->sponsor;
-  asset transfer_quantity = iitr->transfer_quantity;
-  asset sow_quantity = iitr->sow_quantity;
-
-  create_account(account, publicKey);
-  add_user(account);
-  transfer_seeds(account, transfer_quantity);
-  plant_seeds(sow_quantity);
-  sow_seeds(account, sow_quantity);
-  add_referral(sponsor, account);
+  accept_invite(account, invite_secret, publicKey);
 }
