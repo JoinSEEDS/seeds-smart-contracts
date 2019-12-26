@@ -128,7 +128,7 @@ describe('accounts', async assert => {
   assert({
     given: 'changed inviter community building score',
     should: 'have correct values',
-    actual: cbs.rows.map(({ community_building_score }) => community_building_score),
+    actual: usersAfterRemove.rows.map(({ community_building_score }) => community_building_score),
     expected: [1]
   })
 
