@@ -16,6 +16,11 @@ void proposals::reset() {
 
     pitr = props.erase(pitr);
   }
+
+  auto voiceitr = voice.begin();
+  while (voiceitr != voice.end()) {
+    voiceitr = voice.erase(voiceitr);
+  }
 }
 
 void proposals::onperiod() {
@@ -25,6 +30,7 @@ void proposals::onperiod() {
     auto vitr = voice.begin();
 
     uint64_t min_stake = config.find(name("propminstake").value)->value;
+    uint64_t voice_base = config.find(name("propvoice").value)->value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -63,7 +69,7 @@ void proposals::onperiod() {
 
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance = 1000;
+            voice.balance = voice_base;
         });
 
         vitr++;
@@ -185,7 +191,8 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);
-  check(vitr != voice.end(), "no user voice");
+  check(vitr != voice.end(), "User does not have voice");
+  check(vitr->balance >= amount, "voice balance exceeded");
 
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
@@ -222,6 +229,7 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
 
     auto vitr = voice.find(voter.value);
     check(vitr != voice.end(), "User does not have voice");
+    check(vitr->balance >= amount, "voice balance exceeded");
 
     votes_tables votes(get_self(), id);
     auto voteitr = votes.find(voter.value);
