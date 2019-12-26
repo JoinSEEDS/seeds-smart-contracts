@@ -6,7 +6,11 @@ const { accounts } = names
 
 const makecitizen = async (user, citizen = true) => {
     const contracts = await initContracts({ accounts })
+
+
+
     if (citizen) {
+        console.log("acct "+JSON.stringify(accounts))
         await contracts.accounts.genesis(user, { authorization: `${accounts}@active` })
     } else {
         await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
