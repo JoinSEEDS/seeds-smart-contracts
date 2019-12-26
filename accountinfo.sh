@@ -1,0 +1,1 @@
+cleos -u https://node.hypha.earth/ get table --lower $1 --upper $1  accts.seeds accts.seeds users
