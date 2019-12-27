@@ -232,16 +232,16 @@ void harvest::calcrep() {
     uint64_t score = (current_user * 100) / users_number;
 
     auto hitr = harveststat.find(uitr->account.value);
+
     if (hitr == harveststat.end()) {
-      harveststat.emplace(_self, [&](auto& user) {
-        user.account = uitr->account;
-        user.reputation_score = score;
-      });
-    } else {
-      harveststat.modify(hitr, _self, [&](auto& user) {
-        user.reputation_score = score;
-      });
+      init_harvest_stat(uitr->account);
+      hitr = harveststat.find(uitr->account.value);
     }
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+        user.reputation_score = score;
+        user.rep_timestamp = eosio::current_time_point().sec_since_epoch();
+    });
 
     current_user++;
     uitr++;
@@ -277,16 +277,16 @@ void harvest::calctrx() {
       uint64_t score = (current_user * 100) / users_number;
 
       auto hitr = harveststat.find(uitr->account.value);
+      
       if (hitr == harveststat.end()) {
-        harveststat.emplace(_self, [&](auto& user) {
-          user.account = uitr->account;
+        init_harvest_stat(uitr->account);
+        hitr = harveststat.find(uitr->account.value);
+      } 
+
+      harveststat.modify(hitr, _self, [&](auto& user) {
           user.transactions_score = score;
-        });
-      } else {
-        harveststat.modify(hitr, _self, [&](auto& user) {
-          user.transactions_score = score;
-        });
-      }
+          user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
+      });
 
       current_user++;
     }
@@ -303,7 +303,30 @@ void harvest::calctrx() {
   );
   trx.delay_sec = 60;
   trx.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+
 }
+
+void harvest::init_harvest_stat(name account) {
+  harveststat.emplace(_self, [&](auto& user) {
+    user.account = account;
+    
+    user.transactions_score = 0;
+    user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
+    
+    user.reputation_score = 0;
+    user.rep_timestamp = eosio::current_time_point().sec_since_epoch();
+
+    user.planted_score = 0;
+    user.planted_timestamp = eosio::current_time_point().sec_since_epoch();
+
+    user.contribution_score = 0;
+    user.contrib_timestamp = eosio::current_time_point().sec_since_epoch();
+
+    user.community_building_score = 0;
+    user.community_building_timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+}
+
 
 void harvest::calcplanted() {
   require_auth(_self);
@@ -321,19 +344,16 @@ void harvest::calcplanted() {
       uint64_t score = (current_user * 100) / users_number;
 
       auto hitr = harveststat.find(uitr->account.value);
+
       if (hitr == harveststat.end()) {
-        harveststat.emplace(_self, [&](auto& user) {
-          user.account = uitr->account;
-          user.planted_score = score;
-          user.transactions_score = 0;
-          user.reputation_score = 0;
-          user.contribution_score = 0;
-        });
-      } else {
-        harveststat.modify(hitr, _self, [&](auto& user) {
-          user.planted_score = score;
-        });
-      }
+          init_harvest_stat(uitr->account);
+          hitr = harveststat.find(uitr->account.value);
+      } 
+
+      harveststat.modify(hitr, _self, [&](auto& user) {
+        user.planted_score = score;
+        user.planted_timestamp = eosio::current_time_point().sec_since_epoch();
+      });
 
       current_user++;
     }

@@ -56,6 +56,7 @@ CONTRACT harvest : public contract {
     uint64_t ONE_WEEK = 604800;
 
     void init_balance(name account);
+    void init_harvest_stat(name account);
     void check_user(name account);
     void check_asset(asset quantity);
     void deposit(asset quantity);
@@ -123,10 +124,21 @@ CONTRACT harvest : public contract {
 
     TABLE harvest_table {
       name account;
+
       uint64_t planted_score;
+      uint64_t planted_timestamp;
+
       uint64_t transactions_score;
+      uint64_t tx_timestamp;
+
       uint64_t reputation_score;
+      uint64_t rep_timestamp;
+
+      uint64_t community_building_score;
+      uint64_t community_building_timestamp;
+      
       uint64_t contribution_score;
+      uint64_t contrib_timestamp;
 
       uint64_t primary_key()const { return account.value; }
     };
