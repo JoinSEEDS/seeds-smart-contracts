@@ -3,7 +3,9 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal } = require('./helper')
+const { isLocal, initContracts: initContractsHelper, names } = require('./helper')
+const { harvest } = names
+
 const deploy = require('./deploy.command')
 const { initContracts, updatePermissions, resetByName } = require('./deploy')
 
@@ -108,6 +110,20 @@ const updatePermissionAction = async () => {
   await updatePermissions()
 }
 
+const startHarvestCalculations = async () => {
+  console.log("Starting harvest calculations...")
+  const contracts = await initContractsHelper({ harvest })
+
+  console.log("start calcplanted")
+  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  console.log("start calcrep")
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  console.log("start calctrx")
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  console.log("done.")
+
+}
+
 program
   .command('compile <contract>')
   .description('Compile custom contract')
@@ -156,6 +172,14 @@ program
   .action(async function(contract) {
     await updatePermissionAction()
   })
+
+  program
+  .command('startHarvestCalculations')
+  .description('Start calculations on harvest contract')
+  .action(async function(contract) {
+    await startHarvestCalculations()
+  })
+
 
   
 program.parse(process.argv)
