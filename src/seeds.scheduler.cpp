@@ -59,6 +59,11 @@ ACTION scheduler::noop(){
 }
 
 
+ACTION scheduler::np(){
+    print("HELLO");
+    return;
+}
+
 ACTION scheduler::execute() {
    // require_auth(_self);
 
@@ -111,7 +116,7 @@ ACTION scheduler::execute() {
             //tx.send(eosio::current_time_point().sec_since_epoch() + 10, _self, false);
 
             operations.modify(itr, _self, [&](auto & moperation) {
-                moperation.timestamp = current_time_point().sec_since_epoch();
+                moperation.timestamp = current_time_point().sec_since_epoch() - 10;
             });
 
             break;
@@ -123,4 +128,4 @@ ACTION scheduler::execute() {
 
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset)(np));

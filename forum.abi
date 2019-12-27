@@ -122,6 +122,28 @@
             "fields": []
         },
         {
+            "name": "operations_table",
+            "base": "",
+            "fields": [
+                {
+                    "name": "operation",
+                    "type": "name"
+                },
+                {
+                    "name": "contract",
+                    "type": "name"
+                },
+                {
+                    "name": "period",
+                    "type": "uint64"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
             "name": "postcomment_table",
             "base": "",
             "fields": [
@@ -357,6 +379,13 @@
         {
             "name": "forumrep",
             "type": "forum_rep_table",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "operations",
+            "type": "operations_table",
             "index_type": "i64",
             "key_names": [],
             "key_types": []

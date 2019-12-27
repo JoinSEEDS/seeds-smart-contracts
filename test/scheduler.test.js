@@ -39,7 +39,7 @@ describe('forum', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'forum.seeds', 10000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('onperiod', 'forum.seeds', 50000, { authorization: `${scheduler}@active` })
     await contracts.scheduler.configop('newday', 'forum.seeds', 600000, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })

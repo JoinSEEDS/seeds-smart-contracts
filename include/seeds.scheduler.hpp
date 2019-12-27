@@ -23,6 +23,8 @@ CONTRACT scheduler : public contract {
 
         ACTION noop();
 
+        ACTION np();
+
     private:
         TABLE operations_table {
             name operation;
