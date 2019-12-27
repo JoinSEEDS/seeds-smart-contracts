@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const { forum, accounts, settings, application, firstuser, seconduser } = names
+const { forum, scheduler, accounts, settings, application, firstuser, seconduser } = names
 
 
 function sleep(ms) {
@@ -19,10 +19,11 @@ describe('forum', async assert => {
 
      const contracts = await Promise.all([
         eos.contract(forum),
+        eos.contract(scheduler),
         eos.contract(accounts),
         eos.contract(settings)
-    ]).then(([forum, accounts, settings]) => ({
-        forum, accounts, settings
+    ]).then(([forum, scheduler, accounts, settings]) => ({
+        forum, scheduler, accounts, settings
     }))
 
     console.log('forum reset')
@@ -34,7 +35,12 @@ describe('forum', async assert => {
     console.log('settings reset')
     await contracts.settings.reset({ authorization: `${settings}@active` })
 
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
     console.log('configure')
+    await contracts.scheduler.configop('onperiod', 'forum.seeds', 20000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('newday', 'forum.seeds', 600000, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
@@ -102,9 +108,9 @@ describe('forum', async assert => {
     })
 
     console.log('depreciate')
-    await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
+    await contracts.forum.onperiod([], { authorization: `${forum}@active` })
     await sleep(10000)
-    await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
+    await contracts.forum.onperiod([], { authorization: `${forum}@active` })
 
     console.log('vote comments')
 
@@ -126,7 +132,12 @@ describe('forum', async assert => {
     })
 
     console.log('new day')
-    await contracts.forum.newday([], { authorization: `${forum}@active` })
+    try{
+        await contracts.forum.newday([], { authorization: `${forum}@active` })
+    }
+    catch(err){
+        console.log("new day is not ready to be executed.")
+    }
 
     console.log('vote posts')
     await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })

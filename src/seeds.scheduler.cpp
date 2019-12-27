@@ -1,8 +1,21 @@
 #include <seeds.scheduler.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/transaction.hpp>
+#include <contracts.hpp>
 #include <string>
 
+
+bool scheduler::isRdyToExec(name operation){
+    auto itr = operations.find(operation.value);
+    check(itr != operations.end(), "The operation does not exist.");
+    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
+    uint64_t periods = 0;
+
+    periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
+
+    if(periods > 0) return true;
+    return false;
+}
 
 
 ACTION scheduler::reset() {
@@ -47,7 +60,7 @@ ACTION scheduler::noop(){
 
 
 ACTION scheduler::execute() {
-    // require_auth(_self);
+   // require_auth(_self);
 
     /*
         Just as quick reminder.
@@ -74,17 +87,17 @@ ACTION scheduler::execute() {
             By doing this, we are restricting the ACTION to be callable only for an account who has the CUSTOM_PERMISSION
     */
 
+    
+
+    print("execute");
+
     auto itr = operations.begin();
-    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
-    uint64_t periods = 0;
-
     while(itr != operations.end()) {
-        periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
-
-        print("Mira: " + std::to_string(periods) + ", timestamp = " + std::to_string(timestamp) + ", t = " + std::to_string(itr -> timestamp) + ", period = " + std::to_string(itr -> period));
-        if(periods > 0){
+        if(isRdyToExec(itr -> operation)){
             
             action a = action(
+                //permission_level{contracts::forum, "period"_n},
+                //permission_level(get_self(), "scheduled"_n),
                 permission_level{get_self(), "active"_n},
                 itr -> contract,
                 itr -> operation,
@@ -105,6 +118,7 @@ ACTION scheduler::execute() {
         }
         itr++;
     }
+    
 }
 
 

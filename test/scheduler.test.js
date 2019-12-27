@@ -39,7 +39,8 @@ describe('forum', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'seedsforumtx', 20000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('onperiod', 'forum.seeds', 10000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('newday', 'forum.seeds', 600000, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
@@ -67,6 +68,7 @@ describe('forum', async assert => {
     await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
 
     console.log('scheduler execute')
+    await sleep(3000)
     await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
     await sleep(5000)
     console.log('scheduler execute')

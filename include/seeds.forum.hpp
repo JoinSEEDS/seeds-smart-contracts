@@ -15,7 +15,8 @@ CONTRACT forum : public contract {
               forumreps(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
-              votespower(receiver, receiver.value)
+              votespower(receiver, receiver.value),
+              operations(contracts::scheduler, contracts::scheduler.value)
               {}
         
         ACTION reset();
@@ -117,6 +118,15 @@ CONTRACT forum : public contract {
             uint64_t primary_key() const { return param.value; }
         };
 
+        TABLE operations_table {
+            name operation;
+            name contract;
+            uint64_t period;
+            uint64_t timestamp;
+
+            uint64_t primary_key() const { return operation.value; }
+        };
+
 
         typedef eosio::multi_index <"postcomment"_n, postcomment_table, 
             indexed_by<"backendid"_n, const_mem_fun < postcomment_table, 
@@ -135,11 +145,15 @@ CONTRACT forum : public contract {
 
         typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
+        typedef eosio::multi_index < "operations"_n, operations_table> operations_tables;
+
         postcomment_tables postcomments;
         forum_rep_tables forumreps;
         user_tables users;
         vote_power_tables votespower;
         config_tables config;
+        operations_tables operations;
+        
 
         // all these values are expected to be configured in settings
         const name maxpoints = "maxpoints"_n; // max points
@@ -157,4 +171,5 @@ CONTRACT forum : public contract {
         int64_t pointsfunction(name account, int64_t points_left, uint64_t vbp, uint64_t rep, uint64_t cutoff, uint64_t cutoff_zero);
         uint64_t getdperiods(uint64_t timestamp);
         int64_t getdpoints(int64_t points, uint64_t periods);
+        bool isRdyToExec(name operation);
 };
