@@ -13,6 +13,15 @@ const networks = {
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
 
+const networkDisplayName = {
+  mainnet: '???',
+  jungle: 'Jungle',
+  kylin: 'Kylin',
+  local: 'Local',
+  telosTestnet: 'Telos Testnet',
+  telosMainnet: 'Telos Mainnet'
+}
+
 const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
@@ -36,6 +45,9 @@ const {
 const chainId = EOSIO_CHAIN_ID || networks[EOSIO_NETWORK] || networks.local
 const httpEndpoint = EOSIO_API_ENDPOINT || endpoints[EOSIO_NETWORK] || endpoints.local
 const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
+
+const netName = EOSIO_NETWORK != undefined ? (networkDisplayName[EOSIO_NETWORK] || "INVALID NETWORK: "+EOSIO_NETWORK) : "Local"
+console.log(""+netName)
 
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
