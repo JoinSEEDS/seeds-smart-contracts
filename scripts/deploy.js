@@ -139,13 +139,16 @@ const createKeyPermission = async (account, role, parentRole = 'active', key) =>
   try {
     const { permissions } = await eos.getAccount(account)
 
-    const { parent, required_auth } = permissions.find(p => p.perm_name === role)
+    const perm = permissions.find(p => p.perm_name === role)
 
-    const { keys } = required_auth
-
-    if (keys.find(item => item.key === key)) {
-      console.log("createKeyPermission key already exists "+key)
-      return;
+    if (perm) {
+      const { parent, required_auth } = perm
+      const { keys } = required_auth
+  
+      if (keys.find(item => item.key === key)) {
+        console.log("createKeyPermission key already exists "+key)
+        return;
+      }  
     }
 
     await eos.updateauth({
