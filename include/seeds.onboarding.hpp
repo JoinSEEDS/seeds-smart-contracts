@@ -64,19 +64,21 @@ CONTRACT onboarding : public contract {
 
     typedef multi_index<"invites"_n, invite_table,
       indexed_by<"byhash"_n,
-      const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>
+      const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>,
+      indexed_by<"bysponsor"_n,
+      const_mem_fun<invite_table, uint64_t, &invite_table::by_sponsor>>
     > invite_tables;
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
-
-    sponsor_tables sponsors;
 
     typedef eosio::multi_index<"users"_n, tables::user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
     > user_tables;
 
+    sponsor_tables sponsors;
     user_tables users;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
