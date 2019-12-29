@@ -14,7 +14,7 @@ const makecitizen = async (user, citizen = true) => {
         fs.appendFileSync('citizens.txt', user+"\n");
         
         console.log('add voice...')
-        await contracts.proposals.addvoice(user, 20, { authorization: `${proposals}@active` })
+        await contracts.proposals.addvoice(user, 77, { authorization: `${proposals}@active` })
       
     } else {
         await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
