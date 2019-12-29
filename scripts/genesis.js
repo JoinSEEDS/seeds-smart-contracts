@@ -38,11 +38,12 @@ const initvoice = async (user) => {
         scope: accounts,
         table: 'users',
         json: true,
-        limit: 200
+        limit: 300
       })
 
       for(var i=0; i<users.rows.length; i++) {
           let user = users.rows[i].account
+          console.log(i + " testing user "+user + " status: "+users.rows[i].status)
           if (users.rows[i].status == "citizen") {
             console.log('add voice for '+JSON.stringify(user, null, 2))
             await addvoice(user, contracts)
