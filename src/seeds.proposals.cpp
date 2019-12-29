@@ -153,7 +153,7 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
   if (to == _self) {
-      check_user(from);
+      //check_user(from);
       check_asset(quantity);
 
       uint64_t id = 0;
