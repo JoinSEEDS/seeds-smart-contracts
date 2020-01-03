@@ -4,7 +4,7 @@ const { eos, names } = require('./helper')
 const { accounts } = names
 
 const main = async () => {
-  const contract = await eos.contract('seedstokennx')
+  const contract = await eos.contract('token.seeds')
 
   const data = fs.readFileSync('users_backup.json').toString()
 

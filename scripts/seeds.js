@@ -3,9 +3,11 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal } = require('./helper')
+const { isLocal, initContracts: initContractsHelper, names } = require('./helper')
+const { harvest } = names
+
 const deploy = require('./deploy.command')
-const { initContracts, resetByName } = require('./deploy')
+const { initContracts, updatePermissions, resetByName } = require('./deploy')
 
 const allContracts = [
   "accounts", 
@@ -105,6 +107,24 @@ const initAction = async () => {
 
 }
 
+const updatePermissionAction = async () => {
+  await updatePermissions()
+}
+
+const startHarvestCalculations = async () => {
+  console.log("Starting harvest calculations...")
+  const contracts = await initContractsHelper({ harvest })
+
+  console.log("start calcplanted")
+  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  console.log("start calcrep")
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  console.log("start calctrx")
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  console.log("done.")
+
+}
+
 program
   .command('compile <contract>')
   .description('Compile custom contract')
@@ -140,12 +160,27 @@ program
     await batchCallFunc(contract, resetAction)
   })
 
-program
+  program
   .command('init')
   .description('Initial creation of all accounts and contracts contract')
   .action(async function(contract) {
     await initAction()
   })
+
+  program
+  .command('updatePermissions')
+  .description('Update all permissions of all contracts')
+  .action(async function(contract) {
+    await updatePermissionAction()
+  })
+
+  program
+  .command('startHarvestCalculations')
+  .description('Start calculations on harvest contract')
+  .action(async function(contract) {
+    await startHarvestCalculations()
+  })
+
 
   
 program.parse(process.argv)

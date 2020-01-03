@@ -13,13 +13,13 @@ void token::create( const name&   issuer,
     require_auth( get_self() );
 
     auto sym = initial_supply.symbol;
-    check( sym.is_valid(), "invalid symbol name" );
-    check( initial_supply.is_valid(), "invalid supply");
-    check( initial_supply.amount > 0, "max-supply must be positive");
+    check( sym.is_valid(), "seeds: invalid symbol name" );
+    check( initial_supply.is_valid(), "seeds: invalid supply");
+    check( initial_supply.amount > 0, "seeds: max-supply must be positive");
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing == statstable.end(), "token with symbol already exists" );
+    check( existing == statstable.end(), "seeds: token with symbol already exists" );
 
     statstable.emplace( get_self(), [&]( auto& s ) {
        s.supply.symbol = initial_supply.symbol;
@@ -32,20 +32,20 @@ void token::create( const name&   issuer,
 void token::issue( const name& to, const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
-    check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
+    check( sym.is_valid(), "seeds: invalid symbol name" );
+    check( memo.size() <= 256, "seeds: memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
+    check( existing != statstable.end(), "seeds: token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
-    check( to == st.issuer, "tokens can only be issued to issuer account" );
+    check( to == st.issuer, "seeds: tokens can only be issued to issuer account" );
 
     require_auth( st.issuer );
-    check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must issue positive quantity" );
+    check( quantity.is_valid(), "seeds: invalid quantity" );
+    check( quantity.amount > 0, "seeds: must issue positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+    check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply += quantity;
@@ -57,19 +57,19 @@ void token::issue( const name& to, const asset& quantity, const string& memo )
 void token::retire( const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
-    check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
+    check( sym.is_valid(), "seeds: invalid symbol name" );
+    check( memo.size() <= 256, "seeds: memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing != statstable.end(), "token with symbol does not exist" );
+    check( existing != statstable.end(), "seeds: token with symbol does not exist" );
     const auto& st = *existing;
 
     require_auth( st.issuer );
-    check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must retire positive quantity" );
+    check( quantity.is_valid(), "seeds: invalid quantity" );
+    check( quantity.amount > 0, "seeds: must retire positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+    check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
@@ -83,7 +83,7 @@ void token::burn( const name& from, const asset& quantity )
   require_auth(from);
 
   auto sym = quantity.symbol;
-  check(sym.is_valid(), "invalid symbol name");
+  check(sym.is_valid(), "seeds: invalid symbol name");
 
   stats statstable(get_self(), sym.code().raw());
   auto sitr = statstable.find(sym.code().raw());
@@ -148,9 +148,9 @@ void token::transfer( const name&    from,
                       const asset&   quantity,
                       const string&  memo )
 {
-    check( from != to, "cannot transfer to self" );
+    check( from != to, "seeds: cannot transfer to self" );
     require_auth( from );
-    check( is_account( to ), "to account does not exist");
+    check( is_account( to ), "seeds: to account does not exist");
     auto sym = quantity.symbol.code();
     stats statstable( get_self(), sym.raw() );
     const auto& st = statstable.get( sym.raw() );
@@ -160,10 +160,10 @@ void token::transfer( const name&    from,
 
     // check_limit(from);
 
-    check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must transfer positive quantity" );
-    check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
+    check( quantity.is_valid(), "seeds: invalid quantity" );
+    check( quantity.amount > 0, "seeds: must transfer positive quantity" );
+    check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
+    check( memo.size() <= 256, "seeds: memo has more than 256 bytes" );
 
     auto payer = has_auth( to ) ? to : from;
 
@@ -178,8 +178,9 @@ void token::transfer( const name&    from,
 void token::sub_balance( const name& owner, const asset& value ) {
    accounts from_acnts( get_self(), owner.value );
 
-   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
-   check( from.balance.amount >= value.amount, "overdrawn balance" );
+   const auto& from = from_acnts.find( value.symbol.code().raw());
+   check( from != from_acnts.end(), "seeds: no balance object found for " + owner.to_string() );
+   check( from->balance.amount >= value.amount, "seeds: overdrawn balance" );
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;

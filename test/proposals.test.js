@@ -27,6 +27,7 @@ describe('Proposals', async assert => {
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
@@ -46,19 +47,24 @@ describe('Proposals', async assert => {
   console.log('add voice')
   await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 10, { authorization: `${proposals}@active` })
 
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
+  let voteBeforePropIsActiveHasError = true
   try {
     await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+    voteBeforePropIsActiveHasError = false
   } catch (err) {
     console.log('favour first proposal (failed)')
   }
 
   try {
     await contracts.proposals.against(firstuser, 2, 1, { authorization: `${firstuser}@active` })
+    voteBeforePropIsActiveHasError = false
   } catch (err) {
     console.log('against second proposal (failed)')
   }
@@ -66,8 +72,33 @@ describe('Proposals', async assert => {
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
+  const voiceBefore = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+  let voice = voiceBefore.rows[0].balance
+
   console.log('favour first proposal')
   await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 4, { authorization: `${firstuser}@active` })
+
+  var exceedBalanceHasError = true
+  try {
+    await contracts.proposals.against(thirduser, 1, 100, { authorization: `${thirduser}@active` })
+    exceedBalanceHasError = false
+  } catch (err) {
+    console.log('tried to spend more voice than they have - fails')
+  }
+
+  var voteASecondTimeHasError = true
+  try {
+    await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+    voteASecondTimeHasError = false
+  } catch (err) {
+    console.log('vote a second time - fails')
+  }
 
   console.log('against second proposal')
   await contracts.proposals.against(firstuser, 2, 1, { authorization: `${firstuser}@active` })
@@ -98,6 +129,34 @@ describe('Proposals', async assert => {
   delete rows[1].creation_date
 
   assert({
+    given: 'try to vote before proposal is active',
+    should: 'fail',
+    actual: voteBeforePropIsActiveHasError,
+    expected: true
+  })
+
+  assert({
+    given: 'voice reset after onperiod',
+    should: 'have standard amount of voice',
+    actual: voice,
+    expected: 20
+  })
+
+  assert({
+    given: 'exceeded voice balance',
+    should: 'throw error',
+    actual: exceedBalanceHasError,
+    expected: true
+  })
+
+  assert({
+    given: 'vote a second time',
+    should: 'has error',
+    actual: voteASecondTimeHasError,
+    expected: true
+  })
+
+  assert({
     given: 'passed proposal',
     should: 'send reward and stake',
     actual: balancesAfter[0] - balancesBefore[0],
@@ -122,9 +181,9 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 1,
-      total: 5,
+      total: 9,
       favour: 5,
-      against: 0,
+      against: 4,
       stage: 'done',
       title: 'title2',
       summary: 'summary2',

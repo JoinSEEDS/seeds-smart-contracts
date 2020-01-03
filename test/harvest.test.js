@@ -1,5 +1,5 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
 
 const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
@@ -254,4 +254,64 @@ console.log("REWWW "+JSON.stringify(rewards, null, 2))
     given: 'harvest process',
     should: 'distribute rewards based on contribution scores'
   })
+})
+
+describe("harvest contribution score", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest, settings })
+
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+
+  console.log('plant seeds')
+  await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+
+  const balances = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true,
+    limit: 100
+  })
+
+  const harvestStats = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true,
+    limit: 100
+  })
+
+  console.log("balances: "+JSON.stringify(balances, null, 2))
+
+  console.log("harvest: "+JSON.stringify(harvestStats, null, 2))
+
+  assert({
+    given: 'planted calculation',
+    should: 'have valies',
+    actual: harvestStats.rows.map(({ planted_score }) => planted_score),
+    expected: [100, 50]
+  })
+
 })

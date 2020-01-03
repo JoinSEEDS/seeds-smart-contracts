@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -43,6 +43,9 @@ describe('Onboarding', async assert => {
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
+    const inviteSecret2 = await ramdom64ByteHexString()
+    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
     const reset = async () => {
         if (!isLocal()) {
             console.log("Don't reset contracts on mainnet or testnet")
@@ -68,14 +71,14 @@ describe('Onboarding', async assert => {
         }
     }
 
-    const deposit = async () => {
-        console.log(`${token}.transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    
+    const deposit = async (user) => {
+        console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
+        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
     }
 
-    const invite = async () => {
-        console.log(`${onboarding}.invite from ${firstuser}`)
-        await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
+    const invite = async (user, inviteHash) => {
+        console.log(`${onboarding}.invite from ${user}`)
+        await contracts.onboarding.invite(user, transferQuantity, sowQuantity, inviteHash, { authorization: `${user}@active` })
     }
 
     const accept = async () => {
@@ -87,11 +90,33 @@ describe('Onboarding', async assert => {
 
     await adduser()
 
-    await deposit()
+    await deposit(firstuser)
 
-    await invite()
+    await invite(firstuser, inviteHash)
+
+    await deposit(seconduser)
+
+    await invite(seconduser, inviteHash2)
 
     await accept()
+
+    const allInvites = await getTableRows({
+        code: onboarding,
+        scope: onboarding,
+        table: 'invites',
+        json: true
+    })
+
+    const invitesBySponsor = await getTableRows({
+        code: onboarding,
+        scope: onboarding,
+        table: 'invites',
+        key_type: 'name',
+        index_position: 3,
+        lower_bound: seconduser,
+        upper_bound: seconduser,
+        json: true,
+    })
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -112,6 +137,28 @@ describe('Onboarding', async assert => {
             reward: '0.0000 SEEDS'
         }
     })
+
+    assert({
+        given: 'created two invites',
+        should: 'have two invites',
+        actual: allInvites.rows.length,
+        expected: 2
+    })
+
+    assert({
+        given: 'search by sponsor user 2',
+        should: 'have 1 result',
+        actual: invitesBySponsor.rows.length,
+        expected: 1
+    })
+    assert({
+        given: 'search by sponsor user 2',
+        should: 'contains sponsor',
+        actual: invitesBySponsor.rows[0].sponsor,
+        expected: seconduser
+    })
+
+
 })
 
 describe('Use application permission to accept', async assert => {
@@ -144,9 +191,9 @@ describe('Use application permission to accept', async assert => {
         }
     }
 
-    const deposit = async () => {
-        console.log(`${token}.transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    
+    const deposit = async (user) => {
+        console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
+        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
     }
 
     const invite = async () => {
@@ -161,7 +208,7 @@ describe('Use application permission to accept', async assert => {
 
     await adduser()
 
-    await deposit()
+    await deposit(firstuser)
 
     await invite()
 
