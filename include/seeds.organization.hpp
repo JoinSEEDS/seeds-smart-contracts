@@ -17,8 +17,6 @@ CONTRACT organization : public contract {
               config(contracts::settings, contracts::settings.value)
               {}
         
-        
-        // ACTION addorg(name org, name owner);
 
         ACTION reset();
 
@@ -64,7 +62,7 @@ CONTRACT organization : public contract {
             uint64_t primary_key() const { return account.value; }
         };
 
-        TABLE balances_table { // is it posible to have a negative balance?
+        TABLE balances_table {
             name account;
             asset balance;
 
@@ -73,7 +71,7 @@ CONTRACT organization : public contract {
 
         TABLE vote_table {
             name account;
-            uint64_t timestamp; // is it relevant?
+            uint64_t timestamp;
             int64_t regen_points;
 
             uint64_t primary_key() const { return account.value; }
