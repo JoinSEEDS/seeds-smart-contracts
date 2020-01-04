@@ -41,6 +41,10 @@ void onboarding::add_user(name account) {
 
 void onboarding::transfer_seeds(name account, asset quantity) {
   string memo("");
+  
+  if (quantity.amount == 0) {
+    return;
+  }
 
   action(
     permission_level{_self, "active"_n},
