@@ -170,9 +170,9 @@ describe('Use application permission to accept', async assert => {
     
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
-    const transferQuantity = `10.0000 SEEDS`
+    const transferQuantity = `0.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
-    const totalQuantity = '15.0000 SEEDS'
+    const totalQuantity = '5.0000 SEEDS'
     
     const newAccount = randomAccountName()
     console.log("New account "+newAccount)
