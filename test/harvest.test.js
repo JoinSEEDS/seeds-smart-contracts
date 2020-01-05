@@ -58,7 +58,7 @@ describe("harvest", async assert => {
     await contracts.harvest.unplant(seconduser, '100000000.0000 SEEDS', { authorization: `${seconduser}@active` })
     unplantedOverdrawCheck = false
   } catch (err) {
-    print("overdraw protection works")
+    console.log("overdraw protection works")
   }
 
   const refundsAfterUnplanted = await getTableRows({
@@ -178,12 +178,10 @@ describe("harvest", async assert => {
 
   assert({
     given: 'unplant more than planted',
-    should: 'fails',
+    should: 'fail',
     actual: unplantedOverdrawCheck,
     expected: true
   })
-
-  
   
   assert({
     given: 'claim reward transaction',
