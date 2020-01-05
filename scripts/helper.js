@@ -298,6 +298,12 @@ const permissions = [{
 }, {
   target: `${accounts.acctcreator.account}@free`,
   action: 'create'
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptnew'
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptexist'
 }]
 
 const keyProviders = {
