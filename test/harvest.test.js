@@ -53,6 +53,14 @@ describe("harvest", async assert => {
   let num_seeds_unplanted = 100
   await contracts.harvest.unplant(seconduser, num_seeds_unplanted + '.0000 SEEDS', { authorization: `${seconduser}@active` })
 
+  var unplantedOverdrawCheck = true
+  try {
+    await contracts.harvest.unplant(seconduser, '100000000.0000 SEEDS', { authorization: `${seconduser}@active` })
+    unplantedOverdrawCheck = false
+  } catch (err) {
+    print("overdraw protection works")
+  }
+
   const refundsAfterUnplanted = await getTableRows({
     code: harvest,
     scope: seconduser,
@@ -167,6 +175,14 @@ describe("harvest", async assert => {
     actual: transactionAsString.includes(history) && transactionAsString.includes("trxentry") ,
     expected: true
   })
+
+  assert({
+    given: 'unplant more than planted',
+    should: 'fails',
+    actual: unplantedOverdrawCheck,
+    expected: true
+  })
+
   
   
   assert({
