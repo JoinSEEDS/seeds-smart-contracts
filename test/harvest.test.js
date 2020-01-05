@@ -131,6 +131,14 @@ describe("harvest", async assert => {
   console.log('sow seeds')
   await contracts.harvest.sow(seconduser, firstuser, '10.0000 SEEDS', { authorization: `${seconduser}@active` })
 
+  var sowBalanceExceeded = false
+  try {
+    await contracts.harvest.sow(seconduser, firstuser, '100000000000.0000 SEEDS', { authorization: `${seconduser}@active` })
+    sowBalanceExceeded = true
+  } catch (err) {
+    console.log("trying to sow more than user has planted throws error")
+  }
+
   console.log('calculate planted score')
   await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
 
@@ -168,6 +176,13 @@ describe("harvest", async assert => {
 
   console.log("includes history "+transactionAsString.includes(history))
   console.log("includes history "+transactionAsString.includes("trxentry"))
+
+  assert({
+    given: 'sow more than planted',
+    should: 'throw exception',
+    actual: sowBalanceExceeded,
+    expected: false
+  })
 
   assert({
     given: 'claim refund transaction',
@@ -255,8 +270,6 @@ describe("harvest", async assert => {
     expected: [100, 50]
   })
 
-console.log("REWWW "+JSON.stringify(rewards, null, 2))
-
   assert({
     given: 'reputation calculation',
     should: 'assign reputation multiplier to each user',
@@ -316,10 +329,6 @@ describe("harvest contribution score", async assert => {
     json: true,
     limit: 100
   })
-
-  console.log("balances: "+JSON.stringify(balances, null, 2))
-
-  console.log("harvest: "+JSON.stringify(harvestStats, null, 2))
 
   assert({
     given: 'planted calculation',

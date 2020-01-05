@@ -80,6 +80,8 @@ void harvest::sow(name from, name to, asset quantity) {
     init_balance(to);
 
     auto fromitr = balances.find(from.value);
+    check(fromitr->planted.amount >= quantity.amount, "can't sow more than planted!");
+
     balances.modify(fromitr, _self, [&](auto& user) {
         user.planted -= quantity;
     });
