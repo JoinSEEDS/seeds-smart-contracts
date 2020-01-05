@@ -8,13 +8,52 @@ const { accounts, proposals } = names
 const makecitizen = async (user, citizen = true) => {
     const contracts = await initContracts({ accounts, proposals })
 
+    const users = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'users',
+      lower_bound: user,
+      upper_bound: user,
+      json: true,
+    })
+
+    const voice = await getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'voice',
+      lower_bound: user,
+      upper_bound: user,
+      json: true,
+    })
+
+    let alreadyHasVoice = voice.rows.length > 0
+
+    if (alreadyHasVoice) {
+      console.log("user " + user + " already has voice!")
+    }
+
+    if (users.rows.length != 1) {
+      console.log("account "+user +"is not a Seeds user")
+      return
+    } 
+
+    if (users.rows[0].status == "citizen") {
+      console.log("account "+user +" is already a citizen!")
+      console.log(" "+JSON.stringify(users, null, 2))
+      return
+    }
+
     if (citizen) {
         await contracts.accounts.genesis(user, { authorization: `${accounts}@active` })
         console.log("success!")
         fs.appendFileSync('citizens.txt', user+"\n");
         
-        console.log('add voice...')
-        await contracts.proposals.addvoice(user, 77, { authorization: `${proposals}@active` })
+        if (alreadyHasVoice) {
+          console.log("user already has voice: "+JSON.stringify(voice, null, 2))
+        } else {
+          console.log('add voice...')
+          await contracts.proposals.addvoice(user, 77, { authorization: `${proposals}@active` })  
+        }
       
     } else {
         await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
