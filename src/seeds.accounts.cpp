@@ -234,7 +234,11 @@ void accounts::punish(name account) {
 
     auto uitr2 = users.find(sponsor.value);
     users.modify(uitr2, _self, [&](auto& item) {
-      item.reputation -= 50;
+      if (item.reputation < 50) {
+        item.reputation = 0;
+      } else {
+        item.reputation -= 50;
+      }
     });
   }
 }
