@@ -172,7 +172,7 @@ void harvest::unplant(name from, asset quantity) {
   check_user(from);
 
   auto bitr = balances.find(from.value);
-  check(bitr->planted.amount > quantity.amount, "can't unplant more than planted!");
+  check(bitr->planted.amount >= quantity.amount, "can't unplant more than planted!");
 
   uint64_t lastRequestId = 0;
   uint64_t lastRefundId = 0;
