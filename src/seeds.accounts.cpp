@@ -186,11 +186,12 @@ void accounts::vouch(name sponsor, name account) {
 */
 void accounts::_vouch(name sponsor, name account) {
 
-  check_user(sponsor);
+  auto uitrs = users.find(sponsor.value);
+  if (uitrs == users.end()) return;
+
   check_user(account);
   vouch_tables vouch(get_self(), account.value);
 
-  auto uitrs = users.find(sponsor.value);
   auto uitra = users.find(account.value);
 
   name sponsor_status = uitrs->status;
