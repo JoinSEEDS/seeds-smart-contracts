@@ -58,7 +58,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::purchase);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (dailyreset)(updaterate)(updatelimit))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(dailyreset)(updaterate)(updatelimit))
       }
   }
 }
