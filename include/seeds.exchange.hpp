@@ -3,6 +3,7 @@
 #include <eosio/transaction.hpp>
 #include <eosio/singleton.hpp>
 #include <contracts.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -16,13 +17,13 @@ CONTRACT exchange : public contract {
         dailystats(receiver, receiver.value)
         {}
       
-    ACTION dailyreset();
+    ACTION onperiod();
     
     ACTION purchase(name buyer, name contract, asset tlos_quantity, string memo);
     
-    ACTION updaterate(uint64_t seeds_per_tlos);
+    ACTION updaterate(asset seeds_per_tlos);
     
-    ACTION updatelimit(uint64_t seeds_per_day);
+    ACTION updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit);
 
     ACTION reset();
 
@@ -31,8 +32,10 @@ CONTRACT exchange : public contract {
     symbol seeds_symbol = symbol("SEEDS", 4);
   
     TABLE configtable {
-      uint64_t rate;
-      uint64_t limit;
+      asset rate;
+      asset citizen_limit;
+      asset resident_limit;
+      asset visitor_limit;
       uint64_t timestamp;
     };
     
@@ -58,7 +61,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::purchase);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(dailyreset)(updaterate)(updatelimit))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updaterate)(updatelimit))
       }
   }
 }
