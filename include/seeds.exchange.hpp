@@ -23,6 +23,9 @@ CONTRACT exchange : public contract {
     ACTION updaterate(uint64_t seeds_per_tlos);
     
     ACTION updatelimit(uint64_t seeds_per_day);
+
+    ACTION reset();
+
   private:
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -41,7 +44,8 @@ CONTRACT exchange : public contract {
     };
     
     typedef singleton<"config"_n, configtable> configtables;
-    
+    typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
+
     typedef multi_index<"dailystats"_n, stattable> stattables;
     
     configtables config;

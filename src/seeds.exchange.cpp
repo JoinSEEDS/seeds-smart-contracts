@@ -1,5 +1,13 @@
 #include <seeds.exchange.hpp>
 
+
+void exchange::reset() {
+  require_auth(_self);
+
+  config.remove();
+
+}
+
 void exchange::purchase(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
     configtable c = config.get();
