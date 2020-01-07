@@ -143,10 +143,12 @@ const accept = async (newAccount, inviteSecret) => {
         code: harvest,
         scope: harvest,
         table: 'balances',
+        lower_bound: newAccount,
+        upper_bound: newAccount,  
         json: true
     })
 
-    console.log("Accept result: "+JSON.stringify(rows))
+    console.log("Accept result: "+JSON.stringify(rows, null, 2))
 
 }
 
@@ -160,7 +162,7 @@ program
 
 program
   .command('bulk_invite <sponsor> <num> <totalAmount>')
-  .description('invite new user')
+  .description('Bulk invite new users')
   .action(async function (param, num, totalAmount) {
       console.log("generate "+num+" invites at " + totalAmount + " SEEDS" + " with sponsor " + param)
     await bulk_invite(param, num, totalAmount)
@@ -176,3 +178,8 @@ program
   })
 
 program.parse(process.argv)
+
+var NO_COMMAND_SPECIFIED = program.args.length === 0;
+if (NO_COMMAND_SPECIFIED) {
+  program.help();
+}

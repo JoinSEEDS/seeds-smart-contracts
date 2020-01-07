@@ -24,13 +24,18 @@ void onboarding::create_account(name account, string publicKey) {
   ).send();
 }
 
-void onboarding::add_user(name account) {
-  string nickname("");
-
+bool onboarding::is_seeds_user(name account) {
   auto uitr = users.find(account.value);
-  if (uitr != users.end()) {
+  return uitr != users.end();
+}
+
+void onboarding::add_user(name account) {
+
+  if (is_seeds_user(account)) {
     return;
   }
+
+  string nickname("");
 
   action(
     permission_level{contracts::accounts, "active"_n},
@@ -102,12 +107,22 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   asset transfer_quantity = iitr->transfer_quantity;
   asset sow_quantity = iitr->sow_quantity;
 
-  create_account(account, publicKey);
-  add_user(account);
+  bool is_existing_telos_user = is_account(account);
+  bool is_existing_seeds_user = is_seeds_user(account);
+
+  if (!is_existing_telos_user) {
+    create_account(account, publicKey);
+  }
+  
+  if (!is_existing_seeds_user) {
+    add_user(account);
+    add_referral(sponsor, account);  
+  }
+
   transfer_seeds(account, transfer_quantity);
   plant_seeds(sow_quantity);
   sow_seeds(account, sow_quantity);
-  add_referral(sponsor, account);  
+
 }
 
 void onboarding::reset() {
