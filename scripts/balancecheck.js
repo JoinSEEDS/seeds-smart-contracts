@@ -26,7 +26,11 @@ const getbalance = async (account) => {
   try {
     let token = "token.seeds"
     let balance = await eos.getCurrencyBalance(token, account, 'SEEDS')
-    console.log("Balance for "+account+": "+balance + " ("+token+")")
+    if (balance == "") {
+      console.log("Balance for "+account+": No balance")
+    } else {
+      console.log("Balance for "+account+": "+balance + " ("+token+")")
+    }
   
   } catch (err) {
     console.log("error "+err)
@@ -34,11 +38,18 @@ const getbalance = async (account) => {
 }
 
 program
-  .command('/d  ÷  <account>')
-  .description('get balance')
+  .arguments('<account>')
+  .description('Get SEEDS balance for an account')
+  .name("balancecheck.js")
+  .usage("<account>")
   .action(async function (account) {
-      console.log("invite with " + account)
     await getbalance(account)
   })
 
-  program.parse(process.argv)
+program.parse(process.argv)
+
+var NO_COMMAND_SPECIFIED = program.args.length === 0;
+if (NO_COMMAND_SPECIFIED) {
+  program.help();
+}
+ 
