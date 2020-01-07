@@ -6,6 +6,7 @@ const compile = require('./compile')
 const deploy = require('./deploy.command')
 const { initContracts, resetByName } = require('./deploy')
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("./helper")
+const { harvest } = names
 
 const allContracts = [
   "accounts", 
@@ -31,6 +32,17 @@ const getbalance = async (account) => {
     } else {
       console.log("Balance for "+account+": "+balance + " ("+token+")")
     }
+    const plantedBalances = await getTableRows({
+      code: harvest,
+      scope: harvest,
+      table: 'balances',
+      lower_bound: account,
+      upper_bound: account,
+      json: true,
+      limit: 100
+    })
+    console.log("Planted for "+account+": "+JSON.stringify(plantedBalances, null, 2))
+
   
   } catch (err) {
     console.log("error "+err)
