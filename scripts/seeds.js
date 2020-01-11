@@ -21,8 +21,7 @@ const allContracts = [
   "history",
   "acctcreator",
   "exchange",
-  "organization",
-  "onboarding"
+  "onboarding",
 ].sort()
 
 

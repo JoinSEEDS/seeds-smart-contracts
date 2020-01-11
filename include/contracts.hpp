@@ -18,5 +18,4 @@ namespace contracts {
   name bank = "system.seeds"_n;
   name onboarding = "join.seeds"_n;
   name acctcreator = "free.seeds"_n;
-  name organization = "orgtns.seeds"_n;
 }
