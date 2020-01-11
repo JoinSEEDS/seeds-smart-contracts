@@ -67,18 +67,23 @@ describe('accounts', async assert => {
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
   await contract.subrep(seconduser, 1, { authorization: `${accounts}@api` })
 
+  try {
+    console.log('make resident')
+
+    await contract.makeresident(firstuser, { authorization: `${firstuser}@active` })
+
+    console.log('make citizen')
+    
+    await contract.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    console.log('user not ready to become citizen' + err)
+  }
+
   console.log('test citizen')
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
-
-  try {
-    console.log('make citizen')
-    await contract.makecitizen(firstuser, { authorization: `${firstuser}@active` })
-  } catch (err) {
-    console.log('user not ready to become citizen')
-  }
 
   console.log(" ")
   console.log(" ")
@@ -110,9 +115,11 @@ describe('accounts', async assert => {
   const usersAfterRemove = await eos.getTableRows({
     code: accounts,
     scope: accounts,
-    table: 'users',
+    table: 'cbs',
     json: true,
   })
+
+  console.log("uar "+JSON.stringify(usersAfterRemove, null, 2))
 
   const now = new Date() / 1000
 

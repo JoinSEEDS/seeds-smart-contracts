@@ -6,6 +6,7 @@ const compile = require('./compile')
 const deploy = require('./deploy.command')
 const { initContracts, resetByName } = require('./deploy')
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("./helper")
+const { harvest } = names
 
 const allContracts = [
   "accounts", 
@@ -26,7 +27,22 @@ const getbalance = async (account) => {
   try {
     let token = "token.seeds"
     let balance = await eos.getCurrencyBalance(token, account, 'SEEDS')
-    console.log("Balance for "+account+": "+balance + " ("+token+")")
+    if (balance == "") {
+      console.log("Balance for "+account+": No balance")
+    } else {
+      console.log("Balance for "+account+": "+balance + " ("+token+")")
+    }
+    const plantedBalances = await getTableRows({
+      code: harvest,
+      scope: harvest,
+      table: 'balances',
+      lower_bound: account,
+      upper_bound: account,
+      json: true,
+      limit: 100
+    })
+    console.log("Planted for "+account+": "+JSON.stringify(plantedBalances, null, 2))
+
   
   } catch (err) {
     console.log("error "+err)
@@ -34,11 +50,18 @@ const getbalance = async (account) => {
 }
 
 program
-  .command('/d  ÷  <account>')
-  .description('get balance')
+  .arguments('<account>')
+  .description('Get SEEDS balance for an account')
+  .name("balancecheck.js")
+  .usage("<account>")
   .action(async function (account) {
-      console.log("invite with " + account)
     await getbalance(account)
   })
 
-  program.parse(process.argv)
+program.parse(process.argv)
+
+var NO_COMMAND_SPECIFIED = program.args.length === 0;
+if (NO_COMMAND_SPECIFIED) {
+  program.help();
+}
+ 

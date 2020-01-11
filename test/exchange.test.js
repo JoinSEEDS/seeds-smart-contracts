@@ -22,7 +22,7 @@ describe('Exchange', async assert => {
   await contracts.tlostoken.transfer(firstuser, exchange, tlosQuantity, '', { authorization: `${firstuser}@active` })
 
   console.log(`reset daily stats`)
-  await contracts.exchange.dailyreset({ authorization: `${exchange}@active` })  
+  await contracts.exchange.onperiod({ authorization: `${exchange}@active` })  
   
   const seedsBalance = await getBalance(firstuser)
   

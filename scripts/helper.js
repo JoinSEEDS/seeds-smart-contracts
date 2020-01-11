@@ -26,7 +26,7 @@ const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://testnet.eos.miami',
-  telosMainnet: 'https://api.telos.eosindex.io'
+  telosMainnet: 'https://node.hypha.earth'
 }
 
 const ownerAccounts = {
@@ -304,6 +304,12 @@ const permissions = [{
 }, {
   target: `${accounts.organization.account}@active`,
   actor: `${accounts.organization.account}@eosio.code`
+},
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptnew'
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptexist'
 }]
 
 const keyProviders = {

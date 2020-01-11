@@ -80,6 +80,8 @@ void harvest::sow(name from, name to, asset quantity) {
     init_balance(to);
 
     auto fromitr = balances.find(from.value);
+    check(fromitr->planted.amount >= quantity.amount, "can't sow more than planted!");
+
     balances.modify(fromitr, _self, [&](auto& user) {
         user.planted -= quantity;
     });
@@ -171,6 +173,9 @@ void harvest::unplant(name from, asset quantity) {
   require_auth(from);
   check_user(from);
 
+  auto bitr = balances.find(from.value);
+  check(bitr->planted.amount >= quantity.amount, "can't unplant more than planted!");
+
   uint64_t lastRequestId = 0;
   uint64_t lastRefundId = 0;
 
@@ -203,7 +208,6 @@ void harvest::unplant(name from, asset quantity) {
     });
   }
 
-  auto bitr = balances.find(from.value);
   balances.modify(bitr, _self, [&](auto& user) {
     user.planted -= quantity;
   });

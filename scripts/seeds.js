@@ -45,7 +45,7 @@ const deployAction = async (contract) => {
     } catch(err) {
       let errStr = "" + err
       if (errStr.includes("Contract is already running this version of code")) {
-        console.log(`${contract} was already deployed`)
+        console.log(`${contract} code was already deployed`)
       } else {
         console.log("error deploying ", contract)
         console.log(err)          
@@ -71,7 +71,7 @@ const resetAction = async (contract) => {
   } catch(err) {
     let errStr = "" + err
     if (errStr.includes("Contract is already running this version of code")) {
-      console.log(`${contract} was already deployed`)
+      console.log(`${contract} code was already deployed`)
     } else {
       console.log("error deploying ", contract)
       console.log(err)          
