@@ -132,7 +132,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgtns.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -156,7 +156,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgtns.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -189,7 +189,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgtns.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')

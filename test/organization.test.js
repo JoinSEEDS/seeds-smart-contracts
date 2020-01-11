@@ -160,7 +160,7 @@ describe('organization', async assert => {
         actual: initialBalances.rows.map(row => { return row }),
         expected: [
             {
-                account: 'orgtns.seeds',
+                account: 'orgs.seeds',
                 balance: '200.0000 SEEDS'
             },
             {
