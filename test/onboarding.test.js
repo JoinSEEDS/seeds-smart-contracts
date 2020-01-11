@@ -1,6 +1,6 @@
 const { describe } = require('riteway')
 
-const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser, seconduser } = names
 
@@ -334,11 +334,11 @@ describe('Campaign reward for existing user', async assert => {
     
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
-    const transferQuantity = `0.0000 SEEDS`
+    const transferQuantity = `22.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
-    const totalQuantity = '5.0000 SEEDS'
+    const totalQuantity = '27.0000 SEEDS'
     
-    const newAccount = randomAccountName()
+    const newAccount = seconduser;// randomAccountName()
     console.log("New account "+newAccount)
     const keyPair = await createKeypair()
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
@@ -388,9 +388,23 @@ describe('Campaign reward for existing user', async assert => {
 
     await reset()
 
+
     await adduser(firstuser)
 
     await adduser(newAccount)
+
+    console.log('plant seeds')
+    await contracts.token.transfer(firstuser, newAccount, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(newAccount, harvest, '500.0000 SEEDS', '', { authorization: `${newAccount}@active` })
+  
+    const before = await getTableRows({
+        code: harvest,
+        scope: harvest,
+        table: 'balances',
+        json: true
+    })
+
+    const beforeBalance = await getBalance(seconduser)
 
     await deposit(firstuser)
 
@@ -405,6 +419,15 @@ describe('Campaign reward for existing user', async assert => {
         json: true
     })
 
+    console.log("before "+JSON.stringify(before, null, 2))
+    console.log("after "+JSON.stringify(rows, null, 2))
+
+
+    const afterBalance = await getBalance(seconduser)
+
+    console.log("before "+JSON.stringify(beforeBalance, null, 2))
+    console.log("after "+JSON.stringify(afterBalance, null, 2))
+
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -413,7 +436,7 @@ describe('Campaign reward for existing user', async assert => {
         actual: newUserHarvest,
         expected: {
             account: newAccount,
-            planted: sowQuantity,
+            planted: "505.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
     })
