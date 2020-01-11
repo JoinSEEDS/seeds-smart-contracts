@@ -304,7 +304,7 @@ const permissions = [{
 }, {
   target: `${accounts.organization.account}@active`,
   actor: `${accounts.organization.account}@eosio.code`
-},
+}, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
 }, {
