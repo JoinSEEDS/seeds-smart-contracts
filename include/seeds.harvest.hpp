@@ -45,6 +45,8 @@ CONTRACT harvest : public contract {
 
     ACTION calcrep();
 
+    ACTION payforcpu(name account);
+
     ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
@@ -181,7 +183,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
       }
   }
 }
