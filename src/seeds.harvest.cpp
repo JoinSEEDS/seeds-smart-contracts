@@ -262,41 +262,62 @@ void harvest::calcrep() {
   trx.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
 }
 
+// FLAG - implement calc
 void harvest::calctrx() {
   require_auth(_self);
 
-  transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
+// This is supposed to change to
 
-  auto userstrx = transactions.get_index<"bytrxvolume"_n>();
+// Count outgoing tx
+// Count balance vs others, 3 mo trailing
 
-  auto users_number = std::distance(users.begin(), users.end());
+  std::map<uint64_t, uint64_t> userBalance; // account: quantity.amount
 
-  uint64_t current_user = 1;
+  auto uitr = users.begin();
 
-  auto uitr = userstrx.begin();
+  while(uitr != users.end()) {
+    transaction_tables transactions(contracts::token, uitr->account.value);
 
-  while (uitr != userstrx.end()) {
-    auto aitr = users.find(uitr->account.value);
-    if (aitr != users.end()) {
-      uint64_t score = (current_user * 100) / users_number;
+    // TODO get these sorted by most recent timestamp, ignore all timestamps > 3 months, or just erase them outright
 
-      auto hitr = harveststat.find(uitr->account.value);
-      
-      if (hitr == harveststat.end()) {
-        init_harvest_stat(uitr->account);
-        hitr = harveststat.find(uitr->account.value);
-      } 
+    auto titr = transactions.begin();
+    while(titr != transactions.end()) {
+      // if timestamp > 3 months old -> Erase
+      // else..
+      auto is_old_transaction = false;
 
-      harveststat.modify(hitr, _self, [&](auto& user) {
-          user.transactions_score = score;
-          user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
-      });
-
-      current_user++;
+      if (is_old_transaction) {
+        titr = transactions.erase(titr);
+      } else {
+        auto bitr = userBalance.find(titr->to.value);
+        if (bitr != userBalance.end()) {
+          userBalance[titr->to.value] = titr->quantity.amount;
+        } else {
+          userBalance[titr->to.value] = userBalance[titr->to.value] + titr->quantity.amount;
+        }
+        titr++;
+      }
     }
-
     uitr++;
   }
+
+  // for each element in the map
+
+  // find to account
+
+  // subtract balance from to account by looking up table with upper_bound and lower_bound of from account
+
+  // cap balance at 26 * 1777 * 10000
+
+  // Add all balances up
+
+  // => This is the transaction score
+
+  // Rank tx scores from 0 - 100
+
+  // Do 10 users at a time
+
+  // remember where we are in the list by setting a singleton with the last processed pointer
 
   transaction trx{};
   trx.actions.emplace_back(

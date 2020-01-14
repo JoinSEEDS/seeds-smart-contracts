@@ -27,7 +27,7 @@ describe("harvest", async assert => {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('reset token stats')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetstats({ authorization: `${token}@active` })
 
   console.log('configure')
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
@@ -300,7 +300,7 @@ describe("harvest contribution score", async assert => {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('reset token stats')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetstats({ authorization: `${token}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })

@@ -163,20 +163,6 @@ CONTRACT accounts : public contract {
 
     balance_tables balances;
 
-         struct [[eosio::table]] transaction_stats {
-            name account;
-            asset transactions_volume;
-            uint64_t transactions_number;
-
-            uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
-            uint64_t by_transaction_volume()const { return transactions_volume.amount; }
-         };
-
-         typedef eosio::multi_index< "trxstat"_n, transaction_stats,
-            indexed_by<"bytrxvolume"_n,
-            const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
-         > transaction_tables;
-
       user_tables users;
 };
 

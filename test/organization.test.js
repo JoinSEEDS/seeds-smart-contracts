@@ -24,7 +24,7 @@ describe('organization', async assert => {
     await contracts.organization.reset({ authorization: `${organization}@active` })
 
     console.log('reset token stats')
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
+    await contracts.token.resetstats({ authorization: `${token}@active` })
 
     console.log('accounts reset')
     await contracts.accounts.reset({ authorization: `${accounts}@active` })

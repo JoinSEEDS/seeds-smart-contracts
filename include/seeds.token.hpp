@@ -170,7 +170,7 @@ namespace eosio {
          }
 
          [[eosio::action]]
-         void resetweekly();
+         void resetstats();
          
          void save_transaction(name from, name to, asset quantity, string memo);
 
@@ -198,22 +198,26 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
-         struct [[eosio::table]] transaction_stats {
-            name account;
-            asset transactions_volume;
-            uint64_t total_transactions;
-            uint64_t incoming_transactions;
-            uint64_t outgoing_transactions;
+         struct [[eosio::table]] transaction_table {
+            uint64_t id;
+            name to;
+            asset quantity;
+            uint64_t timestamp;
 
-            uint64_t primary_key()const { return account.value; }
-            uint64_t by_transaction_volume()const { return transactions_volume.amount; }
+            uint64_t primary_key()const { return id; }
+            uint64_t by_quantity()const { return quantity.amount; }
+            uint64_t by_to()const { return to.value; }
+            uint64_t by_timestamp()const { return timestamp; }
+
          };
-         
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
-         typedef eosio::multi_index< "trxstat"_n, transaction_stats,
-            indexed_by<"bytrxvolume"_n,
-            const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
+
+         typedef eosio::multi_index< "transactions"_n, transaction_table,
+            indexed_by<"byquantity"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+            indexed_by<"byto"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>,
+            indexed_by<"bytimestamp"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>
          > transaction_tables;
 
           typedef eosio::multi_index<"users"_n, tables::user_table,
@@ -225,6 +229,7 @@ namespace eosio {
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
          void update_stats( const name& from, const name& to, const asset& quantity );
          void check_limit( const name& from );
+
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

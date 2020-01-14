@@ -48,7 +48,7 @@ describe('accounts', async assert => {
   await contract.reset({ authorization: `${accounts}@active` })
 
   console.log('reset token stats')
-  await thetoken.resetweekly({ authorization: `${token}@active` })
+  await thetoken.resetstats({ authorization: `${token}@active` })
 
   console.log('join users')
   await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })

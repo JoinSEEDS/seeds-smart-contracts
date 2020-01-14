@@ -113,15 +113,6 @@ CONTRACT harvest : public contract {
       uint64_t by_reputation()const { return reputation; }
     };
 
-    TABLE transaction_table {
-        name account;
-        asset transactions_volume;
-        uint64_t transactions_number;
-
-        uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
-        uint64_t by_transaction_volume()const { return transactions_volume.amount; }
-    };
-
     TABLE harvest_table {
       name account;
 
@@ -143,6 +134,19 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return account.value; }
     };
 
+    TABLE transaction_table {
+      uint64_t id;
+      name to;
+      asset quantity;
+      uint64_t timestamp;
+
+      uint64_t primary_key()const { return id; }
+      uint64_t by_quantity()const { return quantity.amount; }
+      uint64_t by_to()const { return to.value; }
+      uint64_t by_timestamp()const { return timestamp; }
+
+    };
+
     typedef eosio::multi_index<"reputation"_n, rep_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
@@ -154,10 +158,11 @@ CONTRACT harvest : public contract {
 
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
 
-    typedef eosio::multi_index< "trxstat"_n, transaction_table,
-        indexed_by<"bytrxvolume"_n,
-        const_mem_fun<transaction_table, uint64_t, &transaction_table::by_transaction_volume>>
-    > transaction_tables;
+    typedef eosio::multi_index< "transactions"_n, transaction_table,
+            indexed_by<"byquantity"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+            indexed_by<"byto"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>,
+            indexed_by<"bytimestamp"_n, const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>
+         > transaction_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,

@@ -170,9 +170,9 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity, memo);
+    // save_transaction(from, to, quantity, memo);
 
-    // update_stats( from, to, quantity );
+    update_stats( from, to, quantity );
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -217,67 +217,57 @@ void token::save_transaction(name from, name to, asset quantity, string memo) {
 
 }
 
+// FLAG - check tx limit is unclear - planted / 7 / day
 void token::check_limit(const name& from) {
-  user_tables users(contracts::accounts, contracts::accounts.value);
-  auto uitr = users.find(from.value);
 
-  if (uitr == users.end()) {
-    return;
-  }
+  // This needs to change - we need to store outgoing transactions number and timestamp separately in a 
+  // separate table or maybe a scoped singleton
 
-  name status = uitr->status;
+  // user_tables users(contracts::accounts, contracts::accounts.value);
+  // auto uitr = users.find(from.value);
 
-  uint64_t limit = 10;
-  if (status == "resident"_n) {
-    limit = 50;
-  } else if (status == "citizen"_n) {
-    limit = 100;
-  }
+  // if (uitr == users.end()) {
+  //   return;
+  // }
 
-  transaction_tables transactions(get_self(), seeds_symbol.code().raw());
-  auto titr = transactions.find(from.value);
-  uint64_t current = titr->outgoing_transactions;
+  // name status = uitr->status;
 
-  check(current < limit, "too many outgoing transactions");
+  // uint64_t limit = 10;
+  // if (status == "resident"_n) {
+  //   limit = 50;
+  // } else if (status == "citizen"_n) {
+  //   limit = 100;
+  // }
+
+  // auto titr = transactions.find(from.value);
+  // uint64_t current = titr->outgoing_transactions;
+
+  // check(current < limit, "too many outgoing transactions");
 }
 
-void token::resetweekly() {
+void token::resetstats() {
   require_auth(get_self());
   
-  auto sym_code_raw = seeds_symbol.code().raw();
+  user_tables users(contracts::accounts, contracts::accounts.value);
 
-  transaction_tables transactions(get_self(), sym_code_raw);
 
-  auto titr = transactions.begin();
-  while (titr != transactions.end()) {
-    transactions.modify(titr, get_self(), [&](auto& user) {
-      user.incoming_transactions = 0;
-      user.outgoing_transactions = 0;
-      user.total_transactions = 0;
-      user.transactions_volume = asset(0, seeds_symbol);
-    });
-    titr++;
+  auto uitr = users.begin();
+  while (uitr != users.end()) {
+    transaction_tables transactions(get_self(), uitr->account.value);
+
+    auto titr = transactions.begin();
+    while (titr != transactions.end()) {
+      titr = transactions.erase(titr);
+    }
+
+    uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "resetweekly"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 3600 * 7;
-  trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
-    auto sym_code_raw = quantity.symbol.code().raw();
 
-    transaction_tables transactions(get_self(), sym_code_raw);
     user_tables users(contracts::accounts, contracts::accounts.value);
-
-    auto fromitr = transactions.find(from.value);
-    auto toitr = transactions.find(to.value);
     
     auto fromuser = users.find(from.value);
     auto touser = users.find(to.value);
@@ -286,37 +276,15 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
       return;
     }
 
-    if (fromitr == transactions.end()) {
-      transactions.emplace(get_self(), [&](auto& user) {
-        user.account = from;
-        user.transactions_volume = quantity;
-        user.total_transactions = 1;
-        user.incoming_transactions = 0;
-        user.outgoing_transactions = 1;
-      });
-    } else {
-      transactions.modify(fromitr, get_self(), [&](auto& user) {
-          user.transactions_volume += quantity;
-          user.outgoing_transactions += 1;
-          user.total_transactions += 1;
-      });
-    }
+    transaction_tables transactions(get_self(), from.value);
 
-    if (toitr == transactions.end()) {
-      transactions.emplace(get_self(), [&](auto& user) {
-        user.account = to;
-        user.transactions_volume = quantity;
-        user.total_transactions = 1;
-        user.incoming_transactions = 1;
-        user.outgoing_transactions = 0;
-      });
-    } else {
-      transactions.modify(toitr, get_self(), [&](auto& user) {
-        user.transactions_volume += quantity;
-        user.total_transactions += 1;
-        user.incoming_transactions += 1;
-      });
-    }
+    transactions.emplace(get_self(), [&](auto& tx) {
+      tx.id = transactions.available_primary_key();
+      tx.to = to;
+      tx.quantity = quantity;
+      tx.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+
 }
 
 void token::open( const name& owner, const symbol& symbol, const name& ram_payer )
@@ -350,4 +318,4 @@ void token::close( const name& owner, const symbol& symbol )
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(migrateall) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetstats)(migrateall) )

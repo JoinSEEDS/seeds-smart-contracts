@@ -42,28 +42,29 @@ describe.only('token.transfer.history', async assert => {
   await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
+  console.log('reset token stats') // only to be done after users have been added
+  await contract.resetstats({ authorization: `${token}@active` })
+
   console.log('transfer token')
   await transfer()
   
   const { rows } = await getTableRows({
-    code: history,
-    scope: history,
+    code: token,
+    scope: firstuser,
     table: 'transactions',
     json: true
   })
-  
+
+  const mappedRows = rows.map( item => { return { "id": item.id, "to": item.to, "quantity": item.quantity } } )
+
   assert({
     given: 'transactions table',
     should: 'have transaction entry',
-    actual: rows,
+    actual: mappedRows,
     expected: [{
       id: 0,
-      from: firstuser,
       to: seconduser,
       quantity: '10.0000 SEEDS',
-      fromstatus: 'resident',
-      tostatus: 'citizen',
-      memo: '',
     }]
   })
 })
@@ -82,8 +83,6 @@ describe('token.transfer', async assert => {
 
   const balances = [await getBalance(firstuser)]
   
-  console.log('reset token stats')
-  await contract.resetweekly({ authorization: `${token}@active` })
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
