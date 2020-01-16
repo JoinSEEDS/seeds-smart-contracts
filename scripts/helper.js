@@ -310,6 +310,13 @@ const permissions = [{
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptexist'
+}, {
+  target: `${accounts.harvest.account}@payforcpu`,
+  key: apiPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@payforcpu`,
+  action: 'payforcpu'
 }]
 
 const keyProviders = {

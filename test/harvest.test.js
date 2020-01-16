@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history } = names
 
 describe("harvest", async assert => {
 
@@ -68,6 +68,82 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
+
+  console.log("call first signer pays action")
+  await contracts.harvest.payforcpu(
+    seconduser, 
+    { 
+      authorization: [ 
+        {
+          actor: harvest,
+          permission: 'payforcpu'
+        },   
+        {
+          actor: seconduser,
+          permission: 'active'
+        }
+      ]
+    }
+  )
+
+  var payforcpuSeedsUserOnly = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [ 
+          {
+            actor: harvest,
+            permission: 'payforcpu'
+          },   
+          {
+            actor: thirduser,
+            permission: 'active'
+          }
+        ]
+      }
+    )  
+    payforcpuSeedsUserOnly = false
+  } catch (err) {
+    console.log("require seeds user for pay for cpu test")
+  }
+
+  var payforCPURequireAuth = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [    
+          {
+            actor: thirduser,
+            permission: 'active'
+          }
+        ]
+      }
+    )  
+    payforCPURequireAuth = false
+  } catch (err) {
+    console.log("require payforcup perm test")
+  }
+
+  var payforCPURequireUserAuth = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [ 
+          {
+            actor: harvest,
+            permission: 'payforcpu'
+          },   
+        ]
+      }
+    )  
+    payforCPURequireUserAuth = false
+  } catch (err) {
+    console.log("require user auth test")
+  }
+
 
   //console.log("results after unplanted" + JSON.stringify(refundsAfterUnplanted, null, 2))
 
@@ -281,6 +357,14 @@ describe("harvest", async assert => {
     given: 'harvest process',
     should: 'distribute rewards based on contribution scores'
   })
+
+  assert({
+    given: 'payforcpu called',
+    should: 'work only when both authorizations are provided and user is seeds user',
+    actual: [payforCPURequireAuth, payforCPURequireUserAuth, payforcpuSeedsUserOnly],
+    expected: [true, true, true]
+  })
+
 })
 
 describe("harvest contribution score", async assert => {
