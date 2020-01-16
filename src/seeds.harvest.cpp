@@ -310,6 +310,14 @@ void harvest::calctrx() {
 
 }
 
+void harvest::payforcpu(name account) {
+    require_auth(get_self()); // satisfied by payforcpu permission
+    require_auth(account);
+
+    auto uitr = users.find(account.value);
+    check(uitr != users.end(), "Not a Seeds user!");
+}
+
 void harvest::init_harvest_stat(name account) {
   harveststat.emplace(_self, [&](auto& user) {
     user.account = account;
