@@ -63,6 +63,15 @@ const apiKeys = {
 }
 const apiPublicKey = apiKeys[chainId]
 
+
+const payForCPUKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.telosMainnet]: 'EOS8gu3qzDsieAC7ni7o9vdKKnUjQXMEXN1NQNjFFs6M2u2kEyTvz',
+  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE'
+}
+
+const payForCPUPublicKey = payForCPUKeys[chainId]
+
 const applicationKeys = {
   [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
@@ -312,7 +321,7 @@ const permissions = [{
   action: 'acceptexist'
 }, {
   target: `${accounts.harvest.account}@payforcpu`,
-  key: apiPublicKey,
+  key: payForCPUPublicKey,
   parent: 'active'
 }, {
   target: `${accounts.harvest.account}@payforcpu`,
