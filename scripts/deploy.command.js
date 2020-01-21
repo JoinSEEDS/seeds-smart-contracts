@@ -7,6 +7,7 @@ const deploy = async (name) => {
     const { code, abi } = await source(name)
 
     let account = accounts[name]
+    console.log(`Look ${account.name}`)
     let contractName = account.name
 
     await createAccount(account)
@@ -19,6 +20,15 @@ const deploy = async (name) => {
     if (!abi)
       throw new Error('abi not found')
 
+    await eos.setabi({
+        account: account.account,
+        abi: JSON.parse(abi)
+      }, {
+        authorization: `${account.account}@owner`
+      })
+  
+    console.log("abi deployed")
+
     await eos.setcode({
       account: account.account,
       code,
@@ -28,12 +38,6 @@ const deploy = async (name) => {
       authorization: `${account.account}@owner`
     })
 
-    await eos.setabi({
-      account: account.account,
-      abi: JSON.parse(abi)
-    }, {
-      authorization: `${account.account}@owner`
-    })
     console.log(`Success: ${name} deployed to ${account.account}`)
 }
 
@@ -53,6 +57,7 @@ const source = async (name) => {
 
 const createAccount = async ({ account, publicKey, stakes, creator }) => {
   try {
+    console.log(`Look ${account}`)
     await eos.transaction(async trx => {
       await trx.newaccount({
         creator,

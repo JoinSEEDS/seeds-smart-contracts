@@ -20,4 +20,5 @@ namespace contracts {
   name acctcreator = "free.seeds"_n;
   name forum = "forum.seeds"_n;
   name scheduler = "schdlr.seeds"_n;
+  name organization = "orgs.seeds"_n;
 }

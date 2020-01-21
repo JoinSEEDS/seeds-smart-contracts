@@ -13,6 +13,15 @@ const networks = {
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
 
+const networkDisplayName = {
+  mainnet: '???',
+  jungle: 'Jungle',
+  kylin: 'Kylin',
+  local: 'Local',
+  telosTestnet: 'Telos Testnet',
+  telosMainnet: 'Telos Mainnet'
+}
+
 const endpoints = {
   local: 'http://0.0.0.0:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
@@ -37,6 +46,9 @@ const chainId = EOSIO_CHAIN_ID || networks[EOSIO_NETWORK] || networks.local
 const httpEndpoint = EOSIO_API_ENDPOINT || endpoints[EOSIO_NETWORK] || endpoints.local
 const owner = ownerAccounts[EOSIO_NETWORK] || ownerAccounts.local
 
+const netName = EOSIO_NETWORK != undefined ? (networkDisplayName[EOSIO_NETWORK] || "INVALID NETWORK: "+EOSIO_NETWORK) : "Local"
+console.log(""+netName)
+
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj', 'EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj'],
@@ -51,6 +63,15 @@ const apiKeys = {
 }
 const apiPublicKey = apiKeys[chainId]
 
+
+const payForCPUKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.telosMainnet]: 'EOS8gu3qzDsieAC7ni7o9vdKKnUjQXMEXN1NQNjFFs6M2u2kEyTvz',
+  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE'
+}
+
+const payForCPUPublicKey = payForCPUKeys[chainId]
+
 const applicationKeys = {
   [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
@@ -64,11 +85,11 @@ const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 const schedulePublicKey = 'EOS5f45t7iFEvcm12hf8h5thF7qTrGdyxJ3mTmGuDStS7W5kt8keL'
 const periodPublicKey = 'EOS8AHTuDN2TH9WdVmSrDcsKA5BtvVC8uPFuNaHsrBYyiBXEtDKkE'
 
-const account = (accountName, quantity = '0.0000 SEEDS') => ({
+const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
   type: 'account',
   account: accountName,
   creator: owner,
-  publicKey: activePublicKey,
+  publicKey: pubkey,
   stakes: {
     cpu: '1.0000 TLOS',
     net: '1.0000 TLOS',
@@ -87,6 +108,8 @@ const contract = (accountName, contractName, quantity = '0.0000 SEEDS') => ({
     ram: 700000
   }
 })
+
+const testnetUserPubkey = "EOS8M3bWwv7jvDGpS2avYRiYh2BGJxt5VhfjXhbyAhFXmPtrSd591"
 
 const token = (accountName, issuer, supply) => ({
   ...contract(accountName, 'token'),
@@ -123,8 +146,8 @@ const accountsMetadata = (network) => {
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler')
-
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -149,14 +172,18 @@ const accountsMetadata = (network) => {
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler')
-
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosTestnet) {
     return {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
+
+      fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
+      fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
@@ -180,7 +207,8 @@ const accountsMetadata = (network) => {
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler')
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -295,6 +323,22 @@ const permissions = [{
 }, {
   target: `${accounts.scheduler.account}@active`,
   actor: `${accounts.scheduler.account}@eosio.code`
+}, {
+  target: `${accounts.organization.account}@active`,
+  actor: `${accounts.organization.account}@eosio.code`
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptnew'
+}, {
+  target: `${accounts.onboarding.account}@application`,
+  action: 'acceptexist'
+}, {
+  target: `${accounts.harvest.account}@payforcpu`,
+  key: payForCPUPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@payforcpu`,
+  action: 'payforcpu'
 }]
 
 const keyProviders = {
@@ -304,6 +348,11 @@ const keyProviders = {
 }
 
 const keyProvider = keyProviders[chainId]
+
+
+if (keyProvider.length == 0 || keyProvider[0] == null) {
+  console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
+}
 
 const config = {
   keyProvider,
@@ -367,6 +416,7 @@ const createKeypair = async () => {
 
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
-  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair
+  accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
+  testnetUserPubkey
 }
 

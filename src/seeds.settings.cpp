@@ -4,7 +4,7 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  configure(name("propminstake"), 25 * 10000);
+  configure(name("propminstake"), 1 * 10000);
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);
