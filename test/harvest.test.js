@@ -1,8 +1,8 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, bank, settings, history } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history } = names
 
 describe("harvest", async assert => {
 
@@ -53,6 +53,14 @@ describe("harvest", async assert => {
   let num_seeds_unplanted = 100
   await contracts.harvest.unplant(seconduser, num_seeds_unplanted + '.0000 SEEDS', { authorization: `${seconduser}@active` })
 
+  var unplantedOverdrawCheck = true
+  try {
+    await contracts.harvest.unplant(seconduser, '100000000.0000 SEEDS', { authorization: `${seconduser}@active` })
+    unplantedOverdrawCheck = false
+  } catch (err) {
+    console.log("overdraw protection works")
+  }
+
   const refundsAfterUnplanted = await getTableRows({
     code: harvest,
     scope: seconduser,
@@ -60,6 +68,82 @@ describe("harvest", async assert => {
     json: true,
     limit: 100
   })
+
+  console.log("call first signer pays action")
+  await contracts.harvest.payforcpu(
+    seconduser, 
+    { 
+      authorization: [ 
+        {
+          actor: harvest,
+          permission: 'payforcpu'
+        },   
+        {
+          actor: seconduser,
+          permission: 'active'
+        }
+      ]
+    }
+  )
+
+  var payforcpuSeedsUserOnly = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [ 
+          {
+            actor: harvest,
+            permission: 'payforcpu'
+          },   
+          {
+            actor: thirduser,
+            permission: 'active'
+          }
+        ]
+      }
+    )  
+    payforcpuSeedsUserOnly = false
+  } catch (err) {
+    console.log("require seeds user for pay for cpu test")
+  }
+
+  var payforCPURequireAuth = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [    
+          {
+            actor: thirduser,
+            permission: 'active'
+          }
+        ]
+      }
+    )  
+    payforCPURequireAuth = false
+  } catch (err) {
+    console.log("require payforcup perm test")
+  }
+
+  var payforCPURequireUserAuth = true
+  try {
+    await contracts.harvest.payforcpu(
+      thirduser, 
+      { 
+        authorization: [ 
+          {
+            actor: harvest,
+            permission: 'payforcpu'
+          },   
+        ]
+      }
+    )  
+    payforCPURequireUserAuth = false
+  } catch (err) {
+    console.log("require user auth test")
+  }
+
 
   //console.log("results after unplanted" + JSON.stringify(refundsAfterUnplanted, null, 2))
 
@@ -123,6 +207,14 @@ describe("harvest", async assert => {
   console.log('sow seeds')
   await contracts.harvest.sow(seconduser, firstuser, '10.0000 SEEDS', { authorization: `${seconduser}@active` })
 
+  var sowBalanceExceeded = false
+  try {
+    await contracts.harvest.sow(seconduser, firstuser, '100000000000.0000 SEEDS', { authorization: `${seconduser}@active` })
+    sowBalanceExceeded = true
+  } catch (err) {
+    console.log("trying to sow more than user has planted throws error")
+  }
+
   console.log('calculate planted score')
   await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
 
@@ -162,12 +254,25 @@ describe("harvest", async assert => {
   console.log("includes history "+transactionAsString.includes("trxentry"))
 
   assert({
+    given: 'sow more than planted',
+    should: 'throw exception',
+    actual: sowBalanceExceeded,
+    expected: false
+  })
+
+  assert({
     given: 'claim refund transaction',
     should: 'call inline action to history',
     actual: transactionAsString.includes(history) && transactionAsString.includes("trxentry") ,
     expected: true
   })
-  
+
+  assert({
+    given: 'unplant more than planted',
+    should: 'fail',
+    actual: unplantedOverdrawCheck,
+    expected: true
+  })
   
   assert({
     given: 'claim reward transaction',
@@ -241,8 +346,6 @@ describe("harvest", async assert => {
     expected: [100, 50]
   })
 
-console.log("REWWW "+JSON.stringify(rewards, null, 2))
-
   assert({
     given: 'reputation calculation',
     should: 'assign reputation multiplier to each user',
@@ -254,4 +357,68 @@ console.log("REWWW "+JSON.stringify(rewards, null, 2))
     given: 'harvest process',
     should: 'distribute rewards based on contribution scores'
   })
+
+  assert({
+    given: 'payforcpu called',
+    should: 'work only when both authorizations are provided and user is seeds user',
+    actual: [payforCPURequireAuth, payforCPURequireUserAuth, payforcpuSeedsUserOnly],
+    expected: [true, true, true]
+  })
+
+})
+
+describe("harvest contribution score", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest, settings })
+
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+
+  console.log('plant seeds')
+  await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+
+  const balances = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true,
+    limit: 100
+  })
+
+  const harvestStats = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true,
+    limit: 100
+  })
+
+  assert({
+    given: 'planted calculation',
+    should: 'have valies',
+    actual: harvestStats.rows.map(({ planted_score }) => planted_score),
+    expected: [100, 50]
+  })
+
 })

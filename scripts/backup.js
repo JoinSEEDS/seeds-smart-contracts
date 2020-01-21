@@ -16,7 +16,7 @@ const accountsFetchData = async () => {
   return { users }
 }
 
-const harvestFetchData = () => {
+const harvestFetchData = async () => {
   const balances = await eos.getTableRows({
     code: harvest,
     scope: harvest,
