@@ -28,6 +28,8 @@ CONTRACT vstandescrow : public contract {
 
         ACTION claim(name beneficiary);
 
+        ACTION withdraw(name sponsor, asset quantity);
+
         void ontransfer(name from, name to, asset quantity, string memo);
 
 
@@ -67,6 +69,8 @@ CONTRACT vstandescrow : public contract {
         sponsors_tables sponsors;
 
         void createaux(name sponsor, name beneficiary, asset quantity, uint64_t vesting_date, uint8_t type);
+        void cancelaux(name sponsor, name beneficiary);
+        void check_asset(asset quantity);
         void init_balance(name user);
 };
 
@@ -75,7 +79,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<vstandescrow>(name(receiver), name(code), &vstandescrow::ontransfer);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(vstandescrow, (reset)(create)(createescrow)(cancel)(cancelescrow)(claim))
+          EOSIO_DISPATCH_HELPER(vstandescrow, (reset)(create)(createescrow)(cancel)(cancelescrow)(claim)(withdraw))
       }
   }
 }
