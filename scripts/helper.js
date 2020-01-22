@@ -345,9 +345,6 @@ const permissions = [{
 }, {
   target: `${accounts.vstandescrow.account}@active`,
   actor: `${accounts.vstandescrow.account}@eosio.code`
-}, {
-  target: `${accounts.firstuser.account}@active`,
-  actor: `${accounts.firstuser.account}@eosio.code`
 }]
 
 const keyProviders = {

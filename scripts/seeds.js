@@ -19,7 +19,6 @@ const allContracts = [
   "invites",
   "referendums",
   "history",
-  "onboarding",
   "forum",
   "scheduler",
   "acctcreator",
