@@ -81,6 +81,10 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
+// NO OLVIDES QUE ESTO ES PROVICIONAL
+const schedulePublicKey = 'EOS5f45t7iFEvcm12hf8h5thF7qTrGdyxJ3mTmGuDStS7W5kt8keL'
+const periodPublicKey = 'EOS8AHTuDN2TH9WdVmSrDcsKA5BtvVC8uPFuNaHsrBYyiBXEtDKkE'
+
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
   type: 'account',
   account: accountName,
@@ -141,8 +145,10 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgs.seeds', 'organization'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow')
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -166,8 +172,10 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgs.seeds', 'organization'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow')
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -200,8 +208,10 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      organization: contract('orgs.seeds', 'organization'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow')
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      forum: contract('forum.seeds', 'forum'),
+      scheduler: contract('schdlr.seeds', 'scheduler'),
+      organization: contract('orgs.seeds', 'organization')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -314,6 +324,9 @@ const permissions = [{
   target: `${accounts.acctcreator.account}@free`,
   action: 'create'
 }, {
+  target: `${accounts.scheduler.account}@active`,
+  actor: `${accounts.scheduler.account}@eosio.code`
+}, {
   target: `${accounts.organization.account}@active`,
   actor: `${accounts.organization.account}@eosio.code`
 }, {
@@ -415,3 +428,4 @@ module.exports = {
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey
 }
+
