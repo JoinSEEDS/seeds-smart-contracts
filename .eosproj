@@ -6,7 +6,7 @@
   "cdt": "v1.6.3",
   "output": "",
   "scripts": {
-    "build": ""
+    "build": "eosio-cpp -abigen -I ./include -R ./resources -contract vstandescrow -o vstandescrow.wasm src/seeds.vstandescrow.cpp"
   },
   "deploy": {
     "target": "both",
