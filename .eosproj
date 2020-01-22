@@ -1,8 +1,8 @@
 {
-  "main": "src/seeds.scheduler.cpp",
-  "contract": "scheduler",
+  "main": "src/seeds.organization.cpp",
+  "contract": "organization",
   "include": "",
-  "resource": "",
+  "resource": "resources",
   "cdt": "v1.6.3",
   "output": "",
   "scripts": {
