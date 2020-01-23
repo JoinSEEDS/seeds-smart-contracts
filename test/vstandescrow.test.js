@@ -2,8 +2,11 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { vstandescrow, accounts, token, firstuser, seconduser } = names
+const { vstandescrow, accounts, token, firstuser, seconduser, thirduser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 describe('vest and escrow', async assert => {
 
@@ -148,6 +151,37 @@ describe('vest and escrow', async assert => {
         json: true
     })
 
+    console.log('claim several escrows')
+    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, thirduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, thirduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await sleep(50)
+    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+
+    const severalEscrowsBefore = await getTableRows({
+        code: vstandescrow,
+        scope: vstandescrow,
+        table: 'escrow',
+        json: true
+    })
+
+    await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
+
+    const severalEscrowsAfter = await getTableRows({
+        code: vstandescrow,
+        scope: vstandescrow,
+        table: 'escrow',
+        json: true
+    })
+
     assert({
         given: 'the first and second user have transfered tokens to the vest and escrow contract',
         should: 'create the sponsors entries in the sponsors table',
@@ -260,6 +294,46 @@ describe('vest and escrow', async assert => {
             { sponsor: 'escrw.seeds', balance: '150.0000 SEEDS' },
             { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
             { sponsor: 'seedsuserbbb', balance: '20.0000 SEEDS' }
+        ]
+    })
+
+    assert({
+        given: 'several escrows created',
+        should: 'claim all available escrows',
+        actual: severalEscrowsAfter.rows.map(row => row),
+        expected: [
+            {
+                id: 1,
+                sponsor: 'seedsuseraaa',
+                beneficiary: 'seedsuserbbb',
+                quantity: '1.0000 SEEDS',
+                vesting_date: vesting_date_future,
+                type: 0
+            },
+            {
+                id: 2,
+                sponsor: 'seedsuseraaa',
+                beneficiary: 'seedsuserccc',
+                quantity: '1.0000 SEEDS',
+                vesting_date: vesting_date_passed,
+                type: 0
+            },
+            {
+                id: 3,
+                sponsor: 'seedsuseraaa',
+                beneficiary: 'seedsuserccc',
+                quantity: '1.0000 SEEDS',
+                vesting_date: vesting_date_future,
+                type: 0
+            },
+            {
+                id: 5,
+                sponsor: 'seedsuseraaa',
+                beneficiary: 'seedsuserbbb',
+                quantity: '1.0000 SEEDS',
+                vesting_date: vesting_date_future,
+                type: 0
+            }
         ]
     })
 
