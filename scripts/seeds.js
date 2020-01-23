@@ -19,12 +19,13 @@ const allContracts = [
   "invites",
   "referendums",
   "history",
-  "onboarding",
   "forum",
   "scheduler",
   "acctcreator",
   "exchange",
-  "organization"
+  "organization",
+  "onboarding",
+  "vstandescrow"
 ].sort()
 
 
