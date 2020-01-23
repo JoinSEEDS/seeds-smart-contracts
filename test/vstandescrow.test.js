@@ -1,7 +1,6 @@
 const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
-
 const { vstandescrow, accounts, token, firstuser, seconduser, thirduser } = names
 
 function sleep(ms) {
@@ -166,13 +165,6 @@ describe('vest and escrow', async assert => {
     await sleep(50)
     await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
 
-    const severalEscrowsBefore = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
-        table: 'escrow',
-        json: true
-    })
-
     await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
 
     const severalEscrowsAfter = await getTableRows({
@@ -181,6 +173,7 @@ describe('vest and escrow', async assert => {
         table: 'escrow',
         json: true
     })
+
 
     assert({
         given: 'the first and second user have transfered tokens to the vest and escrow contract',
@@ -336,7 +329,6 @@ describe('vest and escrow', async assert => {
             }
         ]
     })
-
 })
 
 
