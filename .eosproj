@@ -1,6 +1,6 @@
 {
-  "main": "src/seeds.scheduler.cpp",
-  "contract": "scheduler",
+  "main": "src/seeds.vstandescrow.cpp",
+  "contract": "vstandescrow",
   "include": "",
   "resource": "",
   "cdt": "v1.6.3",

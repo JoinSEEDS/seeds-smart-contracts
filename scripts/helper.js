@@ -145,6 +145,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -171,6 +172,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -206,6 +208,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -339,6 +342,9 @@ const permissions = [{
 }, {
   target: `${accounts.harvest.account}@payforcpu`,
   action: 'payforcpu'
+}, {
+  target: `${accounts.vstandescrow.account}@active`,
+  actor: `${accounts.vstandescrow.account}@eosio.code`
 }]
 
 const keyProviders = {
