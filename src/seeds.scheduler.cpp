@@ -52,17 +52,17 @@ ACTION scheduler::configop(name action, name contract, uint64_t period) {
 }
 
 
-ACTION scheduler::noop(){
-    //require_auth(_self);
-    print("HOLAAAA!");
-    return;
+ACTION scheduler::confirm(name operation) {
+    require_auth(_self);
+
+    auto itr = operations.find(operation.value);
+    check(itr != operations.end(), "Operation does not exist");
+
+    operations.modify(itr, _self, [&](auto & moperation) {
+        moperation.timestamp = current_time_point().sec_since_epoch();
+    });
 }
 
-
-ACTION scheduler::np(){
-    print("HELLO");
-    return;
-}
 
 ACTION scheduler::execute() {
    // require_auth(_self);
@@ -92,10 +92,6 @@ ACTION scheduler::execute() {
             By doing this, we are restricting the ACTION to be callable only for an account who has the CUSTOM_PERMISSION
     */
 
-    
-
-    print("execute");
-
     auto itr = operations.begin();
     while(itr != operations.end()) {
         if(isRdyToExec(itr -> operation)){
@@ -115,9 +111,14 @@ ACTION scheduler::execute() {
             //tx.actions.emplace_back(a);
             //tx.send(eosio::current_time_point().sec_since_epoch() + 10, _self, false);
 
-            operations.modify(itr, _self, [&](auto & moperation) {
-                moperation.timestamp = current_time_point().sec_since_epoch() - 10;
-            });
+            action c = action(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "confirm"_n,
+                std::make_tuple(itr -> operation)
+            );
+
+            c.send();
 
             break;
         }
@@ -128,4 +129,4 @@ ACTION scheduler::execute() {
 
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset)(np));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset)(np)(confirm));

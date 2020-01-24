@@ -40,7 +40,7 @@ describe('forum', async assert => {
 
     console.log('configure')
     await contracts.scheduler.configop('onperiod', 'forum.seeds', 20000, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('newday', 'forum.seeds', 600000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('newday', 'forum.seeds', 20000, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
@@ -136,7 +136,7 @@ describe('forum', async assert => {
         await contracts.forum.newday([], { authorization: `${forum}@active` })
     }
     catch(err){
-        console.log("new day is not ready to be executed.")
+        console.log("new day is not ready to be executed.", err)
     }
 
     console.log('vote posts')

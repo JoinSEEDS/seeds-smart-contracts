@@ -177,8 +177,8 @@ bool forum::isRdyToExec(name operation){
 
 
     if(periods > 0) return true;
-    
-    check(false, std::to_string(periods));
+
+    check(false, std::to_string(timestamp) + ", t = " + std::to_string(itr -> timestamp));
     return false;
 }
 
@@ -318,7 +318,6 @@ ACTION forum::onperiod() {
     //require_auth(permission_level(contracts::scheduler, "scheduled"_n));
 
     if(!isRdyToExec(name("onperiod"))){
-        print("onperiod is not ready to be executed.");
         check(false, "onperiod is not ready to be executed.");
     }
 
@@ -333,8 +332,6 @@ ACTION forum::onperiod() {
         itr++;
     }
 
-    print("onperiod executed successfully.");
-
 }
 
 
@@ -342,7 +339,6 @@ ACTION forum::newday() {
     //require_auth(contracts::scheduler);
 
     if(!isRdyToExec(name("newday"))){
-        print("newday is not ready to be executed.");
         check(false, "newday is not ready to be executed.");
     }
 
@@ -350,8 +346,6 @@ ACTION forum::newday() {
     while(itr != votespower.end()){
         itr = votespower.erase(itr);
     }
-
-    print("newday executed successfully.");
 
 }
 

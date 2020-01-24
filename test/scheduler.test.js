@@ -10,7 +10,7 @@ function sleep(ms) {
 
 var contracts = null
 
-describe('forum', async assert => {
+describe('scheduler', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -39,8 +39,8 @@ describe('forum', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'forum.seeds', 50000, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('newday', 'forum.seeds', 600000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('onperiod', 'forum.seeds', 70000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('newday', 'forum.seeds', 150000, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
@@ -62,17 +62,126 @@ describe('forum', async assert => {
 
     console.log('vote post')
     await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.forum.downvotepost(seconduser, 2, { authorization: `${seconduser}@active` })
-    await contracts.forum.upvotepost(firstuser, 1, { authorization: `${firstuser}@active` })
     await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
 
-    console.log('scheduler execute')
-    await sleep(3000)
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
-    await sleep(5000)
+    await sleep(30)
     console.log('scheduler execute')
     await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+
+    const repBeforeDepreciation = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'forumrep',
+        json: true
+    })
+
+    await sleep(10000)
+    console.log('scheduler execute')
+    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+
+
+    const repAfterDepreciation = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'forumrep',
+        json: true
+    })
+
+
+    console.log('spend vote power')
+    for(let i = 0; i < 16; i++) {
+        if(i % 2 == 0){
+            await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+            await contracts.forum.upvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
+        }
+        else{
+            await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+            await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
+        }
+    }
+
+    const votePowerBeforeNewDay = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'votepower',
+        json: true
+    })
+
+    await sleep(6000)
+    console.log('scheduler execute')
+    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+
+    console.log('vote post')
+    await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+    await contracts.forum.upvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
+
+    const votePowerAfterNewDay = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'votepower',
+        json: true
+    })
+
+    assert({
+        given: 'the function onperiod not ready to be executed',
+        should: 'not execute the function onperiod',
+        actual: repBeforeDepreciation.rows.map(row => row),
+        expected: [
+            { account: 'seedsuseraaa', reputation: -35000 },
+            { account: 'seedsuserbbb', reputation: 70000 }
+        ]
+    })
+
+    assert({
+        given: 'the function onperiod ready to be executed',
+        should: 'execute the function onperiod',
+        actual: repAfterDepreciation.rows.map(row => row),
+        expected: [
+            { account: 'seedsuseraaa', reputation: -33250 },
+            { account: 'seedsuserbbb', reputation: 66500 }
+        ]
+    })
+
+    assert({
+        given: 'the function newday not ready to be executed',
+        should: 'not execute the function newday',
+        actual: votePowerBeforeNewDay.rows.map(row => row),
+        expected: [
+            {
+                account: 'seedsuseraaa',
+                num_votes: 17,
+                points_left: 0,
+                max_points: 700000
+            },
+            {
+                account: 'seedsuserbbb',
+                num_votes: 17,
+                points_left: 0,
+                max_points: 350000
+            }
+        ]
+    })
+
+    assert({
+        given: 'the function newday ready to be executed',
+        should: 'execute the function newday',
+        actual: votePowerAfterNewDay.rows.map(row => row),
+        expected: [
+            {
+                account: 'seedsuseraaa',
+                num_votes: 1,
+                points_left: 630000,
+                max_points: 700000
+            },
+            {
+                account: 'seedsuserbbb',
+                num_votes: 1,
+                points_left: 315000,
+                max_points: 350000
+            }
+      ]
+    })
+
 })
 
 
