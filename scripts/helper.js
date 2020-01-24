@@ -81,10 +81,6 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
-// NO OLVIDES QUE ESTO ES PROVICIONAL
-const schedulePublicKey = 'EOS5f45t7iFEvcm12hf8h5thF7qTrGdyxJ3mTmGuDStS7W5kt8keL'
-const periodPublicKey = 'EOS8AHTuDN2TH9WdVmSrDcsKA5BtvVC8uPFuNaHsrBYyiBXEtDKkE'
-
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
   type: 'account',
   account: accountName,

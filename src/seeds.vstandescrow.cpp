@@ -158,7 +158,6 @@ void vstandescrow::claim(name beneficiary) {
 
     auto escrows_by_beneficiary = escrows.get_index<"bybneficiary"_n>();
     auto it = escrows_by_beneficiary.find(beneficiary.value);
-
     uint64_t current_time = eosio::current_time_point().sec_since_epoch();
 
     asset total_quantity = asset(0, seeds_symbol);
@@ -166,12 +165,14 @@ void vstandescrow::claim(name beneficiary) {
     check(it != escrows_by_beneficiary.end(), "vstandscrow: The user " + beneficiary.to_string() + " does not have and escrow entry");
 
     while(it != escrows_by_beneficiary.end()){
-        if(it -> vesting_date <= current_time && it -> beneficiary == beneficiary){
+        if(it -> beneficiary != beneficiary)
+            break;
+        if(it -> vesting_date <= current_time){
             total_quantity += it -> quantity;
             it = escrows_by_beneficiary.erase(it);
         }
         else{
-            break;
+            it++;
         }
     }
 
@@ -185,7 +186,6 @@ void vstandescrow::claim(name beneficiary) {
     sponsors.modify(it_c, _self, [&](auto & msponsor){
         msponsor.balance -= total_quantity;
     });
-
 }
 
 
