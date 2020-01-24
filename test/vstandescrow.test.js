@@ -180,7 +180,7 @@ describe('vest and escrow', async assert => {
         should: 'create the sponsors entries in the sponsors table',
         actual: initialBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrw.seeds', balance: '200.0000 SEEDS' },
+            { sponsor: 'escrow.seeds', balance: '200.0000 SEEDS' },
             { sponsor: 'seedsuseraaa', balance: '150.0000 SEEDS' },
             { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
         ]
@@ -240,7 +240,7 @@ describe('vest and escrow', async assert => {
         should: 'get the sponsors balances correct',
         actual: middleBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrw.seeds', balance: '180.0000 SEEDS' },
+            { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
             { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
             { sponsor: 'seedsuserbbb', balance: '0.0000 SEEDS' }
         ]
@@ -251,7 +251,7 @@ describe('vest and escrow', async assert => {
         should: 'update the sponsors balances correctly',
         actual: lastBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrw.seeds', balance: '180.0000 SEEDS' },
+            { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
             { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
             { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
         ]
@@ -284,7 +284,7 @@ describe('vest and escrow', async assert => {
         should: 'update the sponsors table correctly',
         actual: withdrawBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrw.seeds', balance: '150.0000 SEEDS' },
+            { sponsor: 'escrow.seeds', balance: '150.0000 SEEDS' },
             { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
             { sponsor: 'seedsuserbbb', balance: '20.0000 SEEDS' }
         ]

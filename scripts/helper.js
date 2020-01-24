@@ -141,7 +141,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -168,7 +168,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -204,7 +204,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrw.seeds', 'vstandescrow'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
