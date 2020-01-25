@@ -18,25 +18,18 @@ CONTRACT vstandescrow : public contract {
 
         ACTION reset();
 
-        // ACTION create(name sponsor, name beneficiary, asset quantity, uint64_t vesting_date);
-
-        // ACTION createescrow(name sponsor_bucket, name beneficiary_org, asset quantity, uint64_t vesting_date);
-
         ACTION lock (   const name&         lock_type, 
                         const name&         sponsor, 
                         const name&         beneficiary,
                         const asset&        quantity, 
                         const name&         trigger_event, 
+                        const name&         trigger_source,
                         const time_point&   vesting_date,
                         const string&       notes);
 
-        ACTION trigger (const name&     sponsor,
+        ACTION trigger (const name&     trigger_source,
                         const name&     event_name,
                         const string&   notes);
-
-        // ACTION cancel(name sponsor, name beneficiary);
-
-        // ACTION cancelescrow(name sponsor, name beneficiary);
 
         ACTION claim(name beneficiary);
 
@@ -47,9 +40,8 @@ CONTRACT vstandescrow : public contract {
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
-        // enum TypeCreate:uint8_t { createNormal = 0, createEscrow = 1 };
 
-        // events scoped by sponsor
+        // events scoped by trigger_source
         TABLE event {
             name        event_name;
             time_point  event_date   = current_block_time().to_time_point();
@@ -73,6 +65,7 @@ CONTRACT vstandescrow : public contract {
             name        beneficiary;
             asset       quantity;
             name        trigger_event;  // e.g. "golive" 
+            name        trigger_source; // the account that has permissions to trigger the event
             time_point  vesting_date;
             string      notes;
         
@@ -113,19 +106,6 @@ CONTRACT vstandescrow : public contract {
         token_lock_table locks;
         sponsors_tables sponsors;
 
-        // void createaux(name sponsor, name beneficiary, asset quantity, uint64_t vesting_date, uint8_t type);
-        // void cancelaux(name sponsor, name beneficiary);
         void check_asset(asset quantity);
         void init_balance(name user);
 };
-
-// extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-//   if (action == name("transfer").value && code == contracts::token.value) {
-//       execute_action<vstandescrow>(name(receiver), name(code), &vstandescrow::ontransfer);
-//   } else if (code == receiver) {
-//       switch (action) {
-//           EOSIO_DISPATCH_HELPER(vstandescrow, (reset)(create)(createescrow)(cancel)(cancelescrow)(claim)(withdraw))
-//       }
-//   }
-// }
-

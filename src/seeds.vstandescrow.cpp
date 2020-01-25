@@ -26,18 +26,17 @@ void vstandescrow::init_balance(name user) {
     }
 }
 
-
 void vstandescrow::check_asset(asset quantity) {
     check(quantity.is_valid(), "invalid asset");
     check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
-void vstandescrow::trigger (const name&     sponsor,
+void vstandescrow::trigger (const name&     trigger_source,
                             const name&     event_name,
                             const string&   notes) {
-    require_auth (sponsor);
+    require_auth (trigger_source);
 
-    event_table e_t (get_self(), sponsor.value);
+    event_table e_t (get_self(), trigger_source.value);
     e_t.emplace (get_self(), [&](auto &e) {
         e.event_name    = event_name;
         e.notes         = notes;
@@ -49,6 +48,7 @@ void vstandescrow::lock (   const name&         lock_type,
                             const name&         beneficiary,
                             const asset&        quantity, 
                             const name&         trigger_event, 
+                            const name&         trigger_source,
                             const time_point&   vesting_date,
                             const string&       notes) {
     require_auth (sponsor);
@@ -66,62 +66,17 @@ void vstandescrow::lock (   const name&         lock_type,
     });
 
     locks.emplace (get_self(), [&](auto &l) {
-        l.id            = locks.available_primary_key();
-        l.lock_type     = lock_type;
-        l.sponsor       = sponsor;
-        l.beneficiary   = beneficiary;
-        l.quantity      = quantity;
-        l.trigger_event = trigger_event;
-        l.vesting_date  = vesting_date;
-        l.notes         = notes;
+        l.id                = locks.available_primary_key();
+        l.lock_type         = lock_type;
+        l.sponsor           = sponsor;
+        l.beneficiary       = beneficiary;
+        l.quantity          = quantity;
+        l.trigger_event     = trigger_event;
+        l.trigger_source    = trigger_source;
+        l.vesting_date      = vesting_date;
+        l.notes             = notes;
     });
 }
-
-// void vstandescrow::createaux(name sponsor, name beneficiary, asset quantity, uint64_t vesting_date, uint8_t type){
-//     // check if the sponsor has enough balance
-//     auto it_b = sponsors.find(sponsor.value);
-    
-//     check(it_b != sponsors.end(), "vstandscrow: The user " + sponsor.to_string() + " does not have a balance entry");
-//     check(it_b -> balance >= quantity, "vstandscrow: The sponsor " + sponsor.to_string() + " does not have enough balance");
-
-
-//     // check for the beneficiary constraints (pending)
-
-    
-
-//     escrows.emplace(_self, [&](auto & nescrow){
-//         nescrow.id = escrows.available_primary_key();
-//         nescrow.sponsor = sponsor;
-//         nescrow.beneficiary = beneficiary;
-//         nescrow.quantity = quantity;
-//         nescrow.vesting_date = vesting_date;
-//         nescrow.type = type;
-//     });
-// }
-
-
-// void vstandescrow::cancelaux(name sponsor, name beneficiary) {
-//     auto escrows_by_sponsor = escrows.get_index<"bysponsor"_n>();
-//     auto it = escrows_by_sponsor.find(sponsor.value);
-//     TypeCreate type = createNormal;
-
-//     check(it != escrows_by_sponsor.end(), "vstandscrow: The user " + sponsor.to_string() + " does not have a escrow entry");
-
-//     while(it != escrows_by_sponsor.end()){
-//         if(it -> beneficiary == beneficiary){
-
-//             auto it_s = sponsors.find(sponsor.value);
-//             sponsors.modify(it_s, _self, [&](auto & msponsor){
-//                 msponsor.balance += it -> quantity;
-//             });
-
-//             escrows_by_sponsor.erase(it);
-//             break;
-//         }
-//         it++;
-//     }
-// }
-
 
 void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
     // only catch transfer to self of the SEEDS symbol (could be opened up, but would require other data structure changes)
@@ -131,21 +86,13 @@ void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
         quantity.symbol == seeds_symbol) {              // SEEDS symbol
         
         init_balance(from);
-        // init_balance(to);
 
         auto it_f = sponsors.find(from.value);
         sponsors.modify(it_f, _self, [&](auto & msponsor){
             msponsor.liquid_balance += quantity;
         });
-
-        // don't think we need this?
-        // auto it_t = sponsors.find(to.value);
-        // sponsors.modify(it_t, _self, [&](auto & msponsor){
-        //     msponsor.balance += quantity;
-        // });
     }
 }
-
 
 // TODO: should not allow withdraw with funds that have associated locks
 void vstandescrow::withdraw(name sponsor, asset quantity) {
@@ -162,54 +109,18 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     token::transfer_action action{name(token_account), {_self, "active"_n}};
     action.send(_self, sponsor, quantity, "");
 
-    // subtract the quantity to the contract
-    // auto it_c = sponsors.find(get_self().value);
-    // sponsors.modify(it_c, _self, [&](auto & msponsor){
-    //     msponsor.balance -= quantity;
-    // });
-
-    // TODO: if after this withdraw, sponsor's locked and liquid balances are zero, erase record
+    // TODO: if, after this withdraw, sponsor's locked and liquid balances are zero, erase record
     auto it_s = sponsors.find(sponsor.value);
     sponsors.modify(it_s, _self, [&](auto & msponsor){
         msponsor.liquid_balance -= quantity;
     });
 }
 
-
-// void vstandescrow::create(name sponsor, name beneficiary, asset quantity, uint64_t vesting_date) {
-//     require_auth(sponsor);
-
-//     TypeCreate type = createNormal;
-//     createaux(sponsor, beneficiary, quantity, vesting_date, type);
-// }
-
-
-// void vstandescrow::createescrow(name sponsor_bucket, name beneficiary_org, asset quantity, uint64_t vesting_date) {
-//     require_auth(sponsor_bucket);
-
-//     TypeCreate type = createEscrow;
-//     createaux(sponsor_bucket, beneficiary_org, quantity, vesting_date, type);
-// }
-
-
-// void vstandescrow::cancel(name sponsor, name beneficiary) {
-//     require_auth(sponsor);
-//     cancelaux(sponsor, beneficiary);
-// }
-
-
-// void vstandescrow::cancelescrow(name sponsor, name beneficiary) {
-//     require_auth(sponsor);
-//     cancelaux(sponsor, beneficiary);
-// }
-
-
 void vstandescrow::claim(name beneficiary) {
     require_auth(beneficiary);
 
     auto locks_by_beneficiary = locks.get_index<"bybneficiary"_n>();
     auto it = locks_by_beneficiary.find(beneficiary.value);
-    // uint64_t current_time = eosio::current_time_point().sec_since_epoch();
 
     asset total_quantity = asset(0, seeds_symbol);
     check(it != locks_by_beneficiary.end(), "vstandscrow: The user " + beneficiary.to_string() + " does not have any locks.");
@@ -225,7 +136,7 @@ void vstandescrow::claim(name beneficiary) {
                 it = locks_by_beneficiary.erase(it);
             }
         } else if (it->lock_type == "event"_n) {
-            event_table e_t (get_self(), it->sponsor.value);
+            event_table e_t (get_self(), it->trigger_source.value);
             auto e_itr = e_t.find (it->trigger_event.value);
             if (e_itr->event_date <= current_time_point()) {
                 total_quantity += it -> quantity;
