@@ -144,7 +144,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -171,7 +172,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -207,7 +209,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -347,7 +350,7 @@ const permissions = [{
 }]
 
 const keyProviders = {
-  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
   [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY],
   [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
 }
@@ -379,6 +382,11 @@ const getEOSWithEndpoint = (ep) => {
 const encodeName = Eos.modules.format.encodeName
 const decodeName = Eos.modules.format.decodeName
 const getTableRows = eos.getTableRows
+
+const getTelosBalance = async (user) => {
+  const balance = await eos.getCurrencyBalance(names.tlostoken, user, 'TLOS')
+  return Number.parseInt(balance[0])
+}
 
 const getBalance = async (user) => {
   const balance = await eos.getCurrencyBalance(names.token, user, 'SEEDS')
@@ -422,6 +430,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey
+  testnetUserPubkey, getTelosBalance
 }
 
