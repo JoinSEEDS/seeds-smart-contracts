@@ -24,12 +24,14 @@ CONTRACT vstandescrow : public contract {
                         const asset&        quantity, 
                         const name&         trigger_event, 
                         const name&         trigger_source,
-                        const time_point&   vesting_date,
+                        const time_point&   vesting_date, // = current_time_point() + time_point (1000000000),
                         const string&       notes);
 
         ACTION trigger (const name&     trigger_source,
                         const name&     event_name,
                         const string&   notes);
+
+        ACTION cancellock (const uint64_t& lock_id);
 
         ACTION claim(name beneficiary);
 
@@ -95,8 +97,8 @@ CONTRACT vstandescrow : public contract {
         // scoped by get_self()
         TABLE sponsors_table {
             name    sponsor;
-            asset   locked_balance;
-            asset   liquid_balance;
+            asset   locked_balance = asset (0, symbol("SEEDS", 4));
+            asset   liquid_balance = asset (0, symbol("SEEDS", 4));
 
             uint64_t primary_key() const { return sponsor.value; }
         };
@@ -108,4 +110,5 @@ CONTRACT vstandescrow : public contract {
 
         void check_asset(asset quantity);
         void init_balance(name user);
+        void deduct_from_sponsor (name sponsor, asset locked_quantity);
 };

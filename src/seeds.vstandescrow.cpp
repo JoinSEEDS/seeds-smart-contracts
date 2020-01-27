@@ -17,13 +17,7 @@ void vstandescrow::reset() {
 
 void vstandescrow::init_balance(name user) {
     auto it = sponsors.find(user.value);
-    if(it == sponsors.end()) {
-        sponsors.emplace(_self, [&](auto & nsponsor){
-            nsponsor.sponsor = user;
-            nsponsor.liquid_balance = asset(0, seeds_symbol);
-            nsponsor.locked_balance = asset(0, seeds_symbol);
-        });
-    }
+    
 }
 
 void vstandescrow::check_asset(asset quantity) {
@@ -78,20 +72,43 @@ void vstandescrow::lock (   const name&         lock_type,
     });
 }
 
+void vstandescrow::cancellock (const uint64_t& lock_id) {
+
+    auto l_itr = locks.find (lock_id);
+    check (l_itr != locks.end(), "Lock ID " + std::to_string(lock_id) + " does not exist.");
+
+    require_auth (l_itr->sponsor);
+
+    auto it_f = sponsors.find(l_itr->sponsor.value);
+    sponsors.modify(it_f, get_self(), [&](auto & msponsor){
+        msponsor.liquid_balance += l_itr->quantity;
+        msponsor.locked_balance -= l_itr->quantity;
+    });
+
+    locks.erase (l_itr);
+}
+
 void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
+   
     // only catch transfer to self of the SEEDS symbol (could be opened up, but would require other data structure changes)
     // get_first_receiver confirms that the tokens came from the right account
-    if (get_first_receiver() == contracts::token  &&    // from SEEDS token account
-        to  ==  get_self() &&                           // sent to escrow.seeds contract
-        quantity.symbol == seeds_symbol) {              // SEEDS symbol
-        
-        init_balance(from);
+    if (get_first_receiver() == "token"_n  &&    // from SEEDS token account
+        to  ==  get_self() &&                    // sent to escrow.seeds contract
+        quantity.symbol == seeds_symbol) {       // SEEDS symbol
 
-        auto it_f = sponsors.find(from.value);
-        sponsors.modify(it_f, _self, [&](auto & msponsor){
-            msponsor.liquid_balance += quantity;
-        });
-    }
+        
+        auto s_itr = sponsors.find (from.value);
+        if (s_itr == sponsors.end()) {
+            sponsors.emplace(get_self(), [&](auto &s){
+                s.sponsor = from;
+                s.liquid_balance = quantity;
+            });
+        } else {
+            sponsors.modify (s_itr, get_self(), [&](auto &s) {
+                s.liquid_balance += quantity;
+            });
+        }
+    }   
 }
 
 // TODO: should not allow withdraw with funds that have associated locks
@@ -105,7 +122,7 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
     check(it -> liquid_balance >= quantity, "vstandescrow: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
-    auto token_account = contracts::token;
+    auto token_account = "token"_n;
     token::transfer_action action{name(token_account), {_self, "active"_n}};
     action.send(_self, sponsor, quantity, "");
 
@@ -113,6 +130,15 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     auto it_s = sponsors.find(sponsor.value);
     sponsors.modify(it_s, _self, [&](auto & msponsor){
         msponsor.liquid_balance -= quantity;
+    });
+}
+
+void vstandescrow::deduct_from_sponsor (name sponsor, asset locked_quantity) {
+    auto it_c = sponsors.find(sponsor.value);
+
+    // TODO: if it's the last of this sponsor's balance, erase record
+    sponsors.modify(it_c, get_self(), [&](auto & msponsor){
+        msponsor.locked_balance -= locked_quantity;
     });
 }
 
@@ -132,15 +158,19 @@ void vstandescrow::claim(name beneficiary) {
 
         if (it->lock_type == "time"_n) {
             if(it -> vesting_date <= current_time_point()){
+                deduct_from_sponsor (it->sponsor, it->quantity);
                 total_quantity += it -> quantity;
                 it = locks_by_beneficiary.erase(it);
             }
         } else if (it->lock_type == "event"_n) {
             event_table e_t (get_self(), it->trigger_source.value);
             auto e_itr = e_t.find (it->trigger_event.value);
-            if (e_itr->event_date <= current_time_point()) {
+            if (e_itr != e_t.end() && e_itr->event_date <= current_time_point()) {
+                deduct_from_sponsor (it->sponsor, it->quantity);
                 total_quantity += it -> quantity;
                 it = locks_by_beneficiary.erase(it);
+            } else {
+                it++;
             }
         } else {
             it++;
@@ -149,14 +179,9 @@ void vstandescrow::claim(name beneficiary) {
 
     check(total_quantity > asset(0, seeds_symbol), "vstandscrow: The beneficiary does not have any available locks, try to claim them after their vesting date or triggering event");
 
-    auto token_account = contracts::token;
-    token::transfer_action action{name(token_account), {_self, "active"_n}};
-    action.send(_self, beneficiary, total_quantity, "");
-
-    auto it_c = sponsors.find(get_self().value);
-    sponsors.modify(it_c, _self, [&](auto & msponsor){
-        msponsor.locked_balance -= total_quantity;
-    });
+    auto token_account = "token"_n; //contracts::token;
+    token::transfer_action action{name(token_account), {get_self(), "active"_n}};
+    action.send(get_self(), beneficiary, total_quantity, "");
 }
 
 
