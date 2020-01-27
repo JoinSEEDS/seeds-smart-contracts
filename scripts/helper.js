@@ -53,6 +53,7 @@ const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj', 'EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj'],
   [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
+  // NOTE: Testnet seems to use EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm for onwer and active - verify
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
 
@@ -80,10 +81,6 @@ const applicationKeys = {
 const applicationPublicKey = applicationKeys[chainId]
 
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
-
-// NO OLVIDES QUE ESTO ES PROVICIONAL
-const schedulePublicKey = 'EOS5f45t7iFEvcm12hf8h5thF7qTrGdyxJ3mTmGuDStS7W5kt8keL'
-const periodPublicKey = 'EOS8AHTuDN2TH9WdVmSrDcsKA5BtvVC8uPFuNaHsrBYyiBXEtDKkE'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
   type: 'account',
@@ -145,6 +142,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -171,6 +169,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -206,6 +205,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
+      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization')
@@ -342,6 +342,9 @@ const permissions = [{
 }, {
   target: `${accounts.harvest.account}@payforcpu`,
   action: 'payforcpu'
+}, {
+  target: `${accounts.vstandescrow.account}@active`,
+  actor: `${accounts.vstandescrow.account}@eosio.code`
 }]
 
 const keyProviders = {

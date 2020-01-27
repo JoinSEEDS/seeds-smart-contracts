@@ -7,7 +7,7 @@ const deploy = async (name) => {
     const { code, abi } = await source(name)
 
     let account = accounts[name]
-    console.log(`Look ${account.name}`)
+    console.log(`deploy ${account.name}`)
     let contractName = account.name
 
     await createAccount(account)
@@ -57,7 +57,7 @@ const source = async (name) => {
 
 const createAccount = async ({ account, publicKey, stakes, creator }) => {
   try {
-    console.log(`Look ${account}`)
+    console.log(`creating ${account}`)
     await eos.transaction(async trx => {
       await trx.newaccount({
         creator,
