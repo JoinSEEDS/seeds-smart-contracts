@@ -54,27 +54,4 @@ cleos push action escrow withdraw '["sponsor", "10.0000 SEEDS"]' -p sponsor
 cleos get table escrow escrow sponsors
 cleos get table escrow escrow locks
 
-cleos push action eosio updateauth '{
-    "account": "escrow",
-    "permission": "active",
-    "parent": "owner",
-    "auth": {
-        "keys": [
-            {
-                "key": "EOS5tEdJd32ANvoxSecRnY5ucr1jbzaVN2rQZegj6NxsevGU8JoaJ",
-                "weight": 1
-            }
-        ],
-        "threshold": 1,
-        "accounts": [
-            {
-                "permission": {
-                    "actor": "escrow",
-                    "permission": "eosio.code"
-                },
-                "weight": 1
-            }
-        ],
-        "waits": []
-    }
-}' -p escrow@owner
+cleos get table escrow sponsor events
