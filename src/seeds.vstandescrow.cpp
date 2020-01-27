@@ -122,7 +122,7 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
     check(it -> liquid_balance >= quantity, "vstandescrow: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
-    auto token_account = contracts::token;
+    auto token_account = "token"_n;
     token::transfer_action action{name(token_account), {_self, "active"_n}};
     action.send(_self, sponsor, quantity, "");
 
