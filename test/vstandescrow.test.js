@@ -13,7 +13,7 @@ describe('vest and escrow', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-
+    
     const contracts = await Promise.all([
         eos.contract(vstandescrow),
         eos.contract(accounts),
@@ -21,7 +21,6 @@ describe('vest and escrow', async assert => {
     ]).then(([vstandescrow, accounts, token]) => ({
         vstandescrow, accounts, token
     }))
-
 
     console.log('vstandescrow reset')
     await contracts.vstandescrow.reset({ authorization: `${vstandescrow}@active` })
@@ -50,8 +49,8 @@ describe('vest and escrow', async assert => {
     const vesting_date_future = secondsSinceEpoch + 1000
     
     console.log('create escrow')
-    await contracts.vstandescrow.create(firstuser, seconduser, '20.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
-    await contracts.vstandescrow.createescrow(seconduser, firstuser, '50.0000 SEEDS', vesting_date_future, { authorization: `${seconduser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '20.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", seconduser, firstuser, '50.0000 SEEDS', "", vesting_date_future, "notes", { authorization: `${seconduser}@active` })
 
     const initialEscrows = await getTableRows({
         code: vstandescrow,
@@ -62,7 +61,7 @@ describe('vest and escrow', async assert => {
 
     try {
         console.log('creating an escrow without enough balance')
-        await contracts.vstandescrow.create(firstuser, seconduser, '200.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+        await contracts.vstandescrow.lock("time", firstuser, seconduser, '200.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     }
     catch(err) {
         const e = JSON.parse(err)
@@ -109,8 +108,8 @@ describe('vest and escrow', async assert => {
         json: true
     })
 
-    console.log('cancel escrow')
-    await contracts.vstandescrow.cancelescrow(seconduser, firstuser, { authorization: `${seconduser}@active` })
+    // console.log('cancel escrow')
+    // await contracts.vstandescrow.cancelescrow(seconduser, firstuser, { authorization: `${seconduser}@active` })
 
     const escrowsAfter = await getTableRows({
         code: vstandescrow,
@@ -151,19 +150,19 @@ describe('vest and escrow', async assert => {
     })
 
     console.log('claim several escrows')
-    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, thirduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, thirduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_future, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.create(firstuser, seconduser, '1.0000 SEEDS', vesting_date_passed, { authorization: `${firstuser}@active` })
+    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
 
     await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
 
@@ -246,23 +245,23 @@ describe('vest and escrow', async assert => {
         ]
     })
 
-    assert({
-        given: 'after the escrow was canceled',
-        should: 'update the sponsors balances correctly',
-        actual: lastBalances.rows.map(row => row),
-        expected: [
-            { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
-            { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
-            { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
-        ]
-    })
+    // assert({
+    //     given: 'after the escrow was canceled',
+    //     should: 'update the sponsors balances correctly',
+    //     actual: lastBalances.rows.map(row => row),
+    //     expected: [
+    //         { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
+    //         { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
+    //         { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
+    //     ]
+    // })
 
-    assert({
-        given: 'after the escrow was canceled',
-        should: 'erase the escrow table entry',
-        actual: escrowsAfter.rows.map(row => row),
-        expected: []
-    })
+    // assert({
+    //     given: 'after the escrow was canceled',
+    //     should: 'erase the escrow table entry',
+    //     actual: escrowsAfter.rows.map(row => row),
+    //     expected: []
+    // })
 
     assert({
         given: 'the withdraw action called',
