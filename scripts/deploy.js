@@ -63,7 +63,12 @@ const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
     })
     console.log(`${account} created`)
   } catch (err) {
-    console.error(`account ${account} already created\n* error: ` + err + `\n`)
+    let errStr = err + ""
+    if (errStr.includes("Account name already exists")) {
+      console.log(`${account} created already`)
+    } else {
+      console.error(`create account error for: ${account} \n* error: ` + err + `\n`)
+    }
   }
 }
 
@@ -94,7 +99,12 @@ const deploy = async ({ name, account }) => {
     })
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
-    console.error(`account ${name} already deployed\n* error: ` + err + `\n`)
+    let errStr = "" + err
+    if (errStr.includes("contract is already running this version of code")) {
+      console.log(`${name} deployed to ${account} already`)
+    } else {
+      console.error(`error deploying account ${name} \n* error: ` + err + `\n`)
+    }
   }
 }
 
@@ -171,7 +181,12 @@ const allowAction = async (account, role, action) => {
     }, { authorization: `${account}@owner` })
     console.log(`linkauth of ${account}@${action} for ${role}`)
   } catch (err) {
-    console.error(`failed allow action\n* error: ` + err + `\n`)
+    let errString = `failed allow action\n* error: ` + err + `\n`
+    if (errString.includes("Attempting to update required authority, but new requirement is same as old")) {
+      console.log(`linkauth of ${account}@${action} for ${role} exists`)
+    } else {
+      console.error(errString)
+    }
   }
 }
 
@@ -243,7 +258,6 @@ const createCoins = async (token) => {
 
 const transferCoins = async (token, recipient) => {
   const contract = await eos.contract(token)
-
   try {
     await contract.transfer({
       from: token.issuer,
@@ -253,6 +267,10 @@ const transferCoins = async (token, recipient) => {
     }, { authorization: `${token.issuer}@active` })
     
     console.log(`sent ${recipient.quantity} from ${token.issuer} to ${recipient.account}`)
+
+    console.log("remaining balance for "+token.issuer +" "+ JSON.stringify(await getBalance(token.issuer), null, 2))
+
+
   } catch (err) {
     console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})\n* error: ` + err + `\n`)
   }
