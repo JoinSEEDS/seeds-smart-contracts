@@ -1,5 +1,5 @@
 {
-  "main": "src/seeds.organization.cpp",
+  "main": "src/seeds.scheduler.cpp",
   "contract": "organization",
   "include": "",
   "resource": "resources",
