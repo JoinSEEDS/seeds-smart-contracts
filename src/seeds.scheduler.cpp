@@ -129,4 +129,4 @@ ACTION scheduler::execute() {
 
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(noop)(reset)(np)(confirm));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm));
