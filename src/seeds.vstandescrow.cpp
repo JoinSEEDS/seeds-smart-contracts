@@ -3,15 +3,15 @@
 void vstandescrow::reset() {
     require_auth(get_self());
 
-    // auto it_e = escrows.begin();
-    // while(it_e != escrows.end()){
-    //     it_e = escrows.erase(it_e);
-    // }
+    auto it_e = locks.begin();
+    while(it_e != locks.end()){
+        it_e = locks.erase(it_e);
+    }
 
-    // auto it_s = sponsors.begin();
-    // while(it_s != sponsors.end()) {
-    //     it_s = sponsors.erase(it_s);
-    // }
+    auto it_s = sponsors.begin();
+    while(it_s != sponsors.end()) {
+        it_s = sponsors.erase(it_s);
+    }
 }
 
 
