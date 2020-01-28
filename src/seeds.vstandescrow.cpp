@@ -3,15 +3,15 @@
 void vstandescrow::reset() {
     require_auth(get_self());
 
-    // auto it_e = escrows.begin();
-    // while(it_e != escrows.end()){
-    //     it_e = escrows.erase(it_e);
-    // }
+    auto it_e = locks.begin();
+    while(it_e != locks.end()){
+        it_e = locks.erase(it_e);
+    }
 
-    // auto it_s = sponsors.begin();
-    // while(it_s != sponsors.end()) {
-    //     it_s = sponsors.erase(it_s);
-    // }
+    auto it_s = sponsors.begin();
+    while(it_s != sponsors.end()) {
+        it_s = sponsors.erase(it_s);
+    }
 }
 
 
@@ -92,7 +92,7 @@ void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
    
     // only catch transfer to self of the SEEDS symbol (could be opened up, but would require other data structure changes)
     // get_first_receiver confirms that the tokens came from the right account
-    if (get_first_receiver() == "token"_n  &&    // from SEEDS token account
+    if (get_first_receiver() == contracts::token  &&    // from SEEDS token account
         to  ==  get_self() &&                    // sent to escrow.seeds contract
         quantity.symbol == seeds_symbol) {       // SEEDS symbol
 
@@ -122,7 +122,7 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
     check(it -> liquid_balance >= quantity, "vstandescrow: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
-    auto token_account = "token"_n;
+    auto token_account = contracts::token;
     token::transfer_action action{name(token_account), {_self, "active"_n}};
     action.send(_self, sponsor, quantity, "");
 
@@ -161,6 +161,8 @@ void vstandescrow::claim(name beneficiary) {
                 deduct_from_sponsor (it->sponsor, it->quantity);
                 total_quantity += it -> quantity;
                 it = locks_by_beneficiary.erase(it);
+            } else {
+                it++;
             }
         } else if (it->lock_type == "event"_n) {
             event_table e_t (get_self(), it->trigger_source.value);
@@ -179,7 +181,7 @@ void vstandescrow::claim(name beneficiary) {
 
     check(total_quantity > asset(0, seeds_symbol), "vstandscrow: The beneficiary does not have any available locks, try to claim them after their vesting date or triggering event");
 
-    auto token_account = "token"_n; //contracts::token;
+    auto token_account = contracts::token;
     token::transfer_action action{name(token_account), {get_self(), "active"_n}};
     action.send(get_self(), beneficiary, total_quantity, "");
 }

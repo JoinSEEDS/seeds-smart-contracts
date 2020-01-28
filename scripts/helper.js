@@ -23,7 +23,7 @@ const networkDisplayName = {
 }
 
 const endpoints = {
-  local: 'http://0.0.0.0:8888',
+  local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://testnet.eos.miami',
   telosMainnet: 'https://node.hypha.earth'
