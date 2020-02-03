@@ -66,7 +66,7 @@ describe('scheduler', async assert => {
 
     await sleep(30)
     console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await contracts.scheduler.execute([], { authorization: `${firstuser}@active` })
 
     const repBeforeDepreciation = await getTableRows({
         code: forum,
@@ -77,7 +77,7 @@ describe('scheduler', async assert => {
 
     await sleep(10000)
     console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await contracts.scheduler.execute([], { authorization: `${seconduser}@active` })
 
 
     const repAfterDepreciation = await getTableRows({
@@ -109,7 +109,7 @@ describe('scheduler', async assert => {
 
     await sleep(6000)
     console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await contracts.scheduler.execute([], { authorization: `${firstuser}@active` })
 
     console.log('vote post')
     await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
@@ -121,6 +121,15 @@ describe('scheduler', async assert => {
         table: 'votepower',
         json: true
     })
+
+    console.log('try to execute a function of forum without the execute permission')
+    try {
+        await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
+    }
+    catch(err) {
+        const e = JSON.parse(err)
+        console.log(e.error.details[0].message.replace('assertion failure with message: ', ''))
+    }
 
     assert({
         given: 'the function onperiod not ready to be executed',
