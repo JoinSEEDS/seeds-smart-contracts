@@ -41,6 +41,7 @@ CONTRACT onboarding : public contract {
     void plant_seeds(asset quantity);
     void sow_seeds(name account, asset quantity);
     void add_referral(name sponsor, name account);
+    void invitevouch(name sponsor, name account);
     void accept_invite(name account, checksum256 invite_secret, string publicKey);
 
     TABLE invite_table {

@@ -293,9 +293,16 @@ void accounts::addref(name referrer, name invited)
     ref.invited = invited;
   });
 
-  _vouch(referrer, invited);
-
 }
+
+// internal vouch function
+void accounts::invitevouch(name referrer, name invited) 
+{
+  require_auth(get_self());
+
+  _vouch(referrer, invited);
+}
+
 
 
 void accounts::addrep(name user, uint64_t amount)

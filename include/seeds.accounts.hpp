@@ -37,6 +37,8 @@ CONTRACT accounts : public contract {
 
       ACTION addref(name referrer, name invited);
 
+      ACTION invitevouch(name referrer, name invited);
+
       ACTION addrep(name user, uint64_t amount);
 
       ACTION subrep(name user, uint64_t amount);
@@ -178,4 +180,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(invitevouch)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));

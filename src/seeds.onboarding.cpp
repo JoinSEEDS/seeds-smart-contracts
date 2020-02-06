@@ -84,6 +84,14 @@ void onboarding::add_referral(name sponsor, name account) {
   ).send();
 }
 
+void onboarding::invitevouch(name sponsor, name account) {
+  action(
+    permission_level{contracts::accounts, "active"_n},
+    contracts::accounts, "invitevouch"_n,
+    make_tuple(sponsor, account)
+  ).send();
+}
+
 void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey) {
   require_auth(get_self());
 
@@ -117,6 +125,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   if (!is_existing_seeds_user) {
     add_user(account);
     add_referral(sponsor, account);  
+    invitevouch(sponsor, account);
   }
 
   transfer_seeds(account, transfer_quantity);
