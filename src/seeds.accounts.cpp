@@ -124,22 +124,6 @@ void accounts::history_add_citizen(name account) {
   ).send();
 }
 
-void accounts::joinuser(name account)
-{
-  require_auth(account);
-
-  auto uitr = users.find(account.value);
-  check(uitr == users.end(), "existing user");
-
-  users.emplace(_self, [&](auto& user) {
-    user.account = account;
-    user.status = name("visitor");
-    user.reputation = 0;
-    user.type = name("individual");
-    user.timestamp = eosio::current_time_point().sec_since_epoch();
-  });
-}
-
 void accounts::adduser(name account, string nickname)
 {
   require_auth(get_self());
@@ -378,6 +362,9 @@ void accounts::update(name user, name type, string nickname, string image, strin
     check(type == name("individual") || type == name("organization"), "invalid type");
 
     auto uitr = users.find(user.value);
+
+    check(uitr->type == type, "Can't change type - create an org in the org contract.");
+
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
       user.nickname = nickname;
@@ -477,10 +464,6 @@ void accounts::genesis(name user) // Remove this after Feb 2020
   require_auth(_self);
 
   updatestatus(user, name("citizen"));
-
-  //rewards(user);
-  
-  //history_add_citizen(user);
 }
 
 void accounts::testremove(name user)
@@ -490,6 +473,16 @@ void accounts::testremove(name user)
   auto uitr = users.find(user.value);
 
   check(uitr != users.end(), "testremove: user not found - " + user.to_string());
+
+  vouch_tables vouch(get_self(), user.value);
+  auto vitr = vouch.begin();
+  while (vitr != vouch.end()) {
+    if (vitr->account == user) {
+      vitr = vouch.erase(vitr);
+    } else {
+      vitr++;
+    }
+  }
 
   users.erase(uitr);
 }
