@@ -32,15 +32,9 @@ int64_t organization::getregenp(name account) {
     return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
-
-void organization::check_asset(asset quantity) {
-    check(quantity.is_valid(), "invalid asset");
-    check(quantity.symbol == seeds_symbol, "invalid asset");
-}
-
-
 void organization::deposit(name from, name to, asset quantity, string memo) {
     if(to == _self){
+        utils::check_asset(quantity);
         check_user(from);
 
         init_balance(from);
@@ -155,7 +149,7 @@ ACTION organization::destroy(name organization, name owner) {
 ACTION organization::refund(name beneficiary, asset quantity) {
     require_auth(beneficiary);
     
-    check_asset(quantity);
+    utils::check_asset(quantity);
 
     auto itr = balances.find(beneficiary.value);
     check(itr != balances.end(), "organization: user has no entry in the balance table.");

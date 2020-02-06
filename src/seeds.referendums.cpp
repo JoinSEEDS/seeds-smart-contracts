@@ -224,6 +224,8 @@ void referendums::addvoice(name account, uint64_t amount) {
 
 void referendums::stake(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
+    utils::check_asset(quantity);
+
     auto bitr = balances.find(from.value);
 
     if (bitr == balances.end()) {
