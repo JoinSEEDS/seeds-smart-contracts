@@ -50,9 +50,9 @@ describe('accounts', async assert => {
   console.log('reset token stats')
   await thetoken.resetweekly({ authorization: `${token}@active` })
 
-  console.log('join users')
+  console.log('add users')
   await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
-  await contract.joinuser(seconduser, { authorization: `${seconduser}@active` })
+  await contract.adduser(seconduser, 'Second user', { authorization: `${accounts}@active` })
 
   console.log('plant 50 seeds')
   await thetoken.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -61,11 +61,37 @@ describe('accounts', async assert => {
   await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('add referral')
-  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
+  try {
+    await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
+    console.log("referral added.")
+  } catch (err) {
+    console.log("error: "+err)
+  }
+
+  const vouch = await eos.getTableRows({
+    code: accounts,
+    scope: seconduser,
+    table: 'vouch',
+    json: true
+  })
+
 
   console.log('update reputation')
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
   await contract.subrep(seconduser, 1, { authorization: `${accounts}@api` })
+
+  console.log('update user data')
+  await contract.update(
+    firstuser, 
+    "individual", 
+    "Ricky G",
+    "https://m.media-amazon.com/images/M/MV5BMjQzOTEzMTk1M15BMl5BanBnXkFtZTgwODI1Mzc0MDI@._V1_.jpg",
+    "I'm from the UK",
+    "Roless... hmmm... ",
+    "Skills: Making jokes. Some acting. Offending people.",
+    "Animals",
+    { authorization: `${firstuser}@active` })
+
 
   try {
     console.log('make resident')
@@ -85,7 +111,6 @@ describe('accounts', async assert => {
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
 
-  console.log(" ")
   console.log(" ")
 
   const users = await eos.getTableRows({
@@ -119,7 +144,12 @@ describe('accounts', async assert => {
     json: true,
   })
 
-  console.log("uar "+JSON.stringify(usersAfterRemove, null, 2))
+  const vouchAfterRemove = await eos.getTableRows({
+    code: accounts,
+    scope: seconduser,
+    table: 'vouch',
+    json: true
+  })
 
   const now = new Date() / 1000
 
@@ -166,14 +196,21 @@ describe('accounts', async assert => {
     expected: [{
       account: firstuser,
       status: 'citizen',
-      nickname: 'First user',
+      nickname: 'Ricky G',
       reputation: 100 + 1,
     }, {
       account: seconduser,
       status: 'resident',
-      nickname: '',
+      nickname: 'Second user',
       reputation: 0
     }]
+  })
+
+  assert({
+    given: 'referral',
+    should: 'have entry in vouch table',
+    actual: vouch.rows.length,
+    expected: 1
   })
 
   assert({
@@ -181,6 +218,12 @@ describe('accounts', async assert => {
     should: 'have 1 fewer users than before',
     actual: usersAfterRemove.rows.length,
     expected: users.rows.length - 1
+  })
+  assert({
+    given: 'deleted user',
+    should: 'no entry in vouch table',
+    actual: vouchAfterRemove.rows.length,
+    expected: 0
   })
 
 })
