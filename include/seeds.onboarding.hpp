@@ -4,6 +4,7 @@
 #include <abieos_numeric.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;

@@ -52,6 +52,7 @@ void harvest::reset() {
 
 void harvest::plant(name from, name to, asset quantity, string memo) {
   if (to == _self) {
+    utils::check_asset(quantity);
     check_user(from);
 
     init_balance(from);

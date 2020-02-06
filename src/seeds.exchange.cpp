@@ -45,6 +45,9 @@ void exchange::purchase(name buyer, name contract, asset tlos_quantity, string m
       case "visitor"_n:
         seeds_limit = c.visitor_limit;
         break;
+      case "inactive"_n:
+        seeds_limit = c.visitor_limit;
+        break;
     }
     
     asset tlos_as_seeds = asset(tlos_quantity.amount, seeds_symbol);

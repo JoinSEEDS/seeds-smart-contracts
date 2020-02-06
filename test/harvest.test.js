@@ -38,6 +38,9 @@ describe("harvest", async assert => {
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  await contracts.token.transfer(firstuser, harvest, '999.0000 CRRTS', '', { authorization: `${firstuser}@active` })
+
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   const plantedBalances = await getTableRows({
