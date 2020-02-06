@@ -212,6 +212,13 @@ describe('Use application permission to accept', async assert => {
 
     await invite()
 
+    const vouchBeforeInvite = await eos.getTableRows({
+        code: accounts,
+        scope: newAccount,
+        table: 'vouch',
+        json: true
+      })
+
     await accept()
 
     const { rows } = await getTableRows({
@@ -221,6 +228,13 @@ describe('Use application permission to accept', async assert => {
         json: true
     })
 
+    const vouchAfterInvite = await eos.getTableRows({
+        code: accounts,
+        scope: newAccount,
+        table: 'vouch',
+        json: true
+    })
+    
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -233,6 +247,13 @@ describe('Use application permission to accept', async assert => {
             reward: '0.0000 SEEDS'
         }
     })
+    assert({
+        given: 'invited new user',
+        should: 'have new vouch entry',
+        actual: [vouchBeforeInvite.rows.length, vouchAfterInvite.rows.length],
+        expected: [0, 1]
+    })
+
 })
 
 describe('Invite from non-seeds user - sp', async assert => {
