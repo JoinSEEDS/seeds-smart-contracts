@@ -160,7 +160,7 @@ void accounts::vouch(name sponsor, name account) {
   name account_status = uitra->status;
 
   check(account_status == name("visitor"), "account should be visitor");
-  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor should be a citizen");
+  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
 
   _vouch(sponsor, account);
 }

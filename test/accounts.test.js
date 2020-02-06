@@ -61,20 +61,7 @@ describe('accounts', async assert => {
   await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('add referral')
-  try {
-    await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
-    console.log("referral added.")
-  } catch (err) {
-    console.log("error: "+err)
-  }
-
-  const vouch = await eos.getTableRows({
-    code: accounts,
-    scope: seconduser,
-    table: 'vouch',
-    json: true
-  })
-
+  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
 
   console.log('update reputation')
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
@@ -108,10 +95,18 @@ describe('accounts', async assert => {
   console.log('test citizen')
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
+  console.log('add vouch')
+  await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
+
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
 
-  console.log(" ")
+  const vouch = await eos.getTableRows({
+    code: accounts,
+    scope: seconduser,
+    table: 'vouch',
+    json: true
+  })
 
   const users = await eos.getTableRows({
     code: accounts,
@@ -202,7 +197,7 @@ describe('accounts', async assert => {
       account: seconduser,
       status: 'resident',
       nickname: 'Second user',
-      reputation: 0
+      reputation: 10 // 10 because they got vouched for by a citizen
     }]
   })
 
