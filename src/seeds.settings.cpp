@@ -4,12 +4,13 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  configure(name("propminstake"), 25 * 10000);
+  configure(name("propminstake"), 1 * 10000);
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);
   configure(name("propmajority"), 80);
   configure(name("propquorum"), 5);
+  configure(name("propvoice"), 20); // voice base per period
   configure(name("hrvstreward"), 100000);
 
   // contracts

@@ -1,0 +1,1 @@
+cleos -u "https://node.hypha.earth" push action tlosto.seeds reset "{}" -p tlosto.seeds@active

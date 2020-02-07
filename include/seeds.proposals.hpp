@@ -3,6 +3,7 @@
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;
@@ -39,7 +40,6 @@ CONTRACT proposals : public contract {
 
       void check_user(name account);
       void check_citizen(name account);
-      void check_asset(asset quantity);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity, name sender);
       void burn(asset quantity);

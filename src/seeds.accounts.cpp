@@ -24,6 +24,12 @@ void accounts::reset() {
   while (repitr != reps.end()) {
     repitr = reps.erase(repitr);
   }
+
+  auto cbsitr = cbs.begin();
+  while (cbsitr != cbs.end()) {
+    cbsitr = cbs.erase(cbsitr);
+  }
+
 }
 
 void accounts::migrateall()
@@ -53,6 +59,21 @@ void accounts::migrateall()
     
     uitr++;
   }
+
+  ref_tables refs_old(accounts_old, accounts_old.value);
+  ref_tables refs_new(contracts::accounts, contracts::accounts.value);
+
+  auto ritr = refs_old.begin();
+
+  while(ritr != refs_old.end()) {
+    auto oldref = *ritr;
+    refs_new.emplace(_self, [&](auto& ref) {
+      ref.referrer = oldref.referrer;
+      ref.invited = oldref.invited;
+    });
+    ritr++;
+  }
+
 }
 
 void accounts::migrate(name account,
@@ -103,22 +124,6 @@ void accounts::history_add_citizen(name account) {
   ).send();
 }
 
-void accounts::joinuser(name account)
-{
-  require_auth(account);
-
-  auto uitr = users.find(account.value);
-  check(uitr == users.end(), "existing user");
-
-  users.emplace(_self, [&](auto& user) {
-    user.account = account;
-    user.status = name("visitor");
-    user.reputation = 0;
-    user.type = name("individual");
-    user.timestamp = eosio::current_time_point().sec_since_epoch();
-  });
-}
-
 void accounts::adduser(name account, string nickname)
 {
   require_auth(get_self());
@@ -157,18 +162,41 @@ void accounts::vouch(name sponsor, name account) {
   check(account_status == name("visitor"), "account should be visitor");
   check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor should be a citizen");
 
-  uint64_t reps = 5;
+  _vouch(sponsor, account);
+}
+
+/*
+* Internal vouch function
+*/
+void accounts::_vouch(name sponsor, name account) {
+
+  auto uitrs = users.find(sponsor.value);
+  if (uitrs == users.end()) return;
+
+  check_user(account);
+  vouch_tables vouch(get_self(), account.value);
+
+  auto uitra = users.find(account.value);
+
+  name sponsor_status = uitrs->status;
+
+  uint64_t reps = 0;
+  if (sponsor_status == name("resident")) reps = 5;
   if (sponsor_status == name("citizen")) reps = 10;
 
+  // add vouching table entry
   vouch.emplace(_self, [&](auto& item) {
     item.sponsor = sponsor;
     item.account = account;
     item.reps = reps;
   });
 
-  users.modify(uitra, _self, [&](auto& item) {
-    item.reputation += reps;
-  });
+  // add reputation to user, if any
+  if (reps > 0) {
+    users.modify(uitra, _self, [&](auto& item) {
+      item.reputation += reps;
+    });
+  }
 }
 
 void accounts::punish(name account) {
@@ -191,15 +219,24 @@ void accounts::punish(name account) {
 
     auto uitr2 = users.find(sponsor.value);
     users.modify(uitr2, _self, [&](auto& item) {
-      item.reputation -= 50;
+      if (item.reputation < 50) {
+        item.reputation = 0;
+      } else {
+        item.reputation -= 50;
+      }
     });
   }
+}
+
+void accounts::rewards(name account) {
+  vouchreward(account);
+  refreward(account);
 }
 
 void accounts::vouchreward(name account) {
   check_user(account);
 
-  auto uitr = users.find(account.value);;
+  auto uitr = users.find(account.value);
   name status = uitr->status;
 
   vouch_tables vouch(get_self(), account.value);
@@ -218,6 +255,32 @@ void accounts::vouchreward(name account) {
   }
 }
 
+void accounts::refreward(name account) {
+  check_user(account);
+
+  auto ritr = refs.find(account.value);
+  
+  if (ritr == refs.end()) {
+    return; // our reps tables are incomplete...
+  }
+  
+  name referrer = ritr->referrer;
+
+  auto citr = cbs.find(referrer.value);
+  
+  if (citr != cbs.end()) {
+    cbs.modify(citr, _self, [&](auto& item) {
+      item.community_building_score += 1;
+    });
+  } else {
+    cbs.emplace(_self, [&](auto& item) {
+      item.account = referrer;
+      item.community_building_score = 1;
+    });
+  }
+
+}
+
 void accounts::addref(name referrer, name invited)
 {
   require_auth(get_self());
@@ -229,6 +292,9 @@ void accounts::addref(name referrer, name invited)
     ref.referrer = referrer;
     ref.invited = invited;
   });
+
+  _vouch(referrer, invited);
+
 }
 
 
@@ -296,6 +362,9 @@ void accounts::update(name user, name type, string nickname, string image, strin
     check(type == name("individual") || type == name("organization"), "invalid type");
 
     auto uitr = users.find(user.value);
+
+    check(uitr->type == type, "Can't change type - create an org in the org contract.");
+
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
       user.nickname = nickname;
@@ -327,7 +396,7 @@ void accounts::makeresident(name user)
 
     updatestatus(user, name("resident"));
 
-    vouchreward(user);
+    rewards(user);
     
     history_add_resident(user);
 }
@@ -363,7 +432,7 @@ void accounts::makecitizen(name user)
 
     updatestatus(user, name("citizen"));
 
-    vouchreward(user);
+    rewards(user);
     
     history_add_citizen(user);
 }
@@ -374,7 +443,7 @@ void accounts::testresident(name user)
 
   updatestatus(user, name("resident"));
 
-  vouchreward(user);
+  rewards(user);
   
   history_add_resident(user);
 }
@@ -385,9 +454,37 @@ void accounts::testcitizen(name user)
 
   updatestatus(user, name("citizen"));
 
-  vouchreward(user);
+  rewards(user);
   
   history_add_citizen(user);
+}
+
+void accounts::genesis(name user) // Remove this after Feb 2020
+{ 
+  require_auth(_self);
+
+  updatestatus(user, name("citizen"));
+}
+
+void accounts::testremove(name user)
+{
+  require_auth(_self);
+
+  auto uitr = users.find(user.value);
+
+  check(uitr != users.end(), "testremove: user not found - " + user.to_string());
+
+  vouch_tables vouch(get_self(), user.value);
+  auto vitr = vouch.begin();
+  while (vitr != vouch.end()) {
+    if (vitr->account == user) {
+      vitr = vouch.erase(vitr);
+    } else {
+      vitr++;
+    }
+  }
+
+  users.erase(uitr);
 }
 
 void accounts::check_user(name account)

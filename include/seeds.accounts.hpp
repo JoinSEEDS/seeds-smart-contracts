@@ -12,13 +12,12 @@ CONTRACT accounts : public contract {
         : contract(receiver, code, ds),
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
+          cbs(receiver, receiver.value),
           reps(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value)
           {}
 
       ACTION reset();
-
-      ACTION joinuser(name account);
 
       ACTION adduser(name account, string nickname);
 
@@ -28,7 +27,11 @@ CONTRACT accounts : public contract {
 
       ACTION testcitizen(name user);
 
+      ACTION genesis(name user);
+
       ACTION testresident(name user);
+
+      ACTION testremove(name user);
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
@@ -60,8 +63,11 @@ CONTRACT accounts : public contract {
 
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
+      void rewards(name account);
       void vouchreward(name account);
+      void refreward(name account);
       void updatestatus(name account, name status);
+      void _vouch(name sponsor, name account);
       void history_add_resident(name account);
       void history_add_citizen(name account);
 
@@ -80,6 +86,14 @@ CONTRACT accounts : public contract {
 
         uint64_t primary_key() const { return account.value; }
         uint64_t by_reputation()const { return reputation; }
+      };
+
+      TABLE cbs_table {
+        name account;
+        uint64_t community_building_score;
+
+        uint64_t primary_key() const { return account.value; }
+        uint64_t by_cbs()const { return community_building_score; }
       };
 
       TABLE user_table {
@@ -120,11 +134,14 @@ CONTRACT accounts : public contract {
       indexed_by<"byreputation"_n,
       const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
     > rep_tables;
+
     typedef eosio::multi_index<"users"_n, user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
     > user_tables;
+    
     typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
+    
     typedef eosio::multi_index<"vouch"_n, vouch_table> vouch_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
@@ -132,7 +149,14 @@ CONTRACT accounts : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
+    typedef eosio::multi_index<"cbs"_n, cbs_table,
+      indexed_by<"bycbs"_n,
+      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
+    > cbs_tables;
+
+
     rep_tables reps;
+    cbs_tables cbs;
     ref_tables refs;
 
     balance_tables balances;
@@ -154,4 +178,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(testresident)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));

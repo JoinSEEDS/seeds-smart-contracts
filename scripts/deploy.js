@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, encodeName, getBalance, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
+const { eos, isLocal, encodeName, getBalance, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -137,6 +137,20 @@ const changeKeyPermission = async (account, permission, key) => {
 
 const createKeyPermission = async (account, role, parentRole = 'active', key) => {
   try {
+    const { permissions } = await eos.getAccount(account)
+
+    const perm = permissions.find(p => p.perm_name === role)
+
+    if (perm) {
+      const { parent, required_auth } = perm
+      const { keys } = required_auth
+  
+      if (keys.find(item => item.key === key)) {
+        console.log("createKeyPermission key already exists "+key)
+        return;
+      }  
+    }
+
     await eos.updateauth({
       account,
       permission: role,
@@ -263,6 +277,12 @@ const transferCoins = async (token, recipient) => {
 }
 
 const reset = async ({ account }) => {
+
+  if (!isLocal()) {
+    console.log("Don't reset contracts on testnet or mainnet!")
+    return
+  }
+
   const contract = await eos.contract(account)
   
   try {
@@ -300,6 +320,35 @@ const isActionPermission = permission => permission.action
 const isActorPermission = permission => permission.actor && !permission.key
 const isKeyPermission = permission => permission.key && !permission.actor
 
+const updatePermissions = async () => {
+
+  console.log("Updating permissions...")
+
+  for (let current = 0; current < permissions.length; current++) {
+    const permission = permissions[current]
+
+    if (isActionPermission(permission)) {
+      const { target, action } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+
+      await allowAction(targetAccount, targetRole, action)
+    } else if (isActorPermission(permission)) {
+      const { target, actor } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+      const [ actorAccount, actorRole ] = actor.split('@')
+
+      await addActorPermission(targetAccount, targetRole, actorAccount, actorRole)
+    } else if (isKeyPermission(permission)) {
+      const { target, parent, key } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+
+      await createKeyPermission(targetAccount, targetRole, parent, key)
+    } else {
+      console.log(`invalid permission #${current}`)
+    }
+  }  
+}
+
 const initContracts = async () => {
   const ownerExists = await isExistingAccount(accounts.owner.account)
 
@@ -328,31 +377,9 @@ const initContracts = async () => {
     }
   }
 
-  for (let current = 0; current < permissions.length; current++) {
-    const permission = permissions[current]
-
-    if (isActionPermission(permission)) {
-      const { target, action } = permission
-      const [ targetAccount, targetRole ] = target.split('@')
-
-      await allowAction(targetAccount, targetRole, action)
-    } else if (isActorPermission(permission)) {
-      const { target, actor } = permission
-      const [ targetAccount, targetRole ] = target.split('@')
-      const [ actorAccount, actorRole ] = actor.split('@')
-
-      await addActorPermission(targetAccount, targetRole, actorAccount, actorRole)
-    } else if (isKeyPermission(permission)) {
-      const { target, parent, key } = permission
-      const [ targetAccount, targetRole ] = target.split('@')
-
-      await createKeyPermission(targetAccount, targetRole, parent, key)
-    } else {
-      console.log(`invalid permission #${current}`)
-    }
-  }
+  await updatePermissions()
   
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, resetByName }
+module.exports = { initContracts, updatePermissions, resetByName }

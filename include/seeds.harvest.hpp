@@ -5,6 +5,7 @@
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;
@@ -45,6 +46,8 @@ CONTRACT harvest : public contract {
 
     ACTION calcrep();
 
+    ACTION payforcpu(name account);
+
     ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
@@ -56,6 +59,7 @@ CONTRACT harvest : public contract {
     uint64_t ONE_WEEK = 604800;
 
     void init_balance(name account);
+    void init_harvest_stat(name account);
     void check_user(name account);
     void check_asset(asset quantity);
     void deposit(asset quantity);
@@ -123,10 +127,21 @@ CONTRACT harvest : public contract {
 
     TABLE harvest_table {
       name account;
+
       uint64_t planted_score;
+      uint64_t planted_timestamp;
+
       uint64_t transactions_score;
+      uint64_t tx_timestamp;
+
       uint64_t reputation_score;
+      uint64_t rep_timestamp;
+
+      uint64_t community_building_score;
+      uint64_t community_building_timestamp;
+      
       uint64_t contribution_score;
+      uint64_t contrib_timestamp;
 
       uint64_t primary_key()const { return account.value; }
     };
@@ -169,7 +184,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
       }
   }
 }

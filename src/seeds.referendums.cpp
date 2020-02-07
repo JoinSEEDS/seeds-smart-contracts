@@ -224,6 +224,8 @@ void referendums::addvoice(name account, uint64_t amount) {
 
 void referendums::stake(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
+    utils::check_asset(quantity);
+
     auto bitr = balances.find(from.value);
 
     if (bitr == balances.end()) {
@@ -323,7 +325,7 @@ void referendums::update(
 void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
-  check(bitr->voice >= amount, "user has no enough voice");
+  check(bitr->voice >= amount, "not enough voice");
 
   voter_tables voters(get_self(), referendum_id);
   auto vitr = voters.find(voter.value);
@@ -355,6 +357,7 @@ void referendums::against(name voter, uint64_t referendum_id, uint64_t amount) {
 
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
+  check(bitr->voice >= amount, "not enough voice");
 
   referendum_tables active(get_self(), name("active").value);
   auto aitr = active.find(referendum_id);

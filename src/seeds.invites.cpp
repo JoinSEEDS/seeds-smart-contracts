@@ -84,6 +84,7 @@ void invites::reset() {
 
 void invites::send(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
+    utils::check_asset(quantity);
     auto sitr = sponsors.find(from.value);
 
     if (sitr == sponsors.end()) {

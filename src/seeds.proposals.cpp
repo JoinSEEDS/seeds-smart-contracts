@@ -16,6 +16,11 @@ void proposals::reset() {
 
     pitr = props.erase(pitr);
   }
+
+  auto voiceitr = voice.begin();
+  while (voiceitr != voice.end()) {
+    voiceitr = voice.erase(voiceitr);
+  }
 }
 
 void proposals::onperiod() {
@@ -25,6 +30,7 @@ void proposals::onperiod() {
     auto vitr = voice.begin();
 
     uint64_t min_stake = config.find(name("propminstake").value)->value;
+    uint64_t voice_base = config.find(name("propvoice").value)->value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -63,7 +69,7 @@ void proposals::onperiod() {
 
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance = 1000;
+            voice.balance = voice_base;
         });
 
         vitr++;
@@ -84,7 +90,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
   require_auth(creator);
   // check_user(creator);
   // check_user(recipient);
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -147,8 +153,8 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
   if (to == _self) {
-      check_user(from);
-      check_asset(quantity);
+      utils::check_asset(quantity);
+      //check_user(from);
 
       uint64_t id = 0;
 
@@ -185,7 +191,8 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);
-  check(vitr != voice.end(), "no user voice");
+  check(vitr != voice.end(), "User does not have voice");
+  check(vitr->balance >= amount, "voice balance exceeded");
 
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
@@ -222,6 +229,7 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
 
     auto vitr = voice.find(voter.value);
     check(vitr != voice.end(), "User does not have voice");
+    check(vitr->balance >= amount, "voice balance exceeded");
 
     votes_tables votes(get_self(), id);
     auto voteitr = votes.find(voter.value);
@@ -264,7 +272,7 @@ void proposals::addvoice(name user, uint64_t amount)
 
 void proposals::deposit(asset quantity)
 {
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
   auto bank_account = contracts::bank;
@@ -277,7 +285,7 @@ void proposals::withdraw(name beneficiary, asset quantity, name sender)
 {
   if (quantity.amount == 0) return;
 
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
 
@@ -287,19 +295,13 @@ void proposals::withdraw(name beneficiary, asset quantity, name sender)
 
 void proposals::burn(asset quantity)
 {
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
   auto bank_account = contracts::bank;
 
   token::burn_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), quantity);
-}
-
-void proposals::check_asset(asset quantity)
-{
-  check(quantity.is_valid(), "invalid asset");
-  check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
 void proposals::check_user(name account)
