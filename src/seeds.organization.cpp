@@ -94,7 +94,7 @@ ACTION organization::reset() {
 }
 
 
-ACTION organization::create(name sponsor, name orgname, string orgfullname, string publicKey) 
+ACTION organization::create(name sponsor, name orgaccount, string orgfullname, string publicKey) 
 {
     require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
 
@@ -106,33 +106,33 @@ ACTION organization::create(name sponsor, name orgname, string orgfullname, stri
 
     check(bitr -> balance >= quantity, "The user does not have enough credit to create an organization");
 
-    auto orgitr = organizations.find(orgname.value);
+    auto orgitr = organizations.find(orgaccount.value);
     check(orgitr == organizations.end(), "This organization already exists.");
     
     auto uitr = users.find(sponsor.value);
     check(uitr != users.end(), "Sponsor is not a Seeds account.");
 
-    create_account(sponsor, orgname, orgfullname, publicKey);
+    create_account(sponsor, orgaccount, orgfullname, publicKey);
 
     balances.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
     organizations.emplace(_self, [&](auto & norg) {
-        norg.org_name = orgname;
+        norg.org_name = orgaccount;
         norg.owner = sponsor;
         norg.fee = quantity;
     });
 
-    addmember(orgname, sponsor, sponsor, ""_n);
+    addmember(orgaccount, sponsor, sponsor, ""_n);
 }
 
-void organization::create_account(name sponsor, name orgname, string fullname, string publicKey) 
+void organization::create_account(name sponsor, name orgaccount, string orgfullname, string publicKey) 
 {
     action(
         permission_level{contracts::onboarding, "active"_n},
         contracts::onboarding, "onboardorg"_n,
-        make_tuple(sponsor, orgname, fullname, publicKey)
+        make_tuple(sponsor, orgaccount, orgfullname, publicKey)
     ).send();
 }
 

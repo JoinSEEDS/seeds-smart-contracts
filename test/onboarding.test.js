@@ -65,7 +65,7 @@ describe('Onboarding', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -185,7 +185,7 @@ describe('Use application permission to accept', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -296,7 +296,7 @@ describe('Invite from non-seeds user - sp', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -386,7 +386,7 @@ describe('Campaign reward for existing user', async assert => {
     const adduser = async (user) => {
         try {
             console.log(`${accounts}.adduser (${user})`)
-            await contracts.accounts.adduser(user, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(user, '', 'individual',{ authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }

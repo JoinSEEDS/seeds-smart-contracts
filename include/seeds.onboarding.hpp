@@ -37,7 +37,7 @@ CONTRACT onboarding : public contract {
 
     void create_account(name account, string publicKey);
     bool is_seeds_user(name account);
-    void add_user(name account);
+    void add_user(name account, string fullname, name type);
     void transfer_seeds(name account, asset quantity);
     void plant_seeds(asset quantity);
     void sow_seeds(name account, asset quantity);

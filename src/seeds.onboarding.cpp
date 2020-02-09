@@ -29,18 +29,16 @@ bool onboarding::is_seeds_user(name account) {
   return uitr != users.end();
 }
 
-void onboarding::add_user(name account) {
+void onboarding::add_user(name account, string fullname, name type) {
 
   if (is_seeds_user(account)) {
     return;
   }
 
-  string nickname("");
-
   action(
     permission_level{contracts::accounts, "active"_n},
     contracts::accounts, "adduser"_n,
-    make_tuple(account, nickname)
+    make_tuple(account, fullname, type)
   ).send();
 }
 
@@ -123,7 +121,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account);
+    add_user(account, "", "individual"_n);
     add_referral(sponsor, account);  
     invitevouch(sponsor, account);
   }
@@ -145,18 +143,9 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account);
+    add_user(account, fullname, "organization"_n);
     add_referral(sponsor, account);  
   }
-
-  auto uitr = users.find(account.value);
-  check(uitr != users.end(), "Organization is not a Seeds account.");
-
-  users.modify(uitr, _self, [&](auto & user) {
-    user.type = "organization"_n;       
-    user.nickname = fullname;
-  });
-
 }
 
 void onboarding::reset() {

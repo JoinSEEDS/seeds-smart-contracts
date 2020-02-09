@@ -30,8 +30,8 @@ describe('vest and escrow', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` }) 
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` }) 
 
     console.log('create balance')
     await contracts.token.transfer(firstuser, vstandescrow, "150.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })

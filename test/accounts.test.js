@@ -13,7 +13,7 @@ describe('genesis testing', async assert => {
   await contract.reset({ authorization: `${accounts}@active` })
 
   console.log('test genesis')
-  await contract.adduser(thirduser, 'First user', { authorization: `${accounts}@active` })
+  await contract.adduser(thirduser, 'First user', "individual", { authorization: `${accounts}@active` })
   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
   const users = await eos.getTableRows({
@@ -51,8 +51,8 @@ describe('accounts', async assert => {
   await thetoken.resetweekly({ authorization: `${token}@active` })
 
   console.log('add users')
-  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
-  await contract.adduser(seconduser, 'Second user', { authorization: `${accounts}@active` })
+  await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
 
   console.log('plant 50 seeds')
   await thetoken.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })

@@ -19,7 +19,7 @@ CONTRACT accounts : public contract {
 
       ACTION reset();
 
-      ACTION adduser(name account, string nickname);
+      ACTION adduser(name account, string nickname, name type);
 
       ACTION makeresident(name user);
 
@@ -60,6 +60,10 @@ CONTRACT accounts : public contract {
         string interests,
         uint64_t reputation,
         uint64_t timestamp);
+
+      const name individual = "individual"_n;
+      const name organization = "organization"_n;
+      
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 

@@ -25,9 +25,9 @@ describe('Proposals', async assert => {
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, 'firstuser', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, 'seconduser', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(thirduser, 'thirduser', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
@@ -139,7 +139,7 @@ describe('Proposals', async assert => {
     given: 'voice reset after onperiod',
     should: 'have standard amount of voice',
     actual: voice,
-    expected: 20
+    expected: 1000
   })
 
   assert({

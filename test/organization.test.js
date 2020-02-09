@@ -4,6 +4,8 @@ const { equals } = require("ramda")
 
 const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, history } = names
 
+let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
 describe('organization', async assert => {
 
     if (!isLocal()) {
@@ -33,8 +35,8 @@ describe('organization', async assert => {
     await contracts.settings.configure('fee', 500000, { authorization: `${settings}@active` })
 
     console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
     console.log('add rep')
     await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
@@ -52,8 +54,6 @@ describe('organization', async assert => {
     })
 
     console.log('create organization')
-
-    let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
     await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
     await contracts.organization.create(firstuser, 'testorg2', "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
@@ -140,7 +140,7 @@ describe('organization', async assert => {
 
     try{
         console.log('create organization')
-        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+        await contracts.organization.create(thirduser, 'testorg4', eosDevKey, { authorization: `${thirduser}@active`  })
     }
     catch(err){
         console.log('user thoes not have a balance entry')
@@ -149,7 +149,7 @@ describe('organization', async assert => {
     try{
         console.log('create organization')
         await contracts.token.transfer(thirduser, organization, "20.0000 SEEDS", "Initial supply", { authorization: `${thirduser}@active` })
-        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+        await contracts.organization.create(thirduser, 'testorg4', eosDevKey, { authorization: `${thirduser}@active`  })
     }
     catch(err){
         console.log('user has not enough balance')
