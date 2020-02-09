@@ -52,9 +52,12 @@ describe('organization', async assert => {
     })
 
     console.log('create organization')
-    await contracts.organization.create('testorg1', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.create('testorg2', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.create('testorg3', seconduser, { authorization: `${seconduser}@active` })
+
+    let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
+    await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, 'testorg2', "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
+    await contracts.organization.create(seconduser, 'testorg3', "Org 3 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
 
     const initialOrgs = await getTableRows({
         code: organization,

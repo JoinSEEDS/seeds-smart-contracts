@@ -28,6 +28,7 @@ CONTRACT onboarding : public contract {
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
+    ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION cancel(name sponsor, checksum256 invite_hash);
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -89,7 +90,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(accept)(acceptnew)(acceptexist)(cancel))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(accept)(onboardorg)(acceptnew)(acceptexist)(cancel))
       }
   }
 }
