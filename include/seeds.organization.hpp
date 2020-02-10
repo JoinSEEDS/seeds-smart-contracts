@@ -35,7 +35,7 @@ CONTRACT organization : public contract {
         
         ACTION subregen(name organization, name account); // same as add, just negative (account auth)
 
-        ACTION create(name orgname, name sponsor);
+        ACTION create(name sponsor, name orgaccount, string orgfullname, string publicKey);
 
         ACTION destroy(name orgname, name sponsor);
 
@@ -127,6 +127,7 @@ CONTRACT organization : public contract {
 
         const name fee = "fee"_n;
 
+        void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
         void init_balance(name account);
         int64_t getregenp(name account);

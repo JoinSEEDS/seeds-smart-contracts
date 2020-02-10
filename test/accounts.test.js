@@ -13,7 +13,7 @@ describe('genesis testing', async assert => {
   await contract.reset({ authorization: `${accounts}@active` })
 
   console.log('test genesis')
-  await contract.adduser(thirduser, 'First user', { authorization: `${accounts}@active` })
+  await contract.adduser(thirduser, 'First user', "individual", { authorization: `${accounts}@active` })
   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
   const users = await eos.getTableRows({
@@ -51,8 +51,8 @@ describe('accounts', async assert => {
   await thetoken.resetweekly({ authorization: `${token}@active` })
 
   console.log('add users')
-  await contract.adduser(firstuser, 'First user', { authorization: `${accounts}@active` })
-  await contract.adduser(seconduser, 'Second user', { authorization: `${accounts}@active` })
+  await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
 
   console.log('plant 50 seeds')
   await thetoken.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -61,20 +61,7 @@ describe('accounts', async assert => {
   await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('add referral')
-  try {
-    await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
-    console.log("referral added.")
-  } catch (err) {
-    console.log("error: "+err)
-  }
-
-  const vouch = await eos.getTableRows({
-    code: accounts,
-    scope: seconduser,
-    table: 'vouch',
-    json: true
-  })
-
+  await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
 
   console.log('update reputation')
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
@@ -108,10 +95,18 @@ describe('accounts', async assert => {
   console.log('test citizen')
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
+  console.log('add vouch')
+  await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
+
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
 
-  console.log(" ")
+  const vouch = await eos.getTableRows({
+    code: accounts,
+    scope: seconduser,
+    table: 'vouch',
+    json: true
+  })
 
   const users = await eos.getTableRows({
     code: accounts,
@@ -202,7 +197,7 @@ describe('accounts', async assert => {
       account: seconduser,
       status: 'resident',
       nickname: 'Second user',
-      reputation: 0
+      reputation: 10 // 10 because they got vouched for by a citizen
     }]
   })
 

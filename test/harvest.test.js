@@ -33,8 +33,8 @@ describe("harvest", async assert => {
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -390,8 +390,8 @@ describe("harvest contribution score", async assert => {
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })

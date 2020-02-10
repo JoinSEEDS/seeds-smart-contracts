@@ -21,8 +21,8 @@ describe('make a transaction entry', async assert => {
   await accountsContract.reset({ authorization: `${accounts}@active` })
   
   console.log('update status')
-  await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
+  await accountsContract.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await accountsContract.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
   await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })  
 

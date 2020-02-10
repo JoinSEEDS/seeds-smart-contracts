@@ -301,6 +301,9 @@ const permissions = [{
   target: `${accounts.accounts.account}@active`,
   actor: `${accounts.onboarding.account}@active`,
 }, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.organization.account}@active`,
+}, {
   target: `${accounts.onboarding.account}@application`,
   key: applicationPublicKey,
   parent: 'active'

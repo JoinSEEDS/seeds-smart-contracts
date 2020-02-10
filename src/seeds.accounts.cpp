@@ -124,10 +124,12 @@ void accounts::history_add_citizen(name account) {
   ).send();
 }
 
-void accounts::adduser(name account, string nickname)
+void accounts::adduser(name account, string nickname, name type)
 {
   require_auth(get_self());
   check(is_account(account), "no account");
+
+  check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organization'");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
@@ -136,7 +138,7 @@ void accounts::adduser(name account, string nickname)
       user.account = account;
       user.status = name("visitor");
       user.reputation = 0;
-      user.type = name("individual");
+      user.type = type;
       user.nickname = nickname;
       user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
@@ -160,7 +162,7 @@ void accounts::vouch(name sponsor, name account) {
   name account_status = uitra->status;
 
   check(account_status == name("visitor"), "account should be visitor");
-  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor should be a citizen");
+  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
 
   _vouch(sponsor, account);
 }
@@ -293,9 +295,16 @@ void accounts::addref(name referrer, name invited)
     ref.invited = invited;
   });
 
-  _vouch(referrer, invited);
-
 }
+
+// internal vouch function
+void accounts::invitevouch(name referrer, name invited) 
+{
+  require_auth(get_self());
+
+  _vouch(referrer, invited);
+}
+
 
 
 void accounts::addrep(name user, uint64_t amount)
@@ -359,7 +368,7 @@ void accounts::update(name user, name type, string nickname, string image, strin
 {
     require_auth(user);
 
-    check(type == name("individual") || type == name("organization"), "invalid type");
+    check(type == individual || type == organization, "invalid type");
 
     auto uitr = users.find(user.value);
 

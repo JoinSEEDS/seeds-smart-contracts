@@ -35,7 +35,7 @@ void invites::add_user(name account) {
   action(
     permission_level{contracts::accounts, "active"_n},
     contracts::accounts, "adduser"_n,
-    make_tuple(account, nickname)
+    make_tuple(account, nickname, "individual"_n)
   ).send();
 }
 

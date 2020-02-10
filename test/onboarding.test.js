@@ -65,7 +65,7 @@ describe('Onboarding', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -185,7 +185,7 @@ describe('Use application permission to accept', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -212,6 +212,13 @@ describe('Use application permission to accept', async assert => {
 
     await invite()
 
+    const vouchBeforeInvite = await eos.getTableRows({
+        code: accounts,
+        scope: newAccount,
+        table: 'vouch',
+        json: true
+      })
+
     await accept()
 
     const { rows } = await getTableRows({
@@ -221,6 +228,13 @@ describe('Use application permission to accept', async assert => {
         json: true
     })
 
+    const vouchAfterInvite = await eos.getTableRows({
+        code: accounts,
+        scope: newAccount,
+        table: 'vouch',
+        json: true
+    })
+    
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -233,6 +247,13 @@ describe('Use application permission to accept', async assert => {
             reward: '0.0000 SEEDS'
         }
     })
+    assert({
+        given: 'invited new user',
+        should: 'have new vouch entry',
+        actual: [vouchBeforeInvite.rows.length, vouchAfterInvite.rows.length],
+        expected: [0, 1]
+    })
+
 })
 
 describe('Invite from non-seeds user - sp', async assert => {
@@ -275,7 +296,7 @@ describe('Invite from non-seeds user - sp', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }
@@ -365,7 +386,7 @@ describe('Campaign reward for existing user', async assert => {
     const adduser = async (user) => {
         try {
             console.log(`${accounts}.adduser (${user})`)
-            await contracts.accounts.adduser(user, '', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(user, '', 'individual',{ authorization: `${accounts}@active` })        
         } catch (error) {
             console.log("user exists")
         }

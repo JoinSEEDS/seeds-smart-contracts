@@ -94,33 +94,47 @@ ACTION organization::reset() {
 }
 
 
-ACTION organization::create(name orgname, name sponsor) {
+ACTION organization::create(name sponsor, name orgaccount, string orgfullname, string publicKey) 
+{
     require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
 
-    auto itr = balances.find(sponsor.value);
-    check(itr != balances.end(), "The sponsor account does not have a balance entry in this contract.");
+    auto bitr = balances.find(sponsor.value);
+    check(bitr != balances.end(), "The sponsor account does not have a balance entry in this contract.");
 
     auto feeparam = config.get(fee.value, "The fee parameter has not been initialized yet.");
     asset quantity(feeparam.value, seeds_symbol);
 
-    check(itr -> balance >= quantity, "The user does not have enough credit to create an organization");
+    check(bitr -> balance >= quantity, "The user does not have enough credit to create an organization");
 
-    auto orgitr = organizations.find(orgname.value);
+    auto orgitr = organizations.find(orgaccount.value);
     check(orgitr == organizations.end(), "This organization already exists.");
     
-    balances.modify(itr, _self, [&](auto & mbalance) {
+    auto uitr = users.find(sponsor.value);
+    check(uitr != users.end(), "Sponsor is not a Seeds account.");
+
+    create_account(sponsor, orgaccount, orgfullname, publicKey);
+
+    balances.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
     organizations.emplace(_self, [&](auto & norg) {
-        norg.org_name = orgname;
+        norg.org_name = orgaccount;
         norg.owner = sponsor;
         norg.fee = quantity;
     });
 
-    addmember(orgname, sponsor, sponsor, ""_n);
+    addmember(orgaccount, sponsor, sponsor, ""_n);
 }
 
+void organization::create_account(name sponsor, name orgaccount, string orgfullname, string publicKey) 
+{
+    action(
+        permission_level{contracts::onboarding, "active"_n},
+        contracts::onboarding, "onboardorg"_n,
+        make_tuple(sponsor, orgaccount, orgfullname, publicKey)
+    ).send();
+}
 
 ACTION organization::destroy(name organization, name owner) {
     check_owner(organization, owner);

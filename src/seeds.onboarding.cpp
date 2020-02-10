@@ -29,18 +29,16 @@ bool onboarding::is_seeds_user(name account) {
   return uitr != users.end();
 }
 
-void onboarding::add_user(name account) {
+void onboarding::add_user(name account, string fullname, name type) {
 
   if (is_seeds_user(account)) {
     return;
   }
 
-  string nickname("");
-
   action(
     permission_level{contracts::accounts, "active"_n},
     contracts::accounts, "adduser"_n,
-    make_tuple(account, nickname)
+    make_tuple(account, fullname, type)
   ).send();
 }
 
@@ -84,6 +82,14 @@ void onboarding::add_referral(name sponsor, name account) {
   ).send();
 }
 
+void onboarding::invitevouch(name sponsor, name account) {
+  action(
+    permission_level{contracts::accounts, "active"_n},
+    contracts::accounts, "invitevouch"_n,
+    make_tuple(sponsor, account)
+  ).send();
+}
+
 void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey) {
   require_auth(get_self());
 
@@ -115,14 +121,31 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account);
+    add_user(account, "", "individual"_n);
     add_referral(sponsor, account);  
+    invitevouch(sponsor, account);
   }
 
   transfer_seeds(account, transfer_quantity);
   plant_seeds(sow_quantity);
   sow_seeds(account, sow_quantity);
 
+}
+
+ACTION onboarding::onboardorg(name sponsor, name account, string fullname, string publicKey) {
+    require_auth(get_self());
+
+    bool is_existing_telos_user = is_account(account);
+    bool is_existing_seeds_user = is_seeds_user(account);
+
+  if (!is_existing_telos_user) {
+    create_account(account, publicKey);
+  }
+  
+  if (!is_existing_seeds_user) {
+    add_user(account, fullname, "organization"_n);
+    add_referral(sponsor, account);  
+  }
 }
 
 void onboarding::reset() {

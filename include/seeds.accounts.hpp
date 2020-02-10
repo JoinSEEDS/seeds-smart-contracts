@@ -19,7 +19,7 @@ CONTRACT accounts : public contract {
 
       ACTION reset();
 
-      ACTION adduser(name account, string nickname);
+      ACTION adduser(name account, string nickname, name type);
 
       ACTION makeresident(name user);
 
@@ -36,6 +36,8 @@ CONTRACT accounts : public contract {
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
       ACTION addref(name referrer, name invited);
+
+      ACTION invitevouch(name referrer, name invited);
 
       ACTION addrep(name user, uint64_t amount);
 
@@ -58,6 +60,10 @@ CONTRACT accounts : public contract {
         string interests,
         uint64_t reputation,
         uint64_t timestamp);
+
+      const name individual = "individual"_n;
+      const name organization = "organization"_n;
+      
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -178,4 +184,4 @@ CONTRACT accounts : public contract {
       user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(invitevouch)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));
