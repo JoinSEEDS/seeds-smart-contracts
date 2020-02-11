@@ -29,8 +29,11 @@ void proposals::onperiod() {
     auto pitr = props.begin();
     auto vitr = voice.begin();
 
-    uint64_t min_stake = config.find(name("propminstake").value)->value;
-    uint64_t voice_base = config.find(name("propvoice").value)->value;
+    auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
+    auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
+
+    uint64_t min_stake = min_stake_param.value;
+    uint64_t voice_base = voice_param.value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
