@@ -220,7 +220,7 @@ const accountsMetadata = (network) => {
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
-const permissions = [{
+var permissions = [{
   target: `${accounts.secondbank.account}@active`,
   actor: `${accounts.proposals.account}@active`
 }, {
@@ -349,6 +349,23 @@ const permissions = [{
   target: `${accounts.vstandescrow.account}@active`,
   actor: `${accounts.vstandescrow.account}@eosio.code`
 }]
+
+const isTestnet = chainId == networks.telosTestnet
+const isLocalNet = chainId == networks.local
+
+if (isTestnet || isLocalNet) {
+  console.log("Adding TESTNET permissions")
+  const testnetDevelopmentKey = 'EOS7WSioF5yu8yoKEvnaryCJBSSqgdEiPLxHxGwYnvQXbYddTrUts'
+  permissions.push({
+      target: `${accounts.proposals.account}@testnetdev`,
+      key: testnetDevelopmentKey,
+      parent: 'active'
+  })
+  permissions.push({
+      target: `${accounts.proposals.account}@testnetdev`,
+      action: 'onperiod'
+  })
+}
 
 const keyProviders = {
   [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
