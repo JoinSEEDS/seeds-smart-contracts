@@ -24,10 +24,10 @@ void referendums::send_refund_stake(name account, asset quantity) {
   ).send();
 }
 
-void referendums::send_runcycle() {
+void referendums::send_onperiod() {
   action(
     permission_level{contracts::referendums, "active"_n},
-    get_self(), "runcycle"_n,
+    get_self(), "onperiod"_n,
     make_tuple()
   ).send();
 }
@@ -127,7 +127,7 @@ void referendums::run_staged() {
   }
 }
 
-void referendums::runcycle() {
+void referendums::onperiod() {
   run_testing();
   run_active();
   run_staged();

@@ -139,7 +139,7 @@ describe('Proposals', async assert => {
     given: 'voice reset after onperiod',
     should: 'have standard amount of voice',
     actual: voice,
-    expected: 1000
+    expected: 20
   })
 
   assert({
