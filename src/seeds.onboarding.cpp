@@ -143,7 +143,7 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account, fullname, "organization"_n);
+    add_user(account, fullname, "organisation"_n);
     add_referral(sponsor, account);  
   }
 }

@@ -17,7 +17,7 @@ const getSupply = async () => {
   return Number.parseInt(rows[0].supply)
 }
 
-describe.only('token.transfer.history', async assert => {
+describe('token.transfer.history', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")

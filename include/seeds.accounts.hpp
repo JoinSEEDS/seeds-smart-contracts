@@ -1,6 +1,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -62,7 +63,7 @@ CONTRACT accounts : public contract {
         uint64_t timestamp);
 
       const name individual = "individual"_n;
-      const name organization = "organization"_n;
+      const name organization = "organisation"_n;
       
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -119,15 +120,6 @@ CONTRACT accounts : public contract {
         uint64_t by_reputation()const { return reputation; }
       };
 
-      TABLE balance_table {
-        name account;
-        asset planted;
-        asset reward;
-
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_planted()const { return planted.amount; }
-      };
-
       TABLE vouch_table {
         name account;
         name sponsor;
@@ -150,10 +142,11 @@ CONTRACT accounts : public contract {
     
     typedef eosio::multi_index<"vouch"_n, vouch_table> vouch_tables;
 
-    typedef eosio::multi_index<"balances"_n, balance_table,
+    typedef eosio::multi_index<"balances"_n, tables::balance_table,
         indexed_by<"byplanted"_n,
-        const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
+        const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
     > balance_tables;
+    balance_tables balances;
 
     typedef eosio::multi_index<"cbs"_n, cbs_table,
       indexed_by<"bycbs"_n,
@@ -165,7 +158,6 @@ CONTRACT accounts : public contract {
     cbs_tables cbs;
     ref_tables refs;
 
-    balance_tables balances;
 
          struct [[eosio::table]] transaction_stats {
             name account;
