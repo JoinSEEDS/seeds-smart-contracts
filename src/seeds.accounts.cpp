@@ -129,7 +129,7 @@ void accounts::adduser(name account, string nickname, name type)
   require_auth(get_self());
   check(is_account(account), "no account");
 
-  check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organization'");
+  check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organisation'");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");

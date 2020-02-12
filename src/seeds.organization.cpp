@@ -23,7 +23,7 @@ void organization::init_balance(name account) {
 
 void organization::check_user(name account) {
     auto uitr = users.find(account.value);
-    check(uitr != users.end(), "organization: no user.");
+    check(uitr != users.end(), "organisation: no user.");
 }
 
 
@@ -140,7 +140,7 @@ ACTION organization::destroy(name organization, name owner) {
     check_owner(organization, owner);
 
     auto orgitr = organizations.find(organization.value);
-    check(orgitr != organizations.end(), "organization: the organization does not exist.");
+    check(orgitr != organizations.end(), "organisation: the organization does not exist.");
 
     auto bitr = balances.find(owner.value);
     balances.modify(bitr, _self, [&](auto & mbalance) {
@@ -166,8 +166,8 @@ ACTION organization::refund(name beneficiary, asset quantity) {
     utils::check_asset(quantity);
 
     auto itr = balances.find(beneficiary.value);
-    check(itr != balances.end(), "organization: user has no entry in the balance table.");
-    check(itr -> balance >= quantity, "organization: user has not enough balance.");
+    check(itr != balances.end(), "organisation: user has no entry in the balance table.");
+    check(itr -> balance >= quantity, "organisation: user has not enough balance.");
 
     string memo = "refund";
 
@@ -235,8 +235,8 @@ ACTION organization::changeowner(name organization, name owner, name account) {
     auto aitr = balances.find(account.value);
     auto orgitr = organizations.find(organization.value);
 
-    check(aitr != balances.end(), "organization: the account does not have an entry in the balance table.");
-    check(aitr -> balance >= orgitr -> fee, "organization: the account does not have enough balance.");
+    check(aitr != balances.end(), "organisation: the account does not have an entry in the balance table.");
+    check(aitr -> balance >= orgitr -> fee, "organisation: the account does not have enough balance.");
 
     balances.modify(bitr, _self, [&](auto & mbalace) {
         mbalace.balance += orgitr ->fee;
@@ -256,7 +256,7 @@ void organization::vote(name organization, name account, int64_t regen) {
     vote_tables votes(get_self(), organization.value);
 
     auto itr = organizations.find(organization.value);
-    check(itr != organizations.end(), "Organization does not exist.");
+    check(itr != organizations.end(), "organisation does not exist.");
     
     organizations.modify(itr, _self, [&](auto & morg) {
         morg.regen += regen;
@@ -280,7 +280,7 @@ ACTION organization::addregen(name organization, name account) {
     
     if(vitr != votes.end()){
         auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "Organization does not exist.");
+        check(itr != organizations.end(), "organisation does not exist.");
         organizations.modify(itr, _self, [&](auto & morg) {
             morg.regen -= vitr -> regen_points;
         });
@@ -301,7 +301,7 @@ ACTION organization::subregen(name organization, name account) {
     
     if(vitr != votes.end()){
         auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "Organization does not exist.");
+        check(itr != organizations.end(), "organisation does not exist.");
         organizations.modify(itr, _self, [&](auto & morg) {
             morg.regen -= vitr -> regen_points;
         });
