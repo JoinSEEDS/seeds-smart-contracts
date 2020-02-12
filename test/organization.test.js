@@ -49,7 +49,7 @@ describe('organization', async assert => {
     const initialBalances = await getTableRows({
         code: organization,
         scope: organization,
-        table: 'balances',
+        table: 'sponsors',
         json: true
     })
 
@@ -159,7 +159,7 @@ describe('organization', async assert => {
 
     assert({
         given: 'firstuser and second user transfer to organization contract',
-        should: 'update the balances table',
+        should: 'update the sponsors table',
         actual: initialBalances.rows.map(row => { return row }),
         expected: [
             {

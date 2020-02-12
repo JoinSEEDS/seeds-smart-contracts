@@ -13,7 +13,7 @@ CONTRACT organization : public contract {
         organization(name receiver, name code, datastream<const char*> ds)
             : contract(receiver, code, ds),
               organizations(receiver, receiver.value),
-              balances(receiver, receiver.value),
+              sponsors(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value)
               {}
@@ -65,7 +65,7 @@ CONTRACT organization : public contract {
             uint64_t primary_key() const { return account.value; }
         };
 
-        TABLE balances_table { // is it posible to have a negative balance?
+        TABLE sponsors_table { // is it posible to have a negative balance?
             name account;
             asset balance;
 
@@ -108,7 +108,7 @@ CONTRACT organization : public contract {
 
         typedef eosio::multi_index <"members"_n, members_table> members_tables;
 
-        typedef eosio::multi_index <"balances"_n, balances_table> balances_tables;
+        typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;
 
         typedef eosio::multi_index <"votes"_n, vote_table> vote_tables;
 
@@ -121,7 +121,7 @@ CONTRACT organization : public contract {
 
 
         organization_tables organizations;
-        balances_tables balances;
+        sponsors_tables sponsors;
         user_tables users;
         config_tables config;
 

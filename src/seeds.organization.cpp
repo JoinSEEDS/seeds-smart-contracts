@@ -11,9 +11,9 @@ void organization::check_owner(name organization, name owner) {
 
 
 void organization::init_balance(name account) {
-    auto itr = balances.find(account.value);
-    if(itr == balances.end()){
-        balances.emplace(_self, [&](auto & nbalance) {
+    auto itr = sponsors.find(account.value);
+    if(itr == sponsors.end()){
+        sponsors.emplace(_self, [&](auto & nbalance) {
             nbalance.account = account;
             nbalance.balance = asset(0, seeds_symbol);
         });
@@ -40,13 +40,13 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
         init_balance(from);
         init_balance(to);
 
-        auto fitr = balances.find(from.value);
-        balances.modify(fitr, _self, [&](auto & mbalance) {
+        auto fitr = sponsors.find(from.value);
+        sponsors.modify(fitr, _self, [&](auto & mbalance) {
             mbalance.balance += quantity;
         });
 
-        auto titr = balances.find(to.value);
-        balances.modify(titr, _self, [&](auto & mbalance) {
+        auto titr = sponsors.find(to.value);
+        sponsors.modify(titr, _self, [&](auto & mbalance) {
             mbalance.balance += quantity;
         });
     }
@@ -57,7 +57,7 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
 /*
 ACTION organization::createbalance(name user, asset quantity) {
     
-    balances.emplace(_self, [&](auto & nbalance) {
+    sponsors.emplace(_self, [&](auto & nbalance) {
         nbalance.account = user;
         nbalance.balance = quantity;
     });
@@ -87,9 +87,9 @@ ACTION organization::reset() {
         itr = organizations.erase(itr);
     }
 
-    auto bitr = balances.begin();
-    while(bitr != balances.end()){
-        bitr = balances.erase(bitr);
+    auto bitr = sponsors.begin();
+    while(bitr != sponsors.end()){
+        bitr = sponsors.erase(bitr);
     }
 }
 
@@ -98,8 +98,8 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
 {
     require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
 
-    auto bitr = balances.find(sponsor.value);
-    check(bitr != balances.end(), "The sponsor account does not have a balance entry in this contract.");
+    auto bitr = sponsors.find(sponsor.value);
+    check(bitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
 
     auto feeparam = config.get(fee.value, "The fee parameter has not been initialized yet.");
     asset quantity(feeparam.value, seeds_symbol);
@@ -114,7 +114,7 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
 
     create_account(sponsor, orgaccount, orgfullname, publicKey);
 
-    balances.modify(bitr, _self, [&](auto & mbalance) {
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
@@ -142,8 +142,8 @@ ACTION organization::destroy(name organization, name owner) {
     auto orgitr = organizations.find(organization.value);
     check(orgitr != organizations.end(), "organisation: the organization does not exist.");
 
-    auto bitr = balances.find(owner.value);
-    balances.modify(bitr, _self, [&](auto & mbalance) {
+    auto bitr = sponsors.find(owner.value);
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance += orgitr -> fee;
     });
 
@@ -165,8 +165,8 @@ ACTION organization::refund(name beneficiary, asset quantity) {
     
     utils::check_asset(quantity);
 
-    auto itr = balances.find(beneficiary.value);
-    check(itr != balances.end(), "organisation: user has no entry in the balance table.");
+    auto itr = sponsors.find(beneficiary.value);
+    check(itr != sponsors.end(), "organisation: user has no entry in the balance table.");
     check(itr -> balance >= quantity, "organisation: user has not enough balance.");
 
     string memo = "refund";
@@ -178,12 +178,12 @@ ACTION organization::refund(name beneficiary, asset quantity) {
         std::make_tuple(_self, beneficiary, quantity, memo)
     ).send();
 
-    auto bitr = balances.find(_self.value);
-    balances.modify(bitr, _self, [&](auto & mbalance) {
+    auto bitr = sponsors.find(_self.value);
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;
     });
 
-    balances.modify(itr, _self, [&](auto & mbalance) {
+    sponsors.modify(itr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;
     });
 }
@@ -231,18 +231,18 @@ ACTION organization::changeowner(name organization, name owner, name account) {
     check_owner(organization, owner);
     check_user(account);
 
-    auto bitr = balances.find(owner.value);
-    auto aitr = balances.find(account.value);
+    auto bitr = sponsors.find(owner.value);
+    auto aitr = sponsors.find(account.value);
     auto orgitr = organizations.find(organization.value);
 
-    check(aitr != balances.end(), "organisation: the account does not have an entry in the balance table.");
+    check(aitr != sponsors.end(), "organisation: the account does not have an entry in the balance table.");
     check(aitr -> balance >= orgitr -> fee, "organisation: the account does not have enough balance.");
 
-    balances.modify(bitr, _self, [&](auto & mbalace) {
+    sponsors.modify(bitr, _self, [&](auto & mbalace) {
         mbalace.balance += orgitr ->fee;
     });
 
-    balances.modify(aitr, _self, [&](auto & mbalace) {
+    sponsors.modify(aitr, _self, [&](auto & mbalace) {
         mbalace.balance -= orgitr -> fee;
     });
 
