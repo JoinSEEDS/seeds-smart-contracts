@@ -39,8 +39,8 @@ describe('scheduler', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'forum.seeds', 70000, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('newday', 'forum.seeds', 150000, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('onperiod', 'forum.seeds', 7, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('newday', 'forum.seeds', 15, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })

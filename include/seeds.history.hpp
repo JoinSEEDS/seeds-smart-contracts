@@ -24,7 +24,7 @@ CONTRACT history : public contract {
 
         ACTION historyentry(name account, string action, uint64_t amount, string meta);
 
-        ACTION trxentry(name from, name to, asset quantity, string memo);
+        ACTION trxentry(name from, name to, asset quantity);
         
         ACTION addcitizen(name account);
         
@@ -62,15 +62,14 @@ CONTRACT history : public contract {
       };
       
       TABLE transaction_table {
-       uint64_t id; 
-       name from;
+       uint64_t id;
        name to;
        asset quantity;
-       string memo;
-       name fromstatus;
-       name tostatus;
+       uint64_t timestamp;
 
        uint64_t primary_key()const { return id; }
+       uint64_t by_timestamp()const { return timestamp; }
+       uint64_t by_to()const { return to.value; }
       };
      
     typedef eosio::multi_index<"citizens"_n, citizen_table,
@@ -83,7 +82,10 @@ CONTRACT history : public contract {
       const_mem_fun<resident_table, uint64_t, &resident_table::by_account>>
     > resident_tables;
     
-    typedef eosio::multi_index<"transactions"_n, transaction_table> transaction_tables;
+    typedef eosio::multi_index<"transactions"_n, transaction_table,
+      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
+    > transaction_tables;
     typedef eosio::multi_index<"history"_n, history_table> history_tables;
     
     typedef eosio::multi_index<"users"_n, tables::user_table,

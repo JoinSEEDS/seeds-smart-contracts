@@ -19,7 +19,7 @@ CONTRACT scheduler : public contract {
 
         ACTION execute();
 
-        ACTION configop(name action, name contract, uint64_t period);
+        ACTION configop(name action, name contract, uint64_t period_sec);
 
         ACTION confirm(name operation);
 

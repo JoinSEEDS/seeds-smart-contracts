@@ -172,7 +172,7 @@ namespace eosio {
          [[eosio::action]]
          void resetweekly();
          
-         void save_transaction(name from, name to, asset quantity, string memo);
+         void save_transaction(name from, name to, asset quantity);
 
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;

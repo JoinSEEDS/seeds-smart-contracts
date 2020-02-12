@@ -67,7 +67,7 @@ void history::historyentry(name account, string action, uint64_t amount, string 
   });
 }
 
-void history::trxentry(name from, name to, asset quantity, string memo) {
+void history::trxentry(name from, name to, asset quantity) {
   require_auth(get_self());
   
   auto uitr1 = users.find(from.value);
@@ -76,20 +76,14 @@ void history::trxentry(name from, name to, asset quantity, string memo) {
   if (uitr1 == users.end() || uitr2 == users.end()) {
     return;
   }
-  
-  name fromstatus = uitr1->status;
-  name tostatus = uitr2->status;
-  
-  transaction_tables transactions(get_self(), get_self().value);
+    
+  transaction_tables transactions(get_self(), from.value);
   
   transactions.emplace(_self, [&](auto& item) {
     item.id = transactions.available_primary_key();
-    item.from = from;
     item.to = to;
     item.quantity = quantity;
-    item.memo = memo;
-    item.fromstatus = fromstatus;
-    item.tostatus = tostatus;
+    item.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 }
 

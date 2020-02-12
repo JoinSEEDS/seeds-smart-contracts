@@ -11,7 +11,9 @@ bool scheduler::isRdyToExec(name operation){
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
     uint64_t periods = 0;
 
-    periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
+    uint64_t seconds_expired = (timestamp - itr -> timestamp);
+
+    periods = seconds_expired / itr -> period;
 
     if(periods > 0) return true;
     return false;
@@ -28,7 +30,7 @@ ACTION scheduler::reset() {
 }
 
 
-ACTION scheduler::configop(name action, name contract, uint64_t period) {
+ACTION scheduler::configop(name action, name contract, uint64_t period_sec) {
     require_auth(_self);
 
     auto itr = operations.find(action.value);
@@ -37,14 +39,14 @@ ACTION scheduler::configop(name action, name contract, uint64_t period) {
         operations.modify(itr, _self, [&](auto & moperation) {
             moperation.operation = action;
             moperation.contract = contract;
-            moperation.period = period;
+            moperation.period = period_sec;
         });
     }
     else{
         operations.emplace(_self, [&](auto & noperation) {
             noperation.operation = action;
             noperation.contract = contract;
-            noperation.period = period;
+            noperation.period = period_sec;
             noperation.timestamp = current_time_point().sec_since_epoch();
         });
     }
@@ -65,7 +67,7 @@ ACTION scheduler::confirm(name operation) {
 
 
 ACTION scheduler::execute() {
-   // require_auth(_self);
+   require_auth(_self);
 
     /*
         Just as quick reminder.
@@ -124,6 +126,16 @@ ACTION scheduler::execute() {
         }
         itr++;
     }
+
+    transaction trx{};
+    trx.actions.emplace_back(
+        permission_level(_self, "active"_n),
+        _self,"execute"_n,
+        std::make_tuple()
+    );
+    trx.delay_sec = 60;
+    trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
+
     
 }
 

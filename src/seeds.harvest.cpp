@@ -319,24 +319,32 @@ void harvest::payforcpu(name account) {
     check(uitr != users.end(), "Not a Seeds user!");
 }
 
+
+// store a singleton with the cycle #
+// each time calc start we compare cycle # and see if everything has finished, if yes we increase cycle
+// if no we continue old cycle
+// store cucle in harvest stat
+// complete a cycle before going to a new one
+// measure times 
 void harvest::init_harvest_stat(name account) {
+  auto the_time = eosio::current_time_point().sec_since_epoch();
   harveststat.emplace(_self, [&](auto& user) {
     user.account = account;
     
     user.transactions_score = 0;
-    user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.tx_timestamp = ;
     
     user.reputation_score = 0;
-    user.rep_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.rep_timestamp = the_time;
 
     user.planted_score = 0;
-    user.planted_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.planted_timestamp = the_time;
 
     user.contribution_score = 0;
-    user.contrib_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.contrib_timestamp = the_time;
 
     user.community_building_score = 0;
-    user.community_building_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.community_building_timestamp = the_time;
   });
 }
 
