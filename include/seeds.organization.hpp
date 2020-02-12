@@ -2,6 +2,7 @@
 #include <eosio/asset.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -15,6 +16,7 @@ CONTRACT organization : public contract {
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
+              balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value)
               {}
         
@@ -53,7 +55,7 @@ CONTRACT organization : public contract {
             int64_t regen;
             uint64_t reputation;
             uint64_t voice;
-            asset fee;
+            asset planted;
 
             uint64_t primary_key() const { return org_name.value; }
         };
@@ -80,29 +82,18 @@ CONTRACT organization : public contract {
             uint64_t primary_key() const { return account.value; }
         };
 
-        TABLE user_table {
-            name account;
-            name status;
-            name type;
-            string nickname;
-            string image;
-            string story;
-            string roles;
-            string skills;
-            string interests;
-            uint64_t reputation;
-            uint64_t timestamp;
-
-            uint64_t primary_key()const { return account.value; }
-            uint64_t by_reputation()const { return reputation; }
-        };
-
         TABLE config_table {
             name param;
             uint64_t value;
             uint64_t primary_key()const { return param.value; }
         };
 
+        typedef eosio::multi_index<"balances"_n, tables::balance_table,
+            indexed_by<"byplanted"_n,
+            const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
+        > balance_tables;
+    
+        balance_tables balances;
 
         typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
 
@@ -112,9 +103,9 @@ CONTRACT organization : public contract {
 
         typedef eosio::multi_index <"votes"_n, vote_table> vote_tables;
 
-        typedef eosio::multi_index<"users"_n, user_table,
+        typedef eosio::multi_index<"users"_n, tables::user_table,
             indexed_by<"byreputation"_n,
-            const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
+            const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
         > user_tables;
 
         typedef eosio::multi_index<"config"_n, config_table> config_tables;
@@ -125,7 +116,7 @@ CONTRACT organization : public contract {
         user_tables users;
         config_tables config;
 
-        const name fee = "fee"_n;
+        const name min_planted = "org.minplant"_n;
 
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
