@@ -58,12 +58,10 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 
     if (!memo.empty()) {
       std::size_t found = memo.find(string("sow "));
-      if (found!=std::string::npos) {
-        string target_acct_name = memo.substr (4,string::npos);
-        target = name(target_acct_name);
-=     } else {
-        check(false, "invalid memo");
-      }
+      check(found != std::string::npos, "invalid memo");
+      
+      string target_acct_name = memo.substr (4,string::npos);
+      target = name(target_acct_name);
     }
 
     check_user(target);
