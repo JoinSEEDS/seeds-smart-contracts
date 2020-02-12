@@ -26,8 +26,8 @@ CONTRACT onboarding : public contract {
     ACTION deposit(name from, name to, asset quantity, string memo);
     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
-    ACTION acceptnew(name account, checksum256 invite_secret, string publicKey);
-    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
+    ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
+    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey, string fullname);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION cancel(name sponsor, checksum256 invite_hash);
   private:
