@@ -235,10 +235,10 @@ void onboarding::acceptnew(name account, checksum256 invite_secret, string publi
 }
 
 // accept invite using already existing account
-void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey, string fullname) {
+void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey) {
   check(is_account(account) == true, "Account does not exist " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey, fullname);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }
 
 // accept invite using already existing account or creating new account
