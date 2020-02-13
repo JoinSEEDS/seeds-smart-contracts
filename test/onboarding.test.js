@@ -34,6 +34,9 @@ describe('Onboarding', async assert => {
     const newAccount = randomAccountName()
     console.log("New account "+newAccount)
 
+    const newAccount2 = randomAccountName()
+    console.log("New account 2"+newAccount2)
+
     const keyPair = await createKeypair()
 
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
@@ -86,6 +89,11 @@ describe('Onboarding', async assert => {
         await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })    
     }
 
+    const acceptnew = async () => {
+        console.log(`${onboarding}.acceptnew from ${anotherNewAccount}`)
+        await contracts.onboarding.acceptnew(newAccount2, inviteSecret2, newAccountPublicKey, { authorization: `${onboarding}@active` })
+    }
+
     await reset()
 
     await adduser()
@@ -99,6 +107,8 @@ describe('Onboarding', async assert => {
     await invite(seconduser, inviteHash2)
 
     await accept()
+
+    await acceptnew()
 
     const allInvites = await getTableRows({
         code: onboarding,
@@ -149,7 +159,7 @@ describe('Onboarding', async assert => {
         given: 'search by sponsor user 2',
         should: 'have 1 result',
         actual: invitesBySponsor.rows.length,
-        expected: 1
+        expected: 2
     })
     assert({
         given: 'search by sponsor user 2',
