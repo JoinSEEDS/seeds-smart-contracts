@@ -27,7 +27,7 @@ CONTRACT onboarding : public contract {
     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
-    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey, string fullname);
+    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION cancel(name sponsor, checksum256 invite_hash);
   private:
@@ -43,7 +43,7 @@ CONTRACT onboarding : public contract {
     void sow_seeds(name account, asset quantity);
     void add_referral(name sponsor, name account);
     void invitevouch(name sponsor, name account);
-    void accept_invite(name account, checksum256 invite_secret, string publicKey);
+    void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
 
     TABLE invite_table {
       uint64_t invite_id;
