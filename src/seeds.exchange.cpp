@@ -72,8 +72,9 @@ void exchange::purchase(name buyer, name contract, asset tlos_quantity, string m
       }); 
     }
     
-    soldtable s = sold.get_or_create(get_self(), soldtable());
-    s.total_sold += seeds_quantity.amount;
+    soldtable stb = sold.get_or_create(get_self(), soldtable());
+    stb.total_sold = stb.total_sold + seeds_amount;
+    sold.set(stb, get_self());
 
     action(
       permission_level{get_self(), "active"_n},
