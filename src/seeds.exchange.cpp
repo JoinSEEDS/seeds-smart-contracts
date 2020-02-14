@@ -12,7 +12,7 @@ void exchange::reset() {
   // SEEDS 0.01
   // Seeds per TLOS = 5.3611 * 10000 = 5.36 * 10000
 
-  c.rate = asset(53600, seeds_symbol);                      // 5.63
+  // c.rate = asset(53600, seeds_symbol);                      // 5.63
   c.visitor_limit =   asset(25000 * 10000, seeds_symbol);        // USD 250 / wk = 25,000 SEEDS
   c.resident_limit =  asset( uint64_t(250000) * uint64_t(10000), seeds_symbol);        // 250,000 
   c.citizen_limit =   asset( uint64_t(250000) * uint64_t(10000), seeds_symbol);       // 250,000 
