@@ -14,6 +14,7 @@ CONTRACT exchange : public contract {
     exchange(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         config(receiver, receiver.value),
+        sold(receiver, receiver.value),
         dailystats(receiver, receiver.value)
         {}
       
@@ -45,13 +46,24 @@ CONTRACT exchange : public contract {
       
       uint64_t primary_key()const { return buyer_account.value; }
     };
+
+    TABLE soldtable {
+      uint64_t id;
+      uint64_t total_sold;
+      uint64_t primary_key()const { return id; }
+    };
     
     typedef singleton<"config"_n, configtable> configtables;
     typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
 
+    typedef singleton<"sold"_n, soldtable> soldtables;
+    typedef eosio::multi_index<"sold"_n, soldtable> dump_for_sold;
+
     typedef multi_index<"dailystats"_n, stattable> stattables;
     
     configtables config;
+
+    soldtables sold;
     
     stattables dailystats;
 };
