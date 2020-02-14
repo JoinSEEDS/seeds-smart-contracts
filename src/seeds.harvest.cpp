@@ -61,7 +61,7 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
       if (found!=std::string::npos) {
         string target_acct_name = memo.substr (4,string::npos);
         target = name(target_acct_name);
-=     } else {
+     } else {
         check(false, "invalid memo");
       }
     }
