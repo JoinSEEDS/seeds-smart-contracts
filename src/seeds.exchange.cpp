@@ -1,13 +1,12 @@
 #include <seeds.exchange.hpp>
 
-
 void exchange::reset() {
   require_auth(_self);
 
   config.remove();
 
   configtable c = config.get_or_create(get_self(), configtable());
-  
+
   // TLOS 0.05368
   // SEEDS 0.01
   // Seeds per TLOS = 5.3611 * 10000 = 5.36 * 10000
@@ -73,6 +72,10 @@ void exchange::purchase(name buyer, name contract, asset tlos_quantity, string m
       }); 
     }
     
+    soldtable stb = sold.get_or_create(get_self(), soldtable());
+    stb.total_sold = stb.total_sold + seeds_amount;
+    sold.set(stb, get_self());
+
     action(
       permission_level{get_self(), "active"_n},
       contracts::token, "transfer"_n,
