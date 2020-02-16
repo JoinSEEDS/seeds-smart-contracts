@@ -99,7 +99,7 @@ ACTION scheduler::execute() {
             action a = action(
                 //permission_level{contracts::forum, "period"_n},
                 //permission_level(get_self(), "scheduled"_n),
-                permission_level{get_self(), "active"_n},
+                permission_level{contracts::forum, "execute"_n},
                 itr -> contract,
                 itr -> operation,
                 std::make_tuple()
