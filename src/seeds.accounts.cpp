@@ -230,9 +230,9 @@ void accounts::punish(name account) {
   }
 }
 
-void accounts::rewards(name account) {
+void accounts::rewards(name account, name new_status) {
   vouchreward(account);
-  refreward(account);
+  refreward(account, new_status);
 }
 
 void accounts::vouchreward(name account) {
@@ -257,29 +257,82 @@ void accounts::vouchreward(name account) {
   }
 }
 
-void accounts::refreward(name account) {
-  check_user(account);
-
-  auto ritr = refs.find(account.value);
+name find_referrer(name account) {
+    auto ritr = refs.find(account.value);
   
   if (ritr == refs.end()) {
-    return; // our reps tables are incomplete...
+    return not_found; // our reps tables are incomplete...
   }
-  
+
   name referrer = ritr->referrer;
 
+  return referrer;
+}
+
+void accounts::refreward(name account, name new_status) {
+  check_user(account);
+
+  bool is_citizen = new_status.value == name("citizen").value;
+    
+  name referrer = find_referrer(account);
+  if (referrer == not_found) {
+    return; // our reps tables are incomplete...
+  }
+
+  // Add community building point +1
+
+  name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
+
+  auto community_building_points = config.get(cbp_param.value, "The community building reward parameter has not been initialized yet.");
+
   auto citr = cbs.find(referrer.value);
-  
   if (citr != cbs.end()) {
     cbs.modify(citr, _self, [&](auto& item) {
-      item.community_building_score += 1;
+      item.community_building_score += community_building_points.value;
     });
   } else {
     cbs.emplace(_self, [&](auto& item) {
       item.account = referrer;
-      item.community_building_score = 1;
+      item.community_building_score = community_building_points.value;
     });
   }
+
+  // see if referrer is org or individual (or nobody)
+  auto uitr = users.find(referrer.value);
+  if (uitr != users.end()) {
+    auto user_type = uitr->type;
+
+    if (user_type == "organisation"_n) 
+    {
+      name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
+      auto org_seeds_reward = config.get(org_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
+      asset org_quantity(org_seeds_reward.value, seeds_symbol);
+
+      name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
+      auto amb_seeds_reward = config.get(amb_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
+      asset amb_quantity(amb_seeds_reward.value, seeds_symbol);
+
+      name owner = 
+
+    } 
+    else 
+    {
+      // Add reputation point +1
+      name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
+      auto rep_points = config.get(reputation_reward_param.value, "The reputation reward for individuals parameter has not been initialized yet.");
+
+      name seed_reward_param = is_citizen ? individual_seeds_reward_citizen : individual_seeds_reward_resident;
+      auto seeds_reward = config.get(seed_reward_param.value, "The seeds reward for individuals parameter has not been initialized yet.");
+      asset quantity(seeds_reward.value, seeds_symbol);
+
+      addrep(referrer, rep_points.value);
+
+      send_reward(referrer, quantity);
+    }
+  }
+
+
+  // if referrer is org, find ambassador and add referral there
 
 }
 
@@ -385,6 +438,20 @@ void accounts::update(name user, name type, string nickname, string image, strin
     });
 }
 
+void accounts::send_reward(name beneficiary, asset quantity) {
+  string memo = "referral reward";
+
+  // TODO: Check balance - if the balance runs out, the rewards run out too.
+
+  // TODO: Send from the referral rewards pool
+
+  action(
+    permission_level{_self, "active"_n},
+    contracts::token, "transfer"_n,
+    make_tuple(_self, beneficiary, quantity, memo)
+  ).send();
+}
+
 void accounts::makeresident(name user)
 {
     auto uitr = users.find(user.value);
@@ -403,9 +470,10 @@ void accounts::makeresident(name user)
     check(invited_users_number >= 1, "user has less than required referrals");
     check(uitr->reputation >= 100, "user has less than required reputation");
 
-    updatestatus(user, name("resident"));
+    auto new_status = name("resident");
+    updatestatus(user, new_status);
 
-    rewards(user);
+    rewards(user, new_status);
     
     history_add_resident(user);
 }
@@ -439,9 +507,10 @@ void accounts::makecitizen(name user)
     check(invited_users_number >= 3, "user has less than required referrals");
     check(uitr->reputation >= 100, "user has less than required reputation");
 
-    updatestatus(user, name("citizen"));
+    auto new_status = name("citizen");
+    updatestatus(user, new_status);
 
-    rewards(user);
+    rewards(user, new_status);
     
     history_add_citizen(user);
 }
@@ -450,9 +519,10 @@ void accounts::testresident(name user)
 {
   require_auth(_self);
 
-  updatestatus(user, name("resident"));
+  auto new_status = name("resident");
+  updatestatus(user, new_status);
 
-  rewards(user);
+  rewards(user, new_status);
   
   history_add_resident(user);
 }
@@ -461,9 +531,11 @@ void accounts::testcitizen(name user)
 {
   require_auth(_self);
 
-  updatestatus(user, name("citizen"));
+  auto new_status = name("citizen");
 
-  rewards(user);
+  updatestatus(user, new_status);
+
+  rewards(user, new_status);
   
   history_add_citizen(user);
 }

@@ -15,7 +15,8 @@ CONTRACT accounts : public contract {
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
           reps(receiver, receiver.value),
-          balances(contracts::harvest, contracts::harvest.value)
+          balances(contracts::harvest, contracts::harvest.value),
+          config(contracts::settings, contracts::settings.value)
           {}
 
       ACTION reset();
@@ -67,18 +68,36 @@ CONTRACT accounts : public contract {
       
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
+      symbol network_symbol = symbol("TLOS", 4);
+
+      const name not_found = ""_n;
+      const name cbp_reward_resident = "refcbp1.ind"_n;
+      const name cbp_reward_citizen = "refcbp2.ind"_n;
+
+      const name reputation_reward_resident = "refrep1.ind"_n;
+      const name reputation_reward_citizen = "refrep2.ind"_n;
+
+      const name individual_seeds_reward_resident = "refrwd1.ind"_n;
+      const name individual_seeds_reward_citizen = "refrwd2.ind"_n;
+
+      const name org_seeds_reward_resident = "refrwd1.org"_n;
+      const name org_seeds_reward_citizen = "refrwd2.org"_n;
+
+      const name ambassador_seeds_reward_resident = "refrwd1.amb"_n;
+      const name ambassador_seeds_reward_citizen = "refrwd2.amb"_n;
 
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
-      void rewards(name account);
+      void rewards(name account, name new_status);
       void vouchreward(name account);
-      void refreward(name account);
+      void refreward(name account, name new_status);
+      void send_reward(name beneficiary, asset quantity);
       void updatestatus(name account, name status);
       void _vouch(name sponsor, name account);
       void history_add_resident(name account);
       void history_add_citizen(name account);
+      name find_referrer(name account);
 
-      symbol network_symbol = symbol("TLOS", 4);
 
       TABLE ref_table {
         name referrer;
@@ -128,6 +147,12 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return sponsor.value; }
       };
 
+      TABLE config_table {
+        name param;
+        uint64_t value;
+        uint64_t primary_key() const { return param.value; }
+      };
+
     typedef eosio::multi_index<"reputation"_n, rep_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
@@ -153,10 +178,13 @@ CONTRACT accounts : public contract {
       const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
     > cbs_tables;
 
+    typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
     rep_tables reps;
     cbs_tables cbs;
     ref_tables refs;
+    config_tables config;
+
 
 
          struct [[eosio::table]] transaction_stats {

@@ -14,6 +14,39 @@ void settings::reset() {
   configure(name("hrvstreward"), 100000);
   configure(name("org.minplant"), 200 * 10000);
 
+  // =====================================
+  // referral rewards 
+  // =====================================
+
+  // community buiding points for referrer when user becomes resident
+  configure(name("refcbp1.ind"), 1);
+  // community buiding points for referrer when user becomes citizen
+  configure(name("refcbp2.ind"), 1);
+
+  // reputation points for referrer when user becomes resident
+  configure(name("refrep1.ind"), 1);
+  // reputation points for referrer when user becomes citizen
+  configure(name("refrep2.ind"), 1);
+
+  // reward for individual referrer when user becomes resident  
+  configure(name("refrwd1.ind"), 2 * 10000);
+  // reward for individual referrer when user becomes citizen  
+  configure(name("refrwd2.ind"), 3 * 10000);
+
+  // reward for org referrer when user becomes resident
+  configure(name("refrwd1.org"), 15 * 1000); // 1.4 SEEDS
+  // reward for org when user becomes citizen
+  configure(name("refrwd2.org"), 25 * 1000); // 2.5 SEEDS
+
+  // reward for ambassador of referring org when user becomes resident
+  configure(name("refrwd1.amb"), 4 * 1000); // 0.4 SEEDS
+  // reward for abmassador of referring org when user becomes citizen
+  configure(name("refrwd2.amb"), 6 * 1000); // 0.6 SEEDS
+
+
+
+
+
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
   setcontract(name("harvest"), "harvst.seeds"_n);
