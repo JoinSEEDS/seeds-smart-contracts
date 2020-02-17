@@ -43,8 +43,8 @@ void settings::reset() {
   // reward for abmassador of referring org when user becomes citizen
   configure(name("refrwd2.amb"), 6 * 1000); // 0.6 SEEDS
 
-
-
+  // Maximum number of points a user can gain from others vouching for them
+  configure(name("maxvouch"), 50);
 
 
   // contracts

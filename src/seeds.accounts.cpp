@@ -186,6 +186,26 @@ void accounts::_vouch(name sponsor, name account) {
   if (sponsor_status == name("resident")) reps = 5;
   if (sponsor_status == name("citizen")) reps = 10;
 
+  if (reps == 0) {
+    // this is called from invite accept - just no op
+    return;
+  }
+
+  // add up existing vouches
+  uint64_t total_vouch = 0;
+  auto vitr = vouch.begin();
+  while (vitr != vouch.end()) {
+    total_vouch += vitr->reps;
+    vitr++;
+  }
+
+  auto maxvouch = config.get(max_vouch_points.value, "settgs.seeds::config: the maxvouch parameter has not been initialized");
+  
+  check(total_vouch < maxvouch.value, "user is already fully vouched!");
+  if ( (total_vouch + reps) > maxvouch.value) {
+    reps = maxvouch.value - total_vouch; // limit to max vouch
+  }
+
   // add vouching table entry
   vouch.emplace(_self, [&](auto& item) {
     item.sponsor = sponsor;
@@ -193,12 +213,25 @@ void accounts::_vouch(name sponsor, name account) {
     item.reps = reps;
   });
 
-  // add reputation to user, if any
-  if (reps > 0) {
-    users.modify(uitra, _self, [&](auto& item) {
-      item.reputation += reps;
-    });
-  }
+  // add reputation to user
+  send_addrep(account, reps);
+  
+}
+
+void accounts::send_addrep(name user, uint64_t amount) {
+    action(
+      permission_level{_self, "active"_n},
+      contracts::accounts, "addrep"_n,
+      std::make_tuple(user, amount)
+  ).send();
+}
+
+void accounts::send_subrep(name user, uint64_t amount) {
+    action(
+      permission_level{_self, "active"_n},
+      contracts::accounts, "subrep"_n,
+      std::make_tuple(user, amount)
+  ).send();
 }
 
 void accounts::punish(name account) {
@@ -218,15 +251,8 @@ void accounts::punish(name account) {
 
   while (vitr != vouch.end()) {
     auto sponsor = vitr->sponsor;
-
-    auto uitr2 = users.find(sponsor.value);
-    users.modify(uitr2, _self, [&](auto& item) {
-      if (item.reputation < 50) {
-        item.reputation = 0;
-      } else {
-        item.reputation -= 50;
-      }
-    });
+    send_subrep(sponsor, 50);
+    vitr++;
   }
 }
 
@@ -247,18 +273,22 @@ void accounts::vouchreward(name account) {
 
   while (vitr != vouch.end()) {
     auto sponsor = vitr->sponsor;
-
-    auto uitr2 = users.find(sponsor.value);
-    users.modify(uitr2, _self, [&](auto& item) {
-      item.reputation += 1;
-    });
-
+    send_addrep(sponsor, 1);
     vitr++;
   }
 }
 
-name find_referrer(name account) {
-    auto ritr = refs.find(account.value);
+void accounts::requestvouch(name account, name sponsor) {
+  require_auth(account);
+  check_user(sponsor);
+  check_user(account);
+  
+  // Not implemented
+
+}
+
+name accounts::find_referrer(name account) {
+  auto ritr = refs.find(account.value);
   
   if (ritr == refs.end()) {
     return not_found; // our reps tables are incomplete...
@@ -276,7 +306,7 @@ void accounts::refreward(name account, name new_status) {
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
-    return; // our reps tables are incomplete...
+    return; // our refs tables are incomplete...
   }
 
   // Add community building point +1
@@ -312,7 +342,17 @@ void accounts::refreward(name account, name new_status) {
       auto amb_seeds_reward = config.get(amb_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
       asset amb_quantity(amb_seeds_reward.value, seeds_symbol);
 
-      name owner = 
+      // send reward to org
+      send_reward(referrer, org_quantity);
+
+      // send reward to ambassador if we have one
+      name org_owner = find_referrer(account);
+      if (org_owner != not_found) {
+        name ambassador = find_referrer(org_owner);
+        if (ambassador != not_found) {
+          send_reward(ambassador, amb_quantity);
+        }
+      }
 
     } 
     else 
@@ -325,7 +365,7 @@ void accounts::refreward(name account, name new_status) {
       auto seeds_reward = config.get(seed_reward_param.value, "The seeds reward for individuals parameter has not been initialized yet.");
       asset quantity(seeds_reward.value, seeds_symbol);
 
-      addrep(referrer, rep_points.value);
+      send_addrep(referrer, rep_points.value);
 
       send_reward(referrer, quantity);
     }
@@ -357,8 +397,6 @@ void accounts::invitevouch(name referrer, name invited)
 
   _vouch(referrer, invited);
 }
-
-
 
 void accounts::addrep(name user, uint64_t amount)
 {
