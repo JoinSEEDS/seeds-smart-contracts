@@ -346,7 +346,7 @@ void accounts::refreward(name account, name new_status) {
       send_reward(referrer, org_quantity);
 
       // send reward to ambassador if we have one
-      name org_owner = find_referrer(account);
+      name org_owner = find_referrer(referrer);
       if (org_owner != not_found) {
         name ambassador = find_referrer(org_owner);
         if (ambassador != not_found) {

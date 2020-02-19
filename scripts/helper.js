@@ -361,7 +361,7 @@ const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
 
 if (isTestnet || isLocalNet) {
-  console.log("Adding TESTNET permissions")
+  //console.log("Adding TESTNET permissions")
   const testnetDevelopmentKey = 'EOS7WSioF5yu8yoKEvnaryCJBSSqgdEiPLxHxGwYnvQXbYddTrUts'
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
@@ -445,6 +445,7 @@ const ramdom64ByteHexString = async () => {
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
+const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
   let private = await ecc.randomKey()
@@ -455,6 +456,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance
+  testnetUserPubkey, getTelosBalance, fromHexString
 }
 

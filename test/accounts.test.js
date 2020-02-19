@@ -1,10 +1,11 @@
 const { describe } = require('riteway')
-const { eos, names, isLocal } = require('../scripts/helper')
+const { eos, names, isLocal, initContracts, activePublicKey, getBalance, getBalanceFloat,
+  ramdom64ByteHexString, sha256, fromHexString, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, harvest, token, settings, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, harvest, token, settings, organization, onboarding, firstuser, seconduser, thirduser, fourthuser } = names
 
 const bulkadd = async (accounts, n) => {
   // todo import acount from helper, account creation func on local net
@@ -90,7 +91,7 @@ describe('accounts', async assert => {
   console.log("plant 100 seeds")
   await thetoken.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
-  console.log('add referral')
+  console.log('add referral firstuser is referrer for seconduser')
   await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
 
   console.log('update reputation')
@@ -128,8 +129,21 @@ describe('accounts', async assert => {
   console.log('add vouch')
   await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
 
+  let balanceBeforeResident = await getBalance(firstuser)
+  console.log('balanceBeforeResident'+balanceBeforeResident)
+
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  const cbScore1 = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true,
+  })
+
+  let balanceAfterResident = await getBalance(firstuser)
+  console.log('balanceAfterResident'+balanceAfterResident)
 
   const vouch = await eos.getTableRows({
     code: accounts,
@@ -159,6 +173,12 @@ describe('accounts', async assert => {
     json: true
   })
 
+  console.log('test citizen second user')
+  await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  let balanceAfterCitizen = await getBalance(firstuser)
+  console.log('balanceAfterCitizen'+balanceAfterCitizen)
+
   console.log('test testremove')
   await contract.testremove(seconduser, { authorization: `${accounts}@active` })
 
@@ -169,7 +189,7 @@ describe('accounts', async assert => {
     json: true,
   })
 
-  const cbScore = await eos.getTableRows({
+  const cbScore2 = await eos.getTableRows({
     code: accounts,
     scope: accounts,
     table: 'cbs',
@@ -188,6 +208,20 @@ describe('accounts', async assert => {
   const firstTimestamp = users.rows[0].timestamp
 
   assert({
+    given: 'referred became resudent',
+    should: 'gain Seeds for referrer',
+    actual: balanceAfterResident,
+    expected: balanceBeforeResident + 2
+  })
+
+  assert({
+    given: 'referred became citizen',
+    should: 'gain Seeds for referrer',
+    actual: balanceAfterCitizen,
+    expected: balanceBeforeResident + 5
+  })
+
+  assert({
     given: 'changed reputation',
     should: 'have correct values',
     actual: reps.rows.map(({ reputation }) => reputation),
@@ -195,10 +229,17 @@ describe('accounts', async assert => {
   })
 
   assert({
-    given: 'changed inviter community building score',
-    should: 'have correct values',
-    actual: cbScore.rows.map(({ community_building_score }) => community_building_score),
+    given: 'invited became resudent',
+    should: 'have community building score',
+    actual: cbScore1.rows.map(({ community_building_score }) => community_building_score),
     expected: [1]
+  })
+
+  assert({
+    given: 'invited became citizen',
+    should: 'have community building score',
+    actual: cbScore2.rows.map(({ community_building_score }) => community_building_score),
+    expected: [2]
   })
 
   assert({
@@ -382,7 +423,167 @@ describe('vouching', async assert => {
 
 })
 
+
+describe('Ambassador and Org rewards', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts, organization, token, onboarding })
+
+  console.log('reset contracts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('add user')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+
+  let ambassador = firstuser
+  let orgowner = "testorgowner"
+  let orgaccount = "testorg11111"
+
+  console.log('ambassador invites a user named testorgowner')
+  let secret = await invite(ambassador, 800, true)
+
+  console.log('user accepts the invite and becomes a Seeds user')
+  await accept(orgowner, secret, activePublicKey, contracts)
+
+  console.log("user sends funds to orgs.seeds contract")
+  await contracts.token.transfer(orgowner, organization, "200.0000 SEEDS", "memo", { authorization: `${orgowner}@active` })
+
+  console.log("user creates org")
+  await contracts.organization.create(orgowner, orgaccount, "Org Number 1", activePublicKey, { authorization: `${orgowner}@active` })
+
+  console.log("user sends funds to newly created org")
+  await contracts.token.transfer(firstuser, orgaccount, "900.0000 SEEDS", "memo", { authorization: `${firstuser}@active` })
+
+  console.log("org signs up people")
+  let orguser1 = "seedsorgusr1"
+  let orguser2 = "seedsorgusr2"
+
+  console.log('org invites 2 users')
+  let secret1 = await invite(orgaccount, 50, true)
+  let secret2 = await invite(orgaccount, 100, true)
+
+  await accept(orguser1, secret1, activePublicKey, contracts)
+  await accept(orguser2, secret2, activePublicKey, contracts)
+
+  const balances = async () => {
+     return { 
+      ambassador: await getBalanceFloat(ambassador),
+      organization: await getBalanceFloat(orgaccount),      
+    }
+  }
+
+  const checkBalances = (text, base, offset, actual) => {
+    assert({
+      given: text,
+      should: 'gain Seeds',
+      actual: actual,
+      expected: {
+        ambassador: base.ambassador + offset[0], 
+        organization: base.organization + offset[1],
+      }
+    })
+  
+  }
+
+  let balancesBefore = await balances()
+  console.log("balances before "+JSON.stringify(balancesBefore, null, 2))
+
+  console.log("user 1 becomes resident")
+  await contracts.accounts.testresident(orguser1, { authorization: `${accounts}@active` })
+
+  let balancesAfter1 = await balances()
+  checkBalances("after resident", balancesBefore, [0.4, 1.5], balancesAfter1)
+
+  console.log("user 2 becomes citizen")
+  await contracts.accounts.testcitizen(orguser2, { authorization: `${accounts}@active` })
+  let balancesAfter2 = await balances()
+  checkBalances("after citizen 1", balancesAfter1, [0.6, 2.5], balancesAfter2)
+
+  console.log("user 1 becomes citizen")
+  await contracts.accounts.testcitizen(orguser1, { authorization: `${accounts}@active` })
+  let balancesAfter3 = await balances()
+  checkBalances("after citizen 2", balancesAfter2, [0.6, 2.5], balancesAfter3)
+
+  console.log("final balances "+JSON.stringify(balancesAfter3, null, 2))
+
+})
+
 // TODO: Test ambassador and org rewards
 
 // TODO: Test punish
+const invite = async (sponsor, totalAmount, debug = false) => {
+    
+    const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
+    totalAmount = parseInt(totalAmount)
+
+    const plantedSeeds = 5
+    const transferredSeeds = totalAmount - plantedSeeds
+
+    const transferQuantity = transferredSeeds + `.0000 SEEDS`
+    const sowQuantity = plantedSeeds + '.0000 SEEDS'
+    const totalQuantity = totalAmount + '.0000 SEEDS'
+    
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+    console.log("     Invite Secret: "+inviteSecret)
+    console.log("     Secret hash: "+inviteHash)
+    
+    const deposit = async () => {
+        try {
+            console.log(`${token}.transfer from ${sponsor} to ${onboarding} (${totalQuantity})`)
+            await contracts.token.transfer(sponsor, onboarding, totalQuantity, '', { authorization: `${sponsor}@active` })        
+        } catch (err) {
+            console.log("deposit error: " + err)
+        }
+    }
+
+    const invite = async () => {
+        try {
+            console.log(`${onboarding}.invite from ${sponsor}`)
+            await contracts.onboarding.invite(sponsor, transferQuantity, sowQuantity, inviteHash, { authorization: `${sponsor}@active` })    
+        } catch(err) {
+            console.log("inv err: "+err)
+        }
+    }
+
+    await deposit()
+
+    if (debug == true) {
+        const sponsorsBefore = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'sponsors',
+            json: true
+        })
+        console.log("sponsors after deposit "+JSON.stringify(sponsorsBefore.rows, null, 2))    
+    }
+
+    await invite()
+
+    if (debug == true) {
+        const sponsorsAfter = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'sponsors',
+            json: true
+        })
+        console.log("sponsors after invite "+JSON.stringify(sponsorsAfter.rows, null, 2))
+    }   
+
+    return inviteSecret
+
+}
+
+const accept = async (newAccount, inviteSecret, publicKey, contracts) => {
+  console.log(`${onboarding}.accept invite for ${newAccount}`)
+  await contracts.onboarding.accept(newAccount, inviteSecret, publicKey, { authorization: `${onboarding}@application` })        
+  console.log("accept success!")
+}
