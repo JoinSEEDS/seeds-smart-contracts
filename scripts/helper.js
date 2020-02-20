@@ -122,6 +122,10 @@ const accountsMetadata = (network) => {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
+      fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
+      fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -357,7 +361,7 @@ const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
 
 if (isTestnet || isLocalNet) {
-  console.log("Adding TESTNET permissions")
+  //console.log("Adding TESTNET permissions")
   const testnetDevelopmentKey = 'EOS7WSioF5yu8yoKEvnaryCJBSSqgdEiPLxHxGwYnvQXbYddTrUts'
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
@@ -441,6 +445,7 @@ const ramdom64ByteHexString = async () => {
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
+const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
   let private = await ecc.randomKey()
@@ -451,6 +456,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance
+  testnetUserPubkey, getTelosBalance, fromHexString
 }
 
