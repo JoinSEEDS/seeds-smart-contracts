@@ -90,7 +90,7 @@ void onboarding::invitevouch(name sponsor, name account) {
   ).send();
 }
 
-void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey) {
+void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname) {
   require_auth(get_self());
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
@@ -121,7 +121,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account, "", "individual"_n);
+    add_user(account, fullname, "individual"_n);
     add_referral(sponsor, account);  
     invitevouch(sponsor, account);
   }
@@ -143,7 +143,7 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account, fullname, "organization"_n);
+    add_user(account, fullname, "organisation"_n);
     add_referral(sponsor, account);  
   }
 }
@@ -228,20 +228,20 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
 }
 
 // accept invite with creating new account
-void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey) {
+void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname) {
   check(is_account(account) == false, "Account already exists " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, fullname);
 }
 
 // accept invite using already existing account
 void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey) {
   check(is_account(account) == true, "Account does not exist " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }
 
 // accept invite using already existing account or creating new account
 void onboarding::accept(name account, checksum256 invite_secret, string publicKey) {
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }

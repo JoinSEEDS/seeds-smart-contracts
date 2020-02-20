@@ -122,6 +122,10 @@ const accountsMetadata = (network) => {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
+      fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
+      fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -145,7 +149,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -172,7 +177,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -208,7 +214,8 @@ const accountsMetadata = (network) => {
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
-      organization: contract('orgs.seeds', 'organization')
+      organization: contract('orgs.seeds', 'organization'),
+      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -354,7 +361,7 @@ const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
 
 if (isTestnet || isLocalNet) {
-  console.log("Adding TESTNET permissions")
+  //console.log("Adding TESTNET permissions")
   const testnetDevelopmentKey = 'EOS7WSioF5yu8yoKEvnaryCJBSSqgdEiPLxHxGwYnvQXbYddTrUts'
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
@@ -401,6 +408,11 @@ const encodeName = Eos.modules.format.encodeName
 const decodeName = Eos.modules.format.decodeName
 const getTableRows = eos.getTableRows
 
+const getTelosBalance = async (user) => {
+  const balance = await eos.getCurrencyBalance(names.tlostoken, user, 'TLOS')
+  return Number.parseInt(balance[0])
+}
+
 const getBalance = async (user) => {
   const balance = await eos.getCurrencyBalance(names.token, user, 'SEEDS')
   return Number.parseInt(balance[0])
@@ -433,6 +445,7 @@ const ramdom64ByteHexString = async () => {
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
+const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
   let private = await ecc.randomKey()
@@ -443,6 +456,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey
+  testnetUserPubkey, getTelosBalance, fromHexString
 }
 

@@ -1,6 +1,7 @@
 #include <eosio/eosio.hpp>
 
 using eosio::name;
+using eosio::asset;
 using std::string;
 
 namespace tables {
@@ -20,4 +21,14 @@ namespace tables {
     uint64_t primary_key()const { return account.value; }
     uint64_t by_reputation()const { return reputation; }
   };
+
+  TABLE balance_table {
+      name account;
+      asset planted;
+      asset reward;
+
+      uint64_t primary_key()const { return account.value; }
+      uint64_t by_planted()const { return planted.amount; }
+  };
+
 }
