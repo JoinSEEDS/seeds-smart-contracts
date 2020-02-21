@@ -1,6 +1,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;

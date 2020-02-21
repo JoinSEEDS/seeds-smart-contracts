@@ -27,7 +27,6 @@ void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
-    auto vitr = voice.begin();
 
     auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
     auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
@@ -70,11 +69,11 @@ void proposals::onperiod() {
       pitr++;
     }
 
+    auto vitr = voice.begin();
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
             voice.balance = voice_base;
         });
-
         vitr++;
     }
 
@@ -85,8 +84,33 @@ void proposals::onperiod() {
       "onperiod"_n,
       std::make_tuple()
     );
-    trx.delay_sec = 2548800;
+    trx.delay_sec = get_cycle_period_sec(); 
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+
+    update_cycle();
+}
+
+uint64_t proposals::get_cycle_period_sec() {
+  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
+  return moon_cycle.value / 2; // Using half moon cycles for now
+}
+
+uint64_t proposals::get_voice_decay_period_sec() {
+  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
+  return voice_decay_period.value;
+}
+
+void proposals::decayvoice() {
+  // Not yet implemented    
+  require_auth(get_self());
+
+}
+
+void proposals::update_cycle() {
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    c.propcycle += 1;
+    c.t_onperiod = current_time_point().sec_since_epoch();
+    cycle.set(c, get_self());
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
