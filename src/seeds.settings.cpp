@@ -10,7 +10,7 @@ void settings::reset() {
   configure(name("refsquorum"), 80);
   configure(name("propmajority"), 80);
   configure(name("propquorum"), 5);
-  configure(name("propvoice"), 20); // voice base per period
+  configure(name("propvoice"), 77); // voice base per period
   configure(name("hrvstreward"), 100000);
   configure(name("org.minplant"), 200 * 10000);
   configure(name("mooncyclesec"), utils::moon_cycle);
