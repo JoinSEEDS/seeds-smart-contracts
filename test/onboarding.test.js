@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -71,9 +71,9 @@ describe('Onboarding', async assert => {
         }
     }
 
-    const deposit = async (user) => {
+    const deposit = async (user, memo = '') => {
         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
+        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })    
     }
 
     const invite = async (user, inviteHash) => {
@@ -125,6 +125,20 @@ describe('Onboarding', async assert => {
         json: true
     })
 
+    const getSponsors = async () => {
+        return await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'sponsors',
+            json: true
+        })
+    }
+
+    console.log("first user makes deposit on behalf of third user")
+    await contracts.token.transfer(firstuser, onboarding, '22.0000 SEEDS', "sponsor "+thirduser, { authorization: `${firstuser}@active` })    
+
+    let sponsorsAfter = await getSponsors()
+
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -158,6 +172,15 @@ describe('Onboarding', async assert => {
         expected: seconduser
     })
 
+    assert({
+        given: 'define sponsor in memo',
+        should: 'have sponsors table entry',
+        actual: sponsorsAfter.rows[2],
+        expected: {
+            "account": thirduser,
+            "balance": "22.0000 SEEDS"
+          }
+    })
 
 })
 
@@ -185,7 +208,8 @@ describe('Use application permission to accept', async assert => {
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })     
+            await contracts.accounts.makeresident(firstuser, { authorization: `${accounts}@active` })
         } catch (error) {
             console.log("user exists")
         }
@@ -235,6 +259,8 @@ describe('Use application permission to accept', async assert => {
         json: true
     })
     
+    console.log("vouch after accept "+JSON.stringify(vouchAfterInvite, null, 2))
+
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -440,14 +466,14 @@ describe('Campaign reward for existing user', async assert => {
         json: true
     })
 
-    console.log("before "+JSON.stringify(before, null, 2))
-    console.log("after "+JSON.stringify(rows, null, 2))
+    // console.log("before "+JSON.stringify(before, null, 2))
+    // console.log("after "+JSON.stringify(rows, null, 2))
 
 
-    const afterBalance = await getBalance(seconduser)
+    //const afterBalance = await getBalance(seconduser)
 
-    console.log("before "+JSON.stringify(beforeBalance, null, 2))
-    console.log("after "+JSON.stringify(afterBalance, null, 2))
+    // console.log("before "+JSON.stringify(beforeBalance, null, 2))
+    // console.log("after "+JSON.stringify(afterBalance, null, 2))
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
