@@ -13,7 +13,9 @@ void settings::reset() {
   configure(name("propvoice"), 20); // voice base per period
   configure(name("hrvstreward"), 100000);
   configure(name("org.minplant"), 200 * 10000);
-
+  configure(name("mooncyclesec"), utils::moon_cycle);
+  configure(name("propdecaysec"), utils::seconds_per_day);
+  
   // =====================================
   // referral rewards 
   // =====================================
