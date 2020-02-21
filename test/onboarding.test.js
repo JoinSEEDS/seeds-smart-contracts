@@ -209,7 +209,6 @@ describe('Use application permission to accept', async assert => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
             await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })     
-            await contracts.accounts.makeresident(firstuser, { authorization: `${accounts}@active` })
         } catch (error) {
             console.log("user exists")
         }
@@ -231,6 +230,7 @@ describe('Use application permission to accept', async assert => {
     }
 
     await adduser()
+    await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
     await deposit(firstuser)
 
