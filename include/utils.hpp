@@ -4,6 +4,9 @@ using namespace eosio;
 
 namespace utils {
 
+  const uint64_t seconds_per_day = 86400;
+  const uint64_t moon_cycle = seconds_per_day * 29 + seconds_per_day / 2;
+
   symbol seeds_symbol = symbol("SEEDS", 4);
 
   bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority) {
