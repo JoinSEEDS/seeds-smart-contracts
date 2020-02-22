@@ -38,10 +38,6 @@ namespace eosio {
             :  contract(receiver, code, ds),
                circulating(receiver, receiver.value)
                {}
-
-
-         [[eosio::action]]
-         void migrateall();
          
          /**
           * Create action.
