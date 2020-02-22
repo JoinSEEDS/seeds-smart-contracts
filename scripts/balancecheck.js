@@ -25,37 +25,37 @@ const allContracts = [
 
 const getbalance = async (account) => {
   try {
+    var formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    });
+    
     let token = "token.seeds"
     let balance = await eos.getCurrencyBalance(token, account, 'SEEDS')
     if (balance == "") {
       console.log("Balance for "+account+": No balance")
     } else {
-      console.log("Balance for "+account+": "+balance + " ("+token+")")
-    }
-    const plantedBalances = await getTableRows({
-      code: harvest,
-      scope: harvest,
-      table: 'balances',
-      lower_bound: account,
-      upper_bound: account,
-      json: true,
-      limit: 100
-    })
-    console.log("Planted for "+account+": "+JSON.stringify(plantedBalances, null, 2))
-
-  
+      console.log("Balance for "+account+": "+formatter.format(parseInt(balance)))
+      // console.log(account+","+formatter.format(parseInt(balance)))
+    }  
   } catch (err) {
     console.log("error "+err)
   }
 }
 
 program
-  .arguments('<account>')
+  .arguments('<account> [moreAccounts...]')
   .description('Get SEEDS balance for an account')
   .name("balancecheck.js")
   .usage("<account>")
-  .action(async function (account) {
+  .action(async function (account, moreAccounts) {
     await getbalance(account)
+    if (moreAccounts) {
+      moreAccounts.forEach(async function (a) {
+        await getbalance(a)
+      })
+    }
+  
   })
 
 program.parse(process.argv)
