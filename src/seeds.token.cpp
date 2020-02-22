@@ -311,7 +311,7 @@ void token::updatecirc() {
     uint64_t total = sitr->supply.amount;
     uint64_t result = total;
 
-    std::array<name, 10> system_accounts = {
+    std::array<name, 11> system_accounts = {
       "gift.seeds"_n,
       "milest.seeds"_n,
       "hypha.seeds"_n,
@@ -319,9 +319,10 @@ void token::updatecirc() {
       "refer.seeds"_n,
       "bank.seeds"_n,
       "system.seeds"_n,
-      "harvst.seeds"_n, // planted - although these go into system actually
-      "funds.seeds"_n,  // proposals
-      "rules.seeds"_n   // referendums
+      "harvst.seeds"_n,   // planted - although these go into system actually
+      "funds.seeds"_n,    // proposals
+      "rules.seeds"_n,    // referendums
+      "dao.hypha"_n       // hypha dao escrow contract
     };
 
     for(const auto& account : system_accounts) {   // Range-for!
