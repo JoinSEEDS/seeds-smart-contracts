@@ -90,6 +90,21 @@ void proposals::onperiod() {
     update_cycle();
 }
 
+double proposals::vote_depreciation_factor() {
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+  uint64_t cycle_period = get_cycle_period_sec();
+  double half_period = cycle_period / 2;
+  uint64_t next_cycle = last_cycle_timestamp() + cycle_period;
+  double seconds_till_next_cycle = next_cycle - now;
+  
+  if (seconds_till_next_cycle > half_period) {
+    return 1.0;
+  } else {
+    // linear depreciation
+    return seconds_till_next_cycle / half_period;
+  }
+}
+
 uint64_t proposals::get_cycle_period_sec() {
   auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
   return moon_cycle.value / 2; // Using half moon cycles for now
@@ -100,18 +115,18 @@ uint64_t proposals::get_voice_decay_period_sec() {
   return voice_decay_period.value;
 }
 
-void proposals::decayvoice() {
-  // Not yet implemented    
-  require_auth(get_self());
-
-}
-
 void proposals::update_cycle() {
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     c.propcycle += 1;
     c.t_onperiod = current_time_point().sec_since_epoch();
     cycle.set(c, get_self());
 }
+
+uint64_t proposals::last_cycle_timestamp() {
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    return c.t_onperiod;
+}
+
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
   require_auth(creator);
@@ -219,7 +234,17 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "User does not have voice");
-  check(vitr->balance >= amount, "voice balance exceeded");
+
+  double factor = vote_depreciation_factor();
+  uint64_t vote_subtract_amount = amount;
+
+  if (factor >= 1) {
+    check(vitr->balance >= amount, "voice balance exceeded");
+  } else {
+    uint64_t actual_available_votes = vitr->balance * factor;
+    vote_subtract_amount = ( 1 / factor ) * amount;
+    check(vitr->balance >= vote_subtract_amount, "voice balance exceeded - actual available amount: "+std::to_string(actual_available_votes));
+  }
 
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
@@ -231,7 +256,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   });
 
   voice.modify(vitr, voter, [&](auto& voice) {
-    voice.balance -= amount;
+    voice.balance -= vote_subtract_amount;
   });
 
   votes.emplace(_self, [&](auto& vote) {
@@ -256,7 +281,17 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
 
     auto vitr = voice.find(voter.value);
     check(vitr != voice.end(), "User does not have voice");
-    check(vitr->balance >= amount, "voice balance exceeded");
+
+    double factor = vote_depreciation_factor();
+    uint64_t vote_subtract_amount = amount;
+
+    if (factor >= 1) {
+      check(vitr->balance >= amount, "voice balance exceeded");
+    } else {
+      uint64_t actual_available_votes = vitr->balance * factor;
+      vote_subtract_amount = ( 1 / factor ) * amount;
+      check(vitr->balance >= vote_subtract_amount, "voice balance exceeded - actual available amount: "+std::to_string(actual_available_votes));
+    }
 
     votes_tables votes(get_self(), id);
     auto voteitr = votes.find(voter.value);
@@ -268,7 +303,7 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     });
 
     voice.modify(vitr, voter, [&](auto& voice) {
-        voice.balance -= amount;
+        voice.balance -= vote_subtract_amount;
     });
 
     votes.emplace(_self, [&](auto& vote) {

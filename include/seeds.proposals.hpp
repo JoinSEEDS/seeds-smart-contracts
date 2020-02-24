@@ -39,8 +39,6 @@ CONTRACT proposals : public contract {
 
       ACTION onperiod();
 
-      ACTION decayvoice();
-
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       
@@ -48,6 +46,8 @@ CONTRACT proposals : public contract {
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
+      uint64_t last_cycle_timestamp();
+      double vote_depreciation_factor();
 
       void check_user(name account);
       void check_citizen(name account);
@@ -149,7 +149,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod))
       }
   }
 }
