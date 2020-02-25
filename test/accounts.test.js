@@ -211,14 +211,14 @@ describe('accounts', async assert => {
     given: 'referred became resudent',
     should: 'gain Seeds for referrer',
     actual: balanceAfterResident,
-    expected: balanceBeforeResident + 2
+    expected: balanceBeforeResident + 10
   })
 
   assert({
     given: 'referred became citizen',
     should: 'gain Seeds for referrer',
     actual: balanceAfterCitizen,
-    expected: balanceBeforeResident + 5
+    expected: balanceAfterResident + 15
   })
 
   assert({
@@ -498,23 +498,21 @@ describe('Ambassador and Org rewards', async assert => {
   await contracts.accounts.testresident(orguser1, { authorization: `${accounts}@active` })
 
   let balancesAfter1 = await balances()
-  checkBalances("after resident", balancesBefore, [0.4, 1.5], balancesAfter1)
+  checkBalances("after resident", balancesBefore, [2, 8], balancesAfter1)
 
   console.log("user 2 becomes citizen")
   await contracts.accounts.testcitizen(orguser2, { authorization: `${accounts}@active` })
   let balancesAfter2 = await balances()
-  checkBalances("after citizen 1", balancesAfter1, [0.6, 2.5], balancesAfter2)
+  checkBalances("after citizen 1", balancesAfter1, [3, 12], balancesAfter2)
 
   console.log("user 1 becomes citizen")
   await contracts.accounts.testcitizen(orguser1, { authorization: `${accounts}@active` })
   let balancesAfter3 = await balances()
-  checkBalances("after citizen 2", balancesAfter2, [0.6, 2.5], balancesAfter3)
+  checkBalances("after citizen 2", balancesAfter2, [3, 12], balancesAfter3)
 
   console.log("final balances "+JSON.stringify(balancesAfter3, null, 2))
 
 })
-
-// TODO: Test ambassador and org rewards
 
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {
