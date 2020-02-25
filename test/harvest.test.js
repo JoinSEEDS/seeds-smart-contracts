@@ -426,7 +426,7 @@ describe("harvest contribution score", async assert => {
 
 })
 
-describe.only("plant for other user", async assert => {
+describe("plant for other user", async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
