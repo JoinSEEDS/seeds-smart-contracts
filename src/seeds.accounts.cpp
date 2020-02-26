@@ -20,11 +20,6 @@ void accounts::reset() {
     refitr = refs.erase(refitr);
   }
 
-  auto repitr = reps.begin();
-  while (repitr != reps.end()) {
-    repitr = reps.erase(repitr);
-  }
-
   auto cbsitr = cbs.begin();
   while (cbsitr != cbs.end()) {
     cbsitr = cbs.erase(cbsitr);
@@ -291,7 +286,7 @@ name accounts::find_referrer(name account) {
   auto ritr = refs.find(account.value);
   
   if (ritr == refs.end()) {
-    return not_found; // our reps tables are incomplete...
+    return not_found; // our refs tables are incomplete...
   }
 
   name referrer = ritr->referrer;
@@ -408,18 +403,6 @@ void accounts::addrep(name user, uint64_t amount)
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
-
-  auto ritr = reps.find(user.value);
-  if (ritr == reps.end()) {
-    reps.emplace(_self, [&](auto& rep) {
-      rep.account = user;
-      rep.reputation = amount;
-    });
-  } else {
-    reps.modify(ritr, _self, [&](auto& rep) {
-      rep.reputation += amount;
-    });
-  }
 }
 
 void accounts::subrep(name user, uint64_t amount)
@@ -436,23 +419,6 @@ void accounts::subrep(name user, uint64_t amount)
       user.reputation -= amount;
     }
   });
-
-  auto ritr = reps.find(user.value);
-
-  if (ritr == reps.end()) {
-    reps.emplace(_self, [&](auto& rep) {
-      rep.account = user;
-      rep.reputation = 0;
-    });
-  } else {
-    reps.modify(ritr, _self, [&](auto& rep) {
-      if (rep.reputation < amount) {
-        rep.reputation = 0;
-      } else {
-        rep.reputation -= amount;
-      }
-    });
-  }
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)

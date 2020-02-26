@@ -14,7 +14,6 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
-          reps(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value)
@@ -113,14 +112,6 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return invited.value; }
       };
 
-      TABLE rep_table {
-        name account;
-        uint64_t reputation;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
-
       TABLE cbs_table {
         name account;
         uint64_t community_building_score;
@@ -172,11 +163,6 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return param.value; }
       };
 
-    typedef eosio::multi_index<"reputation"_n, rep_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
-    > rep_tables;
-
     typedef eosio::multi_index<"users"_n, user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
@@ -209,7 +195,6 @@ CONTRACT accounts : public contract {
 
     typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
-    rep_tables reps;
     cbs_tables cbs;
     ref_tables refs;
     req_vouch_tables reqvouch;
