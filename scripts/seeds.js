@@ -88,13 +88,18 @@ const runAction = async (contract) => {
   await test(contract)
 }
 
-const batchCallFunc = async (contract, func) => {
+const batchCallFunc = async (contract, moreContracts, func) => {
   if (contract == 'all') {
     for (const contract of allContracts) {
       await func(contract)
     }
   } else {
     await func(contract)
+  }
+  if (moreContracts) {
+    moreContracts.forEach(async function (c) {
+      await func(c)
+    })
   }
 }
 
@@ -129,38 +134,38 @@ const startHarvestCalculations = async () => {
 }
 
 program
-  .command('compile <contract>')
+  .command('compile <contract> [moreContracts...]')
   .description('Compile custom contract')
-  .action(async function (contract) {
-    await batchCallFunc(contract, compileAction)
+  .action(async function (contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, compileAction)
   })
 
 program
-  .command('deploy <contract>')
+  .command('deploy <contract> [moreContracts...]')
   .description('Deploy custom contract')
-  .action(async function (contract) {
-    await batchCallFunc(contract, deployAction)
+  .action(async function (contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, deployAction)
   })
 
 program
-  .command('run <contract>')
+  .command('run <contract> [moreContracts...]')
   .description('compile and deploy custom contract')
-  .action(async function (contract) {
-    await batchCallFunc(contract, runAction)
+  .action(async function (contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, runAction)
   })
 
   program
-  .command('test <contract>')
+  .command('test <contract> [moreContracts...]')
   .description('Run unit tests for deployed contract')
-  .action(async function(contract) {
-    await batchCallFunc(contract, test)
+  .action(async function(contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, test)
   })
 
   program
-  .command('reset <contract>')
+  .command('reset <contract> [moreContracts...]')
   .description('Reset deployed contract')
-  .action(async function(contract) {
-    await batchCallFunc(contract, resetAction)
+  .action(async function(contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, resetAction)
   })
 
   program
@@ -177,13 +182,17 @@ program
     await updatePermissionAction()
   })
 
-  program
-  .command('startHarvestCalculations')
-  .description('Start calculations on harvest contract')
-  .action(async function(contract) {
-    await startHarvestCalculations()
-  })
+  // program // NOT IN USE AT THE MOMENT
+  // .command('startHarvestCalculations')
+  // .description('Start calculations on harvest contract')
+  // .action(async function(contract) {
+  //   await startHarvestCalculations()
+  // })
 
 
-  
 program.parse(process.argv)
+
+var NO_COMMAND_SPECIFIED = program.args.length === 0;
+if (NO_COMMAND_SPECIFIED) {
+  program.help();
+}

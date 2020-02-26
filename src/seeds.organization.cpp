@@ -11,48 +11,40 @@ void organization::check_owner(name organization, name owner) {
 
 
 void organization::init_balance(name account) {
-    auto itr = balances.find(account.value);
-    if(itr == balances.end()){
-        balances.emplace(_self, [&](auto & nbalance) {
+    auto itr = sponsors.find(account.value);
+    if(itr == sponsors.end()){
+        sponsors.emplace(_self, [&](auto & nbalance) {
             nbalance.account = account;
             nbalance.balance = asset(0, seeds_symbol);
         });
     }
 }
 
-
 void organization::check_user(name account) {
     auto uitr = users.find(account.value);
-    check(uitr != users.end(), "organization: no user.");
+    check(uitr != users.end(), "organisation: no user.");
 }
-
 
 int64_t organization::getregenp(name account) {
     auto itr = users.find(account.value);
     return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
-
-void organization::check_asset(asset quantity) {
-    check(quantity.is_valid(), "invalid asset");
-    check(quantity.symbol == seeds_symbol, "invalid asset");
-}
-
-
 void organization::deposit(name from, name to, asset quantity, string memo) {
     if(to == _self){
+        utils::check_asset(quantity);
         check_user(from);
 
         init_balance(from);
         init_balance(to);
 
-        auto fitr = balances.find(from.value);
-        balances.modify(fitr, _self, [&](auto & mbalance) {
+        auto fitr = sponsors.find(from.value);
+        sponsors.modify(fitr, _self, [&](auto & mbalance) {
             mbalance.balance += quantity;
         });
 
-        auto titr = balances.find(to.value);
-        balances.modify(titr, _self, [&](auto & mbalance) {
+        auto titr = sponsors.find(to.value);
+        sponsors.modify(titr, _self, [&](auto & mbalance) {
             mbalance.balance += quantity;
         });
     }
@@ -63,7 +55,7 @@ void organization::deposit(name from, name to, asset quantity, string memo) {
 /*
 ACTION organization::createbalance(name user, asset quantity) {
     
-    balances.emplace(_self, [&](auto & nbalance) {
+    sponsors.emplace(_self, [&](auto & nbalance) {
         nbalance.account = user;
         nbalance.balance = quantity;
     });
@@ -93,50 +85,74 @@ ACTION organization::reset() {
         itr = organizations.erase(itr);
     }
 
-    auto bitr = balances.begin();
-    while(bitr != balances.end()){
-        bitr = balances.erase(bitr);
+    auto bitr = sponsors.begin();
+    while(bitr != sponsors.end()){
+        bitr = sponsors.erase(bitr);
     }
 }
 
 
-ACTION organization::create(name orgname, name sponsor) {
+ACTION organization::create(name sponsor, name orgaccount, string orgfullname, string publicKey) 
+{
     require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
 
-    auto itr = balances.find(sponsor.value);
-    check(itr != balances.end(), "The sponsor account does not have a balance entry in this contract.");
+    auto bitr = sponsors.find(sponsor.value);
+    check(bitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
 
-    auto feeparam = config.get(fee.value, "The fee parameter has not been initialized yet.");
+    auto feeparam = config.get(min_planted.value, "The org.minplant parameter has not been initialized yet.");
     asset quantity(feeparam.value, seeds_symbol);
 
-    check(itr -> balance >= quantity, "The user does not have enough credit to create an organization");
+    check(bitr->balance >= quantity, "The user does not have enough credit to create an organization" + bitr->balance.to_string() + " min: "+quantity.to_string());
 
-    auto orgitr = organizations.find(orgname.value);
+    auto orgitr = organizations.find(orgaccount.value);
     check(orgitr == organizations.end(), "This organization already exists.");
     
-    balances.modify(itr, _self, [&](auto & mbalance) {
+    auto uitr = users.find(sponsor.value);
+    check(uitr != users.end(), "Sponsor is not a Seeds account.");
+
+    create_account(sponsor, orgaccount, orgfullname, publicKey);
+
+    string memo =  "sow "+orgaccount.to_string();
+
+    action(
+        permission_level(_self, "active"_n),
+        contracts::token,
+        "transfer"_n,
+        std::make_tuple(_self, contracts::harvest, quantity, memo)
+    ).send();
+
+
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
     organizations.emplace(_self, [&](auto & norg) {
-        norg.org_name = orgname;
+        norg.org_name = orgaccount;
         norg.owner = sponsor;
-        norg.fee = quantity;
+        norg.planted = quantity;
     });
 
-    addmember(orgname, sponsor, sponsor, ""_n);
+    addmember(orgaccount, sponsor, sponsor, ""_n);
 }
 
+void organization::create_account(name sponsor, name orgaccount, string orgfullname, string publicKey) 
+{
+    action(
+        permission_level{contracts::onboarding, "active"_n},
+        contracts::onboarding, "onboardorg"_n,
+        make_tuple(sponsor, orgaccount, orgfullname, publicKey)
+    ).send();
+}
 
 ACTION organization::destroy(name organization, name owner) {
     check_owner(organization, owner);
 
     auto orgitr = organizations.find(organization.value);
-    check(orgitr != organizations.end(), "organization: the organization does not exist.");
+    check(orgitr != organizations.end(), "organisation: the organization does not exist.");
 
-    auto bitr = balances.find(owner.value);
-    balances.modify(bitr, _self, [&](auto & mbalance) {
-        mbalance.balance += orgitr -> fee;
+    auto bitr = sponsors.find(owner.value);
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
+        mbalance.balance += orgitr -> planted;
     });
 
     members_tables members(get_self(), organization.value);
@@ -148,18 +164,18 @@ ACTION organization::destroy(name organization, name owner) {
     auto org = organizations.find(organization.value);
     organizations.erase(org);
 
-    // refund(owner, fee); this method could be called if we want to refund as soon as the user destroys an organization
+    // refund(owner, planted); this method could be called if we want to refund as soon as the user destroys an organization
 }
 
 
 ACTION organization::refund(name beneficiary, asset quantity) {
     require_auth(beneficiary);
     
-    check_asset(quantity);
+    utils::check_asset(quantity);
 
-    auto itr = balances.find(beneficiary.value);
-    check(itr != balances.end(), "organization: user has no entry in the balance table.");
-    check(itr -> balance >= quantity, "organization: user has not enough balance.");
+    auto itr = sponsors.find(beneficiary.value);
+    check(itr != sponsors.end(), "organisation: user has no entry in the balance table.");
+    check(itr -> balance >= quantity, "organisation: user has not enough balance.");
 
     string memo = "refund";
 
@@ -170,12 +186,12 @@ ACTION organization::refund(name beneficiary, asset quantity) {
         std::make_tuple(_self, beneficiary, quantity, memo)
     ).send();
 
-    auto bitr = balances.find(_self.value);
-    balances.modify(bitr, _self, [&](auto & mbalance) {
+    auto bitr = sponsors.find(_self.value);
+    sponsors.modify(bitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;
     });
 
-    balances.modify(itr, _self, [&](auto & mbalance) {
+    sponsors.modify(itr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;
     });
 }
@@ -223,20 +239,7 @@ ACTION organization::changeowner(name organization, name owner, name account) {
     check_owner(organization, owner);
     check_user(account);
 
-    auto bitr = balances.find(owner.value);
-    auto aitr = balances.find(account.value);
     auto orgitr = organizations.find(organization.value);
-
-    check(aitr != balances.end(), "organization: the account does not have an entry in the balance table.");
-    check(aitr -> balance >= orgitr -> fee, "organization: the account does not have enough balance.");
-
-    balances.modify(bitr, _self, [&](auto & mbalace) {
-        mbalace.balance += orgitr ->fee;
-    });
-
-    balances.modify(aitr, _self, [&](auto & mbalace) {
-        mbalace.balance -= orgitr -> fee;
-    });
 
     organizations.modify(orgitr, _self, [&](auto & morg) {
         morg.owner = account;
@@ -248,7 +251,7 @@ void organization::vote(name organization, name account, int64_t regen) {
     vote_tables votes(get_self(), organization.value);
 
     auto itr = organizations.find(organization.value);
-    check(itr != organizations.end(), "Organization does not exist.");
+    check(itr != organizations.end(), "organisation does not exist.");
     
     organizations.modify(itr, _self, [&](auto & morg) {
         morg.regen += regen;
@@ -272,7 +275,7 @@ ACTION organization::addregen(name organization, name account) {
     
     if(vitr != votes.end()){
         auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "Organization does not exist.");
+        check(itr != organizations.end(), "organisation does not exist.");
         organizations.modify(itr, _self, [&](auto & morg) {
             morg.regen -= vitr -> regen_points;
         });
@@ -293,7 +296,7 @@ ACTION organization::subregen(name organization, name account) {
     
     if(vitr != votes.end()){
         auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "Organization does not exist.");
+        check(itr != organizations.end(), "organisation does not exist.");
         organizations.modify(itr, _self, [&](auto & morg) {
             morg.regen -= vitr -> regen_points;
         });

@@ -70,7 +70,7 @@ CONTRACT referendums : public contract {
 
       ACTION cancelvote(name voter, uint64_t referendum_id);
 
-      ACTION runcycle();
+      ACTION onperiod();
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -78,7 +78,7 @@ CONTRACT referendums : public contract {
     void run_testing();
     void run_active();
     void run_staged();
-    void send_runcycle();
+    void send_onperiod();
     void send_refund_stake(name account, asset quantity);
     void send_burn_stake(asset quantity);
     void send_change_setting(name setting_name, uint64_t setting_value);
@@ -143,7 +143,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(runcycle))
+        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod))
       }
   }
 }

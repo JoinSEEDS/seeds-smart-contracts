@@ -20,8 +20,7 @@ const ramdom64ByteHexString = async () => {
   return encoded
 }
 
-const fromHexString = hexString =>
-  new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
+const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createInviteSecretAndHash = async () => {
   const secret = await ramdom64ByteHexString()

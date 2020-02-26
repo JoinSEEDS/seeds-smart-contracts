@@ -1,12 +1,10 @@
 const program = require('commander')
 const fs = require('fs')
 
-const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser } = names
  
-const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
-
 const bulk_invite = async (sponsor, num, totalAmount) => {
     var secrets = "Secret,Hash,Seeds (total)\n"
     const fileName = 'secrets_'+num+'.csv'
@@ -169,12 +167,24 @@ program
   })
 
 
-program
+  program
   .command('accept <newAccount> <inviteSecret>')
   .description('accept invite')
   .action(async function (newAccount, inviteSecret) {
     console.log("accept invite with " + newAccount + " sec: " + inviteSecret)
     await accept(newAccount, inviteSecret)
+  })
+
+  program
+  .command('test <sponsor> <newAccount>')
+  .description('test invite process')
+  .action(async function (sponsor, newAccount) {
+      
+    console.log("invite from " + sponsor)
+    let result = await invite(sponsor, 20, true) // always 20 seeds
+
+    console.log("accept invite with " + newAccount + " secret: " + result.secret)
+    await accept(newAccount, result.secret)
   })
 
 program.parse(process.argv)

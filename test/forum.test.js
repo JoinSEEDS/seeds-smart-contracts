@@ -47,8 +47,8 @@ describe('forum', async assert => {
     await contracts.settings.configure("dps", 5, { authorization: `${settings}@active` })
 
     console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
     console.log('add reputation')
     await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })

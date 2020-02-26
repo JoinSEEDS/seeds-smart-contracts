@@ -52,12 +52,26 @@ void harvest::reset() {
 
 void harvest::plant(name from, name to, asset quantity, string memo) {
   if (to == _self) {
-    check_user(from);
+    utils::check_asset(quantity);
 
-    init_balance(from);
+    name target = from;
+
+    if (!memo.empty()) {
+      std::size_t found = memo.find(string("sow "));
+      if (found!=std::string::npos) {
+        string target_acct_name = memo.substr (4,string::npos);
+        target = name(target_acct_name);
+     } else {
+        check(false, "invalid memo");
+      }
+    }
+
+    check_user(target);
+
+    init_balance(target);
     init_balance(_self);
 
-    auto bitr = balances.find(from.value);
+    auto bitr = balances.find(target.value);
     balances.modify(bitr, _self, [&](auto& user) {
       user.planted += quantity;
     });

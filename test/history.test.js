@@ -21,8 +21,8 @@ describe('make a transaction entry', async assert => {
   await accountsContract.reset({ authorization: `${accounts}@active` })
   
   console.log('update status')
-  await accountsContract.adduser(firstuser, '', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(seconduser, '', { authorization: `${accounts}@active` })
+  await accountsContract.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await accountsContract.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
   await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })  
 
@@ -59,9 +59,10 @@ describe("make a history entry", async (assert) => {
     console.log('history reset')
     await history_contract.reset(firstuser, { authorization: `${history}@active` })
     
-
     console.log('history make entry')
     await history_contract.historyentry(firstuser, "tracktest", 77,  "vasily", { authorization: `${history}@active` })
+    var txTime = parseInt(Math.round(new Date()/1000) / 100)
+    console.log("now time "+txTime)
 
     console.log('check that history table has the entry')
     
@@ -71,7 +72,10 @@ describe("make a history entry", async (assert) => {
         table: "history",
         json: true
     })
-    let timestamp = rows[0].timestamp
+
+    let timestamp = parseInt(rows[0].timestamp / 100)
+
+    console.log("timestamp "+parseInt(rows[0].timestamp))
 
     let rowWithoutTimestamp = rows[0]
     delete rowWithoutTimestamp.timestamp
@@ -88,11 +92,12 @@ describe("make a history entry", async (assert) => {
         }
     })
 
+
     assert({ 
         given: "action was tracked",
         should: "timestamp is kinda close",
-        actual: Math.round(timestamp/10),
-        expected: Math.round(new Date()/10000),
+        actual: timestamp,
+        expected: txTime,
     })
 
   console.log('add resident')

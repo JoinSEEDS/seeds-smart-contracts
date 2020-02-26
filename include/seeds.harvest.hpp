@@ -5,6 +5,7 @@
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;

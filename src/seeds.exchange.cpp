@@ -1,18 +1,17 @@
 #include <seeds.exchange.hpp>
 
-
 void exchange::reset() {
   require_auth(_self);
 
   config.remove();
 
   configtable c = config.get_or_create(get_self(), configtable());
-  
+
   // TLOS 0.05368
   // SEEDS 0.01
   // Seeds per TLOS = 5.3611 * 10000 = 5.36 * 10000
 
-  c.rate = asset(53600, seeds_symbol);                      // 5.63
+  // c.rate = asset(53600, seeds_symbol);                      // 5.63
   c.visitor_limit =   asset(25000 * 10000, seeds_symbol);        // USD 250 / wk = 25,000 SEEDS
   c.resident_limit =  asset( uint64_t(250000) * uint64_t(10000), seeds_symbol);        // 250,000 
   c.citizen_limit =   asset( uint64_t(250000) * uint64_t(10000), seeds_symbol);       // 250,000 
@@ -45,6 +44,9 @@ void exchange::purchase(name buyer, name contract, asset tlos_quantity, string m
       case "visitor"_n:
         seeds_limit = c.visitor_limit;
         break;
+      case "inactive"_n:
+        seeds_limit = c.visitor_limit;
+        break;
     }
     
     asset tlos_as_seeds = asset(tlos_quantity.amount, seeds_symbol);
@@ -70,6 +72,10 @@ void exchange::purchase(name buyer, name contract, asset tlos_quantity, string m
       }); 
     }
     
+    soldtable stb = sold.get_or_create(get_self(), soldtable());
+    stb.total_sold = stb.total_sold + seeds_amount;
+    sold.set(stb, get_self());
+
     action(
       permission_level{get_self(), "active"_n},
       contracts::token, "transfer"_n,
