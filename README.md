@@ -30,26 +30,62 @@ npm install
 
 Use the seeds.js script to 
 
- * init all contracts and deploy them on local network
+### init all contracts and deploy them on local network
 
 ```
 ./scripts/seeds.js init
 ```
 
- * compile, deploy, or test a contract
+### update contract permissions
+
+This command will update all permissions on all contracts
+
+It will check if a permission is already set and only set permissions that
+have been added or have been changed.
+
+```
+./scripts/seeds.js updatePermissions
+```
+
+### Compile, deploy, or test a contract
 
 ```
 ./scripts/seeds.js compile harvest => compiles seeds.harvest.cpp
 ```
+```
+./scripts/seeds.js deploy accounts => deploys accounts contract
+```
+```
+./scripts/seeds.js test accounts => run unit tests on accounts contract
+```
+```
+./scripts/seeds.js run accounts => compile, deploy, and run unit tests
+```
+### Specify more than one contract - 
+
+Contract is a varadic parameter
+
+```
+./scripts/seeds.js run accounts onboarding invites organization
+```
+
+### Deploy on testnet
+```
+EOSIO_NETWORK=telosTestnet ./scripts/seeds.js deploy accounts
+```
+### Deploy on mainnet
+```
+EOSIO_NETWORK=telosMainnet ./scripts/seeds.js deploy accounts
+```
 
 ### usage seeds.js 
 ```
-./scripts/seeds.js [command] [contract name]
+./scripts/seeds.js <command> <contract name> [additional contract names...]
 command = compile | deploy | test | run
 ```
 
 
- *  run a contract - which means to compile, then deploy, then test 
+### run a contract - compile, then deploy, then test 
 
 ```
 example: 

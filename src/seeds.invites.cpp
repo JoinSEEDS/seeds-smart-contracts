@@ -35,7 +35,7 @@ void invites::add_user(name account) {
   action(
     permission_level{contracts::accounts, "active"_n},
     contracts::accounts, "adduser"_n,
-    make_tuple(account, nickname)
+    make_tuple(account, nickname, "individual"_n)
   ).send();
 }
 
@@ -84,6 +84,7 @@ void invites::reset() {
 
 void invites::send(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
+    utils::check_asset(quantity);
     auto sitr = sponsors.find(from.value);
 
     if (sitr == sponsors.end()) {

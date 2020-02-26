@@ -12,6 +12,9 @@ const main = async () => {
     const contract = await eos.contract(accounts)
 
     const adduser = async (transaction) => {
+
+        throw new Error("This no longer works, adduser params now have a type param")
+
         try {
             const { account, nickname } = transaction['action_trace']['act']['data']
     
@@ -24,6 +27,8 @@ const main = async () => {
     }
     
     const update = async (transaction) => {
+        throw new Error("This no longer works, adduser params now have a type param")
+
         try {
             const { user, type, nickname, image, story, roles, skills, interests } = transaction['action_trace']['act']['data']
         

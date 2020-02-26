@@ -46,7 +46,7 @@ describe('Referendums', async assert => {
   const executeReferendums = () => async () => {
     console.log(`execute referendums`)
     await sleep(1000)
-    await contracts.referendums.runcycle({ authorization: `${referendums}@active` })
+    await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
   }
 
   const stateHistory = (() => {
@@ -78,6 +78,8 @@ describe('Referendums', async assert => {
         code: settings,
         scope: settings,
         table: 'config',
+        lower_bound: settingName,
+        upper_bound: settingName,  
         json: true
       })
 
@@ -154,6 +156,7 @@ describe('Referendums', async assert => {
 
     console.log('settings configure')
     await contracts.settings.configure(settingName, settingInitialValue, { authorization: `${settings}@active` })
+
   }
 
   const fail = (fn) => async () => {

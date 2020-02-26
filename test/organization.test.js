@@ -2,7 +2,9 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, history } = names
+const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history } = names
+
+let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 describe('organization', async assert => {
 
@@ -16,8 +18,9 @@ describe('organization', async assert => {
         eos.contract(token),
         eos.contract(accounts),
         eos.contract(settings),
-    ]).then(([organization, token, accounts, settings]) => ({
-        organization, token, accounts, settings
+        eos.contract(harvest),
+    ]).then(([organization, token, accounts, settings, harvest]) => ({
+        organization, token, accounts, settings, harvest
     }))
 
     console.log('reset organization')
@@ -28,33 +31,43 @@ describe('organization', async assert => {
 
     console.log('accounts reset')
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
+    
+    console.log('harvest reset')
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
     console.log('configure')
-    await contracts.settings.configure('fee', 500000, { authorization: `${settings}@active` })
+    await contracts.settings.configure('planted', 500000, { authorization: `${settings}@active` })
 
     console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
     console.log('add rep')
     await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
     await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
 
     console.log('create balance')
-    await contracts.token.transfer(firstuser, organization, "150.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(seconduser, organization, "50.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(seconduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
 
     const initialBalances = await getTableRows({
         code: organization,
         scope: organization,
-        table: 'balances',
+        table: 'sponsors',
         json: true
     })
 
     console.log('create organization')
-    await contracts.organization.create('testorg1', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.create('testorg2', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.create('testorg3', seconduser, { authorization: `${seconduser}@active` })
+    await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, 'testorg2', "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
+    await contracts.organization.create(seconduser, 'testorg3', "Org 3 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
+
+    let plantedAfter = (await getTableRows({
+        code: harvest,
+        scope: harvest,
+        table: 'balances',
+        json: true
+    })).rows.map( item => parseInt(item.planted) )
 
     const initialOrgs = await getTableRows({
         code: organization,
@@ -84,7 +97,7 @@ describe('organization', async assert => {
 
     console.log('destroy organization')
     await contracts.organization.destroy('testorg2', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.refund(firstuser, "50.0000 SEEDS", { authorization: `${firstuser}@active` })
+    //await contracts.organization.refund(firstuser, "50.0000 SEEDS", { authorization: `${firstuser}@active` })
 
     const orgs = await getTableRows({
         code: organization,
@@ -137,7 +150,7 @@ describe('organization', async assert => {
 
     try{
         console.log('create organization')
-        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+        await contracts.organization.create(thirduser, 'testorg4', eosDevKey, { authorization: `${thirduser}@active`  })
     }
     catch(err){
         console.log('user thoes not have a balance entry')
@@ -146,30 +159,35 @@ describe('organization', async assert => {
     try{
         console.log('create organization')
         await contracts.token.transfer(thirduser, organization, "20.0000 SEEDS", "Initial supply", { authorization: `${thirduser}@active` })
-        await contracts.organization.create('testorg4', thirduser, { authorization: `${thirduser}@active`  })
+        await contracts.organization.create(thirduser, 'testorg4', eosDevKey, { authorization: `${thirduser}@active`  })
     }
     catch(err){
         console.log('user has not enough balance')
     }
 
-
+    assert({
+        given: 'organisations were created',
+        should: 'they have planted scores',
+        actual: plantedAfter,
+        expected: [600, 200, 200, 200] // 600 is orgs contract, the other 3 are 3 created orgs
+    })
 
     assert({
         given: 'firstuser and second user transfer to organization contract',
-        should: 'update the balances table',
+        should: 'update the sponsors table',
         actual: initialBalances.rows.map(row => { return row }),
         expected: [
             {
                 account: 'orgs.seeds',
-                balance: '200.0000 SEEDS'
+                balance: '600.0000 SEEDS'
             },
             {
                 account: 'seedsuseraaa',
-                balance: '150.0000 SEEDS'
+                balance: '400.0000 SEEDS'
             },
             {
                 account: 'seedsuserbbb',
-                balance: '50.0000 SEEDS'
+                balance: '200.0000 SEEDS'
             },
         ]
     })
@@ -186,7 +204,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             },
             {
                 org_name: 'testorg2',
@@ -195,7 +213,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             },
             {
                 org_name: 'testorg3',
@@ -204,7 +222,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             }
         ]
     })
@@ -259,7 +277,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             },
             {
                 org_name: 'testorg3',
@@ -268,7 +286,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             }
         ]
     })
@@ -285,7 +303,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             },
             {
                 org_name: 'testorg3',
@@ -294,7 +312,7 @@ describe('organization', async assert => {
                 regen: 0,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             }
         ]
     })
@@ -327,7 +345,7 @@ describe('organization', async assert => {
                 regen: 10000,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             },
             {
                 org_name: 'testorg3',
@@ -336,7 +354,7 @@ describe('organization', async assert => {
                 regen: -13000,
                 reputation: 0,
                 voice: 0,
-                fee: "50.0000 SEEDS"
+                planted: "200.0000 SEEDS"
             }
         ]
     })

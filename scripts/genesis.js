@@ -35,7 +35,7 @@ const makecitizen = async (user, citizen = true) => {
     }
 
     if (users.rows.length != 1) {
-      console.log("account "+user +"is not a Seeds user")
+      console.log("account "+user +" is not a Seeds user")
       return
     } 
 
@@ -118,8 +118,55 @@ const initvoice = async (user) => {
             await addvoice(user, contracts)
           }
         }
+}
+
+const deleteuser = async (user) => {
+
+  console.log("Delete is disabled for safety")
+  return
+
+  const contracts = await initContracts({ accounts, proposals })
+
+  const users = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    lower_bound: user,
+    upper_bound: user,
+    json: true,
+  })
+
+  const voice = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    lower_bound: user,
+    upper_bound: user,
+    json: true,
+  })
+
+  let alreadyHasVoice = voice.rows.length > 0
+
+  if (alreadyHasVoice) {
+    console.log("user " + user + " has voice! - currently no way to delete that")
+  }
+
+  if (users.rows.length != 1) {
+    console.log("account "+user +"is not a Seeds user")
+    return
+  } 
+
+  await contracts.accounts.testremove(user, { authorization: `${accounts}@active` })
+  console.log("success!")
+      
+  if (alreadyHasVoice) {
+    console.log("user already has voice: "+JSON.stringify(voice, null, 2))
+  } 
+    
+ 
 
 }
+
 
 program
   .command('citizen <user>')
@@ -143,6 +190,14 @@ program
   .action(async function (user) {
     await checkuser(user) 
 })
+
+program
+  .command('DELETE <user>')
+  .description('delete a user')
+  .action(async function (user) {
+    await deleteuser(user) 
+})
+
 
 
 program

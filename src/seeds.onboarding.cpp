@@ -29,18 +29,16 @@ bool onboarding::is_seeds_user(name account) {
   return uitr != users.end();
 }
 
-void onboarding::add_user(name account) {
+void onboarding::add_user(name account, string fullname, name type) {
 
   if (is_seeds_user(account)) {
     return;
   }
 
-  string nickname("");
-
   action(
     permission_level{contracts::accounts, "active"_n},
     contracts::accounts, "adduser"_n,
-    make_tuple(account, nickname)
+    make_tuple(account, fullname, type)
   ).send();
 }
 
@@ -84,7 +82,15 @@ void onboarding::add_referral(name sponsor, name account) {
   ).send();
 }
 
-void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey) {
+void onboarding::invitevouch(name sponsor, name account) {
+  action(
+    permission_level{contracts::accounts, "active"_n},
+    contracts::accounts, "invitevouch"_n,
+    make_tuple(sponsor, account)
+  ).send();
+}
+
+void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname) {
   require_auth(get_self());
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
@@ -115,14 +121,31 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   }
   
   if (!is_existing_seeds_user) {
-    add_user(account);
+    add_user(account, fullname, "individual"_n);
     add_referral(sponsor, account);  
+    invitevouch(sponsor, account);
   }
 
   transfer_seeds(account, transfer_quantity);
   plant_seeds(sow_quantity);
   sow_seeds(account, sow_quantity);
 
+}
+
+ACTION onboarding::onboardorg(name sponsor, name account, string fullname, string publicKey) {
+    require_auth(get_self());
+
+    bool is_existing_telos_user = is_account(account);
+    bool is_existing_seeds_user = is_seeds_user(account);
+
+  if (!is_existing_telos_user) {
+    create_account(account, publicKey);
+  }
+  
+  if (!is_existing_seeds_user) {
+    add_user(account, fullname, "organisation"_n);
+    add_referral(sponsor, account);  
+  }
 }
 
 void onboarding::reset() {
@@ -140,18 +163,35 @@ void onboarding::reset() {
   }
 }
 
+
+// memo = "sponsor acctname" makes accountname the sponsor for this transfer
 void onboarding::deposit(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
-    auto sitr = sponsors.find(from.value);
+    utils::check_asset(quantity);
+
+    name sponsor = from;
+
+    if (!memo.empty()) {
+      std::size_t found = memo.find(string("sponsor "));
+      if (found!=std::string::npos) {
+        string acct_name = memo.substr(8,string::npos);
+        sponsor = name(acct_name);
+        check(is_account(sponsor), "Beneficiary sponsor account does not exist " + sponsor.to_string());
+     } else {
+        check(false, "invalid memo");
+      }
+    }
+
+    auto sitr = sponsors.find(sponsor.value);
 
     if (sitr == sponsors.end()) {
-      sponsors.emplace(_self, [&](auto& sponsor) {
-        sponsor.account = from;
-        sponsor.balance = quantity;
+      sponsors.emplace(_self, [&](auto& asponsor) {
+        asponsor.account = sponsor;
+        asponsor.balance = quantity;
       });
     } else {
-      sponsors.modify(sitr, _self, [&](auto& sponsor) {
-        sponsor.balance += quantity;
+      sponsors.modify(sitr, _self, [&](auto& asponsor) {
+        asponsor.balance += quantity;
       });
     }
   }
@@ -204,20 +244,20 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
 }
 
 // accept invite with creating new account
-void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey) {
+void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname) {
   check(is_account(account) == false, "Account already exists " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, fullname);
 }
 
 // accept invite using already existing account
 void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey) {
   check(is_account(account) == true, "Account does not exist " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }
 
 // accept invite using already existing account or creating new account
 void onboarding::accept(name account, checksum256 invite_secret, string publicKey) {
-  accept_invite(account, invite_secret, publicKey);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }

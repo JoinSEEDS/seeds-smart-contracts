@@ -1,6 +1,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
+#include <tables.hpp>
 
 using namespace eosio;
 using std::string;
@@ -14,14 +15,14 @@ CONTRACT accounts : public contract {
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
           reps(receiver, receiver.value),
-          balances(contracts::harvest, contracts::harvest.value)
+          reqvouch(receiver, receiver.value),
+          balances(contracts::harvest, contracts::harvest.value),
+          config(contracts::settings, contracts::settings.value)
           {}
 
       ACTION reset();
 
-      ACTION joinuser(name account);
-
-      ACTION adduser(name account, string nickname);
+      ACTION adduser(name account, string nickname, name type);
 
       ACTION makeresident(name user);
 
@@ -39,11 +40,15 @@ CONTRACT accounts : public contract {
 
       ACTION addref(name referrer, name invited);
 
+      ACTION invitevouch(name referrer, name invited);
+
       ACTION addrep(name user, uint64_t amount);
 
       ACTION subrep(name user, uint64_t amount);
 
       ACTION punish(name account);
+
+      ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
 
@@ -60,20 +65,46 @@ CONTRACT accounts : public contract {
         string interests,
         uint64_t reputation,
         uint64_t timestamp);
+
+      const name individual = "individual"_n;
+      const name organization = "organisation"_n;
+      
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
+      symbol network_symbol = symbol("TLOS", 4);
+
+      const name not_found = ""_n;
+      const name cbp_reward_resident = "refcbp1.ind"_n;
+      const name cbp_reward_citizen = "refcbp2.ind"_n;
+
+      const name reputation_reward_resident = "refrep1.ind"_n;
+      const name reputation_reward_citizen = "refrep2.ind"_n;
+
+      const name individual_seeds_reward_resident = "refrwd1.ind"_n;
+      const name individual_seeds_reward_citizen = "refrwd2.ind"_n;
+
+      const name org_seeds_reward_resident = "refrwd1.org"_n;
+      const name org_seeds_reward_citizen = "refrwd2.org"_n;
+
+      const name ambassador_seeds_reward_resident = "refrwd1.amb"_n;
+      const name ambassador_seeds_reward_citizen = "refrwd2.amb"_n;
+
+      const name max_vouch_points = "maxvouch"_n;
 
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
-      void rewards(name account);
+      void rewards(name account, name new_status);
       void vouchreward(name account);
-      void refreward(name account);
+      void refreward(name account, name new_status);
+      void send_reward(name beneficiary, asset quantity);
       void updatestatus(name account, name status);
       void _vouch(name sponsor, name account);
       void history_add_resident(name account);
       void history_add_citizen(name account);
+      name find_referrer(name account);
+      void send_addrep(name user, uint64_t amount);
+      void send_subrep(name user, uint64_t amount);
 
-      symbol network_symbol = symbol("TLOS", 4);
 
       TABLE ref_table {
         name referrer;
@@ -115,21 +146,30 @@ CONTRACT accounts : public contract {
         uint64_t by_reputation()const { return reputation; }
       };
 
-      TABLE balance_table {
-        name account;
-        asset planted;
-        asset reward;
-
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_planted()const { return planted.amount; }
-      };
-
       TABLE vouch_table {
         name account;
         name sponsor;
         uint64_t reps;
 
         uint64_t primary_key() const { return sponsor.value; }
+        uint64_t by_account()const { return account.value; }
+
+      };
+
+      TABLE req_vouch_table {
+        uint64_t id;
+        name account;
+        name sponsor;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_account()const { return account.value; }
+        uint64_t by_sponsor()const { return sponsor.value; }
+      };
+
+      TABLE config_table {
+        name param;
+        uint64_t value;
+        uint64_t primary_key() const { return param.value; }
       };
 
     typedef eosio::multi_index<"reputation"_n, rep_table,
@@ -144,40 +184,53 @@ CONTRACT accounts : public contract {
     
     typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
     
-    typedef eosio::multi_index<"vouch"_n, vouch_table> vouch_tables;
+    typedef eosio::multi_index<"vouch"_n, vouch_table,
+      indexed_by<"byaccount"_n,
+      const_mem_fun<vouch_table, uint64_t, &vouch_table::by_account>>
+    > vouch_tables;
 
-    typedef eosio::multi_index<"balances"_n, balance_table,
+    typedef eosio::multi_index<"reqvouch"_n, req_vouch_table,
+      indexed_by<"byaccount"_n,
+      const_mem_fun<req_vouch_table, uint64_t, &req_vouch_table::by_account>>,
+      indexed_by<"bysponsor"_n,
+      const_mem_fun<req_vouch_table, uint64_t, &req_vouch_table::by_sponsor>>
+    > req_vouch_tables;
+
+    typedef eosio::multi_index<"balances"_n, tables::balance_table,
         indexed_by<"byplanted"_n,
-        const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
+        const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
     > balance_tables;
+    balance_tables balances;
 
     typedef eosio::multi_index<"cbs"_n, cbs_table,
       indexed_by<"bycbs"_n,
       const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
     > cbs_tables;
 
+    typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
     rep_tables reps;
     cbs_tables cbs;
     ref_tables refs;
+    req_vouch_tables reqvouch;
+    user_tables users;
 
-    balance_tables balances;
+    config_tables config;
 
-         struct [[eosio::table]] transaction_stats {
-            name account;
-            asset transactions_volume;
-            uint64_t transactions_number;
+    struct [[eosio::table]] transaction_stats {
+      name account;
+      asset transactions_volume;
+      uint64_t transactions_number;
 
-            uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
-            uint64_t by_transaction_volume()const { return transactions_volume.amount; }
-         };
+      uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
+      uint64_t by_transaction_volume()const { return transactions_volume.amount; }
+    };
 
-         typedef eosio::multi_index< "trxstat"_n, transaction_stats,
-            indexed_by<"bytrxvolume"_n,
-            const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
-         > transaction_tables;
+    typedef eosio::multi_index< "trxstat"_n, transaction_stats,
+      indexed_by<"bytrxvolume"_n,
+      const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
+    > transaction_tables;
 
-      user_tables users;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(joinuser)(makeresident)(makecitizen)(update)(migrate)(addref)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(invitevouch)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(requestvouch)(vouch)(migrateall));

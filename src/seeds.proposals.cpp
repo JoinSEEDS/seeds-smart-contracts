@@ -27,10 +27,12 @@ void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
-    auto vitr = voice.begin();
 
-    uint64_t min_stake = config.find(name("propminstake").value)->value;
-    uint64_t voice_base = config.find(name("propvoice").value)->value;
+    auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
+    auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
+
+    uint64_t min_stake = min_stake_param.value;
+    uint64_t voice_base = voice_param.value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -67,11 +69,11 @@ void proposals::onperiod() {
       pitr++;
     }
 
+    auto vitr = voice.begin();
     while (vitr != voice.end()) {
         voice.modify(vitr, _self, [&](auto& voice) {
             voice.balance = voice_base;
         });
-
         vitr++;
     }
 
@@ -82,15 +84,40 @@ void proposals::onperiod() {
       "onperiod"_n,
       std::make_tuple()
     );
-    trx.delay_sec = 2548800;
+    trx.delay_sec = get_cycle_period_sec(); 
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+
+    update_cycle();
+}
+
+uint64_t proposals::get_cycle_period_sec() {
+  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
+  return moon_cycle.value / 2; // Using half moon cycles for now
+}
+
+uint64_t proposals::get_voice_decay_period_sec() {
+  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
+  return voice_decay_period.value;
+}
+
+void proposals::decayvoice() {
+  // Not yet implemented    
+  require_auth(get_self());
+
+}
+
+void proposals::update_cycle() {
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    c.propcycle += 1;
+    c.t_onperiod = current_time_point().sec_since_epoch();
+    cycle.set(c, get_self());
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
   require_auth(creator);
   // check_user(creator);
   // check_user(recipient);
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -153,8 +180,8 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
   if (to == _self) {
+      utils::check_asset(quantity);
       //check_user(from);
-      check_asset(quantity);
 
       uint64_t id = 0;
 
@@ -272,7 +299,7 @@ void proposals::addvoice(name user, uint64_t amount)
 
 void proposals::deposit(asset quantity)
 {
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
   auto bank_account = contracts::bank;
@@ -285,7 +312,7 @@ void proposals::withdraw(name beneficiary, asset quantity, name sender)
 {
   if (quantity.amount == 0) return;
 
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
 
@@ -295,19 +322,13 @@ void proposals::withdraw(name beneficiary, asset quantity, name sender)
 
 void proposals::burn(asset quantity)
 {
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   auto token_account = contracts::token;
   auto bank_account = contracts::bank;
 
   token::burn_action action{name(token_account), {name(bank_account), "active"_n}};
   action.send(name(bank_account), quantity);
-}
-
-void proposals::check_asset(asset quantity)
-{
-  check(quantity.is_valid(), "invalid asset");
-  check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
 void proposals::check_user(name account)

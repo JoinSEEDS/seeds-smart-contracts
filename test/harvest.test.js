@@ -33,11 +33,14 @@ describe("harvest", async assert => {
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  await contracts.token.transfer(firstuser, harvest, '999.0000 CRRTS', '', { authorization: `${firstuser}@active` })
+
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   const plantedBalances = await getTableRows({
@@ -387,8 +390,8 @@ describe("harvest contribution score", async assert => {
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('join users')
-  await contracts.accounts.adduser(firstuser, 'first user', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, 'second user', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -419,6 +422,92 @@ describe("harvest contribution score", async assert => {
     should: 'have valies',
     actual: harvestStats.rows.map(({ planted_score }) => planted_score),
     expected: [100, 50]
+  })
+
+})
+
+describe.only("plant for other user", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await Promise.all([
+    eos.contract(token),
+    eos.contract(accounts),
+    eos.contract(harvest),
+    eos.contract(settings),
+  ]).then(([token, accounts, harvest, settings]) => ({
+    token, accounts, harvest, settings
+  }))
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+
+  let memo = "sow "+seconduser
+
+  console.log('plant seeds with memo: ' + memo)
+
+  await contracts.token.transfer(firstuser, harvest, '77.0000 SEEDS', memo, { authorization: `${firstuser}@active` })
+
+  const plantedBalances = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    upper_bound: seconduser,
+    lower_bound: seconduser,
+    json: true,
+  })
+
+  let badMemos = false
+  const badMemo = async (badmemo) => {
+    try {
+      await contracts.token.transfer(firstuser, harvest, '77.0000 SEEDS', badmemo, { authorization: `${firstuser}@active` })
+      badMemos = true
+    } catch (error) {
+      //console.log("error as expected "+ badmemo)
+      //console.log(error)
+    }  
+  }
+  console.log('planted: ' + JSON.stringify(plantedBalances, null, 2))
+
+  await badMemo("foobar");
+  await badMemo("ASDASDSDASDSADSDSDSDASDSDSDSSDSDSDSADSDSADSD");
+  await badMemo("sow X");
+  await badMemo("sow somethingspecial");
+  await badMemo("sow seedsuserfoo");
+  await badMemo("sow seedsuseraaa foo");
+
+  await badMemo("sow .");
+  await badMemo("sow \u03A9\u0122\u9099\u6660");
+  await badMemo("sow sadsadsakd;skdjlksajdlaskjd;lkaslaksdj;lkasjdals;kdjsal;kdj;aslKDJ;alskdj;alskdj;alskdj;alskdj;alskdjas;lKDJas;lkdj;alsKDJ;aslkdja;sLKDJas;lkdj");
+
+  assert({
+    given: 'user '+firstuser + 'planted for '+seconduser,
+    should: 'second user should have planted balance',
+    actual: plantedBalances.rows[0],
+    expected: {
+      "account": seconduser,
+      "planted": "77.0000 SEEDS",
+      "reward": "0.0000 SEEDS"
+    }
+  })
+  assert({
+    given: 'bad memo',
+    should: 'cause exception',
+    actual: badMemos,
+    expected: false
   })
 
 })
