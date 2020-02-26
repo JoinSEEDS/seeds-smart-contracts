@@ -360,6 +360,36 @@ var permissions = [{
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
+  target: `${accounts.harvest.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcplanted'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrx'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcrep'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
 }, {
