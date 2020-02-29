@@ -104,7 +104,6 @@ CONTRACT accounts : public contract {
       void send_addrep(name user, uint64_t amount);
       void send_subrep(name user, uint64_t amount);
 
-
       TABLE ref_table {
         name referrer;
         name invited;

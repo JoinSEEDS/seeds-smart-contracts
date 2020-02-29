@@ -10,7 +10,7 @@ void history::reset(name account) {
       hitr = history.erase(hitr);
   }
   
-  transaction_tables transactions(get_self(), get_self().value);
+  transaction_tables transactions(get_self(), account.value);
   auto titr = transactions.begin();
   
   while (titr != transactions.end()) {
