@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -45,6 +45,9 @@ describe('Onboarding', async assert => {
 
     const inviteSecret2 = await ramdom64ByteHexString()
     const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
+    const inviteSecret3 = await ramdom64ByteHexString()
+    const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
 
     const reset = async () => {
         if (!isLocal()) {
@@ -139,6 +142,23 @@ describe('Onboarding', async assert => {
 
     let sponsorsAfter = await getSponsors()
 
+    console.log("first user invites on behalf of fourth user")
+    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.onboarding.invitefor(firstuser, fourthuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
+
+    let invitesAfter = await getTableRows({
+        code: onboarding,
+        scope: onboarding,
+        table: 'invites',
+        key_type: 'name',
+        index_position: 3,
+        lower_bound: seconduser,
+        upper_bound: seconduser,
+        json: true,
+    })
+
+    console.log("invite after "+ JSON.stringify(invitesAfter, null, 2))
+
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     assert({
@@ -171,6 +191,21 @@ describe('Onboarding', async assert => {
         actual: invitesBySponsor.rows[0].sponsor,
         expected: seconduser
     })
+
+    assert({
+        given: 'search by sponsor user 4',
+        should: 'have 1 result',
+        actual: invitesAfter.rows.length,
+        expected: 1
+    })
+
+    assert({
+        given: 'search by sponsor user 4',
+        should: 'contains sponsor',
+        actual: invitesAfter.rows[0].sponsor,
+        expected: seconduser
+    })
+
 
     assert({
         given: 'define sponsor in memo',
