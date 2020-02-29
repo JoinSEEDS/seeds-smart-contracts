@@ -231,6 +231,12 @@ void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantit
 void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   require_auth(sponsor);
 
+  auto sitr = sponsors.find(sponsor.value);
+  check(sitr != sponsors.end(), "sponsor not found");
+
+  auto uitr = users.find(sponsor.value);
+  check(uitr != users.end(), "sponsor user not found");
+
   invite_tables invites(get_self(), get_self().value);
   auto invites_byhash = invites.get_index<"byhash"_n>();
   auto iitr = invites_byhash.find(invite_hash);
@@ -238,7 +244,13 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
 
   asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
 
-  transfer_seeds(sponsor, total_quantity);
+  if (user->type == "organization"_n) {
+    sponsors.modify(sitr, get_self(), [&](auto& sponsor) {
+      sponsor.balance += total_quantity;
+    });
+  } else {
+    transfer_seeds(sponsor, total_quantity);
+  }
 
   invites_byhash.erase(iitr);
 }

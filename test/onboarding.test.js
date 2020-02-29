@@ -490,3 +490,82 @@ describe('Campaign reward for existing user', async assert => {
 })
 
 
+describe('Money Flow and Cancel', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+    
+    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+
+    const zero = `0.0000 SEEDS`
+
+    const transferQuantity = `11.0000 SEEDS`
+    const sowQuantity = '7.0000 SEEDS'
+    const totalQuantity = '18.0000 SEEDS'
+    
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+    const verifyBalance = async (amount, name) => {
+        const balances = await getTableRows({
+            code: "join.seeds",
+            scope: "join.seeds",
+            table: 'sponsors',
+            json: true
+        })
+
+        console.log("Sponsor account balance for "+firstuser + " "+ JSON.stringify(balances, null, 2))
+        
+        if (balances.rows.length == 0 && amount == zero) {
+            assert({
+                given: name,
+                should: 'should be '+amount,
+                actual: true,
+                expected: true
+            })
+            return
+        } 
+
+        assert({
+            given: name,
+            should: 'should be '+amount,
+            actual: balances.rows,
+            expected: [{
+                "account": firstuser,
+                "balance": amount
+              }]
+        })
+    }
+
+    console.log(`reset ${accounts}`)
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log(`reset ${onboarding}`)
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+    console.log(`reset ${harvest}`)
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })    
+  
+    console.log(`${accounts}.adduser (${firstuser})`)
+    await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })        
+
+    verifyBalance(zero,"initial balance")
+
+    console.log(`${token}.transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
+    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    
+
+    verifyBalance(totalQuantity, "after deposit")
+
+    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
+    
+    verifyBalance(zero, "after invite")
+
+    console.log(`${onboarding}.cancel from Application`)
+    await contracts.onboarding.cancel(firstuser, inviteHash, { authorization: `${firstuser}@active` })    
+
+    verifyBalance(totalQuantity, "after cancel")
+
+
+})
