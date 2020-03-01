@@ -27,82 +27,6 @@ void accounts::reset() {
 
 }
 
-void accounts::migrateall()
-{
-  name accounts_old = name("seedsaccntsx");
-  
-  user_tables users_old(accounts_old, accounts_old.value);
-  
-  auto uitr = users_old.begin();
-  
-  while (uitr != users_old.end()) {
-    auto olduser = *uitr;
-    
-    migrate(
-      olduser.account, 
-      olduser.status, 
-      olduser.type, 
-      olduser.nickname,
-      olduser.image,
-      olduser.story,
-      olduser.roles,
-      olduser.skills,
-      olduser.interests,
-      olduser.reputation,
-      olduser.timestamp
-    );
-    
-    uitr++;
-  }
-
-  ref_tables refs_old(accounts_old, accounts_old.value);
-  ref_tables refs_new(contracts::accounts, contracts::accounts.value);
-
-  auto ritr = refs_old.begin();
-
-  while(ritr != refs_old.end()) {
-    auto oldref = *ritr;
-    refs_new.emplace(_self, [&](auto& ref) {
-      ref.referrer = oldref.referrer;
-      ref.invited = oldref.invited;
-    });
-    ritr++;
-  }
-
-}
-
-void accounts::migrate(name account,
-        name status,
-        name type,
-        string nickname,
-        string image,
-        string story,
-        string roles,
-        string skills,
-        string interests,
-        uint64_t reputation,
-        uint64_t timestamp
-)
-{
-  require_auth(_self);
-
-  user_tables users(contracts::accounts, contracts::accounts.value);
-
-  users.emplace(_self, [&](auto& user) {
-    user.account = account;
-    user.status = status;
-    user.type = type;
-    user.nickname = nickname;
-    user.image = image;
-    user.story = story;
-    user.roles = roles;
-    user.skills = skills;
-    user.interests = interests;
-    user.reputation = reputation;
-    user.timestamp = timestamp;
-  });
-}
-
 void accounts::history_add_resident(name account) {
   action(
     permission_level{contracts::history, "active"_n},
@@ -570,6 +494,17 @@ void accounts::testremove(name user)
   }
 
   users.erase(uitr);
+}
+
+void accounts::testsetrep(name user, uint64_t amount) {
+  require_auth(get_self());
+
+  check(is_account(user), "non existing user");
+
+  auto uitr = users.find(user.value);
+  users.modify(uitr, _self, [&](auto& user) {
+    user.reputation = amount;
+  });
 }
 
 void accounts::check_user(name account)
