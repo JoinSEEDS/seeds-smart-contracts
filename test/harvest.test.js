@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser } = names
 
 describe("harvest", async assert => {
 
@@ -370,7 +370,7 @@ describe("harvest", async assert => {
 
 })
 
-describe("harvest contribution score", async assert => {
+describe("harvest planted score", async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -425,6 +425,147 @@ describe("harvest contribution score", async assert => {
   })
 
 })
+
+describe.only("harvest transaction score", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest, settings, history })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  // await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  // await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+  // await contracts.accounts.adduser(thirduser, '3 user', 'individual', { authorization: `${accounts}@active` })
+  // await contracts.accounts.adduser(fourthuser, '4 user', 'individual', { authorization: `${accounts}@active` })
+
+  let users = [firstuser, seconduser, thirduser, fourthuser]
+
+  users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
+  users.forEach( async (user, index) => await contracts.history.reset(user, { authorization: `${history}@active` }))
+
+  const checkScores = async (points, scores, given, should) => {
+
+    console.log("checking points "+points + " scores: "+scores)
+
+    await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
+
+
+
+    await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+
+    
+    const txpoints = await eos.getTableRows({
+      code: harvest,
+      scope: harvest,
+      table: 'txpoints',
+      json: true,
+      limit: 100
+    })
+
+    console.log(given + " tx points "+JSON.stringify(txpoints, null, 2))
+  
+    const harvestStats = await eos.getTableRows({
+      code: harvest,
+      scope: harvest,
+      table: 'harvest',
+      json: true,
+      limit: 100
+    })
+  
+    console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
+
+    assert({
+      given: 'transaction points',
+      should: 'have expected values',
+      actual: txpoints.rows.map(({ points }) => points),
+      expected: points
+    })
+
+    assert({
+      given: 'transaction scores',
+      should: 'have expected values',
+      actual: harvestStats.rows.map(({ transactions_score }) => transactions_score),
+      expected: scores
+    })
+
+  }
+
+  console.log('make transaction')
+  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  //checkScores([0, 0, 0, 0], [0, 0, 0, 0], "no reputation", "be empty")
+
+  await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+
+  const reps = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+    limit: 100
+  })
+
+  console.log("reps "+JSON.stringify(reps, null, 2))
+
+  await checkScores([20, 0, 0, 0], [100, 0, 0, 0], "1 reputation, 1 tx", "100 score")
+
+  const history_tx = await eos.getTableRows({
+    code: history,
+    scope: firstuser,
+    table: 'transactions',
+    json: true,
+    limit: 100
+  })
+
+  console.log(" history_tx points "+JSON.stringify(history_tx, null, 2))
+
+
+
+  await contracts.token.transfer(seconduser, thirduser, '1.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+
+
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+
+  const balances = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true,
+    limit: 100
+  })
+
+  const harvestStats = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true,
+    limit: 100
+  })
+
+  
+
+})
+
+// TODO test more than 26 transactions rule
+
+// TODO test tx volume cap rule
+
+// TODO test old tx rule??
 
 describe("plant for other user", async assert => {
 

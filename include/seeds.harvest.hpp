@@ -117,7 +117,6 @@ CONTRACT harvest : public contract {
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
       indexed_by<"bycycle"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_cycle>>
     > tx_points_tables;
-    tx_points_tables txpoints;
 
     TABLE harvest_table {
       name account;
@@ -198,6 +197,7 @@ CONTRACT harvest : public contract {
 
     // Contract Tables
     balance_tables balances;
+    tx_points_tables txpoints;
     harvest_tables harveststat;
 
     // External Tables
@@ -211,7 +211,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calcplanted)(migrateall))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(migrateall))
       }
   }
 }
