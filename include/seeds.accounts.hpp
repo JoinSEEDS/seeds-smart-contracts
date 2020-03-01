@@ -31,10 +31,6 @@ CONTRACT accounts : public contract {
 
       ACTION genesis(name user);
 
-      ACTION testresident(name user);
-
-      ACTION testremove(name user);
-
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
       ACTION addref(name referrer, name invited);
@@ -51,26 +47,18 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
-      ACTION migrateall();
+      ACTION testresident(name user);
 
-      ACTION migrate(name account,
-        name status,
-        name type,
-        string nickname,
-        string image,
-        string story,
-        string roles,
-        string skills,
-        string interests,
-        uint64_t reputation,
-        uint64_t timestamp);
+      ACTION testremove(name user);
 
-      const name individual = "individual"_n;
-      const name organization = "organisation"_n;
-      
+      ACTION testsetrep(name user, uint64_t amount);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
+
+      const name individual = "individual"_n;
+      const name organization = "organisation"_n;
 
       const name not_found = ""_n;
       const name cbp_reward_resident = "refcbp1.ind"_n;
@@ -217,4 +205,4 @@ CONTRACT accounts : public contract {
 
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(invitevouch)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(requestvouch)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)(subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(requestvouch)(vouch));
