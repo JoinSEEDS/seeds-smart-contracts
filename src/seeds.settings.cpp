@@ -4,7 +4,7 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  configure(name("propminstake"), 1 * 10000);
+  configure(name("propminstake"), 500 * 10000); // 500 Seeds
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);
@@ -31,19 +31,19 @@ void settings::reset() {
   configure(name("refrep2.ind"), 1);
 
   // reward for individual referrer when user becomes resident  
-  configure(name("refrwd1.ind"), 2 * 10000);
+  configure(name("refrwd1.ind"), 10 * 10000); // 10 SEEDS
   // reward for individual referrer when user becomes citizen  
-  configure(name("refrwd2.ind"), 3 * 10000);
+  configure(name("refrwd2.ind"), 15 * 10000); // 15 SEEDS
 
-  // reward for org referrer when user becomes resident
-  configure(name("refrwd1.org"), 15 * 1000); // 1.4 SEEDS
+  // reward for org when user becomes resident
+  configure(name("refrwd1.org"), 8 * 10000);  // 8 SEEDS
   // reward for org when user becomes citizen
-  configure(name("refrwd2.org"), 25 * 1000); // 2.5 SEEDS
+  configure(name("refrwd2.org"), 12 * 10000); // 12 SEEDS
 
   // reward for ambassador of referring org when user becomes resident
-  configure(name("refrwd1.amb"), 4 * 1000); // 0.4 SEEDS
+  configure(name("refrwd1.amb"), 2 * 10000);  // 2 SEEDS
   // reward for abmassador of referring org when user becomes citizen
-  configure(name("refrwd2.amb"), 6 * 1000); // 0.6 SEEDS
+  configure(name("refrwd2.amb"), 3 * 10000);  // 3 SEEDS
 
   // Maximum number of points a user can gain from others vouching for them
   configure(name("maxvouch"), 50);

@@ -507,8 +507,6 @@ describe('Ambassador and Org rewards', async assert => {
 
 })
 
-// TODO: Test ambassador and org rewards
-
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {
     

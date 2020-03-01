@@ -9,6 +9,7 @@
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <eosio/singleton.hpp>
 
 #include <string>
 
@@ -33,9 +34,10 @@ namespace eosio {
    class [[eosio::contract("token")]] token : public contract {
       public:
          using contract::contract;
-         
-         [[eosio::action]]
-         void migrateall();
+         token(name receiver, name code, datastream<const char*> ds)
+            :  contract(receiver, code, ds),
+               circulating(receiver, receiver.value)
+               {}
          
          /**
           * Create action.
@@ -171,7 +173,9 @@ namespace eosio {
 
          [[eosio::action]]
          void resetweekly();
-         
+
+         ACTION updatecirc();
+
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &token::retire>;
@@ -224,6 +228,20 @@ namespace eosio {
          void update_stats( const name& from, const name& to, const asset& quantity );
          void save_transaction(name from, name to, asset quantity);
          void check_limit( const name& from );
+         uint64_t balance_for( const name& owner );
+
+         TABLE circulating_supply_table {
+            uint64_t id;
+            uint64_t total;
+            uint64_t circulating;
+            uint64_t primary_key()const { return id; }
+         };
+    
+         typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
+         typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+
+         circulating_supply_tables circulating;
+
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

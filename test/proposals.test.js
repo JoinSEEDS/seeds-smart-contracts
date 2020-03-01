@@ -139,7 +139,7 @@ describe('Proposals', async assert => {
     given: 'voice reset after onperiod',
     should: 'have standard amount of voice',
     actual: voice,
-    expected: 20
+    expected: 77 // NOTE THIS will be dynamic and based on rank
   })
 
   assert({
