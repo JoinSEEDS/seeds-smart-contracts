@@ -20,11 +20,10 @@ CONTRACT harvest : public contract {
         harveststat(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
-        users(contracts::accounts, contracts::accounts.value)
+        users(contracts::accounts, contracts::accounts.value),
+        cbs(contracts::accounts, contracts::accounts.value)
         {}
         
-    ACTION migrateall();
-
     ACTION reset();
 
     ACTION plant(name from, name to, asset quantity, string memo);
@@ -48,6 +47,10 @@ CONTRACT harvest : public contract {
     ACTION calctrx(); // calculate score
 
     ACTION calcrep();
+
+    ACTION calccbs(); // community building score
+
+    ACTION calccs(); // contribution score
 
     ACTION payforcpu(name account);
 
@@ -73,11 +76,14 @@ CONTRACT harvest : public contract {
     double get_rep_multiplier(name account) {
         auto hitr = harveststat.find(account.value);
         check(hitr != harveststat.end(), "not a seeds user "+account.to_string());
-        uint64_t rep = hitr->reputation_score;
-        // rep is 0 - 100
-        check(rep < 101, "illegal rep score ");
-        // return 0 - 2
-        return rep * 2.0 / 100.0; 
+        return rep_multiplier_for_score(hitr->reputation_score);
+    }
+
+    double rep_multiplier_for_score(uint64_t rep_score) {
+      // rep is 0 - 100
+      check(rep_score < 101, "illegal rep score ");
+      // return 0 - 2
+      return rep_score * 2.0 / 100.0; 
     }
 
     // Contract Tables
@@ -177,8 +183,19 @@ CONTRACT harvest : public contract {
        uint64_t by_quantity() const { return quantity.amount; }
     };
 
+    // from accounts contract
+    TABLE cbs_table {
+        name account;
+        uint64_t community_building_score;
+
+        uint64_t primary_key() const { return account.value; }
+        uint64_t by_cbs()const { return community_building_score; }
+    };
+
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
+
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
+
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
@@ -188,12 +205,19 @@ CONTRACT harvest : public contract {
         indexed_by<"byreputation"_n,
         const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
     > user_tables;
+
     typedef eosio::multi_index<"config"_n, config_table> config_tables;
+
     typedef eosio::multi_index<"transactions"_n, transaction_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
       indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
       indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
+
+    typedef eosio::multi_index<"cbs"_n, cbs_table,
+      indexed_by<"bycbs"_n,
+      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
+    > cbs_tables;
 
     // Contract Tables
     balance_tables balances;
@@ -203,6 +227,7 @@ CONTRACT harvest : public contract {
     // External Tables
     config_tables config;
     user_tables users;
+    cbs_tables cbs;
 
 };
 
@@ -211,7 +236,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(migrateall))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs))
       }
   }
 }

@@ -2,28 +2,6 @@
 #include <eosio/system.hpp>
 #include <seeds.harvest.hpp>
 
-void harvest::migrateall() {
-  require_auth(_self);
-
-  name old_harvest = name("seedshrvestx");
-
-  balance_tables balances_old(old_harvest, old_harvest.value);
-
-  auto bitr = balances_old.begin();
-  
-  while (bitr != balances_old.end()) {
-    auto user_balance = *bitr;
-    
-    balances.emplace(get_self(), [&](auto& balance) {
-      balance.account = user_balance.account;
-      balance.planted = user_balance.planted;
-      balance.reward = user_balance.reward;
-    });
-    
-    bitr++;
-  }
-}
-
 void harvest::reset() {
   require_auth(_self);
 
@@ -420,6 +398,67 @@ void harvest::calctrx() {
     current_user++;
 
     uitr++;
+  }
+
+}
+
+void harvest::calccbs() {
+  require_auth(_self);
+
+  auto users = cbs.get_index<"bycbs"_n>();
+
+  uint64_t users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    uint64_t score = (current_user * 100) / users_number;
+
+    if (uitr->community_building_score == 0) {
+      score = 0;
+    }
+
+    auto hitr = harveststat.find(uitr->account.value);
+
+    if (hitr == harveststat.end()) {
+        init_harvest_stat(uitr->account);
+        hitr = harveststat.find(uitr->account.value);
+    } 
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.community_building_score = score;
+      user.community_building_timestamp = now_time;
+    });
+
+    current_user++;
+
+    uitr++;
+  }
+
+
+}
+
+// [PS+RT+CB X Rep = Total Contribution Score]
+void harvest::calccs() {
+
+  require_auth(_self);
+
+  auto hitr = harveststat.begin();
+  while (hitr != harveststat.end()) {
+
+    double rep = rep_multiplier_for_score(hitr->reputation_score);
+
+    uint64_t cs_score = uint64_t( 
+      (hitr->planted_score + hitr->transactions_score + hitr->community_building_score) * rep);
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.contribution_score = cs_score;
+    });
+
+    hitr++;
   }
 
 }
