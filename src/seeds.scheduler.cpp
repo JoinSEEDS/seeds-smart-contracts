@@ -19,9 +19,9 @@ bool scheduler::isRdyToExec(name operation){
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
     uint64_t periods = 0;
 
-    periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
+    periods = (timestamp - itr -> timestamp) / itr -> period;
 
-    print("PERIODS: " + std::to_string(periods) + ", timestamp: " + std::to_string(timestamp) + ", timestap: " + std::to_string(itr->timestamp) );
+    print("\nPERIODS: " + std::to_string(periods) + ", timestamp: " + std::to_string(timestamp) + ", timestap: " + std::to_string(itr->timestamp) );
 
     if(periods > 0) return true;
     return false;
@@ -55,9 +55,9 @@ ACTION scheduler::reset() {
     };
 
     std::vector<uint64_t> delay_v = {
-        600000,
-        600000,
-        600000
+        60,
+        60,
+        60
     };
 
     int i = 0;
@@ -180,8 +180,8 @@ ACTION scheduler::execute() {
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
-    tx.delay_sec = it_s -> value / 10000;
-    tx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
+    tx.delay_sec = it_s -> value;
+    tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
     
     print("transaction sended");
 
@@ -220,5 +220,10 @@ ACTION scheduler::execute() {
 
 }
 
+ACTION scheduler::cancelexec() {
+    require_auth(get_self());
+    cancel_deferred(contracts::scheduler.value);
+}
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop));
+
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(cancelexec));

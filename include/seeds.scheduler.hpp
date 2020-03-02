@@ -27,6 +27,8 @@ CONTRACT scheduler : public contract {
 
         ACTION confirm(name operation);
 
+        ACTION cancelexec();
+
     private:
         TABLE operations_table {
             name id;
