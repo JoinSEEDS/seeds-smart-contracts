@@ -3,15 +3,26 @@
 void policy::reset() {
   require_auth(_self);
 
-  /*
-  policy_tables_new policies(_self, name("seedsuser444").value);
+  auto uitr = users.begin();
+  while (uitr != users.end()) {
 
-  auto pitr = policies.begin();
+    // delete new policies
+    policy_tables_new policies(_self, uitr->account.value);
+    auto pitr = policies.begin();
+    while (pitr != policies.end()) {
+      pitr = policies.erase(pitr);
+    }
 
-  while (pitr != policies.end()) {
-    pitr = policies.erase(pitr);
+    // delete old policies
+    policy_tables oldpol(_self, uitr->account.value);
+    auto opitr = oldpol.begin();
+    while (opitr != oldpol.end()) {
+      opitr = oldpol.erase(opitr);
+    }
+
+    uitr++;
   }
-  */
+
 }
 
 void policy::create(name account, string backend_user_id, string device_id, string signature, string policy) {
