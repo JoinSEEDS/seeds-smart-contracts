@@ -3,76 +3,51 @@
 void policy::reset() {
   require_auth(_self);
 
-  auto uitr = users.begin();
-  while (uitr != users.end()) {
-
-    // delete new policies
-    policy_tables_new policies(_self, uitr->account.value);
-    auto pitr = policies.begin();
-    while (pitr != policies.end()) {
-      pitr = policies.erase(pitr);
-    }
-
-    // delete old policies
-    policy_tables oldpol(_self, uitr->account.value);
-    auto opitr = oldpol.begin();
-    while (opitr != oldpol.end()) {
-      opitr = oldpol.erase(opitr);
-    }
-
-    uitr++;
+  auto pitr = devicepolicy.begin();
+  while (pitr != devicepolicy.end()) {
+    pitr = devicepolicy.erase(pitr);
   }
-
 }
 
 void policy::create(name account, string backend_user_id, string device_id, string signature, string policy) {
   require_auth(account);
 
-  policy_tables_new policies(_self, account.value);
+  devicepolicy.emplace(_self, [&](auto& item) {
+    item.id = devicepolicy.available_primary_key();
+    item.account = account;
+    item.backend_user_id = backend_user_id;
+    item.device_id = device_id;
+    item.signature = signature;
+    item.policy = policy;
+  });
 
-  auto pitr = policies.find(account.value);
-
-  if (pitr == policies.end()) {
-    policies.emplace(_self, [&](auto& item) {
-      item.account = account;
-      item.backend_user_id = backend_user_id;
-      item.device_id = device_id;
-      item.signature = signature;
-      item.policy = policy;
-    });
-  } else {
-    policies.modify(pitr, _self, [&](auto& item) {
-      item.account = account;
-      item.backend_user_id = backend_user_id;
-      item.device_id = device_id;
-      item.signature = signature;
-      item.policy = policy;
-    });
-  }
 }
 
-void policy::update(name account, string backend_user_id, string device_id, string signature, string policy) {
+void policy::update(uint64_t id, name account, string backend_user_id, string device_id, string signature, string policy) {
   require_auth(account);
 
-  policy_tables_new policies(_self, account.value);
+  auto pitr = devicepolicy.find(id);
 
-  auto pitr = policies.find(account.value);
-
-  if (pitr == policies.end()) {
-    policies.emplace(_self, [&](auto& item) {
-      item.account = account;
-      item.backend_user_id = backend_user_id;
-      item.device_id = device_id;
-      item.signature = signature;
-      item.policy = policy;
-    });
-  } else {
-    policies.modify(pitr, _self, [&](auto& item) {
-      item.account = account;
-      item.backend_user_id = backend_user_id;
-      item.device_id = device_id;
-      item.signature = signature;
-      item.policy = policy;
-    });
-  }
+  check(pitr != devicepolicy.end(), "policy with id not found: "+std::to_string(id) );
+  
+  devicepolicy.modify(pitr, _self, [&](auto& item) {
+    item.backend_user_id = backend_user_id;
+    item.device_id = device_id;
+    item.signature = signature;
+    item.policy = policy;
+  });
+  
 }
+
+void policy::remove(uint64_t id) {
+
+  auto pitr = devicepolicy.find(id);
+
+  check(pitr != devicepolicy.end(), "remove: policy with id not found: "+std::to_string(id) );
+  
+  require_auth(pitr -> account);
+
+  devicepolicy.erase(pitr);
+  
+}
+
