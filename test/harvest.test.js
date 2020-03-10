@@ -537,8 +537,6 @@ describe.only("harvest transaction score", async assert => {
 
 })
 
-// TODO test old tx rule??
-
 describe("plant for other user", async assert => {
 
   if (!isLocal()) {
