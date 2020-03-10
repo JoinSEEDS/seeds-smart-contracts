@@ -31,6 +31,7 @@ describe('Proposals', async assert => {
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
@@ -40,14 +41,16 @@ describe('Proposals', async assert => {
 
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
 
   console.log('deposit stake (without memo)')
   await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   console.log('add voice')
-  await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(thirduser, 10, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
 
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
@@ -81,8 +84,12 @@ describe('Proposals', async assert => {
   let voice = voiceBefore.rows[0].balance
 
   console.log('favour first proposal')
-  await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(firstuser, 1, 4, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 2, { authorization: `${firstuser}@active` })
+
+  console.log('favour second proposal but not enough for 80% majority')
+  await contracts.proposals.against(seconduser, 2, 4, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 6, { authorization: `${firstuser}@active` })
 
   var exceedBalanceHasError = true
   try {
@@ -101,7 +108,7 @@ describe('Proposals', async assert => {
   }
 
   console.log('against second proposal')
-  await contracts.proposals.against(firstuser, 2, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.against(firstuser, 3, 1, { authorization: `${firstuser}@active` })
 
   const balancesBefore = [
     await getBalance(firstuser),
@@ -127,6 +134,7 @@ describe('Proposals', async assert => {
 
   delete rows[0].creation_date
   delete rows[1].creation_date
+  delete rows[2].creation_date
 
   assert({
     given: 'try to vote before proposal is active',
@@ -171,7 +179,7 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'passed proposal',
+    given: 'passed proposal 80% majority',
     should: 'show passed proposal',
     actual: rows[0],
     expected: {
@@ -181,9 +189,9 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 1,
-      total: 9,
-      favour: 5,
-      against: 4,
+      total: 10,
+      favour: 8,
+      against: 2,
       stage: 'done',
       title: 'title2',
       summary: 'summary2',
@@ -196,11 +204,36 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'rejected proposal',
+    given: 'rejected proposal 60% majority',
     should: 'show rejected proposal',
     actual: rows[1],
     expected: {
       id: 2,
+      creator: firstuser,
+      recipient: firstuser,
+      quantity: '55.7000 SEEDS',
+      staked: '0.0000 SEEDS',
+      executed: 0,
+      total: 10,
+      favour: 6,
+      against: 4,
+      stage: 'done',
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'rejected',
+      fund: secondbank,
+    }
+  })
+
+  assert({
+    given: 'rejected proposal',
+    should: 'show rejected proposal',
+    actual: rows[2],
+    expected: {
+      id: 3,
       creator: seconduser,
       recipient: seconduser,
       quantity: '100.0000 SEEDS',

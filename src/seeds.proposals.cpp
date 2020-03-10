@@ -29,6 +29,9 @@ void proposals::onperiod() {
     auto pitr = props.begin();
 
     auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
+    
+    auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
+
     auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
 
     uint64_t min_stake = min_stake_param.value;
@@ -36,7 +39,10 @@ void proposals::onperiod() {
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
-        if (pitr->favour > pitr->against) {
+        double majority = double(prop_majority.value) / 100.0;
+        double fav = double(pitr->favour);
+        bool passed = fav >= double(pitr->favour + pitr->against) * majority;
+        if (passed) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
               withdraw(pitr->recipient, pitr->staked, contracts::bank);
