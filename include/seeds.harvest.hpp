@@ -75,7 +75,11 @@ CONTRACT harvest : public contract {
 
     double get_rep_multiplier(name account) {
         auto hitr = harveststat.find(account.value);
-        check(hitr != harveststat.end(), "not a seeds user "+account.to_string());
+        if (hitr == harveststat.end) {
+          // user doesn't have a harvest entry yet
+          // either a new user, or harvest stat not initialized
+          return 0;
+        }
         return rep_multiplier_for_score(hitr->reputation_score);
     }
 

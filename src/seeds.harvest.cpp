@@ -356,7 +356,7 @@ void harvest::calctrxpt() {
   trx.actions.emplace_back(
     permission_level(_self, "active"_n),
     _self,
-    "calctrx"_n,
+    "calctrxpt"_n,
     std::make_tuple()
   );
   trx.delay_sec = 120; // this is doing all users for now, every 2 min

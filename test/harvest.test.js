@@ -433,6 +433,10 @@ describe.only("harvest transaction score", async assert => {
     return
   }
 
+  const memoprefix = "" + (new Date()).getTime()
+
+  console.log("memoprefix   "+memoprefix)
+
   const contracts = await initContracts({ accounts, token, harvest, settings, history })
 
   console.log('harvest reset')
@@ -445,26 +449,15 @@ describe.only("harvest transaction score", async assert => {
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('join users')
-  // await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
-  // await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
-  // await contracts.accounts.adduser(thirduser, '3 user', 'individual', { authorization: `${accounts}@active` })
-  // await contracts.accounts.adduser(fourthuser, '4 user', 'individual', { authorization: `${accounts}@active` })
-
   let users = [firstuser, seconduser, thirduser, fourthuser]
-
   users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
   users.forEach( async (user, index) => await contracts.history.reset(user, { authorization: `${history}@active` }))
 
   const checkScores = async (points, scores, given, should) => {
 
     console.log("checking points "+points + " scores: "+scores)
-
     await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
-
-
-
     await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
-
     
     const txpoints = await eos.getTableRows({
       code: harvest,
@@ -502,68 +495,47 @@ describe.only("harvest transaction score", async assert => {
 
   }
 
-  console.log('make transaction')
-  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('make transaction, no reps')
+  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', memoprefix, { authorization: `${firstuser}@active` })
+  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
 
-  //checkScores([0, 0, 0, 0], [0, 0, 0, 0], "no reputation", "be empty")
+  await checkScores([0, 0, 0, 0], [0, 0, 0, 0], "no reputation", "be empty")
 
+  console.log('calculate tx scores with reputation')
   await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-
-  const reps = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'users',
-    json: true,
-    limit: 100
-  })
-
-  console.log("reps "+JSON.stringify(reps, null, 2))
-
   await checkScores([20, 0, 0, 0], [100, 0, 0, 0], "1 reputation, 1 tx", "100 score")
 
-  const history_tx = await eos.getTableRows({
-    code: history,
-    scope: firstuser,
-    table: 'transactions',
-    json: true,
-    limit: 100
-  })
-
-  console.log(" history_tx points "+JSON.stringify(history_tx, null, 2))
-
-
-
-  await contracts.token.transfer(seconduser, thirduser, '1.0000 SEEDS', '', { authorization: `${seconduser}@active` })
-
-
-
+  console.log("transfer with 10 rep, 2 accounts have rep")
+  await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
+  await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  await checkScores([15, 20, 0, 0], [75, 100, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
-  const balances = await eos.getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'balances',
-    json: true,
-    limit: 100
-  })
 
-  const harvestStats = await eos.getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'harvest',
-    json: true,
-    limit: 100
-  })
+  let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
+  console.log("More than 26 transactions. Expected tx points: "+ expectedScore)
+  for(let i = 0; i < 40; i++) {
+    // 40 transactions
+    // rep multiplier 2nd user: 1.5
+    // vulume: 1
+    // only 26 tx count
+    // score from before was 15
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
+  }
+  await checkScores([52, 20, 0, 0], [100, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
+  // test tx exceeds volume limit
+  let tx_max_points = 1777
+  let third_user_rep_multiplier = 2 
+  await contracts.token.transfer(seconduser, thirduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${seconduser}@active` })
+  await checkScores([52, 20 + tx_max_points * third_user_rep_multiplier, 0, 0], [75, 100, 0, 0], "large tx", "100, 75 score")
   
+  // send back 
+  await contracts.token.transfer(thirduser, seconduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${thirduser}@active` })
+
 
 })
-
-// TODO test more than 26 transactions rule
-
-// TODO test tx volume cap rule
 
 // TODO test old tx rule??
 
