@@ -54,6 +54,7 @@ CONTRACT proposals : public contract {
       void deposit(asset quantity);
       void withdraw(name account, asset quantity, name sender);
       void burn(asset quantity);
+      void update_voice_table();
 
       TABLE config_table {
           name param;

@@ -32,10 +32,7 @@ void proposals::onperiod() {
     
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
 
-    auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
-
     uint64_t min_stake = min_stake_param.value;
-    uint64_t voice_base = voice_param.value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -75,13 +72,7 @@ void proposals::onperiod() {
       pitr++;
     }
 
-    auto vitr = voice.begin();
-    while (vitr != voice.end()) {
-        voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance = voice_base;
-        });
-        vitr++;
-    }
+    update_voice_table();
 
     transaction trx{};
     trx.actions.emplace_back(
@@ -94,6 +85,40 @@ void proposals::onperiod() {
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 
     update_cycle();
+}
+
+void proposals::update_voice_table() {
+  auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
+  uint64_t voice_base = voice_param.value;
+
+  auto uitr = users.begin();
+  
+  while(uitr != users.end()) {
+    
+    if (uitr->status == "citizen"_n) {
+      name user = uitr->account;
+      auto vitr = voice.find(user.value);
+
+      if (vitr == voice.end()) {
+          voice.emplace(_self, [&](auto& voice) {
+              voice.account = user;
+              voice.balance = 0;
+          });
+      } 
+
+    }
+
+    uitr++;
+  }
+
+  auto vitr = voice.begin();
+  while (vitr != voice.end()) {
+      voice.modify(vitr, _self, [&](auto& voice) {
+          voice.balance = voice_base;
+      });
+      vitr++;
+  }
+
 }
 
 uint64_t proposals::get_cycle_period_sec() {
