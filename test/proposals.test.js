@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser } = names
+const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser, fourthuser } = names
 
 describe('Proposals', async assert => {
 
@@ -28,6 +28,7 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
@@ -116,8 +117,24 @@ describe('Proposals', async assert => {
     await getBalance(secondbank),
   ]
 
+  console.log('new citizen')
+  await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const voice2 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  const hasVoice = (voices, user) => {
+    return voices.rows.filter(
+      (item) => item.account == user
+    ).length == 1
+  }
 
   const balancesAfter = [
     await getBalance(firstuser),
@@ -259,6 +276,14 @@ describe('Proposals', async assert => {
     actual: balancesAfter[2] - balancesBefore[2],
     expected: -100
   })
+
+  assert({
+    given: 'new citizen was added',
+    should: 'be added to voice on new cycle',
+    actual: [hasVoice(voiceBefore, fourthuser), hasVoice(voice2, fourthuser)],
+    expected: [false, true]
+  })
+
 })
 
 describe('Recepient invalid', async assert => {
@@ -335,3 +360,4 @@ describe('Recepient invalid', async assert => {
   })
 
 })
+
