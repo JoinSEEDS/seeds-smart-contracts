@@ -260,3 +260,78 @@ describe('Proposals', async assert => {
     expected: -100
   })
 })
+
+describe('Recepient invalid', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  var createdProp = false
+  try {
+    await contracts.proposals.create(firstuser, "23", '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    createdProp = true
+    console.log('error')
+  } catch (err) {
+
+  }
+
+  console.log('create proposal with invalid fund')
+  var createdFundProp = false
+  try {
+    await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', "clowns", { authorization: `${firstuser}@active` })
+    console.log('error')
+    createdFundProp = true
+  } catch (err) {
+
+  }
+
+  console.log('create proposal with non seeds user')
+  var createNonSeedsUser = false
+  try {
+    await contracts.proposals.create(secondbank, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    console.log('error')
+    createNonSeedsUser = true
+  } catch (err) {
+
+  }
+
+
+  assert({
+    given: 'create proposal with invalid recepient',
+    should: 'fail',
+    actual: createdProp,
+    expected: false
+  })
+  
+  assert({
+    given: 'create proposal with invalid fund',
+    should: 'fail',
+    actual: createdFundProp,
+    expected: false
+  })
+
+  assert({
+    given: 'create proposal with non seeds user',
+    should: 'fail',
+    actual: createNonSeedsUser,
+    expected: false
+  })
+
+})

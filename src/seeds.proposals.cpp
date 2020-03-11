@@ -41,7 +41,7 @@ void proposals::onperiod() {
       if (pitr->stage == name("active")) {
         double majority = double(prop_majority.value) / 100.0;
         double fav = double(pitr->favour);
-        bool passed = fav >= double(pitr->favour + pitr->against) * majority;
+        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
         if (passed) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
@@ -120,9 +120,12 @@ void proposals::update_cycle() {
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
+  
   require_auth(creator);
-  // check_user(creator);
-  // check_user(recipient);
+
+  check_user(creator);
+  check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
+  check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   utils::check_asset(quantity);
 
   uint64_t lastId = 0;
