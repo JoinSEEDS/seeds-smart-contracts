@@ -507,6 +507,24 @@ void accounts::testsetrep(name user, uint64_t amount) {
   });
 }
 
+void accounts::testsetcbs(name user, uint64_t amount) {
+  require_auth(get_self());
+
+  check(is_account(user), "non existing user");
+
+  auto citr = cbs.find(user.value);
+  if (citr == cbs.end()) {
+    cbs.emplace(_self, [&](auto& item) {
+      item.account = user;
+      item.community_building_score = amount;
+    });
+  } else {
+    cbs.modify(citr, _self, [&](auto& item) {
+      item.community_building_score = amount;
+    });
+  }
+}
+
 void accounts::check_user(name account)
 {
   auto uitr = users.find(account.value);

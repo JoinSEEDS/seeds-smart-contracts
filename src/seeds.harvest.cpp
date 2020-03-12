@@ -24,6 +24,10 @@ void harvest::reset() {
     ritr = refunds.erase(ritr);
   }
   
+  auto titr = txpoints.begin();
+  while (titr != txpoints.end()) {
+    titr = txpoints.erase(titr);
+  }
 
   init_balance(_self);
 }
@@ -319,17 +323,19 @@ void harvest::calc_tx_points(name account, uint64_t cycle) {
     }
   }
 
+  // use ceil function so each schore is counted if it is > 0
+    
   // enter into transaction points table
   auto hitr = txpoints.find(account.value);
   if (hitr == txpoints.end()) {
     txpoints.emplace(_self, [&](auto& entry) {
       entry.account = account;
-      entry.points = (uint64_t) result;
+      entry.points = (uint64_t) ceil(result);
       entry.cycle = cycle;
     });
   } else {
     txpoints.modify(hitr, _self, [&](auto& entry) {
-      entry.points = (uint64_t) result;
+      entry.points = (uint64_t) ceil(result);
       entry.cycle = cycle;
     });
   }

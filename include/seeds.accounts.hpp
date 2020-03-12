@@ -53,6 +53,8 @@ CONTRACT accounts : public contract {
 
       ACTION testsetrep(name user, uint64_t amount);
 
+      ACTION testsetcbs(name user, uint64_t amount);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
@@ -205,4 +207,5 @@ CONTRACT accounts : public contract {
 
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)(subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(requestvouch)(vouch));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
+(subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testremove)(testsetcbs)(punish)(requestvouch)(vouch));

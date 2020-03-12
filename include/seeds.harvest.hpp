@@ -6,6 +6,7 @@
 #include <seeds.token.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <cmath> 
 
 using namespace eosio;
 using namespace utils;
@@ -75,7 +76,7 @@ CONTRACT harvest : public contract {
 
     double get_rep_multiplier(name account) {
         auto hitr = harveststat.find(account.value);
-        if (hitr == harveststat.end) {
+        if (hitr == harveststat.end()) {
           // user doesn't have a harvest entry yet
           // either a new user, or harvest stat not initialized
           return 0;

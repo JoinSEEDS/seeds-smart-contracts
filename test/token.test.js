@@ -47,23 +47,20 @@ describe('token.transfer.history', async assert => {
   
   const { rows } = await getTableRows({
     code: history,
-    scope: history,
+    scope: firstuser,
     table: 'transactions',
     json: true
   })
-  
+  delete rows[0].timestamp
+
   assert({
     given: 'transactions table',
     should: 'have transaction entry',
     actual: rows,
     expected: [{
       id: 0,
-      from: firstuser,
       to: seconduser,
       quantity: '10.0000 SEEDS',
-      fromstatus: 'resident',
-      tostatus: 'citizen',
-      memo: '',
     }]
   })
 })

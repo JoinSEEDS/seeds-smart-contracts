@@ -150,7 +150,6 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -178,7 +177,6 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -215,7 +213,6 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('schdlr.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
