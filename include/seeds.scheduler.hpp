@@ -19,18 +19,26 @@ CONTRACT scheduler : public contract {
 
         ACTION execute();
 
-        ACTION configop(name action, name contract, uint64_t period_sec);
+        ACTION configop(name id, name action, name contract, uint64_t period);
+
+        ACTION removeop(name id);
+
+        ACTION pauseop(name id, uint8_t pause);
 
         ACTION confirm(name operation);
 
+        ACTION cancelexec();
+
     private:
         TABLE operations_table {
+            name id;
             name operation;
             name contract;
+            uint8_t pause;
             uint64_t period;
             uint64_t timestamp;
 
-            uint64_t primary_key() const { return operation.value; }
+            uint64_t primary_key() const { return id.value; }
         };
 
         TABLE config_table {
@@ -44,6 +52,7 @@ CONTRACT scheduler : public contract {
 
         typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
+        name seconds_to_execute = "secndstoexec"_n;
 
         operations_tables operations;
         config_tables config;

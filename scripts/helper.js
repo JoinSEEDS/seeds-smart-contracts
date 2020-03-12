@@ -80,6 +80,13 @@ const applicationKeys = {
 }
 const applicationPublicKey = applicationKeys[chainId]
 
+const executePublicKeys = {
+  [networks.local]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
+  [networks.telosMainnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
+  [networks.telosTestnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ'
+}
+const execPublicKey = executePublicKeys[chainId]
+
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
@@ -337,6 +344,49 @@ var permissions = [{
   target: `${accounts.forum.account}@active`,
   actor: `${accounts.forum.account}@eosio.code`
 }, {
+  target: `${accounts.forum.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.forum.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'onperiod'
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'newday'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcplanted'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrx'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcrep'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  key: execPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
 }, {
@@ -372,9 +422,9 @@ if (isTestnet || isLocalNet) {
 }
 
 const keyProviders = {
-  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
-  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY],
-  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
+  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY]
 }
 
 const keyProvider = keyProviders[chainId]

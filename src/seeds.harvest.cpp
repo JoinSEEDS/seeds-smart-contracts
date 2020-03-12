@@ -253,15 +253,7 @@ void harvest::calcrep() {
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calcrep"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 60;
-  trx.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
+  print("HARVEST: calcrep executed");
 }
 
 // Calculate Transaction Points for a single account
@@ -358,15 +350,7 @@ void harvest::calctrxpt() {
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calctrxpt"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 120; // this is doing all users for now, every 2 min
-  trx.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+  print("HARVEST: calctrx executed");
 
 }
 
@@ -543,15 +527,8 @@ void harvest::calcplanted() {
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calcplanted"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 60;
-  trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
+  print("HARVEST: calcplanted executed");
+
 }
 
 void harvest::claimreward(name from) {

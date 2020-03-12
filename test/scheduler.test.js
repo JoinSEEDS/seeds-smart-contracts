@@ -39,14 +39,18 @@ describe('scheduler', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'forum.seeds', 7, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('newday', 'forum.seeds', 15, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('run.forum', 'onperiod', 'forum.seeds', 7, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('new.forum', 'newday', 'forum.seeds', 20, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('rep.harvest', 'calcrep', 'harvst.seeds', 1200, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('trx.harvest', 'calctrx', 'harvst.seeds', 1200, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('plad.harvest', 'calcplanted', 'harvst.seeds', 1200, { authorization: `${scheduler}@active` })
     await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
     await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
     await contracts.settings.configure("cutoffz", 5000, { authorization: `${settings}@active` })
     await contracts.settings.configure("depreciation", 9500, { authorization: `${settings}@active` })
     await contracts.settings.configure("dps", 2, { authorization: `${settings}@active` })
+    await contracts.settings.configure('secndstoexec', 1, { authorization: `${settings}@active` })
 
     console.log('join users')
     await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
@@ -66,7 +70,7 @@ describe('scheduler', async assert => {
 
     await sleep(30)
     console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await contracts.scheduler.execute([], { authorization: `${firstuser}@active` })
 
     const repBeforeDepreciation = await getTableRows({
         code: forum,
@@ -75,9 +79,9 @@ describe('scheduler', async assert => {
         json: true
     })
 
-    await sleep(10000)
-    console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await sleep(7000)
+    // console.log('scheduler execute')
+    // await contracts.scheduler.execute([], { authorization: `${seconduser}@active` })
 
 
     const repAfterDepreciation = await getTableRows({
@@ -108,8 +112,8 @@ describe('scheduler', async assert => {
     })
 
     await sleep(6000)
-    console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    // console.log('scheduler execute')
+    // await contracts.scheduler.execute([], { authorization: `${firstuser}@active` })
 
     console.log('vote post')
     await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
@@ -121,6 +125,17 @@ describe('scheduler', async assert => {
         table: 'votepower',
         json: true
     })
+
+    console.log('try to execute a function of forum without the execute permission')
+    try {
+        await contracts.forum.onperiod([], { authorization: `${firstuser}@active` })
+    }
+    catch(err) {
+        const e = JSON.parse(err)
+        console.log(e.error.details[0].message.replace('assertion failure with message: ', ''))
+    }
+
+    await contracts.scheduler.cancelexec({ authorization: `${scheduler}@active` })
 
     assert({
         given: 'the function onperiod not ready to be executed',
