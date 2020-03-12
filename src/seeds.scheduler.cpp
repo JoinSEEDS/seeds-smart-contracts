@@ -94,7 +94,7 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period)
             noperation.pause = 0;
             noperation.operation = action;
             noperation.contract = contract;
-            noperation.period = period_sec;
+            noperation.period = period;
             noperation.timestamp = current_time_point().sec_since_epoch();
         });
     }
@@ -135,7 +135,7 @@ ACTION scheduler::confirm(name operation) {
 
 
 ACTION scheduler::execute() {
-   require_auth(_self);
+   // require_auth(_self);
 
    print("Executing...");
 
