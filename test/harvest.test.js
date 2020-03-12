@@ -544,6 +544,23 @@ describe("harvest transaction score", async assert => {
   // send back 
   await contracts.token.transfer(thirduser, seconduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${thirduser}@active` })
 
+  console.log("calc CS score")
+  await contracts.harvest.calccs({ authorization: `${harvest}@active` })
+  const harvestStats = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true,
+    limit: 100
+  })
+  let secondCS = harvestStats.rows.filter( item => item.account == seconduser )[0].contribution_score
+
+  assert({
+    given: 'contribution score',
+    should: 'have contribution score',
+    actual: secondCS, 
+    expected: 150
+  })
 
 })
 
