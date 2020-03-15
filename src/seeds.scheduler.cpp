@@ -21,7 +21,7 @@ bool scheduler::isRdyToExec(name operation){
 
     periods = (timestamp - itr -> timestamp) / itr -> period;
 
-    print("\nPERIODS: " + std::to_string(periods) + ", timestamp: " + std::to_string(timestamp) + ", timestap: " + std::to_string(itr->timestamp) );
+    print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
 
     if(periods > 0) return true;
     return false;
@@ -29,26 +29,42 @@ bool scheduler::isRdyToExec(name operation){
 
 
 ACTION scheduler::reset() {
-    require_auth(_self);
+    require_auth(get_self());
+
+    cancelexec();
 
     auto itr = operations.begin();
     while(itr != operations.end()){
         itr = operations.erase(itr);
     }
 
+    auto titr = test.begin();
+    while(titr != test.end()){
+        titr = test.erase(titr);
+    }
+
     std::vector<name> id_v = { 
-        name("rep.harvest"), 
-        name("trx.harvest"), 
-        name("plad.harvest") 
+        name("cs.rep"), 
+        name("cs.planted"),
+        name("cs.trxpt"), 
+        name("cs.trx"),
+        name("cs.cbs"),
+        name("cs.cs"),
     };
     
     std::vector<name> operations_v = {
         name("calcrep"),
+        name("calcplanted"),
+        name("calctrxpt"),
         name("calctrx"),
-        name("calcplanted")
+        name("calccbs"),
+        name("calccs"),
     };
 
     std::vector<name> contracts_v = {
+        contracts::harvest,
+        contracts::harvest,
+        contracts::harvest,
         contracts::harvest,
         contracts::harvest,
         contracts::harvest
@@ -57,19 +73,24 @@ ACTION scheduler::reset() {
     std::vector<uint64_t> delay_v = {
         60,
         60,
+        60,
+        60,
+        60,
         60
     };
 
     int i = 0;
-    while(i < 3){
-        operations.emplace(_self, [&](auto & noperation){
-            noperation.id = id_v[i];
-            noperation.operation = operations_v[i];
-            noperation.contract = contracts_v[i];
-            noperation.pause = 0;
-            noperation.period = delay_v[i];
-            noperation.timestamp = current_time_point().sec_since_epoch();
-        });
+    while(i < 6){
+        configop(id_v[i], operations_v[i], contracts_v[i], delay_v[i]);
+
+        // operations.emplace(_self, [&](auto & noperation){
+        //     noperation.id = id_v[i];
+        //     noperation.operation = operations_v[i];
+        //     noperation.contract = contracts_v[i];
+        //     noperation.pause = 0;
+        //     noperation.period = delay_v[i];
+        //     noperation.timestamp = current_time_point().sec_since_epoch();
+        // });
         i++;
     }
 }
@@ -121,7 +142,7 @@ ACTION scheduler::pauseop(name id, uint8_t pause) {
 }
 
 ACTION scheduler::confirm(name operation) {
-    require_auth(_self);
+    require_auth(get_self());
 
     print("Confirm the execution of " + operation.to_string());
 
@@ -164,7 +185,15 @@ ACTION scheduler::execute() {
             By doing this, we are restricting the ACTION to be callable only for an account who has the CUSTOM_PERMISSION
     */
 
-    auto itr = operations.begin();
+    // =======================
+    // cancel deferred execution if any
+    // =======================
+
+    cancel_deferred(contracts::scheduler.value);
+
+    // =======================
+    // schedule next execution
+    // =======================
 
     auto it_s = config.find(seconds_to_execute.value);
     check(it_s != config.end(), contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string());
@@ -183,9 +212,15 @@ ACTION scheduler::execute() {
     tx.delay_sec = it_s -> value;
     tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
     
-    print("transaction sended");
 
-    while(itr != operations.end()) {
+    // =======================
+    // execute operations
+    // =======================
+
+    auto ops_by_last_executed = operations.get_index<"bytimestamp"_n>();
+    auto itr = ops_by_last_executed.begin();
+
+    while(itr != ops_by_last_executed.end()) {
         if(isRdyToExec(itr -> id)){
 
             print("Operation to be executed: " + itr -> id.to_string());
@@ -197,12 +232,12 @@ ACTION scheduler::execute() {
                 std::make_tuple()
             );
 
-            transaction txa;
-            txa.actions.emplace_back(a);
-            txa.delay_sec = 0;
-            txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+            //transaction txa;
+            //txa.actions.emplace_back(a);
+            //txa.delay_sec = 0;
+            //txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 
-            // a.send();
+            a.send();
 
             action c = action(
                 permission_level{get_self(), "active"_n},
@@ -225,5 +260,48 @@ ACTION scheduler::cancelexec() {
     cancel_deferred(contracts::scheduler.value);
 }
 
+ACTION scheduler::test1() {
+    require_auth(get_self());
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(cancelexec));
+    name testname = "unit.test.1"_n;
+
+    auto itr = test.find(testname.value);
+    
+    if( itr != test.end() ){
+        test.modify(itr, _self, [&](auto & item) {
+            item.value += 1;
+        });
+    }
+    else{
+        test.emplace(_self, [&](auto & item) {
+            item.param = testname;
+            item.value = 0;
+        });
+    }
+
+}
+
+ACTION scheduler::test2() {
+    require_auth(get_self());
+
+    name testname = "unit.test.2"_n;
+
+    auto itr = test.find(testname.value);
+    
+    if(itr != test.end()){
+        test.modify(itr, _self, [&](auto & item) {
+            item.value += 1;
+        });
+    }
+    else{
+        test.emplace(_self, [&](auto & item) {
+            item.param = testname;
+            item.value = 0;
+        });
+    }
+
+}
+
+
+
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(cancelexec)(test1)(test2));
