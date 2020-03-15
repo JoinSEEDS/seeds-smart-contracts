@@ -364,24 +364,29 @@ var permissions = [{
   target: `${accounts.scheduler.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  // Execute key is incorrect - we never need private permission of execute, we 
-  // just set it up so scheduler has execute permission on all the contracts, and the execute 
-  // permission is limited to the calc... functions.
-  // 
-  target: `${accounts.harvest.account}@execute`, // TODO remove these - only scheduler is allowed to execute these things
+  target: `${accounts.harvest.account}@execute`, 
   action: 'calcplanted'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccbs'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccs'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrx'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrxpt'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcrep'
 }, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'
 }, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test2'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calctrx'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calcrep'
 }, {
   target: `${accounts.referendums.account}@execute`,
   key: activePublicKey,
