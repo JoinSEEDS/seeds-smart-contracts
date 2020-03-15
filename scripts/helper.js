@@ -80,13 +80,6 @@ const applicationKeys = {
 }
 const applicationPublicKey = applicationKeys[chainId]
 
-const executePublicKeys = {
-  [networks.local]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
-  [networks.telosMainnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
-  [networks.telosTestnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ'
-}
-const execPublicKey = executePublicKeys[chainId]
-
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
@@ -345,7 +338,11 @@ var permissions = [{
   actor: `${accounts.forum.account}@eosio.code`
 }, {
   target: `${accounts.forum.account}@execute`,
-  key: execPublicKey,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.forum.account}@execute`,
@@ -358,14 +355,27 @@ var permissions = [{
   action: 'newday'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  key: execPublicKey,
+  key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.harvest.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.harvest.account}@execute`,
+  target: `${accounts.scheduler.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  // Execute key is incorrect - we never need private permission of execute, we 
+  // just set it up so scheduler has execute permission on all the contracts, and the execute 
+  // permission is limited to the calc... functions.
+  // 
+  target: `${accounts.harvest.account}@execute`, // TODO remove these - only scheduler is allowed to execute these things
   action: 'calcplanted'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test1'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test2'
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calctrx'
@@ -374,14 +384,14 @@ var permissions = [{
   action: 'calcrep'
 }, {
   target: `${accounts.referendums.account}@execute`,
-  key: execPublicKey,
+  key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.referendums.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.proposals.account}@execute`,
-  key: execPublicKey,
+  key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.proposals.account}@execute`,
@@ -422,9 +432,9 @@ if (isTestnet || isLocalNet) {
 }
 
 const keyProviders = {
-  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
-  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
-  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY]
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY],
+  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
 }
 
 const keyProvider = keyProviders[chainId]
