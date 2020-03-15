@@ -41,26 +41,23 @@ CONTRACT harvest : public contract {
 
     ACTION runharvest();
 
-    ACTION calcplanted();
+    ACTION calcplanted(); // caluclate planted score
 
-    ACTION calctrxpt(); // calculate points
+    ACTION calctrxpt(); // calculate transaction points
 
-    ACTION calctrx(); // calculate score
+    ACTION calctrx(); // calculate transaction score
 
-    ACTION calcrep();
+    ACTION calcrep(); // calculate reputation score
 
-    ACTION calccbs(); // community building score
+    ACTION calccbs(); // calculate community building score
 
-    ACTION calccs(); // contribution score
+    ACTION calccs(); // calculate contribution score
 
     ACTION payforcpu(name account);
 
     ACTION testreward(name from);
-    ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
-    using reset_action = action_wrapper<"reset"_n, &harvest::reset>;
-    using unplant_action = action_wrapper<"unplant"_n, &harvest::unplant>;
-    using claimreward_action = action_wrapper<"claimreward"_n, &harvest::claimreward>;
+    ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
