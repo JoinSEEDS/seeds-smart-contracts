@@ -73,5 +73,5 @@ CONTRACT scheduler : public contract {
         config_tables config;
         test_tables test;
 
-        bool isRdyToExec(name operation);
+        bool is_ready_to_execute(name operation);
 };

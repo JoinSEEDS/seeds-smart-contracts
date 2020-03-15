@@ -5,7 +5,7 @@
 #include <string>
 
 
-bool scheduler::isRdyToExec(name operation){
+bool scheduler::is_ready_to_execute(name operation){
     auto itr = operations.find(operation.value);
 
     if (itr == operations.end()) {
@@ -221,7 +221,7 @@ ACTION scheduler::execute() {
     auto itr = ops_by_last_executed.begin();
 
     while(itr != ops_by_last_executed.end()) {
-        if(isRdyToExec(itr -> id)){
+        if(is_ready_to_execute(itr -> id)){
 
             print("Operation to be executed: " + itr -> id.to_string());
 
@@ -232,10 +232,10 @@ ACTION scheduler::execute() {
                 std::make_tuple()
             );
 
-            //transaction txa;
-            //txa.actions.emplace_back(a);
-            //txa.delay_sec = 0;
-            //txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+            // transaction txa;
+            // txa.actions.emplace_back(a);
+            // txa.delay_sec = 0;
+            // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 
             a.send();
 
