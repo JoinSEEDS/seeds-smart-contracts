@@ -148,7 +148,7 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
     }
   } else if (network == networks.telosMainnet) {
@@ -175,7 +175,7 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
     }
   } else if (network == networks.telosTestnet) {
@@ -211,7 +211,7 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
     }
   } else if (network == networks.kylin) {
