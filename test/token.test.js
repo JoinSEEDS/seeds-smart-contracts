@@ -30,6 +30,9 @@ describe('token.transfer.history', async assert => {
   
   const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
+  console.log('reset token')
+  await contract.resetweekly({ authorization: `${token}@active` })
+
   console.log('reset history')
   await historyContract.reset(firstuser, { authorization: `${history}@active` })
 
@@ -63,6 +66,41 @@ describe('token.transfer.history', async assert => {
       quantity: '10.0000 SEEDS',
     }]
   })
+
+  await transfer()
+
+  const stats = await getTableRows({
+    code: token,
+    scope: "SEEDS",
+    table: 'trxstat',
+    json: true
+  })
+
+  //console.log("stats: "+JSON.stringify(stats, null, 2))
+
+  assert({
+    given: 'transactions',
+    should: 'have transaction stat entries',
+    actual: stats.rows,
+    expected: [
+      {
+        "account": "seedsuseraaa",
+        "transactions_volume": "20.0000 SEEDS",
+        "total_transactions": 2,
+        "incoming_transactions": 0,
+        "outgoing_transactions": 2
+      },
+      {
+        "account": "seedsuserbbb",
+        "transactions_volume": "20.0000 SEEDS",
+        "total_transactions": 2,
+        "incoming_transactions": 2,
+        "outgoing_transactions": 0
+      }
+    ]
+  })
+
+
 })
 
 describe('token.transfer', async assert => {
