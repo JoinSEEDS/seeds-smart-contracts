@@ -1,5 +1,17 @@
 #include <seeds.history.hpp>
 
+void history::migratetrx(string memo) {
+  require_auth(get_self());
+  
+  transaction_tables transactions(get_self(), get_self().value);
+  auto titr = transactions.begin();
+  
+  while (titr != transactions.end()) {
+    titr = transactions.erase(titr);
+  }
+  
+}
+
 void history::reset(name account) {
   require_auth(get_self());
 

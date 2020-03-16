@@ -29,6 +29,9 @@ CONTRACT history : public contract {
         ACTION addcitizen(name account);
         
         ACTION addresident(name account);
+
+        ACTION migratetrx(string memo);
+
     private:
       void check_user(name account);
     
@@ -96,4 +99,4 @@ CONTRACT history : public contract {
     citizen_tables citizens;
 };
 
-EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident));
+EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident)(migratetrx));
