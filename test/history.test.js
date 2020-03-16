@@ -27,28 +27,27 @@ describe('make a transaction entry', async assert => {
   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })  
 
   console.log('add transaction entry')
-  await historyContract.trxentry(firstuser, seconduser, '10.0000 SEEDS', '', { authorization: `${history}@active` })
+  await historyContract.trxentry(firstuser, seconduser, '10.0000 SEEDS', { authorization: `${history}@active` })
   
   const { rows } = await getTableRows({
     code: history,
-    scope: history,
+    scope: firstuser,
     table: 'transactions',
     json: true
   })
   
+  let txresult = rows[0]
+  delete txresult.timestamp
+
   assert({
     given: 'transactions table',
     should: 'have transaction entry',
-    actual: rows,
-    expected: [{
+    actual: txresult,
+    expected: {
       id: 0,
-      from: firstuser,
       to: seconduser,
       quantity: '10.0000 SEEDS',
-      fromstatus: 'resident',
-      tostatus: 'citizen',
-      memo: '',
-    }]
+    }
   })
 })
 

@@ -2,28 +2,6 @@
 #include <eosio/system.hpp>
 #include <seeds.harvest.hpp>
 
-void harvest::migrateall() {
-  require_auth(_self);
-
-  name old_harvest = name("seedshrvestx");
-
-  balance_tables balances_old(old_harvest, old_harvest.value);
-
-  auto bitr = balances_old.begin();
-  
-  while (bitr != balances_old.end()) {
-    auto user_balance = *bitr;
-    
-    balances.emplace(get_self(), [&](auto& balance) {
-      balance.account = user_balance.account;
-      balance.planted = user_balance.planted;
-      balance.reward = user_balance.reward;
-    });
-    
-    bitr++;
-  }
-}
-
 void harvest::reset() {
   require_auth(_self);
 
@@ -46,6 +24,10 @@ void harvest::reset() {
     ritr = refunds.erase(ritr);
   }
   
+  auto titr = txpoints.begin();
+  while (titr != txpoints.end()) {
+    titr = txpoints.erase(titr);
+  }
 
   init_balance(_self);
 }
@@ -238,7 +220,7 @@ void harvest::runharvest() {}
 void harvest::calcrep() {
   require_auth(_self);
 
-  auto usersrep = reps.get_index<"byreputation"_n>();
+  auto usersrep = users.get_index<"byreputation"_n>();
 
   auto users_number = std::distance(usersrep.begin(), usersrep.end());
 
@@ -246,8 +228,14 @@ void harvest::calcrep() {
 
   auto uitr = usersrep.begin();
 
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
   while (uitr != usersrep.end()) {
     uint64_t score = (current_user * 100) / users_number;
+
+    if (uitr->reputation == 0) {
+      score = 0;
+    }
 
     auto hitr = harveststat.find(uitr->account.value);
 
@@ -258,71 +246,213 @@ void harvest::calcrep() {
 
     harveststat.modify(hitr, _self, [&](auto& user) {
         user.reputation_score = score;
-        user.rep_timestamp = eosio::current_time_point().sec_since_epoch();
+        user.rep_timestamp = now_time;
     });
 
     current_user++;
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calcrep"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 60;
-  trx.send(eosio::current_time_point().sec_since_epoch() + 10, _self);
+  print("HARVEST: calcrep executed");
 }
 
-void harvest::calctrx() {
+// Calculate Transaction Points for a single account
+void harvest::calc_tx_points(name account, uint64_t cycle) {
+
+  auto three_moon_cycles = moon_cycle * 3;
+  auto now = eosio::current_time_point().sec_since_epoch();
+  auto cutoffdate = now - three_moon_cycles;
+
+  // get all transactions for this account
+  transaction_tables transactions(contracts::history, account.value);
+
+  auto transactions_by_to = transactions.get_index<"byto"_n>();
+  auto tx_to_itr = transactions_by_to.begin();
+
+  double result = 0;
+
+  uint64_t max_quantity = 1777; // get this from settings // TODO verify this number
+  uint64_t max_number_of_transactions = 26;
+
+  name      current_to = name("");
+  uint64_t  current_num = 0;
+  double    current_rep_multiplier = 0.0;
+
+  while(tx_to_itr != transactions_by_to.end()) {
+
+    if (tx_to_itr->timestamp < cutoffdate) {
+
+      // remove old transactions
+      tx_to_itr = transactions_by_to.erase(tx_to_itr);
+
+    } else {
+
+      // update "to"
+      if (current_to != tx_to_itr->to) {
+        current_to = tx_to_itr->to;
+        current_num = 0;
+        current_rep_multiplier = get_rep_multiplier(current_to);
+      } else {
+        current_num++;
+      }
+
+      if (current_num < max_number_of_transactions) {
+        uint64_t volume = tx_to_itr->quantity.amount;
+
+        // limit max volume
+        if (volume > max_quantity * 10000) {
+          volume = max_quantity * 10000;
+        }
+
+        // multiply by receiver reputation
+        double points = (double(volume) / 10000.0) * current_rep_multiplier;
+
+        result += points;
+
+      } 
+
+      tx_to_itr++;
+    }
+  }
+
+  // use ceil function so each schore is counted if it is > 0
+    
+  // enter into transaction points table
+  auto hitr = txpoints.find(account.value);
+  if (hitr == txpoints.end()) {
+    txpoints.emplace(_self, [&](auto& entry) {
+      entry.account = account;
+      entry.points = (uint64_t) ceil(result);
+      entry.cycle = cycle;
+    });
+  } else {
+    txpoints.modify(hitr, _self, [&](auto& entry) {
+      entry.points = (uint64_t) ceil(result);
+      entry.cycle = cycle;
+    });
+  }
+
+}
+
+void harvest::calctrxpt() {
   require_auth(_self);
 
-  transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
-
-  auto userstrx = transactions.get_index<"bytrxvolume"_n>();
+  //auto userstrx = transactions.get_index<"bytrxvolume"_n>();
 
   auto users_number = std::distance(users.begin(), users.end());
 
   uint64_t current_user = 1;
 
-  auto uitr = userstrx.begin();
+  auto uitr = users.begin();
 
-  while (uitr != userstrx.end()) {
-    auto aitr = users.find(uitr->account.value);
-    if (aitr != users.end()) {
-      uint64_t score = (current_user * 100) / users_number;
+  while (uitr != users.end()) {
+    calc_tx_points(uitr->account, 0);
+    uitr++;
+  }
 
-      auto hitr = harveststat.find(uitr->account.value);
-      
-      if (hitr == harveststat.end()) {
+  print("HARVEST: calctrx executed");
+
+}
+
+void harvest::calctrx() {
+  require_auth(_self);
+
+  auto users = txpoints.get_index<"bypoints"_n>();
+
+  uint64_t users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    uint64_t score = (current_user * 100) / users_number;
+
+    if (uitr->points == 0) {
+      score = 0;
+    }
+
+    auto hitr = harveststat.find(uitr->account.value);
+
+    if (hitr == harveststat.end()) {
         init_harvest_stat(uitr->account);
         hitr = harveststat.find(uitr->account.value);
-      } 
+    } 
 
-      harveststat.modify(hitr, _self, [&](auto& user) {
-          user.transactions_score = score;
-          user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
-      });
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.transactions_score = score;
+      user.tx_timestamp = now_time;
+    });
 
-      current_user++;
-    }
+    current_user++;
 
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calctrx"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 60;
-  trx.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+}
+
+void harvest::calccbs() {
+  require_auth(_self);
+
+  auto users = cbs.get_index<"bycbs"_n>();
+
+  uint64_t users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    uint64_t score = (current_user * 100) / users_number;
+
+    if (uitr->community_building_score == 0) {
+      score = 0;
+    }
+
+    auto hitr = harveststat.find(uitr->account.value);
+
+    if (hitr == harveststat.end()) {
+        init_harvest_stat(uitr->account);
+        hitr = harveststat.find(uitr->account.value);
+    } 
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.community_building_score = score;
+      user.community_building_timestamp = now_time;
+    });
+
+    current_user++;
+
+    uitr++;
+  }
+
 
 }
+
+// [PS+RT+CB X Rep = Total Contribution Score]
+void harvest::calccs() {
+
+  require_auth(_self);
+
+  auto hitr = harveststat.begin();
+  while (hitr != harveststat.end()) {
+
+    double rep = rep_multiplier_for_score(hitr->reputation_score);
+
+    uint64_t cs_score = uint64_t( 
+      (hitr->planted_score + hitr->transactions_score + hitr->community_building_score) * rep);
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.contribution_score = cs_score;
+    });
+
+    hitr++;
+  }
+
+}
+
 
 void harvest::payforcpu(name account) {
     require_auth(get_self()); // satisfied by payforcpu permission
@@ -332,24 +462,32 @@ void harvest::payforcpu(name account) {
     check(uitr != users.end(), "Not a Seeds user!");
 }
 
+
+// store a singleton with the cycle #
+// each time calc start we compare cycle # and see if everything has finished, if yes we increase cycle
+// if no we continue old cycle
+// store cucle in harvest stat
+// complete a cycle before going to a new one
+// measure times 
 void harvest::init_harvest_stat(name account) {
+  auto the_time = eosio::current_time_point().sec_since_epoch();
   harveststat.emplace(_self, [&](auto& user) {
     user.account = account;
     
     user.transactions_score = 0;
-    user.tx_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.tx_timestamp = the_time;
     
     user.reputation_score = 0;
-    user.rep_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.rep_timestamp = the_time;
 
     user.planted_score = 0;
-    user.planted_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.planted_timestamp = the_time;
 
     user.contribution_score = 0;
-    user.contrib_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.contrib_timestamp = the_time;
 
     user.community_building_score = 0;
-    user.community_building_timestamp = eosio::current_time_point().sec_since_epoch();
+    user.community_building_timestamp = the_time;
   });
 }
 
@@ -365,6 +503,8 @@ void harvest::calcplanted() {
 
   auto uitr = users.begin();
 
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
   while (uitr != users.end()) {
     if (uitr->account != get_self()) {
       uint64_t score = (current_user * 100) / users_number;
@@ -378,7 +518,7 @@ void harvest::calcplanted() {
 
       harveststat.modify(hitr, _self, [&](auto& user) {
         user.planted_score = score;
-        user.planted_timestamp = eosio::current_time_point().sec_since_epoch();
+        user.planted_timestamp = now_time;
       });
 
       current_user++;
@@ -387,15 +527,8 @@ void harvest::calcplanted() {
     uitr++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "calcplanted"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 60;
-  trx.send(eosio::current_time_point().sec_since_epoch() + 30, _self);
+  print("HARVEST: calcplanted executed");
+
 }
 
 void harvest::claimreward(name from) {

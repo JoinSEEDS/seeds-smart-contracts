@@ -166,13 +166,6 @@ describe('accounts', async assert => {
     json: true
   })
 
-  const reps = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'reputation',
-    json: true
-  })
-
   console.log('test citizen second user')
   await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
 
@@ -224,8 +217,8 @@ describe('accounts', async assert => {
   assert({
     given: 'changed reputation',
     should: 'have correct values',
-    actual: reps.rows.map(({ reputation }) => reputation),
-    expected: [102, 10]
+    actual: users.rows.map(({ reputation }) => reputation),
+    expected: [102, 10, 0]
   })
 
   assert({
