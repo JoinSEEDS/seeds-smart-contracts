@@ -441,14 +441,55 @@ void harvest::calccs() {
 
     double rep = rep_multiplier_for_score(hitr->reputation_score);
 
-    uint64_t cs_score = uint64_t( 
-      (hitr->planted_score + hitr->transactions_score + hitr->community_building_score) * rep);
+    uint64_t cs_score = uint64_t((hitr->planted_score + hitr->transactions_score + hitr->community_building_score) * rep);
 
-    harveststat.modify(hitr, _self, [&](auto& user) {
-      user.contribution_score = cs_score;
-    });
+    auto csitr = cspoints.find(hitr->account.value);
+    if (csitr == cspoints.end()) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = hitr->account;
+        item.contribution_points = cs_score;
+        item.cycle = 0;
+      });
+    } else {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.contribution_points = cs_score;
+      });
+    }
 
     hitr++;
+  }
+
+  auto users = cspoints.get_index<"bycspoints"_n>();
+
+  uint64_t users_number = std::distance(users.begin(), users.end());
+
+  uint64_t current_user = 1;
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    uint64_t score = (current_user * 100) / users_number;
+
+    if (uitr->contribution_points == 0) {
+      score = 0;
+    }
+
+    auto hitr = harveststat.find(uitr->account.value);
+
+    if (hitr == harveststat.end()) {
+        init_harvest_stat(uitr->account);
+        hitr = harveststat.find(uitr->account.value);
+    } 
+
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.contribution_score = score;
+      user.contrib_timestamp = now_time;
+    });
+
+    current_user++;
+
+    uitr++;
   }
 
 }
