@@ -20,6 +20,7 @@ CONTRACT harvest : public contract {
         balances(receiver, receiver.value),
         harveststat(receiver, receiver.value),
         txpoints(receiver, receiver.value),
+        cspoints(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
@@ -145,7 +146,26 @@ CONTRACT harvest : public contract {
       uint64_t contrib_timestamp;
 
       uint64_t primary_key()const { return account.value; }
+      
+      uint64_t by_cs_points()const { return ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; }
+
     };
+
+    TABLE cs_points_table {
+        name account;
+        uint64_t contribution_points;
+        uint64_t cycle;
+
+        uint64_t primary_key() const { return account.value; }
+        uint64_t by_cs_points()const { return contribution_points; }
+        uint64_t by_cycle()const { return cycle; }
+    };
+
+    typedef eosio::multi_index<"cspoints"_n, cs_points_table,
+      indexed_by<"bycspoints"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cs_points>>,
+      indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
+    > cs_points_tables;
+
 
     // External Tables
 
@@ -225,6 +245,7 @@ CONTRACT harvest : public contract {
     balance_tables balances;
     tx_points_tables txpoints;
     harvest_tables harveststat;
+    cs_points_tables cspoints;
 
     // External Tables
     config_tables config;
