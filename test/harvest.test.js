@@ -553,13 +553,29 @@ describe("harvest transaction score", async assert => {
     json: true,
     limit: 100
   })
-  let secondCS = harvestStats.rows.filter( item => item.account == seconduser )[0].contribution_score
+  const cspoints = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'cspoints',
+    json: true,
+    limit: 100
+  })
+
+  // let secondCSpoints = cspoints.rows.filter( item => item.account == seconduser )[0].contribution_points
+  // let secondCS = harvestStats.rows.filter( item => item.account == seconduser )[0].contribution_score
+
+  assert({
+    given: 'contribution score points',
+    should: 'have contribution score',
+    actual: cspoints.rows.map(({ contribution_points }) => contribution_points), 
+    expected: [0, 150, 0, 0]
+  })
 
   assert({
     given: 'contribution score',
     should: 'have contribution score',
-    actual: secondCS, 
-    expected: 150
+    actual: harvestStats.rows.map(({ contribution_score }) => contribution_score), 
+    expected: [0, 100, 0, 0]
   })
 
 })

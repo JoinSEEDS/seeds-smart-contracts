@@ -80,17 +80,17 @@ ACTION scheduler::reset() {
     };
 
     int i = 0;
-    while(i < 6){
-        configop(id_v[i], operations_v[i], contracts_v[i], delay_v[i]);
+    uint64_t now = current_time_point().sec_since_epoch()+1;
 
-        // operations.emplace(_self, [&](auto & noperation){
-        //     noperation.id = id_v[i];
-        //     noperation.operation = operations_v[i];
-        //     noperation.contract = contracts_v[i];
-        //     noperation.pause = 0;
-        //     noperation.period = delay_v[i];
-        //     noperation.timestamp = current_time_point().sec_since_epoch();
-        // });
+    while(i < 6){
+        operations.emplace(_self, [&](auto & noperation){
+            noperation.id = id_v[i];
+            noperation.operation = operations_v[i];
+            noperation.contract = contracts_v[i];
+            noperation.pause = 0;
+            noperation.period = delay_v[i];
+            noperation.timestamp = now + i;
+        });
         i++;
     }
 }
