@@ -475,6 +475,21 @@ void accounts::genesis(name user) // Remove this after Feb 2020
   updatestatus(user, name("citizen"));
 }
 
+void accounts::genesisrep() {
+  require_auth(_self);
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    if (uitr -> status == "citizen"_n && uitr -> reputation < 100) {
+      users.modify(uitr, _self, [&](auto& user) {
+        user.reputation = 100;
+      });
+    }
+    uitr++;
+  }
+
+}
+
 void accounts::testremove(name user)
 {
   require_auth(_self);
