@@ -252,6 +252,7 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
       auto pitr = props.find(id);
       check(pitr != props.end(), "no proposal");
+      check(from == pitr->creator, "only the creator can stake into a proposal");
 
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;

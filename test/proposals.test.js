@@ -42,6 +42,14 @@ describe('Proposals', async assert => {
   await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.proposals.cancel(4, { authorization: `${firstuser}@active` })
 
+  let notOwnerStake = true
+  try {
+    await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
+    notOwnerStake = false
+  } catch(err) {
+    console.log('stake from not owner (failed)')
+  }
+
   const balanceBeforeCancel = await getBalance(firstuser)
   await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
   const balanceAfterCancel = await getBalance(firstuser)
@@ -202,6 +210,13 @@ describe('Proposals', async assert => {
     should: 'burn staked tokens',
     actual: balancesAfter[1] - balancesBefore[1],
     expected: 0
+  })
+
+  assert({
+    given: 'stake from not owner',
+    should: 'has error',
+    actual: notOwnerStake,
+    expected: true
   })
 
   assert({
