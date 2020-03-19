@@ -50,6 +50,7 @@ ACTION scheduler::reset() {
         name("cs.trx"),
         name("cs.cbs"),
         name("cs.cs"),
+        name("exch.period"),
     };
     
     std::vector<name> operations_v = {
@@ -59,6 +60,7 @@ ACTION scheduler::reset() {
         name("calctrx"),
         name("calccbs"),
         name("calccs"),
+        name("onperiod"),
     };
 
     std::vector<name> contracts_v = {
@@ -67,7 +69,8 @@ ACTION scheduler::reset() {
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
-        contracts::harvest
+        contracts::harvest,
+        contracts::exchange,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -76,7 +79,8 @@ ACTION scheduler::reset() {
         60,
         60,
         60,
-        60
+        60,
+        utils::seconds_per_day * 7,
     };
 
     int i = 0;
