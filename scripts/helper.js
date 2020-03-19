@@ -358,7 +358,14 @@ var permissions = [{
   key: activePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.scheduler.account}@execute`,
@@ -381,6 +388,9 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calcrep'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'onperiod'
 }, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'

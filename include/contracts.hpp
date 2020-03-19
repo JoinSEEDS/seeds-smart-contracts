@@ -21,4 +21,5 @@ namespace contracts {
   name forum = "forum.seeds"_n;
   name scheduler = "cycle.seeds"_n;
   name organization = "orgs.seeds"_n;
+  name exchange = "tlosto.seeds"_n;
 }
