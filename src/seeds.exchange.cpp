@@ -5,6 +5,17 @@ void exchange::reset() {
 
   config.remove();
 
+  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
+
+  asset seeds_per_usd =  asset( uint64_t(1000000), seeds_symbol);
+  asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
+
+  updatelimit(citizen_limit, resident_limit, visitor_limit);
+  updateusd(seeds_per_usd);
+  updatetlos(tlos_per_usd);
+
 }
 
 void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
@@ -78,7 +89,7 @@ void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string me
     asset tlos_per_usd = c.tlos_per_usd;
 
     uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
-
+    
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, memo);
