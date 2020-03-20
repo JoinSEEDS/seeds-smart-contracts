@@ -5,6 +5,11 @@ void exchange::reset() {
 
   config.remove();
 
+  auto pitr = payhistory.begin();
+  while(pitr != payhistory.end()) {
+    pitr = payhistory.erase(pitr);
+  }
+
   asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
   asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
   asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
@@ -46,7 +51,6 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
       break;
   }
   
-  asset tlos_as_seeds = asset(usd_quantity.amount, seeds_symbol);
   uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
   asset seeds_quantity = asset(seeds_amount, seeds_symbol);
   
@@ -89,7 +93,7 @@ void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string me
     asset tlos_per_usd = c.tlos_per_usd;
 
     uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
-    
+
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, memo);
