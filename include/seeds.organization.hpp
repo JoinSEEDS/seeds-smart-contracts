@@ -1,7 +1,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
 #include <contracts.hpp>
-#include <utils.hpp>
+#include <utils.hpp> 
 #include <tables.hpp>
 
 using namespace eosio;
@@ -16,6 +16,7 @@ CONTRACT organization : public contract {
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
+              harvest(contracts::harvest, contracts::harvest.value),
               balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value)
               {}
@@ -104,17 +105,18 @@ CONTRACT organization : public contract {
         typedef eosio::multi_index <"votes"_n, vote_table> vote_tables;
 
         typedef eosio::multi_index<"users"_n, tables::user_table,
-            indexed_by<"byreputation"_n,
-            const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
+            indexed_by<"byreputation"_n,const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
         > user_tables;
 
         typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
+        typedef eosio::multi_index<"harvest"_n, tables::harvest_table> harvest_tables;
 
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
         config_tables config;
+        harvest_tables harvest;
 
         const name min_planted = "org.minplant"_n;
 

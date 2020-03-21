@@ -26,8 +26,15 @@ void organization::check_user(name account) {
 }
 
 int64_t organization::getregenp(name account) {
-    auto itr = users.find(account.value);
-    return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
+    auto itr = harvest.find(account.value);
+    int64_t result = 0;
+    if (itr != harvest.end()) {
+        result = itr -> reputation_score;
+    }
+    return result;
+
+    //auto itr = users.find(account.value);
+    //return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
 void organization::deposit(name from, name to, asset quantity, string memo) {

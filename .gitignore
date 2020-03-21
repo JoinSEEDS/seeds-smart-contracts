@@ -9,4 +9,4 @@ package-lock.json
 \.env*
 !.env.example
 
-.vscode/settings.json
+.vscode/*
