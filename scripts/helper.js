@@ -88,8 +88,6 @@ const exchangeKeys = {
 
 const exchangePublicKey = exchangeKeys[chainId]
 
-console.log("exchange key: "+exchangePublicKey)
-
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
