@@ -253,7 +253,7 @@ void harvest::calcrep() {
     uitr++;
   }
 
-  print("HARVEST: calcrep executed");
+  //print("HARVEST: calcrep executed");
 }
 
 // Calculate Transaction Points for a single account

@@ -15,6 +15,7 @@ CONTRACT organization : public contract {
             : contract(receiver, code, ds),
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
+              scores(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               harvest(contracts::harvest, contracts::harvest.value),
               balances(contracts::harvest, contracts::harvest.value),
@@ -57,6 +58,8 @@ CONTRACT organization : public contract {
             asset planted;
 
             uint64_t primary_key() const { return org_name.value; }
+            uint64_t  by_regen() const { return regen; }
+            uint64_t by_reputation() const { return reputation; }
         };
 
         TABLE members_table {
@@ -87,6 +90,19 @@ CONTRACT organization : public contract {
             uint64_t primary_key()const { return param.value; }
         };
 
+        TABLE score_table {
+            name account;
+            uint64_t biosphere_score;
+            uint64_t transaction_score;
+            uint64_t community_building_score;
+            uint64_t contribution_score;
+
+            uint64_t primary_key()const { return account.value; }
+            //uint64_t by_cs_points()const { return ( (regen_score + transaction_score + community_building_score)) / 3; }
+        };
+
+        typedef eosio::multi_index<"scores"_n, score_table> score_tables;
+
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
             indexed_by<"byplanted"_n,
             const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
@@ -94,7 +110,10 @@ CONTRACT organization : public contract {
     
         balance_tables balances;
 
-        typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
+        typedef eosio::multi_index <"organization"_n, organization_table,
+            indexed_by<"byregen"_n,const_mem_fun<organization_table, uint64_t, &organization_table::by_regen>>,
+            indexed_by<"byreputation"_n,const_mem_fun<organization_table, uint64_t, &organization_table::by_reputation>>
+        > organization_tables;
 
         typedef eosio::multi_index <"members"_n, members_table> members_tables;
 
@@ -111,6 +130,7 @@ CONTRACT organization : public contract {
         typedef eosio::multi_index<"harvest"_n, tables::harvest_table> harvest_tables;
 
         organization_tables organizations;
+        score_tables scores;
         sponsors_tables sponsors;
         user_tables users;
         config_tables config;
@@ -125,6 +145,9 @@ CONTRACT organization : public contract {
         void check_user(name account);
         void vote(name organization, name account, int64_t regen);
         void check_asset(asset quantity);
+        void cal_bio_scores();
+        void init_scores(name account);
+
 };
 
 

@@ -258,15 +258,86 @@ void organization::vote(name organization, name account, int64_t regen) {
     auto itr = organizations.find(organization.value);
     check(itr != organizations.end(), "organisation does not exist.");
     
-    organizations.modify(itr, _self, [&](auto & morg) {
-        morg.regen += regen;
-    });
+    // enter the vote
 
     votes.emplace(_self, [&](auto & nvote) {
         nvote.account = account;
         nvote.timestamp = eosio::current_time_point().sec_since_epoch();
         nvote.regen_points = regen;
     });
+
+    // calculate the new total score
+
+    int64_t total_points = 0;
+    int64_t median = 0;
+    int64_t average = 0;
+    uint64_t counter = 0;
+    int64_t score = 0;
+
+    auto vitr = votes.begin();
+    while(vitr != votes.end()) {
+        total_points += vitr -> regen_points;
+        counter++;
+        average = total_points / counter;
+        if ( abs(average - vitr -> regen_points) < abs(average - median)) {
+            median = vitr -> regen_points;
+        }
+        vitr++;
+    }
+
+    // As per the constituion
+    // "When an org has more than 1000 points, its regenerative score is set to the median of the received votes"
+    // "When an org has less than 1000 points, its regen score is 0"
+    if (total_points > 1000) {
+        score = median;
+    }
+
+    organizations.modify(itr, _self, [&](auto & morg) {
+        morg.regen = score;
+    });
+
+    cal_bio_scores();
+}
+
+void organization::cal_bio_scores() {
+    auto orgregen = organizations.get_index<"byregen"_n>();
+    auto number = std::distance(orgregen.begin(), orgregen.end());
+
+    uint64_t current = 1;
+
+    auto oitr = orgregen.begin();
+
+    while (oitr != orgregen.end()) {
+        uint64_t score = (current * 100) / number;
+
+        if (oitr->regen == 0) {
+            score = 0;
+        }
+
+        auto hitr = scores.find(oitr->org_name.value);
+
+        if (hitr == scores.end()) {
+            init_scores(oitr->org_name);
+            hitr = scores.find(oitr->org_name.value);
+        }
+
+        scores.modify(hitr, _self, [&](auto& item) {
+            item.biosphere_score = score;
+        });
+
+        current++;
+        oitr++;
+    }   
+}
+
+void organization::init_scores(name account) {
+  scores.emplace(_self, [&](auto& item) {
+    item.account = account;
+    item.biosphere_score = 0;    
+    item.transaction_score = 0;
+    item.community_building_score = 0;
+    item.contribution_score = 0;
+  });
 }
 
 
@@ -282,11 +353,6 @@ ACTION organization::addregen(name organization, name account, int64_t points) {
     auto vitr = votes.find(account.value);
     
     if(vitr != votes.end()){
-        auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "organisation does not exist.");
-        organizations.modify(itr, _self, [&](auto & morg) {
-            morg.regen -= vitr -> regen_points;
-        });
         votes.erase(vitr);
     }
     
