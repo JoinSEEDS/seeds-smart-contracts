@@ -122,9 +122,9 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity, memo);
+    save_transaction(from, to, quantity);
 
-    // update_stats( from, to, quantity );
+    update_stats( from, to, quantity );
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -154,7 +154,7 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
    }
 }
 
-void token::save_transaction(name from, name to, asset quantity, string memo) {
+void token::save_transaction(name from, name to, asset quantity) {
   if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
     // Before our accounts are created, don't record anything
     return;
@@ -164,7 +164,7 @@ void token::save_transaction(name from, name to, asset quantity, string memo) {
     permission_level{contracts::history, "active"_n},
     contracts::history, 
     "trxentry"_n,
-    std::make_tuple(from, to, quantity, memo)
+    std::make_tuple(from, to, quantity)
   ).send();
 
 }
@@ -223,20 +223,20 @@ void token::resetweekly() {
 }
 
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
-    auto sym_code_raw = quantity.symbol.code().raw();
-
-    transaction_tables transactions(get_self(), sym_code_raw);
     user_tables users(contracts::accounts, contracts::accounts.value);
 
-    auto fromitr = transactions.find(from.value);
-    auto toitr = transactions.find(to.value);
-    
     auto fromuser = users.find(from.value);
     auto touser = users.find(to.value);
     
     if (fromuser == users.end() || touser == users.end()) {
       return;
     }
+
+    auto sym_code_raw = quantity.symbol.code().raw();
+    transaction_tables transactions(get_self(), sym_code_raw);
+
+    auto fromitr = transactions.find(from.value);
+    auto toitr = transactions.find(to.value);
 
     if (fromitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {

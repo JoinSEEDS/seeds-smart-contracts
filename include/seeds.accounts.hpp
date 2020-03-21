@@ -14,7 +14,6 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
-          reps(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value)
@@ -32,9 +31,7 @@ CONTRACT accounts : public contract {
 
       ACTION genesis(name user);
 
-      ACTION testresident(name user);
-
-      ACTION testremove(name user);
+      ACTION genesisrep();
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
@@ -52,26 +49,20 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
-      ACTION migrateall();
+      ACTION testresident(name user);
 
-      ACTION migrate(name account,
-        name status,
-        name type,
-        string nickname,
-        string image,
-        string story,
-        string roles,
-        string skills,
-        string interests,
-        uint64_t reputation,
-        uint64_t timestamp);
+      ACTION testremove(name user);
 
-      const name individual = "individual"_n;
-      const name organization = "organisation"_n;
-      
+      ACTION testsetrep(name user, uint64_t amount);
+
+      ACTION testsetcbs(name user, uint64_t amount);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
+
+      const name individual = "individual"_n;
+      const name organization = "organisation"_n;
 
       const name not_found = ""_n;
       const name cbp_reward_resident = "refcbp1.ind"_n;
@@ -105,20 +96,11 @@ CONTRACT accounts : public contract {
       void send_addrep(name user, uint64_t amount);
       void send_subrep(name user, uint64_t amount);
 
-
       TABLE ref_table {
         name referrer;
         name invited;
 
         uint64_t primary_key() const { return invited.value; }
-      };
-
-      TABLE rep_table {
-        name account;
-        uint64_t reputation;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
       };
 
       TABLE cbs_table {
@@ -172,11 +154,6 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return param.value; }
       };
 
-    typedef eosio::multi_index<"reputation"_n, rep_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<rep_table, uint64_t, &rep_table::by_reputation>>
-    > rep_tables;
-
     typedef eosio::multi_index<"users"_n, user_table,
       indexed_by<"byreputation"_n,
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
@@ -209,7 +186,6 @@ CONTRACT accounts : public contract {
 
     typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
-    rep_tables reps;
     cbs_tables cbs;
     ref_tables refs;
     req_vouch_tables reqvouch;
@@ -233,4 +209,5 @@ CONTRACT accounts : public contract {
 
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(migrate)(addref)(invitevouch)(addrep)(subrep)(testcitizen)(genesis)(testresident)(testremove)(punish)(requestvouch)(vouch)(migrateall));
+EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
+(subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testremove)(testsetcbs)(punish)(requestvouch)(vouch));

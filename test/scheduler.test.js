@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const { scheduler, forum, accounts, settings, application, firstuser, seconduser } = names
+const { scheduler, settings, firstuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -10,180 +10,92 @@ function sleep(ms) {
 
 var contracts = null
 
-describe('scheduler', async assert => {
+describe.only('scheduler', async assert => {
 
     if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
         return
     }
 
     contracts = await Promise.all([
         eos.contract(scheduler),
-        eos.contract(forum),
-        eos.contract(accounts),
         eos.contract(settings)
-    ]).then(([scheduler, forum, accounts, settings]) => ({
-        scheduler, forum, accounts, settings
+    ]).then(([scheduler, settings]) => ({
+        scheduler, settings
     }))
 
     console.log('scheduler reset')
     await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
-    console.log('forum reset')
-    await contracts.forum.reset({ authorization: `${forum}@active` })
-
     console.log('settings reset')
     await contracts.settings.reset({ authorization: `${settings}@active` })
 
-    console.log('accounts reset')
-    await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
     console.log('configure')
-    await contracts.scheduler.configop('onperiod', 'forum.seeds', 70000, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('newday', 'forum.seeds', 150000, { authorization: `${scheduler}@active` })
-    await contracts.settings.configure("maxpoints", 100000, { authorization: `${settings}@active` })
-    await contracts.settings.configure("vbp", 70000, { authorization: `${settings}@active` })
-    await contracts.settings.configure("cutoff", 280000, { authorization: `${settings}@active` })
-    await contracts.settings.configure("cutoffz", 5000, { authorization: `${settings}@active` })
-    await contracts.settings.configure("depreciation", 9500, { authorization: `${settings}@active` })
-    await contracts.settings.configure("dps", 2, { authorization: `${settings}@active` })
+    await contracts.settings.configure('secndstoexec', 1, { authorization: `${settings}@active` })
 
-    console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+    console.log('add operations')
+    await contracts.scheduler.configop('one', 'test1', 'cycle.seeds', 1, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('two', 'test2', 'cycle.seeds', 7, { authorization: `${scheduler}@active` })
 
-    console.log('add reputation')
-    await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
-    await contracts.accounts.addrep(seconduser, 5000, { authorization: `${accounts}@active` })
+    console.log('init test 1')
+    await contracts.scheduler.test1({ authorization: `${scheduler}@active` })
 
-    console.log('creating posts')
-    await contracts.forum.createpost(firstuser, 1, 'url1', 'body1', { authorization: `${firstuser}@active` })
-    await contracts.forum.createpost(seconduser, 2, 'url2', 'body2', { authorization: `${seconduser}@active` })
+    console.log('init test 2')
+    await contracts.scheduler.test2({ authorization: `${scheduler}@active` })
 
-    console.log('vote post')
-    await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
+    const beforeValues = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
+    })
 
-    await sleep(30)
+    console.log("before "+JSON.stringify(beforeValues, null, 2))
+
     console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
 
-    const repBeforeDepreciation = await getTableRows({
-        code: forum,
-        scope: forum,
-        table: 'forumrep',
-        json: true
+    await sleep(30 * 1000)
+
+    const afterValues = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
     })
 
-    await sleep(10000)
-    console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
+    console.log("after "+JSON.stringify(afterValues, null, 2))
 
+    let delta1 = afterValues.rows[0].value - beforeValues.rows[0].value
+    let delta2 = afterValues.rows[1].value - beforeValues.rows[1].value
 
-    const repAfterDepreciation = await getTableRows({
-        code: forum,
-        scope: forum,
-        table: 'forumrep',
-        json: true
-    })
+    // TODO: test pause op
 
+    // TODO: test remove op
 
-    console.log('spend vote power')
-    for(let i = 0; i < 16; i++) {
-        if(i % 2 == 0){
-            await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-            await contracts.forum.upvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
-        }
-        else{
-            await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-            await contracts.forum.downvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
-        }
-    }
+    // TODO: test change op to different op
 
-    const votePowerBeforeNewDay = await getTableRows({
-        code: forum,
-        scope: forum,
-        table: 'votepower',
-        json: true
-    })
-
-    await sleep(6000)
-    console.log('scheduler execute')
-    await contracts.scheduler.execute([], { authorization: `${scheduler}@active` })
-
-    console.log('vote post')
-    await contracts.forum.downvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.forum.upvotepost(seconduser, 1, { authorization: `${seconduser}@active` })
-
-    const votePowerAfterNewDay = await getTableRows({
-        code: forum,
-        scope: forum,
-        table: 'votepower',
-        json: true
+    assert({
+        given: '1 second delay was executed 30 seonds',
+        should: 'be executed close to 30 times (was: '+delta1+')',
+        actual: delta1 >= 26 && delta1 <= 28, // NOTE: ACTUALLY 27 => 31 - 4, 4 is the other action
+        expected: true
     })
 
     assert({
-        given: 'the function onperiod not ready to be executed',
-        should: 'not execute the function onperiod',
-        actual: repBeforeDepreciation.rows.map(row => row),
-        expected: [
-            { account: 'seedsuseraaa', reputation: -35000 },
-            { account: 'seedsuserbbb', reputation: 70000 }
-        ]
-    })
-
-    assert({
-        given: 'the function onperiod ready to be executed',
-        should: 'execute the function onperiod',
-        actual: repAfterDepreciation.rows.map(row => row),
-        expected: [
-            { account: 'seedsuseraaa', reputation: -33250 },
-            { account: 'seedsuserbbb', reputation: 66500 }
-        ]
-    })
-
-    assert({
-        given: 'the function newday not ready to be executed',
-        should: 'not execute the function newday',
-        actual: votePowerBeforeNewDay.rows.map(row => row),
-        expected: [
-            {
-                account: 'seedsuseraaa',
-                num_votes: 17,
-                points_left: 0,
-                max_points: 700000
-            },
-            {
-                account: 'seedsuserbbb',
-                num_votes: 17,
-                points_left: 0,
-                max_points: 350000
-            }
-        ]
-    })
-
-    assert({
-        given: 'the function newday ready to be executed',
-        should: 'execute the function newday',
-        actual: votePowerAfterNewDay.rows.map(row => row),
-        expected: [
-            {
-                account: 'seedsuseraaa',
-                num_votes: 1,
-                points_left: 630000,
-                max_points: 700000
-            },
-            {
-                account: 'seedsuserbbb',
-                num_votes: 1,
-                points_left: 315000,
-                max_points: 350000
-            }
-      ]
+        given: '7 second delay was executed 30 seconds',
+        should: 'be executed 4 times',
+        actual: delta2,
+        expected: 4
     })
 
 })
-
 
 
 

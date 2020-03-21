@@ -25,7 +25,8 @@ describe('genesis testing', async assert => {
   await contract.reset({ authorization: `${accounts}@active` })
 
   console.log('test genesis')
-  await contract.adduser(thirduser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(thirduser, 'third user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, 'second user', "individual", { authorization: `${accounts}@active` })
   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
   const users = await eos.getTableRows({
@@ -35,7 +36,7 @@ describe('genesis testing', async assert => {
     json: true,
   })
 
-  let user = users.rows[0]
+  let user = users.rows[1]
 
   assert({
     given: 'genesis',
@@ -44,8 +45,24 @@ describe('genesis testing', async assert => {
     expected: "citizen"
   })
 
+  await contract.genesisrep({ authorization: `${accounts}@active` })
+
+  let reps = await get_reps()
+
+  console.log("reps: "+JSON.stringify(reps, null, 2))
+
+  assert({
+    given: 'genesis reps',
+    should: 'citizens have 100 rep',
+    actual: reps,
+    expected: [0, 100]
+  })
+
+
+
 })
 
+// helper function
 const get_reps = async () => {
   const users = await eos.getTableRows({
     code: accounts,
@@ -166,13 +183,6 @@ describe('accounts', async assert => {
     json: true
   })
 
-  const reps = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'reputation',
-    json: true
-  })
-
   console.log('test citizen second user')
   await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
 
@@ -224,8 +234,8 @@ describe('accounts', async assert => {
   assert({
     given: 'changed reputation',
     should: 'have correct values',
-    actual: reps.rows.map(({ reputation }) => reputation),
-    expected: [102, 10]
+    actual: users.rows.map(({ reputation }) => reputation),
+    expected: [102, 10, 0]
   })
 
   assert({

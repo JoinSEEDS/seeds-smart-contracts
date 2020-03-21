@@ -167,22 +167,6 @@ uint64_t forum::getdperiods(uint64_t timestamp) {
 }
 
 
-bool forum::isRdyToExec(name operation){
-    auto itr = operations.find(operation.value);
-    check(itr != operations.end(), "The operation does not exist.");
-    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
-    uint64_t periods = 0;
-
-    periods = ((timestamp - itr -> timestamp) * 10000) / itr -> period;
-
-
-    if(periods > 0) return true;
-
-    check(false, std::to_string(timestamp) + ", t = " + std::to_string(itr -> timestamp));
-    return false;
-}
-
-
 ACTION forum::reset() {
     require_auth(_self);
 
@@ -314,12 +298,7 @@ ACTION forum::downvotecomt(name account, uint64_t post_id, uint64_t comment_id) 
 
 
 ACTION forum::onperiod() {
-    //require_auth(permission_level(contracts::forum, "period"_n));
-    //require_auth(permission_level(contracts::scheduler, "scheduled"_n));
-
-    if(!isRdyToExec(name("onperiod"))){
-        check(false, "onperiod is not ready to be executed.");
-    }
+    require_auth(permission_level(contracts::forum, "execute"_n));
 
     auto ditr = config.get(depreciation.value, "Depreciation factor is not configured.");
     uint64_t depreciation = ditr.value;
@@ -331,22 +310,16 @@ ACTION forum::onperiod() {
         });
         itr++;
     }
-
 }
 
 
 ACTION forum::newday() {
-    //require_auth(contracts::scheduler);
-
-    if(!isRdyToExec(name("newday"))){
-        check(false, "newday is not ready to be executed.");
-    }
+    require_auth(permission_level(contracts::forum, "execute"_n));
 
     auto itr = votespower.begin();
     while(itr != votespower.end()){
         itr = votespower.erase(itr);
     }
-
 }
 
 

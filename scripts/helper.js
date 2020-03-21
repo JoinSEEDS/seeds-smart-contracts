@@ -148,9 +148,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -176,9 +175,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -213,9 +211,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -339,6 +336,81 @@ var permissions = [{
 }, {
   target: `${accounts.forum.account}@active`,
   actor: `${accounts.forum.account}@eosio.code`
+}, {
+  target: `${accounts.forum.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.forum.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'onperiod'
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'newday'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calcplanted'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccbs'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccs'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrx'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrxpt'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcrep'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'onperiod'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test1'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test2'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'

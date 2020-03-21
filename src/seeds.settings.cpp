@@ -16,6 +16,9 @@ void settings::reset() {
   configure(name("mooncyclesec"), utils::moon_cycle);
   configure(name("propdecaysec"), utils::seconds_per_day);
   
+  // Scheduler cycle
+  configure(name("secndstoexec"), 60);
+
   // =====================================
   // referral rewards 
   // =====================================

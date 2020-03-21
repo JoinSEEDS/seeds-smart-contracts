@@ -39,21 +39,6 @@ CONTRACT forum : public contract {
 
 
     private:
-        // symbol seeds_symbol = symbol("SEEDS", 4);
-
-        void send_summary(name a){
-            action(
-                //permission_level,
-                permission_level{get_self(),"active"_n},
-                //code,
-                get_self(),
-                //action,
-                a,
-                //data
-                std::make_tuple()
-            ).send();   
-        }
-
         TABLE postcomment_table {
             uint64_t id;
             uint64_t parent_id;
@@ -171,5 +156,4 @@ CONTRACT forum : public contract {
         int64_t pointsfunction(name account, int64_t points_left, uint64_t vbp, uint64_t rep, uint64_t cutoff, uint64_t cutoff_zero);
         uint64_t getdperiods(uint64_t timestamp);
         int64_t getdpoints(int64_t points, uint64_t periods);
-        bool isRdyToExec(name operation);
 };

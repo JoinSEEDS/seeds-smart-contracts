@@ -176,8 +176,6 @@ namespace eosio {
 
          ACTION updatecirc();
 
-         void save_transaction(name from, name to, asset quantity, string memo);
-
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &token::retire>;
@@ -228,6 +226,7 @@ namespace eosio {
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
          void update_stats( const name& from, const name& to, const asset& quantity );
+         void save_transaction(name from, name to, asset quantity);
          void check_limit( const name& from );
          uint64_t balance_for( const name& owner );
 
