@@ -25,16 +25,13 @@ void organization::check_user(name account) {
     check(uitr != users.end(), "organisation: no user.");
 }
 
-int64_t organization::getregenp(name account) {
+int64_t organization::getregenp(int64_t points, name account) {
     auto itr = harvest.find(account.value);
     int64_t result = 0;
     if (itr != harvest.end()) {
         result = itr -> reputation_score;
     }
-    return result;
-
-    //auto itr = users.find(account.value);
-    //return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
+    return result * points;
 }
 
 void organization::deposit(name from, name to, asset quantity, string memo) {
@@ -273,9 +270,12 @@ void organization::vote(name organization, name account, int64_t regen) {
 }
 
 
-ACTION organization::addregen(name organization, name account) {
+ACTION organization::addregen(name organization, name account, int64_t points) {
     require_auth(account);
     check_user(account);
+
+    check( points >= -7 , "invalid regen vote: points can't be less than -7");
+    check( points <= 7  , "invalid regen vote: points can't be greater than 7");
 
     vote_tables votes(get_self(), organization.value);
 
@@ -290,28 +290,8 @@ ACTION organization::addregen(name organization, name account) {
         votes.erase(vitr);
     }
     
-    vote(organization, account, getregenp(account));
+    vote(organization, account, getregenp(points, account));
 }
 
-
-ACTION organization::subregen(name organization, name account) {
-    require_auth(account);
-    check_user(account);
-
-    vote_tables votes(get_self(), organization.value);
-
-    auto vitr = votes.find(account.value);
-    
-    if(vitr != votes.end()){
-        auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "organisation does not exist.");
-        organizations.modify(itr, _self, [&](auto & morg) {
-            morg.regen -= vitr -> regen_points;
-        });
-        votes.erase(vitr);
-    }
-    
-    vote(organization, account, -1 * getregenp(account));
-}
 
 

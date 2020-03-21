@@ -63,23 +63,11 @@ icon: https://joinseeds.com/assets/images/logos/seeds-app-Icon_190626.png#604c07
 ---
 spec_version: "0.2.0"
 title: Add regen points
-summary: 'Give positive regen points to the given organization'
+summary: 'Give positive or negative regen points to the given organization'
 icon: https://joinseeds.com/assets/images/logos/seeds-app-Icon_190626.png#604c0741207bdc82b3214d575bc75cf705fa9cbc0cfa7c7553269ee0c550fd35
 ---
 
 {{$action.authorization.[0].actor}} gives positive regen points to the organization {{organization}}.
-
-
-<h1 class="contract">subregen</h1>
-
----
-spec_version: "0.2.0"
-title: Substract regen points
-summary: 'Give negative regen points to the given organization'
-icon: https://joinseeds.com/assets/images/logos/seeds-app-Icon_190626.png#604c0741207bdc82b3214d575bc75cf705fa9cbc0cfa7c7553269ee0c550fd35
----
-
-{{$action.authorization.[0].actor}} gives negative regen points to the organization {{organization}}.
 
 
 <h1 class="contract">create</h1>

@@ -34,10 +34,8 @@ CONTRACT organization : public contract {
         
         ACTION changeowner(name organization, name owner, name account); // (owner permission)
 
-        ACTION addregen(name organization, name account); // adds a fixed number of regen points, possibly modified by the account reputation. account - account adding the regen (account auth)
+        ACTION addregen(name organization, name account, int64_t points); // adds/subtracts a fixed number of regen points, possibly modified by the account reputation. account - account adding the regen (account auth)
         
-        ACTION subregen(name organization, name account); // same as add, just negative (account auth)
-
         ACTION create(name sponsor, name orgaccount, string orgfullname, string publicKey);
 
         ACTION destroy(name orgname, name sponsor);
@@ -123,7 +121,7 @@ CONTRACT organization : public contract {
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
         void init_balance(name account);
-        int64_t getregenp(name account);
+        int64_t getregenp(int64_t points, name account);
         void check_user(name account);
         void vote(name organization, name account, int64_t regen);
         void check_asset(asset quantity);
@@ -135,7 +133,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<organization>(name(receiver), name(code), &organization::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund))
+          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(create)(destroy)(refund))
       }
   }
 }

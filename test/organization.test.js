@@ -46,6 +46,8 @@ describe('organization', async assert => {
     await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
     await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
 
+    await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+
     console.log('create balance')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
     await contracts.token.transfer(seconduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
@@ -137,8 +139,8 @@ describe('organization', async assert => {
     })
 
     console.log('add regen')
-    await contracts.organization.addregen('testorg1', firstuser, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen('testorg3', seconduser, { authorization: `${seconduser}@active` })
+    await contracts.organization.addregen('testorg1', firstuser, 3, { authorization: `${firstuser}@active` })
+    await contracts.organization.addregen('testorg3', seconduser, -3,  { authorization: `${seconduser}@active` })
     
     const regen = await getTableRows({
         code: organization,
@@ -342,7 +344,7 @@ describe('organization', async assert => {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
                 status: 0,
-                regen: 10000,
+                regen: 150,
                 reputation: 0,
                 voice: 0,
                 planted: "200.0000 SEEDS"
@@ -351,7 +353,7 @@ describe('organization', async assert => {
                 org_name: 'testorg3',
                 owner: 'seedsuseraaa',
                 status: 0,
-                regen: -13000,
+                regen: -300,
                 reputation: 0,
                 voice: 0,
                 planted: "200.0000 SEEDS"
