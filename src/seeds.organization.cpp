@@ -359,5 +359,22 @@ ACTION organization::addregen(name organization, name account, int64_t points) {
     vote(organization, account, getregenp(points, account));
 }
 
+ACTION organization::addcbs(name org, uint64_t amount) {
+    require_auth(get_self());
+
+    auto citr = orgcbs.find(org.value);
+
+    if (citr == orgcbs.end()) {
+        orgcbs.emplace(_self, [&](auto& item) {
+            item.account = org;
+            item.community_building_score = amount;
+        });
+    } else {
+        orgcbs.modify(citr, _self, [&](auto& item) {
+            item.community_building_score += amount;
+        });
+    }
+
+}
 
 

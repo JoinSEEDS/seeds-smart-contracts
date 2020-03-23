@@ -16,6 +16,7 @@ CONTRACT organization : public contract {
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
               scores(receiver, receiver.value),
+              orgcbs(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               harvest(contracts::harvest, contracts::harvest.value),
               balances(contracts::harvest, contracts::harvest.value),
@@ -42,6 +43,8 @@ CONTRACT organization : public contract {
         ACTION destroy(name orgname, name sponsor);
 
         ACTION refund(name beneficiary, asset quantity);
+
+        ACTION addcbs(name org, uint64_t amount);
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
@@ -101,6 +104,19 @@ CONTRACT organization : public contract {
             //uint64_t by_cs_points()const { return ( (regen_score + transaction_score + community_building_score)) / 3; }
         };
 
+        TABLE cbs_table {
+            name account;
+            uint64_t community_building_score;
+
+            uint64_t primary_key() const { return account.value; }
+            uint64_t by_cbs()const { return community_building_score; }
+        };
+
+        typedef eosio::multi_index<"orgcbs"_n, cbs_table,
+        indexed_by<"bycbs"_n,
+        const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
+        > cbs_tables;
+
         typedef eosio::multi_index<"scores"_n, score_table> score_tables;
 
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
@@ -132,6 +148,8 @@ CONTRACT organization : public contract {
         organization_tables organizations;
         score_tables scores;
         sponsors_tables sponsors;
+        cbs_tables orgcbs;
+
         user_tables users;
         config_tables config;
         harvest_tables harvest;
@@ -156,7 +174,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<organization>(name(receiver), name(code), &organization::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(create)(destroy)(refund))
+          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(create)(destroy)(refund)(addcbs))
       }
   }
 }
