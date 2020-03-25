@@ -402,6 +402,9 @@ var permissions = [{
   target: `${accounts.proposals.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
+  target: `${accounts.proposals.account}@execute`,
+  action: 'decayvoice'
+}, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
 }, {

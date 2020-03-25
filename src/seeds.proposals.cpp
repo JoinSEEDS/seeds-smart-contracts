@@ -19,6 +19,13 @@ void proposals::reset() {
 
   auto voiceitr = voice.begin();
   while (voiceitr != voice.end()) {
+    rollover_tables rollover(get_self(), (voiceitr->account).value);
+    
+    auto rolloveritr = rollover.begin();
+    while (rolloveritr != rollover.end()) {
+      rolloveritr = rollover.erase(rolloveritr);
+    }
+
     voiceitr = voice.erase(voiceitr);
   }
 }
@@ -113,10 +120,13 @@ void proposals::update_voice_table() {
 
   auto vitr = voice.begin();
   while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& voice) {
-          voice.balance = voice_base;
-      });
-      vitr++;
+    name usr = vitr->account;
+    save_voice(usr, voice_base);
+
+    voice.modify(vitr, _self, [&](auto& voice) {
+        voice.balance = get_total_voice(usr);
+    });
+    vitr++;
   }
 
 }
@@ -131,11 +141,108 @@ uint64_t proposals::get_voice_decay_period_sec() {
   return voice_decay_period.value;
 }
 
-void proposals::decayvoice() {
-  // Not yet implemented    
+// ================================================================================= //
+
+uint64_t proposals::get_total_voice(name account) {
+  rollover_tables rollover(get_self(), account.value);
+  
+  uint64_t total_amount = 0;
+  uint8_t num_cycles = 0;
+
+  auto ritr = rollover.begin();
+  while (ritr != rollover.end()) {
+    if (num_cycles == 3) {
+      ritr = rollover.erase(ritr);
+    } else {
+      total_amount += ritr -> balance;
+      ritr++;
+      num_cycles++;
+    }
+  }
+
+  return total_amount;
+}
+
+void proposals::save_voice(name account, uint64_t amount) {
   require_auth(get_self());
 
+  rollover_tables rollover(get_self(), account.value);
+
+  rollover.emplace(_self, [&](auto & savedvoice){
+    savedvoice.timestamp = current_time_point().sec_since_epoch();
+    savedvoice.balance = amount;
+    savedvoice.voted = 0;
+  });
 }
+
+void proposals::save_vote_rollover(name account) {
+  rollover_tables rollover(get_self(), account.value);
+
+  auto ritr = rollover.begin();
+  check(ritr != rollover.end(), "user does not have a rollover entry");
+
+  rollover.modify(ritr, _self, [&](auto & rollover){
+    rollover.voted += 1;
+  });
+}
+
+uint64_t proposals::get_decay_value(uint64_t & voice_amount, uint64_t & point_in_cycle) {
+  uint64_t decay_value = 0;
+  uint64_t num_days_left = (get_cycle_period_sec() - point_in_cycle) / get_voice_decay_period_sec();
+
+  print("num_days_left", num_days_left, ", MIRA: get_cycle_period_sec = ", get_cycle_period_sec(), ", point_in_cycle = ", point_in_cycle, ", voice_decay_period_sec = ", get_voice_decay_period_sec(), "\n\n\n");
+
+  if (num_days_left == 0) {
+    return voice_amount;
+  }
+
+  decay_value = voice_amount /  num_days_left;
+
+  return decay_value;
+}
+
+void proposals::decayvoice() {    
+  require_auth(get_self());
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  
+  uint64_t point_in_cycle = current_time_point().sec_since_epoch() - c.t_onperiod;
+  uint64_t half_cycle_period = get_cycle_period_sec() / 2;
+
+  print("Executing voice decay....");
+
+  if (point_in_cycle < half_cycle_period) {
+    print("Not on time");
+    return;
+  }
+
+  auto vitr = voice.begin();
+  
+  while (vitr != voice.end()) {
+    uint64_t balance = vitr -> balance;
+    uint64_t usrid = (vitr -> account).value;
+    
+    rollover_tables rollover(get_self(), usrid);
+    auto ritr = rollover.begin();
+    uint64_t rollover_balance = ritr -> balance;
+
+    if (ritr -> voted == 0) {
+      voice.modify(vitr, _self, [&](auto & voice){
+        voice.balance -= get_decay_value(balance, point_in_cycle);
+      });
+      rollover.modify(ritr, _self, [&](auto & rollover){
+        rollover.balance -= get_decay_value(rollover_balance, point_in_cycle);
+      });
+    }
+
+    vitr++;
+  }
+
+  c.t_voicedecay = current_time_point().sec_since_epoch();
+  cycle.set(c, get_self());
+}
+
+// ================================================================================= //
 
 void proposals::update_cycle() {
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
@@ -297,43 +404,47 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
     vote.favour = true;
     vote.proposal_id = id;
   });
+
+  save_vote_rollover(voter);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
-    require_auth(voter);
-    check_citizen(voter);
+  require_auth(voter);
+  check_citizen(voter);
 
-    auto pitr = props.find(id);
-    check(pitr != props.end(), "Proposal not found");
-    check(pitr->executed == false, "Proposal was already executed");
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->executed == false, "Proposal was already executed");
 
-    uint64_t min_stake = config.find(name("propminstake").value)->value;
-    check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
-    check(pitr->stage == name("active"), "not active stage");
+  uint64_t min_stake = config.find(name("propminstake").value)->value;
+  check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
+  check(pitr->stage == name("active"), "not active stage");
 
-    auto vitr = voice.find(voter.value);
-    check(vitr != voice.end(), "User does not have voice");
-    check(vitr->balance >= amount, "voice balance exceeded");
+  auto vitr = voice.find(voter.value);
+  check(vitr != voice.end(), "User does not have voice");
+  check(vitr->balance >= amount, "voice balance exceeded");
 
-    votes_tables votes(get_self(), id);
-    auto voteitr = votes.find(voter.value);
-    check(voteitr == votes.end(), "only one vote");
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+  check(voteitr == votes.end(), "only one vote");
 
-    props.modify(pitr, voter, [&](auto& proposal) {
-        proposal.total += amount;
-        proposal.against += amount;
-    });
+  props.modify(pitr, voter, [&](auto& proposal) {
+      proposal.total += amount;
+      proposal.against += amount;
+  });
 
-    voice.modify(vitr, voter, [&](auto& voice) {
-        voice.balance -= amount;
-    });
+  voice.modify(vitr, voter, [&](auto& voice) {
+      voice.balance -= amount;
+  });
 
-    votes.emplace(_self, [&](auto& vote) {
-      vote.account = voter;
-      vote.amount = amount;
-      vote.favour = false;
-      vote.proposal_id = id;
-    });
+  votes.emplace(_self, [&](auto& vote) {
+    vote.account = voter;
+    vote.amount = amount;
+    vote.favour = false;
+    vote.proposal_id = id;
+  });
+
+  save_vote_rollover(voter);
 }
 
 void proposals::addvoice(name user, uint64_t amount)
@@ -399,4 +510,12 @@ void proposals::check_citizen(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+
+void proposals::testdecay() {
+  require_auth(get_self());
+
+  update_voice_table();
+  update_cycle();
 }

@@ -45,90 +45,106 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice();
 
+      ACTION testdecay();
+
   private:
-      symbol seeds_symbol = symbol("SEEDS", 4);
-      
-      void update_cycle();
-      void update_voicedecay();
-      uint64_t get_cycle_period_sec();
-      uint64_t get_voice_decay_period_sec();
+    symbol seeds_symbol = symbol("SEEDS", 4);
+    
+    void update_cycle();
+    void update_voicedecay();
+    uint64_t get_cycle_period_sec();
+    uint64_t get_voice_decay_period_sec();
 
-      void check_user(name account);
-      void check_citizen(name account);
-      void deposit(asset quantity);
-      void withdraw(name account, asset quantity, name sender);
-      void burn(asset quantity);
-      void update_voice_table();
+    void check_user(name account);
+    void check_citizen(name account);
+    void deposit(asset quantity);
+    void withdraw(name account, asset quantity, name sender);
+    void burn(asset quantity);
+    void update_voice_table();
 
-      TABLE config_table {
-          name param;
-          uint64_t value;
-          uint64_t primary_key()const { return param.value; }
-      };
+    uint64_t get_total_voice(name account);
+    void save_voice(name account, uint64_t amount);
+    void save_vote_rollover(name account);
+    uint64_t get_decay_value(uint64_t & voice_amount, uint64_t & point_in_cycle);
 
-      TABLE proposal_table {
-          uint64_t id;
-          name creator;
-          name recipient;
-          asset quantity;
-          asset staked;
-          bool executed;
-          uint64_t total;
-          uint64_t favour;
-          uint64_t against;
-          string title;
-          string summary;
-          string description;
-          string image;
-          string url;
-          name status;
-          name stage;
-          name fund;
-          uint64_t creation_date;
-          uint64_t primary_key()const { return id; }
-      };
 
-      TABLE user_table {
-        name account;
-        name status;
-        name type;
-        string nickname;
+    TABLE config_table {
+        name param;
+        uint64_t value;
+        uint64_t primary_key()const { return param.value; }
+    };
+
+    TABLE proposal_table {
+        uint64_t id;
+        name creator;
+        name recipient;
+        asset quantity;
+        asset staked;
+        bool executed;
+        uint64_t total;
+        uint64_t favour;
+        uint64_t against;
+        string title;
+        string summary;
+        string description;
         string image;
-        string story;
-        string roles;
-        string skills;
-        string interests;
-        uint64_t reputation;
-        uint64_t timestamp;
+        string url;
+        name status;
+        name stage;
+        name fund;
+        uint64_t creation_date;
+        uint64_t primary_key()const { return id; }
+    };
 
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
+    TABLE user_table {
+      name account;
+      name status;
+      name type;
+      string nickname;
+      string image;
+      string story;
+      string roles;
+      string skills;
+      string interests;
+      uint64_t reputation;
+      uint64_t timestamp;
 
-      TABLE vote_table {
-          uint64_t proposal_id;
-          name account;
-          uint64_t amount;
-          bool favour;
-          uint64_t primary_key()const { return account.value; }
-      };
+      uint64_t primary_key()const { return account.value; }
+      uint64_t by_reputation()const { return reputation; }
+    };
 
-      TABLE voice_table {
-        name account;
-        uint64_t balance;
-        uint64_t primary_key()const { return account.value; }
-      };
-
-      TABLE last_proposal_table {
-        name account;
+    TABLE vote_table {
         uint64_t proposal_id;
+        name account;
+        uint64_t amount;
+        bool favour;
         uint64_t primary_key()const { return account.value; }
-      };
+    };
+
+    TABLE voice_table {
+      name account;
+      uint64_t balance;
+      uint64_t primary_key()const { return account.value; }
+    };
+
+    TABLE last_proposal_table {
+      name account;
+      uint64_t proposal_id;
+      uint64_t primary_key()const { return account.value; }
+    };
 
     TABLE cycle_table {
       uint64_t propcycle; 
       uint64_t t_onperiod; // last time onperiod ran
       uint64_t t_voicedecay; // last time voice was decayed
+    };
+
+    TABLE rollover_table { // scoped by account
+      uint64_t timestamp;
+      uint8_t voted;
+      uint64_t balance;
+
+      uint64_t primary_key()const { return timestamp; }
     };
     
     typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
@@ -139,6 +155,7 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
+    typedef eosio::multi_index<"rollover"_n, rollover_table> rollover_tables;
 
     config_tables config;
     proposal_tables props;
@@ -154,7 +171,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(refund))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(refund)(testdecay))
       }
   }
 }

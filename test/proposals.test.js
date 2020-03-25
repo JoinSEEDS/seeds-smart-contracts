@@ -4,6 +4,10 @@ const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require
 
 const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser, fourthuser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('Proposals', async assert => {
 
   if (!isLocal()) {
@@ -391,4 +395,211 @@ describe('Recepient invalid', async assert => {
   })
 
 })
+
+describe('Voice decay and rollover', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  await contracts.settings.configure("mooncyclesec", 120,{ authorization: `${settings}@active` })
+  await contracts.settings.configure("propdecaysec", 2,{ authorization: `${settings}@active` })
+
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  const voice = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  await sleep(1500)
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  await sleep(1500)
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  await sleep(1500)
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  const voice2 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  await sleep(25000)
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  const voice3 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  console.log('voting')
+  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+
+  await sleep(2000)
+  await contracts.proposals.decayvoice({ authorization: `${proposals}@active` })
+
+  const voice4 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  console.log('execute test decay')
+  await contracts.proposals.testdecay({ authorization: `${proposals}@active` })
+
+  const voice5 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  await sleep(1500)
+  console.log('execute test decay')
+  await contracts.proposals.testdecay({ authorization: `${proposals}@active` })
+
+  await sleep(1500)
+  console.log('execute test decay')
+  await contracts.proposals.testdecay({ authorization: `${proposals}@active` })
+
+  await sleep(1500)
+  console.log('execute test decay')
+  await contracts.proposals.testdecay({ authorization: `${proposals}@active` })
+
+  const voice6 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  assert({
+    given: 'Execute voice decay not on time',
+    should: 'do nothing',
+    actual: voice.rows,
+    expected: [
+      { account: 'seedsuseraaa', balance: 77 },
+      { account: 'seedsuserbbb', balance: 77 },
+      { account: 'seedsuserccc', balance: 77 }
+    ]
+  })
+
+  assert({
+    given: 'Execute voice decay not on time',
+    should: 'do nothing',
+    actual: voice2.rows,
+    expected: [
+      { account: 'seedsuseraaa', balance: 77 },
+      { account: 'seedsuserbbb', balance: 77 },
+      { account: 'seedsuserccc', balance: 77 }
+    ]
+  })
+
+  assert({
+    given: 'Execute voice decay on time',
+    should: 'decrease the voice',
+    actual: voice3.rows,
+    expected: [
+      { account: 'seedsuseraaa', balance: 72 },
+      { account: 'seedsuserbbb', balance: 72 },
+      { account: 'seedsuserccc', balance: 72 }
+    ]
+  })
+
+  assert({
+    given: 'Execute voice decay on time',
+    should: 'decrease the voice',
+    actual: voice4.rows.map(row => {
+      if (row.balance === 67) {
+        row.balance = 66
+      }
+      return row
+    }),
+    expected: [
+      { account: 'seedsuseraaa', balance: 66 },
+      { account: 'seedsuserbbb', balance: 64 },
+      { account: 'seedsuserccc', balance: 66 }
+    ]
+  })
+
+  assert({
+    given: 'Execute voice decay on time',
+    should: 'decrease the voice',
+    actual: voice5.rows.map(row => {
+      if (row.balance === 144) {
+        row.balance = 143
+      }
+      return row
+    }),
+    expected: [
+      { account: 'seedsuseraaa', balance: 143 },
+      { account: 'seedsuserbbb', balance: 149 },
+      { account: 'seedsuserccc', balance: 143 }
+    ]
+  })
+
+  assert({
+    given: 'Execute voice decay on time',
+    should: 'decrease the voice',
+    actual: voice6.rows.map(row => {
+      if (row.balance === 221) {
+        row.balance = 220
+      }
+      return row
+    }),
+    expected: [
+      { account: 'seedsuseraaa', balance: 220 },
+      { account: 'seedsuserbbb', balance: 226 },
+      { account: 'seedsuserccc', balance: 220 }
+    ]
+  })
+
+})
+
+
+
+
 
