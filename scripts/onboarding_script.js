@@ -10,11 +10,24 @@ const bulk_invite = async (sponsor, num, totalAmount) => {
     const fileName = 'secrets_'+num+'.csv'
     var log = []
 
+    const contracts = await initContracts({ token })
+
+    let depositAmount = num * totalAmount
+
+    const depositAmmountSeeds = parseInt(depositAmount) + '.0000 SEEDS'
+
+    console.log("deposit "+depositAmmountSeeds)
+
+    return
+    
+    await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
+
+
     try {
         totalAmount = parseInt(totalAmount)
         for (i = 0; i < num; i++) {
             console.log("inviting "+(i+1) + "/" + num)
-            let inv = await invite(sponsor, totalAmount, false)
+            let inv = await invite(sponsor, totalAmount, false, false)
             console.log("secret "+inv.secret)
             console.log("hashed secret: "+inv.hashedSecret)
             log.push(inv)
@@ -41,8 +54,43 @@ const bulk_invite = async (sponsor, num, totalAmount) => {
 
 
 }
-  
-const invite = async (sponsor, totalAmount, debug = false) => {
+
+
+const createInviteAction = (sponsor, transfer, sow, secretHash, payer) => {
+    return {
+        account: 'join.seeds',
+        name: 'invite',
+        authorization: [{
+          actor: payer,
+          permission: 'active',
+        }],
+        data: {
+    //     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
+            sponsor: sponsor,
+            transfer_quantity: parseInt(transfer) + ".0000 SEEDS",
+            sow_quantity: parseInt(sow) + '.0000 SEEDS',
+            invite_hash: secretHash,
+        }
+      }
+}
+
+const binvite = async (sponsor, amount, number) => {
+
+    let actions = []
+
+    for(let i=0; i<number; i++) {
+        actions.push( createInviteAction("something") )
+    }
+
+    const result = await api.transact({
+        actions: actions
+      }, {
+        blocksBehind: 3,
+        expireSeconds: 30,
+      });
+}
+
+const invite = async (sponsor, totalAmount, debug = false, depositFunds = false) => {
     
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
@@ -88,7 +136,9 @@ const invite = async (sponsor, totalAmount, debug = false) => {
         }
     }
 
-    await deposit()
+    if (depositFunds) {
+        await deposit()
+    }
 
     if (debug == true) {
         const sponsorsBefore = await getTableRows({
@@ -157,6 +207,10 @@ program
       console.log("invite with " + sponsor)
     await invite(sponsor, 20, true) // always 20 seeds
   })
+
+  // join.seeds before
+//   memory: 
+//      quota:     1.432 MiB    used:     879.7 KiB  
 
 program
   .command('bulk_invite <sponsor> <num> <totalAmount>')
