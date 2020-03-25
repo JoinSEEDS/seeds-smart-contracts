@@ -507,7 +507,9 @@ const getBalance = async (user) => {
 
 const getBalanceFloat = async (user) => {
   const balance = await eos.getCurrencyBalance(names.token, user, 'SEEDS')
-  return parseFloat(balance[0])
+  var float = parseInt(Math.round(parseFloat(balance[0]) * 10000)) / 10000.0;
+
+  return float;
 }
 
 const initContracts = (accounts) =>

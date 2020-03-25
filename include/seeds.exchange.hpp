@@ -15,6 +15,8 @@ CONTRACT exchange : public contract {
       : contract(receiver, code, ds),
         config(receiver, receiver.value),
         sold(receiver, receiver.value),
+        price(receiver, receiver.value),
+        rounds(receiver, receiver.value),
         dailystats(receiver, receiver.value),
         payhistory(receiver, receiver.value)
         {}
@@ -30,6 +32,14 @@ CONTRACT exchange : public contract {
     ACTION updatetlos(asset tlos_per_usd);
     
     ACTION updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit);
+
+    ACTION updateprice(); // updates price table
+
+    ACTION addround(uint64_t volume, asset seeds_per_usd);
+
+    ACTION initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd);
+
+    ACTION initsale();
 
     ACTION reset();
 
@@ -60,7 +70,14 @@ CONTRACT exchange : public contract {
       uint64_t primary_key()const { return id; }
       uint64_t by_payment_id()const { return std::hash<std::string>{}(paymentId); }
     };
-    
+
+    TABLE round_table {
+      uint64_t id;
+      uint64_t max_sold;
+      asset seeds_per_usd;
+
+      uint64_t primary_key()const { return id; }
+    };
     
     TABLE stattable {
       name buyer_account;
@@ -75,14 +92,28 @@ CONTRACT exchange : public contract {
       uint64_t primary_key()const { return id; }
     };
     
+    TABLE price_table {
+      uint64_t id;
+      uint64_t current_round_id;
+      asset current_seeds_per_usd;
+      uint64_t remaining;
+
+      uint64_t primary_key()const { return id; }
+    };
+
     typedef singleton<"config"_n, configtable> configtables;
     typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
 
     typedef singleton<"sold"_n, soldtable> soldtables;
     typedef eosio::multi_index<"sold"_n, soldtable> dump_for_sold;
 
+    typedef singleton<"price"_n, price_table> price_tables;
+    typedef eosio::multi_index<"price"_n, price_table> dump_for_price;
+
     typedef multi_index<"dailystats"_n, stattable> stattables;
     
+    typedef multi_index<"rounds"_n, round_table> round_tables;
+
     typedef eosio::multi_index<"payhistory"_n, payhistory_table,
       indexed_by<"bypaymentid"_n,const_mem_fun<payhistory_table, uint64_t, &payhistory_table::by_payment_id>>
     > payhistory_tables;
@@ -90,7 +121,11 @@ CONTRACT exchange : public contract {
     configtables config;
 
     soldtables sold;
-    
+
+    price_tables price;
+
+    round_tables rounds;
+
     stattables dailystats;
 
     payhistory_tables payhistory;
@@ -102,7 +137,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updateusd)(updatetlos)(updatelimit)(newpayment))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updateusd)(updatetlos)(updatelimit)(newpayment)(addround)(updateprice)(initsale)(initrounds))
       }
   }
 }
