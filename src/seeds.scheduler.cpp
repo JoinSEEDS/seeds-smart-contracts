@@ -100,11 +100,18 @@ ACTION scheduler::reset() {
 }
 
 
-ACTION scheduler::configop(name id, name action, name contract, uint64_t period) {
+ACTION scheduler::configop(name id, name action, name contract, uint64_t period, uint64_t starttime) {
     require_auth(_self);
 
     auto itr = operations.find(id.value);
     
+    uint64_t now = current_time_point().sec_since_epoch();
+
+    check(starttime == 0 || starttime >= now, "Start time cannot be in the past. Specify start time of 0 to start now.");
+
+    uint64_t start = (starttime == 0) ? now : starttime;
+    
+
     if(itr != operations.end()){
         operations.modify(itr, _self, [&](auto & moperation) {
             moperation.operation = action;
@@ -120,7 +127,7 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period)
             noperation.operation = action;
             noperation.contract = contract;
             noperation.period = period;
-            noperation.timestamp = current_time_point().sec_since_epoch();
+            noperation.timestamp = start;
         });
     }
 }
