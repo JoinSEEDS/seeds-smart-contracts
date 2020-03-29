@@ -6,10 +6,18 @@ void exchange::reset() {
 
   config.remove();
 
+/**
+ 
+  // NEVER CHECK THESE IN - we never want to erase rounds or sold table on mainnet
+  
+  sold.remove();
+
   auto pitr = payhistory.begin();
   while(pitr != payhistory.end()) {
     pitr = payhistory.erase(pitr);
   }
+
+/**/
 
   asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
   asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
@@ -22,6 +30,73 @@ void exchange::reset() {
   updateusd(seeds_per_usd);
   updatetlos(tlos_per_usd);
 
+  auto ritr = rounds.begin();
+  while(ritr != rounds.end()){
+    ritr = rounds.erase(ritr);
+  }
+}
+
+asset exchange::seeds_for_usd(asset usd_quantity) {
+  updateprice();
+
+  soldtable s = sold.get_or_create(get_self(), soldtable());
+
+  //price_table p = price.get_or_create(get_self(), price_table());
+  //auto ritr = rounds.find(p.current_round);
+
+  double usd_total = double(usd_quantity.amount);
+  double usd_remaining = usd_total;
+  double seeds_amount = 0.0;
+
+  auto ritr = rounds.begin(); //rounds.find(p -> current_round);
+
+  uint64_t round_start_volume = 0;
+
+  while(ritr != rounds.end() && usd_remaining > 0) {
+    uint64_t round_end_volume = ritr->max_sold;
+
+    if (s.total_sold < round_end_volume) {
+      double usd_per_seeds = 10000.0 / double(ritr->seeds_per_usd.amount);
+
+      // num available
+      double available_in_round = round_end_volume - std::max(round_start_volume, s.total_sold);
+
+      // price of available seeds
+      double usd_available = available_in_round * usd_per_seeds;
+
+
+    //check(false, "debug. "+std::to_string(ritr->seeds_per_usd.amount)+" usd_per_seeds "+std::to_string(usd_per_seeds) + 
+    //" available: "+std::to_string(available_in_round) + " usd_available: " + std::to_string(usd_available));
+
+      // if < usd amount remaining -> calculate, add, and exit
+      if (usd_available >= usd_remaining) {
+        
+        seeds_amount += (usd_remaining * ritr->seeds_per_usd.amount) / 10000;
+
+        //check(ritr->id < 2, "seeds_amount. "+ std::to_string(seeds_amount) +"seeds-perusd: "+std::to_string(ritr->seeds_per_usd.amount)+" usd_per_seeds "+std::to_string(usd_per_seeds) + 
+        //" available: "+std::to_string(available_in_round) + " usd_available: " + std::to_string(usd_available));
+
+        usd_remaining = 0;
+        break;
+      } else {
+        usd_remaining -= usd_available;
+        seeds_amount += available_in_round;
+      }
+    }
+    
+    round_start_volume = round_end_volume;
+    ritr++;
+
+    check(ritr != rounds.end(), "not enough funds available. requested "+std::to_string(usd_total) + 
+    " available: "+std::to_string(usd_total - usd_remaining) + " max vol: " + std::to_string(round_end_volume));
+
+  }
+
+    // check(false, "DEBUG. requested "+std::to_string(usd_total) + 
+    // " available: "+std::to_string(usd_total - usd_remaining) + " max vol: " + std::to_string(round_start_volume)+
+    // " amount "+std::to_string(seeds_amount));
+
+  return asset(seeds_amount, seeds_symbol);
 }
 
 void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
@@ -52,7 +127,8 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
       break;
   }
   
-  uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
+  // uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
+  uint64_t seeds_amount = seeds_for_usd(usd_quantity).amount;
   asset seeds_quantity = asset(seeds_amount, seeds_symbol);
   
   auto sitr = dailystats.find(buyer.value);
@@ -204,6 +280,9 @@ ACTION exchange::updateprice() {
 
 ACTION exchange::addround(uint64_t volume, asset seeds_per_usd) {
   require_auth(get_self());
+
+  check(seeds_per_usd.amount > 0, "seeds per usd must be > 0");
+  check(volume > 0, "volume must be > 0");
 
   uint64_t prev_vol = 0;
 

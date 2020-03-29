@@ -45,7 +45,8 @@ CONTRACT exchange : public contract {
 
   private:
 
-    void purchase_usd(name buyer, asset usd_quantity, string memo);
+    void purchase_usd(name buyer, asset usd_quantity, string memo); 
+    asset seeds_for_usd(asset usd_quantity);
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
