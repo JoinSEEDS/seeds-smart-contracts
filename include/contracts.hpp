@@ -23,3 +23,7 @@ namespace contracts {
   name organization = "orgs.seeds"_n;
   name exchange = "tlosto.seeds"_n;
 }
+namespace accounts {
+  name milestone = "hypha.seeds"_n;
+  name hyphabank = "seeds.hypha"_n;
+}
