@@ -30,6 +30,9 @@ describe('token.transfer.history', async assert => {
   
   const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
+  console.log('reset token')
+  await contract.resetweekly({ authorization: `${token}@active` })
+
   console.log('reset history')
   await historyContract.reset(firstuser, { authorization: `${history}@active` })
 
@@ -47,25 +50,57 @@ describe('token.transfer.history', async assert => {
   
   const { rows } = await getTableRows({
     code: history,
-    scope: history,
+    scope: firstuser,
     table: 'transactions',
     json: true
   })
-  
+  delete rows[0].timestamp
+
   assert({
     given: 'transactions table',
     should: 'have transaction entry',
     actual: rows,
     expected: [{
       id: 0,
-      from: firstuser,
       to: seconduser,
       quantity: '10.0000 SEEDS',
-      fromstatus: 'resident',
-      tostatus: 'citizen',
-      memo: '',
     }]
   })
+
+  await transfer()
+
+  const stats = await getTableRows({
+    code: token,
+    scope: "SEEDS",
+    table: 'trxstat',
+    json: true
+  })
+
+  //console.log("stats: "+JSON.stringify(stats, null, 2))
+
+  assert({
+    given: 'transactions',
+    should: 'have transaction stat entries',
+    actual: stats.rows,
+    expected: [
+      {
+        "account": "seedsuseraaa",
+        "transactions_volume": "20.0000 SEEDS",
+        "total_transactions": 2,
+        "incoming_transactions": 0,
+        "outgoing_transactions": 2
+      },
+      {
+        "account": "seedsuserbbb",
+        "transactions_volume": "20.0000 SEEDS",
+        "total_transactions": 2,
+        "incoming_transactions": 2,
+        "outgoing_transactions": 0
+      }
+    ]
+  })
+
+
 })
 
 describe('token.transfer', async assert => {
@@ -90,12 +125,13 @@ describe('token.transfer', async assert => {
     await transfer(limit)
   }
 
-  try {
-    await transfer()
-    console.log('transferred over limit (NOT expected)')
-  } catch (err) {
-    console.log('transfer over limit failed (as expected)')
-  }
+  // Test limit - should be by planted - put this back in when implemented
+  // try {
+  //   await transfer()
+  //   console.log('transferred over limit (NOT expected)')
+  // } catch (err) {
+  //   console.log('transfer over limit failed (as expected)')
+  // }
 
   balances.push(await getBalance(firstuser))
 
@@ -139,5 +175,39 @@ describe('token.burn', async assert => {
     should: 'decrease total supply',
     actual: supply[1],
     expected: supply[0] - 10
+  })
+})
+
+describe('token calculate circulating supply', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contract = await eos.contract(token)
+  
+  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  
+  console.log('update circulating')
+  await contract.updatecirc({ authorization: `${token}@active` })
+  
+  console.log('transfer token')
+  await transfer()
+  
+  const { rows } = await getTableRows({
+    code: token,
+    scope: token,
+    table: 'circulating',
+    json: true
+  })
+  
+  console.log("circulating: "+JSON.stringify(rows, null, 2))
+
+  assert({
+    given: 'update circulating',
+    should: 'have token circulating number',
+    actual: rows.length,
+    expected: 1
   })
 })

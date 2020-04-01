@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser } = names
+const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser, fourthuser } = names
 
 describe('Proposals', async assert => {
 
@@ -28,9 +28,11 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
@@ -40,14 +42,16 @@ describe('Proposals', async assert => {
 
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
 
   console.log('deposit stake (without memo)')
   await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   console.log('add voice')
-  await contracts.proposals.addvoice(firstuser, 10, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(seconduser, 10, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(thirduser, 10, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
 
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
@@ -81,8 +85,12 @@ describe('Proposals', async assert => {
   let voice = voiceBefore.rows[0].balance
 
   console.log('favour first proposal')
-  await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(firstuser, 1, 4, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 2, { authorization: `${firstuser}@active` })
+
+  console.log('favour second proposal but not enough for 80% majority')
+  await contracts.proposals.against(seconduser, 2, 4, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 6, { authorization: `${firstuser}@active` })
 
   var exceedBalanceHasError = true
   try {
@@ -101,7 +109,7 @@ describe('Proposals', async assert => {
   }
 
   console.log('against second proposal')
-  await contracts.proposals.against(firstuser, 2, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.against(firstuser, 3, 1, { authorization: `${firstuser}@active` })
 
   const balancesBefore = [
     await getBalance(firstuser),
@@ -109,8 +117,24 @@ describe('Proposals', async assert => {
     await getBalance(secondbank),
   ]
 
+  console.log('new citizen')
+  await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const voice2 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  const hasVoice = (voices, user) => {
+    return voices.rows.filter(
+      (item) => item.account == user
+    ).length == 1
+  }
 
   const balancesAfter = [
     await getBalance(firstuser),
@@ -127,6 +151,7 @@ describe('Proposals', async assert => {
 
   delete rows[0].creation_date
   delete rows[1].creation_date
+  delete rows[2].creation_date
 
   assert({
     given: 'try to vote before proposal is active',
@@ -139,7 +164,7 @@ describe('Proposals', async assert => {
     given: 'voice reset after onperiod',
     should: 'have standard amount of voice',
     actual: voice,
-    expected: 20
+    expected: 77 // NOTE THIS will be dynamic and based on rank
   })
 
   assert({
@@ -171,7 +196,7 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'passed proposal',
+    given: 'passed proposal 80% majority',
     should: 'show passed proposal',
     actual: rows[0],
     expected: {
@@ -181,9 +206,9 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 1,
-      total: 9,
-      favour: 5,
-      against: 4,
+      total: 10,
+      favour: 8,
+      against: 2,
       stage: 'done',
       title: 'title2',
       summary: 'summary2',
@@ -196,11 +221,36 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'rejected proposal',
+    given: 'rejected proposal 60% majority',
     should: 'show rejected proposal',
     actual: rows[1],
     expected: {
       id: 2,
+      creator: firstuser,
+      recipient: firstuser,
+      quantity: '55.7000 SEEDS',
+      staked: '0.0000 SEEDS',
+      executed: 0,
+      total: 10,
+      favour: 6,
+      against: 4,
+      stage: 'done',
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'rejected',
+      fund: secondbank,
+    }
+  })
+
+  assert({
+    given: 'rejected proposal',
+    should: 'show rejected proposal',
+    actual: rows[2],
+    expected: {
+      id: 3,
       creator: seconduser,
       recipient: seconduser,
       quantity: '100.0000 SEEDS',
@@ -226,4 +276,88 @@ describe('Proposals', async assert => {
     actual: balancesAfter[2] - balancesBefore[2],
     expected: -100
   })
+
+  assert({
+    given: 'new citizen was added',
+    should: 'be added to voice on new cycle',
+    actual: [hasVoice(voiceBefore, fourthuser), hasVoice(voice2, fourthuser)],
+    expected: [false, true]
+  })
+
 })
+
+describe('Recepient invalid', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  var createdProp = false
+  try {
+    await contracts.proposals.create(firstuser, "23", '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    createdProp = true
+    console.log('error')
+  } catch (err) {
+
+  }
+
+  console.log('create proposal with invalid fund')
+  var createdFundProp = false
+  try {
+    await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', "clowns", { authorization: `${firstuser}@active` })
+    console.log('error')
+    createdFundProp = true
+  } catch (err) {
+
+  }
+
+  console.log('create proposal with non seeds user')
+  var createNonSeedsUser = false
+  try {
+    await contracts.proposals.create(secondbank, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    console.log('error')
+    createNonSeedsUser = true
+  } catch (err) {
+
+  }
+
+
+  assert({
+    given: 'create proposal with invalid recepient',
+    should: 'fail',
+    actual: createdProp,
+    expected: false
+  })
+  
+  assert({
+    given: 'create proposal with invalid fund',
+    should: 'fail',
+    actual: createdFundProp,
+    expected: false
+  })
+
+  assert({
+    given: 'create proposal with non seeds user',
+    should: 'fail',
+    actual: createNonSeedsUser,
+    expected: false
+  })
+
+})
+

@@ -25,7 +25,7 @@ const networkDisplayName = {
 const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
-  telosTestnet: 'https://testnet.eos.miami',
+  telosTestnet: 'https://test.hypha.earth',
   telosMainnet: 'https://node.hypha.earth'
 }
 
@@ -80,12 +80,13 @@ const applicationKeys = {
 }
 const applicationPublicKey = applicationKeys[chainId]
 
-const executePublicKeys = {
-  [networks.local]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
-  [networks.telosMainnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ',
-  [networks.telosTestnet]: 'EOS5dLm4DBjUxbczCwi7HzYR42DFhjh1AMZERYaxDkK8qAJxZUvbZ'
+const exchangeKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
+  [networks.telosMainnet]: 'EOS6Ls7tdHYfo49cUMoeVFe4e7NfPKBzhsFA4sJS8hvgH24UVFPiM', // normal testnet key
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' // special unique key
 }
-const execPublicKey = executePublicKeys[chainId]
+
+const exchangePublicKey = exchangeKeys[chainId]
 
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
@@ -129,6 +130,10 @@ const accountsMetadata = (network) => {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
+      fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
+      fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -151,9 +156,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -179,9 +183,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -216,9 +219,8 @@ const accountsMetadata = (network) => {
       exchange: contract('tlosto.seeds', 'exchange'),
       vstandescrow: contract('escrow.seeds', 'vstandescrow'),
       forum: contract('forum.seeds', 'forum'),
-      scheduler: contract('schdlr.seeds', 'scheduler'),
+      scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      lending: contract('lending.seeds', 'lending'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -286,6 +288,10 @@ var permissions = [{
   key: apiPublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@purchase`,
+  key: exchangePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.invites.account}@api`,
   key: apiPublicKey,
   parent: 'active'
@@ -301,6 +307,9 @@ var permissions = [{
 }, {
   target: `${accounts.invites.account}@api`,
   action: 'accept'
+}, {
+  target: `${accounts.exchange.account}@purchase`,
+  action: 'newpayment'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
@@ -344,7 +353,11 @@ var permissions = [{
   actor: `${accounts.forum.account}@eosio.code`
 }, {
   target: `${accounts.forum.account}@execute`,
-  key: execPublicKey,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.forum.account}@execute`,
@@ -355,6 +368,64 @@ var permissions = [{
 }, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calcplanted'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccbs'
+}, {
+  target: `${accounts.harvest.account}@execute`, 
+  action: 'calccs'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrx'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calctrxpt'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcrep'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'onperiod'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test1'
+}, {
+  target: `${accounts.scheduler.account}@execute`,
+  action: 'test2'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.referendums.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
@@ -377,7 +448,7 @@ const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
 
 if (isTestnet || isLocalNet) {
-  console.log("Adding TESTNET permissions")
+  //console.log("Adding TESTNET permissions")
   const testnetDevelopmentKey = 'EOS7WSioF5yu8yoKEvnaryCJBSSqgdEiPLxHxGwYnvQXbYddTrUts'
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
@@ -391,9 +462,9 @@ if (isTestnet || isLocalNet) {
 }
 
 const keyProviders = {
-  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
-  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY],
-  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXECUTE_KEY]
+  [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY],
+  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
 }
 
 const keyProvider = keyProviders[chainId]
@@ -461,6 +532,7 @@ const ramdom64ByteHexString = async () => {
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
+const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
   let private = await ecc.randomKey()
@@ -471,6 +543,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance
+  testnetUserPubkey, getTelosBalance, fromHexString
 }
 

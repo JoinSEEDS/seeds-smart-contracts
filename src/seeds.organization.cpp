@@ -130,6 +130,7 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
         norg.org_name = orgaccount;
         norg.owner = sponsor;
         norg.planted = quantity;
+        norg.status = 0;
     });
 
     addmember(orgaccount, sponsor, sponsor, ""_n);

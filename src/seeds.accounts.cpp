@@ -20,92 +20,11 @@ void accounts::reset() {
     refitr = refs.erase(refitr);
   }
 
-  auto repitr = reps.begin();
-  while (repitr != reps.end()) {
-    repitr = reps.erase(repitr);
-  }
-
   auto cbsitr = cbs.begin();
   while (cbsitr != cbs.end()) {
     cbsitr = cbs.erase(cbsitr);
   }
 
-}
-
-void accounts::migrateall()
-{
-  name accounts_old = name("seedsaccntsx");
-  
-  user_tables users_old(accounts_old, accounts_old.value);
-  
-  auto uitr = users_old.begin();
-  
-  while (uitr != users_old.end()) {
-    auto olduser = *uitr;
-    
-    migrate(
-      olduser.account, 
-      olduser.status, 
-      olduser.type, 
-      olduser.nickname,
-      olduser.image,
-      olduser.story,
-      olduser.roles,
-      olduser.skills,
-      olduser.interests,
-      olduser.reputation,
-      olduser.timestamp
-    );
-    
-    uitr++;
-  }
-
-  ref_tables refs_old(accounts_old, accounts_old.value);
-  ref_tables refs_new(contracts::accounts, contracts::accounts.value);
-
-  auto ritr = refs_old.begin();
-
-  while(ritr != refs_old.end()) {
-    auto oldref = *ritr;
-    refs_new.emplace(_self, [&](auto& ref) {
-      ref.referrer = oldref.referrer;
-      ref.invited = oldref.invited;
-    });
-    ritr++;
-  }
-
-}
-
-void accounts::migrate(name account,
-        name status,
-        name type,
-        string nickname,
-        string image,
-        string story,
-        string roles,
-        string skills,
-        string interests,
-        uint64_t reputation,
-        uint64_t timestamp
-)
-{
-  require_auth(_self);
-
-  user_tables users(contracts::accounts, contracts::accounts.value);
-
-  users.emplace(_self, [&](auto& user) {
-    user.account = account;
-    user.status = status;
-    user.type = type;
-    user.nickname = nickname;
-    user.image = image;
-    user.story = story;
-    user.roles = roles;
-    user.skills = skills;
-    user.interests = interests;
-    user.reputation = reputation;
-    user.timestamp = timestamp;
-  });
 }
 
 void accounts::history_add_resident(name account) {
@@ -186,6 +105,26 @@ void accounts::_vouch(name sponsor, name account) {
   if (sponsor_status == name("resident")) reps = 5;
   if (sponsor_status == name("citizen")) reps = 10;
 
+  if (reps == 0) {
+    // this is called from invite accept - just no op
+    return;
+  }
+
+  // add up existing vouches
+  uint64_t total_vouch = 0;
+  auto vitr = vouch.begin();
+  while (vitr != vouch.end()) {
+    total_vouch += vitr->reps;
+    vitr++;
+  }
+
+  auto maxvouch = config.get(max_vouch_points.value, "settgs.seeds::config: the maxvouch parameter has not been initialized");
+  
+  check(total_vouch < maxvouch.value, "user is already fully vouched!");
+  if ( (total_vouch + reps) > maxvouch.value) {
+    reps = maxvouch.value - total_vouch; // limit to max vouch
+  }
+
   // add vouching table entry
   vouch.emplace(_self, [&](auto& item) {
     item.sponsor = sponsor;
@@ -193,12 +132,25 @@ void accounts::_vouch(name sponsor, name account) {
     item.reps = reps;
   });
 
-  // add reputation to user, if any
-  if (reps > 0) {
-    users.modify(uitra, _self, [&](auto& item) {
-      item.reputation += reps;
-    });
-  }
+  // add reputation to user
+  send_addrep(account, reps);
+  
+}
+
+void accounts::send_addrep(name user, uint64_t amount) {
+    action(
+      permission_level{_self, "active"_n},
+      contracts::accounts, "addrep"_n,
+      std::make_tuple(user, amount)
+  ).send();
+}
+
+void accounts::send_subrep(name user, uint64_t amount) {
+    action(
+      permission_level{_self, "active"_n},
+      contracts::accounts, "subrep"_n,
+      std::make_tuple(user, amount)
+  ).send();
 }
 
 void accounts::punish(name account) {
@@ -218,15 +170,8 @@ void accounts::punish(name account) {
 
   while (vitr != vouch.end()) {
     auto sponsor = vitr->sponsor;
-
-    auto uitr2 = users.find(sponsor.value);
-    users.modify(uitr2, _self, [&](auto& item) {
-      if (item.reputation < 50) {
-        item.reputation = 0;
-      } else {
-        item.reputation -= 50;
-      }
-    });
+    send_subrep(sponsor, 50);
+    vitr++;
   }
 }
 
@@ -247,21 +192,25 @@ void accounts::vouchreward(name account) {
 
   while (vitr != vouch.end()) {
     auto sponsor = vitr->sponsor;
-
-    auto uitr2 = users.find(sponsor.value);
-    users.modify(uitr2, _self, [&](auto& item) {
-      item.reputation += 1;
-    });
-
+    send_addrep(sponsor, 1);
     vitr++;
   }
 }
 
-name find_referrer(name account) {
-    auto ritr = refs.find(account.value);
+void accounts::requestvouch(name account, name sponsor) {
+  require_auth(account);
+  check_user(sponsor);
+  check_user(account);
+  
+  // Not implemented
+
+}
+
+name accounts::find_referrer(name account) {
+  auto ritr = refs.find(account.value);
   
   if (ritr == refs.end()) {
-    return not_found; // our reps tables are incomplete...
+    return not_found; // our refs tables are incomplete...
   }
 
   name referrer = ritr->referrer;
@@ -276,7 +225,7 @@ void accounts::refreward(name account, name new_status) {
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
-    return; // our reps tables are incomplete...
+    return; // our refs tables are incomplete...
   }
 
   // Add community building point +1
@@ -312,7 +261,17 @@ void accounts::refreward(name account, name new_status) {
       auto amb_seeds_reward = config.get(amb_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
       asset amb_quantity(amb_seeds_reward.value, seeds_symbol);
 
-      name owner = 
+      // send reward to org
+      send_reward(referrer, org_quantity);
+
+      // send reward to ambassador if we have one
+      name org_owner = find_referrer(referrer);
+      if (org_owner != not_found) {
+        name ambassador = find_referrer(org_owner);
+        if (ambassador != not_found) {
+          send_reward(ambassador, amb_quantity);
+        }
+      }
 
     } 
     else 
@@ -325,7 +284,7 @@ void accounts::refreward(name account, name new_status) {
       auto seeds_reward = config.get(seed_reward_param.value, "The seeds reward for individuals parameter has not been initialized yet.");
       asset quantity(seeds_reward.value, seeds_symbol);
 
-      addrep(referrer, rep_points.value);
+      send_addrep(referrer, rep_points.value);
 
       send_reward(referrer, quantity);
     }
@@ -358,8 +317,6 @@ void accounts::invitevouch(name referrer, name invited)
   _vouch(referrer, invited);
 }
 
-
-
 void accounts::addrep(name user, uint64_t amount)
 {
   require_auth(get_self());
@@ -370,18 +327,6 @@ void accounts::addrep(name user, uint64_t amount)
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
-
-  auto ritr = reps.find(user.value);
-  if (ritr == reps.end()) {
-    reps.emplace(_self, [&](auto& rep) {
-      rep.account = user;
-      rep.reputation = amount;
-    });
-  } else {
-    reps.modify(ritr, _self, [&](auto& rep) {
-      rep.reputation += amount;
-    });
-  }
 }
 
 void accounts::subrep(name user, uint64_t amount)
@@ -398,23 +343,6 @@ void accounts::subrep(name user, uint64_t amount)
       user.reputation -= amount;
     }
   });
-
-  auto ritr = reps.find(user.value);
-
-  if (ritr == reps.end()) {
-    reps.emplace(_self, [&](auto& rep) {
-      rep.account = user;
-      rep.reputation = 0;
-    });
-  } else {
-    reps.modify(ritr, _self, [&](auto& rep) {
-      if (rep.reputation < amount) {
-        rep.reputation = 0;
-      } else {
-        rep.reputation -= amount;
-      }
-    });
-  }
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
@@ -547,6 +475,21 @@ void accounts::genesis(name user) // Remove this after Feb 2020
   updatestatus(user, name("citizen"));
 }
 
+void accounts::genesisrep() {
+  require_auth(_self);
+  auto uitr = users.begin();
+
+  while (uitr != users.end()) {
+    if (uitr -> status == "citizen"_n && uitr -> reputation < 100) {
+      users.modify(uitr, _self, [&](auto& user) {
+        user.reputation = 100;
+      });
+    }
+    uitr++;
+  }
+
+}
+
 void accounts::testremove(name user)
 {
   require_auth(_self);
@@ -566,6 +509,35 @@ void accounts::testremove(name user)
   }
 
   users.erase(uitr);
+}
+
+void accounts::testsetrep(name user, uint64_t amount) {
+  require_auth(get_self());
+
+  check(is_account(user), "non existing user");
+
+  auto uitr = users.find(user.value);
+  users.modify(uitr, _self, [&](auto& user) {
+    user.reputation = amount;
+  });
+}
+
+void accounts::testsetcbs(name user, uint64_t amount) {
+  require_auth(get_self());
+
+  check(is_account(user), "non existing user");
+
+  auto citr = cbs.find(user.value);
+  if (citr == cbs.end()) {
+    cbs.emplace(_self, [&](auto& item) {
+      item.account = user;
+      item.community_building_score = amount;
+    });
+  } else {
+    cbs.modify(citr, _self, [&](auto& item) {
+      item.community_building_score = amount;
+    });
+  }
 }
 
 void accounts::check_user(name account)

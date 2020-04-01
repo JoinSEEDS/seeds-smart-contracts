@@ -95,54 +95,6 @@ void token::burn( const name& from, const asset& quantity )
   });
 }
 
-void token::migrateall()
-{
-  require_auth(get_self());
- 
-  name old_token_account = name("seedstokennx"); 
-  name gift_account = name("gift.seeds");
-
-  user_tables users(contracts::accounts, contracts::accounts.value);
-
-  asset total_distributed(0, seeds_symbol);
-
-  auto uitr = users.begin();
-  
-  while (uitr != users.end()) {
-    name user_account = uitr->account;
-    
-    accounts user_old_balances(old_token_account, user_account.value);
-    
-    accounts user_new_balances(get_self(), user_account.value);
-    
-    auto oitr = user_old_balances.find(seeds_symbol.code().raw());
-    
-    if (oitr != user_old_balances.end()) {
-      asset user_balance = oitr->balance;
-      
-      auto nitr = user_new_balances.find(seeds_symbol.code().raw());
-      
-      if (nitr == user_new_balances.end()) {
-        user_new_balances.emplace(get_self(), [&](auto& user) {
-          user.balance = user_balance;
-        });
-        
-        total_distributed += user_balance;
-      }
-    }
-
-    uitr++;
-  }
-  
-  accounts gift_balances(get_self(), gift_account.value);
-
-  auto gitr = gift_balances.find(seeds_symbol.code().raw());
-  
-  gift_balances.modify(gitr, get_self(), [&](auto& gift) {
-    gift.balance -= total_distributed;
-  });  
-}
-
 void token::transfer( const name&    from,
                       const name&    to,
                       const asset&   quantity,
@@ -170,9 +122,9 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity, memo);
+    save_transaction(from, to, quantity);
 
-    // update_stats( from, to, quantity );
+    update_stats( from, to, quantity );
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -202,7 +154,7 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
    }
 }
 
-void token::save_transaction(name from, name to, asset quantity, string memo) {
+void token::save_transaction(name from, name to, asset quantity) {
   if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
     // Before our accounts are created, don't record anything
     return;
@@ -212,7 +164,7 @@ void token::save_transaction(name from, name to, asset quantity, string memo) {
     permission_level{contracts::history, "active"_n},
     contracts::history, 
     "trxentry"_n,
-    std::make_tuple(from, to, quantity, memo)
+    std::make_tuple(from, to, quantity)
   ).send();
 
 }
@@ -271,20 +223,20 @@ void token::resetweekly() {
 }
 
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
-    auto sym_code_raw = quantity.symbol.code().raw();
-
-    transaction_tables transactions(get_self(), sym_code_raw);
     user_tables users(contracts::accounts, contracts::accounts.value);
 
-    auto fromitr = transactions.find(from.value);
-    auto toitr = transactions.find(to.value);
-    
     auto fromuser = users.find(from.value);
     auto touser = users.find(to.value);
     
     if (fromuser == users.end() || touser == users.end()) {
       return;
     }
+
+    auto sym_code_raw = quantity.symbol.code().raw();
+    transaction_tables transactions(get_self(), sym_code_raw);
+
+    auto fromitr = transactions.find(from.value);
+    auto toitr = transactions.find(to.value);
 
     if (fromitr == transactions.end()) {
       transactions.emplace(get_self(), [&](auto& user) {
@@ -348,6 +300,65 @@ void token::close( const name& owner, const symbol& symbol )
    acnts.erase( it );
 }
 
+void token::updatecirc() {
+
+   require_auth(get_self());
+
+    // total supply
+    stats statstable( get_self(), seeds_symbol.code().raw() );
+    auto sitr = statstable.find( seeds_symbol.code().raw() );
+
+    uint64_t total = sitr->supply.amount;
+    uint64_t result = total;
+
+    std::array<name, 12> system_accounts = {
+      "gift.seeds"_n,
+      "milest.seeds"_n,
+      "hypha.seeds"_n,
+      "allies.seeds"_n,
+      "refer.seeds"_n,
+      "bank.seeds"_n,
+      "system.seeds"_n,
+      "harvst.seeds"_n,   // planted - although these go into system actually
+      "funds.seeds"_n,    // proposals
+      "rules.seeds"_n,    // referendums
+      "dao.hypha"_n,      // hypha dao escrow contract
+      "escrow.seeds"_n
+    };
+
+    for(const auto& account : system_accounts) {   // Range-for!
+      result -= balance_for(account);
+    }
+
+    circulating_supply_table c = circulating.get_or_create(get_self(), circulating_supply_table());
+    c.total = total;
+    c.circulating = result;
+    circulating.set(c, get_self());
+
+    transaction trx{};
+    trx.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "updatecirc"_n,
+      std::make_tuple()
+    );
+    trx.delay_sec = 60 * 60; // TODO use scheduler for this - run every hour
+    trx.send(eosio::current_time_point().sec_since_epoch() + 19, _self);
+    
+}
+
+
+uint64_t token::balance_for( const name& owner ) {
+   accounts from_acnts( get_self(), owner.value );
+   const auto& from = from_acnts.find( seeds_symbol.code().raw());
+   if (from != from_acnts.end()) {
+     return from->balance.amount;
+   } else {
+     return 0;
+   }
+}
+
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(migrateall) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(updatecirc) )
