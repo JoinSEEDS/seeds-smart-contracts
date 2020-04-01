@@ -18,7 +18,6 @@ describe('settings', async assert => {
     code: settings,
     scope: settings,
     table: 'config',
-    limit: 1000,
     json: true
   })
 
@@ -26,7 +25,6 @@ describe('settings', async assert => {
     code: settings,
     scope: settings,
     table: 'contracts',
-    limit: 1000,
     json: true
   })
 
@@ -42,30 +40,10 @@ describe('settings', async assert => {
     actual: params.length > 0,
     expected: true
   })
-
   assert({
     given: 'reset settings',
     should: 'have contract items with accounts',
     actual: accounts.length > 0,
     expected: true
   })
-
-  await contract.configure("testing", 77, { authorization: `${settings}@active` })
-
-  const afterSetting = await eos.getTableRows({
-    code: settings,
-    scope: settings,
-    table: 'config',
-    limit: 1000,
-    json: true
-  })
-
-  assert({
-    given: 'set a value',
-    should: 'have value',
-    actual: afterSetting.rows.filter( ({param}) => param == "testing")[0].value,
-    expected: 77
-  })
-
-
 })

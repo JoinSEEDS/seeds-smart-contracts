@@ -27,19 +27,17 @@ void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
+    auto vitr = voice.begin();
 
     auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
-    
-    auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
+    auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
 
     uint64_t min_stake = min_stake_param.value;
+    uint64_t voice_base = voice_param.value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
-        double majority = double(prop_majority.value) / 100.0;
-        double fav = double(pitr->favour);
-        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        if (passed) {
+        if (pitr->favour > pitr->against) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
               withdraw(pitr->recipient, pitr->staked, contracts::bank);
@@ -72,7 +70,13 @@ void proposals::onperiod() {
       pitr++;
     }
 
-    update_voice_table();
+    while (vitr != voice.end()) {
+        voice.modify(vitr, _self, [&](auto& voice) {
+            voice.balance = voice_base;
+        });
+
+        vitr++;
+    }
 
     transaction trx{};
     trx.actions.emplace_back(
@@ -81,76 +85,14 @@ void proposals::onperiod() {
       "onperiod"_n,
       std::make_tuple()
     );
-    trx.delay_sec = get_cycle_period_sec(); 
+    trx.delay_sec = 2548800;
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
-
-    update_cycle();
-}
-
-void proposals::update_voice_table() {
-  auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
-  uint64_t voice_base = voice_param.value;
-
-  auto uitr = users.begin();
-  
-  while(uitr != users.end()) {
-    
-    if (uitr->status == "citizen"_n) {
-      name user = uitr->account;
-      auto vitr = voice.find(user.value);
-
-      if (vitr == voice.end()) {
-          voice.emplace(_self, [&](auto& voice) {
-              voice.account = user;
-              voice.balance = 0;
-          });
-      } 
-
-    }
-
-    uitr++;
-  }
-
-  auto vitr = voice.begin();
-  while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& voice) {
-          voice.balance = voice_base;
-      });
-      vitr++;
-  }
-
-}
-
-uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
-  return moon_cycle.value / 2; // Using half moon cycles for now
-}
-
-uint64_t proposals::get_voice_decay_period_sec() {
-  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
-  return voice_decay_period.value;
-}
-
-void proposals::decayvoice() {
-  // Not yet implemented    
-  require_auth(get_self());
-
-}
-
-void proposals::update_cycle() {
-    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-    c.propcycle += 1;
-    c.t_onperiod = current_time_point().sec_since_epoch();
-    cycle.set(c, get_self());
 }
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
-  
   require_auth(creator);
-
-  check_user(creator);
-  check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
-  check(is_account(fund), "fund is not a valid account: " + fund.to_string());
+  // check_user(creator);
+  // check_user(recipient);
   utils::check_asset(quantity);
 
   uint64_t lastId = 0;

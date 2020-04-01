@@ -1,14 +1,8 @@
 #include <eosio/eosio.hpp>
-#include <eosio/asset.hpp>
-
-using namespace eosio;
 
 namespace utils {
 
-  const uint64_t seconds_per_day = 86400;
-  const uint64_t moon_cycle = seconds_per_day * 29 + seconds_per_day / 2;
-
-  symbol seeds_symbol = symbol("SEEDS", 4);
+  eosio::symbol seeds_symbol = eosio::symbol("SEEDS", 4);
 
   bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority) {
     return favour >= (favour + against) * majority / 100;
@@ -19,9 +13,9 @@ namespace utils {
     return voted_percentage >= quorum;
   }
 
-  void check_asset(asset quantity) {
-    check(quantity.is_valid(), "invalid asset");
-    check(quantity.symbol == seeds_symbol, "invalid asset");
+  void check_asset(eosio::asset quantity) {
+    eosio::check(quantity.is_valid(), "invalid asset");
+    eosio::check(quantity.symbol == seeds_symbol, "invalid asset");
   }
 
 }

@@ -182,17 +182,13 @@ program
     await updatePermissionAction()
   })
 
-  // program // NOT IN USE AT THE MOMENT
-  // .command('startHarvestCalculations')
-  // .description('Start calculations on harvest contract')
-  // .action(async function(contract) {
-  //   await startHarvestCalculations()
-  // })
+  program
+  .command('startHarvestCalculations')
+  .description('Start calculations on harvest contract')
+  .action(async function(contract) {
+    await startHarvestCalculations()
+  })
 
 
+  
 program.parse(process.argv)
-
-var NO_COMMAND_SPECIFIED = program.args.length === 0;
-if (NO_COMMAND_SPECIFIED) {
-  program.help();
-}

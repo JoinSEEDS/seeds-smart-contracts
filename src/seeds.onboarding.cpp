@@ -163,35 +163,19 @@ void onboarding::reset() {
   }
 }
 
-
-// memo = "sponsor acctname" makes accountname the sponsor for this transfer
 void onboarding::deposit(name from, name to, asset quantity, string memo) {
   if (to == get_self()) {
     utils::check_asset(quantity);
-
-    name sponsor = from;
-
-    if (!memo.empty()) {
-      std::size_t found = memo.find(string("sponsor "));
-      if (found!=std::string::npos) {
-        string acct_name = memo.substr(8,string::npos);
-        sponsor = name(acct_name);
-        check(is_account(sponsor), "Beneficiary sponsor account does not exist " + sponsor.to_string());
-     } else {
-        check(false, "invalid memo");
-      }
-    }
-
-    auto sitr = sponsors.find(sponsor.value);
+    auto sitr = sponsors.find(from.value);
 
     if (sitr == sponsors.end()) {
-      sponsors.emplace(_self, [&](auto& asponsor) {
-        asponsor.account = sponsor;
-        asponsor.balance = quantity;
+      sponsors.emplace(_self, [&](auto& sponsor) {
+        sponsor.account = from;
+        sponsor.balance = quantity;
       });
     } else {
-      sponsors.modify(sitr, _self, [&](auto& asponsor) {
-        asponsor.balance += quantity;
+      sponsors.modify(sitr, _self, [&](auto& sponsor) {
+        sponsor.balance += quantity;
       });
     }
   }

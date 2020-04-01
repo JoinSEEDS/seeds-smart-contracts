@@ -94,7 +94,7 @@ const checkuser = async (user) => {
 const addvoice = async (user, contracts) => {      
   
     console.log('add voice for '+JSON.stringify(user, null, 2))
-    await contracts.proposals.addvoice(user, 77, { authorization: `${proposals}@active` })
+    await contracts.proposals.addvoice(user, 20, { authorization: `${proposals}@active` })
     console.log("voice added for "+user+".")
 }
 

@@ -10,7 +10,7 @@ void history::reset(name account) {
       hitr = history.erase(hitr);
   }
   
-  transaction_tables transactions(get_self(), account.value);
+  transaction_tables transactions(get_self(), get_self().value);
   auto titr = transactions.begin();
   
   while (titr != transactions.end()) {
@@ -67,7 +67,7 @@ void history::historyentry(name account, string action, uint64_t amount, string 
   });
 }
 
-void history::trxentry(name from, name to, asset quantity) {
+void history::trxentry(name from, name to, asset quantity, string memo) {
   require_auth(get_self());
   
   auto uitr1 = users.find(from.value);
@@ -76,14 +76,20 @@ void history::trxentry(name from, name to, asset quantity) {
   if (uitr1 == users.end() || uitr2 == users.end()) {
     return;
   }
-    
-  transaction_tables transactions(get_self(), from.value);
+  
+  name fromstatus = uitr1->status;
+  name tostatus = uitr2->status;
+  
+  transaction_tables transactions(get_self(), get_self().value);
   
   transactions.emplace(_self, [&](auto& item) {
     item.id = transactions.available_primary_key();
+    item.from = from;
     item.to = to;
     item.quantity = quantity;
-    item.timestamp = eosio::current_time_point().sec_since_epoch();
+    item.memo = memo;
+    item.fromstatus = fromstatus;
+    item.tostatus = tostatus;
   });
 }
 

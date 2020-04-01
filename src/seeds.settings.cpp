@@ -4,53 +4,15 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  configure(name("propminstake"), 500 * 10000); // 500 Seeds
+  configure(name("propminstake"), 1 * 10000);
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);
   configure(name("propmajority"), 80);
   configure(name("propquorum"), 5);
-  configure(name("propvoice"), 77); // voice base per period
+  configure(name("propvoice"), 20); // voice base per period
   configure(name("hrvstreward"), 100000);
   configure(name("org.minplant"), 200 * 10000);
-  configure(name("mooncyclesec"), utils::moon_cycle);
-  configure(name("propdecaysec"), utils::seconds_per_day);
-  
-  // Scheduler cycle
-  configure(name("secndstoexec"), 60);
-
-  // =====================================
-  // referral rewards 
-  // =====================================
-
-  // community buiding points for referrer when user becomes resident
-  configure(name("refcbp1.ind"), 1);
-  // community buiding points for referrer when user becomes citizen
-  configure(name("refcbp2.ind"), 1);
-
-  // reputation points for referrer when user becomes resident
-  configure(name("refrep1.ind"), 1);
-  // reputation points for referrer when user becomes citizen
-  configure(name("refrep2.ind"), 1);
-
-  // reward for individual referrer when user becomes resident  
-  configure(name("refrwd1.ind"), 10 * 10000); // 10 SEEDS
-  // reward for individual referrer when user becomes citizen  
-  configure(name("refrwd2.ind"), 15 * 10000); // 15 SEEDS
-
-  // reward for org when user becomes resident
-  configure(name("refrwd1.org"), 8 * 10000);  // 8 SEEDS
-  // reward for org when user becomes citizen
-  configure(name("refrwd2.org"), 12 * 10000); // 12 SEEDS
-
-  // reward for ambassador of referring org when user becomes resident
-  configure(name("refrwd1.amb"), 2 * 10000);  // 2 SEEDS
-  // reward for abmassador of referring org when user becomes citizen
-  configure(name("refrwd2.amb"), 3 * 10000);  // 3 SEEDS
-
-  // Maximum number of points a user can gain from others vouching for them
-  configure(name("maxvouch"), 50);
-
 
   // =====================================
   // referral rewards 

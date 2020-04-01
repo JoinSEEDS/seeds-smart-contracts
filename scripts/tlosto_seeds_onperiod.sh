@@ -1,1 +1,1 @@
-cleos -u "https://node.hypha.earth" push action tlosto.seeds onperiod "{}" -p tlosto.seeds@active
+cleos -u "https://node.hypha.earth" push action tlosto.seeds reset "{}" -p tlosto.seeds@active
