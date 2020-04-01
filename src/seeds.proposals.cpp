@@ -201,12 +201,12 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   auto voteitr = votes.find(voter.value);
   check(voteitr == votes.end(), "only one vote");
 
-  props.modify(pitr, voter, [&](auto& proposal) {
+  props.modify(pitr, _self, [&](auto& proposal) {
     proposal.total += amount;
     proposal.favour += amount;
   });
 
-  voice.modify(vitr, voter, [&](auto& voice) {
+  voice.modify(vitr, _self, [&](auto& voice) {
     voice.balance -= amount;
   });
 
@@ -238,12 +238,12 @@ void proposals::against(name voter, uint64_t id, uint64_t amount) {
     auto voteitr = votes.find(voter.value);
     check(voteitr == votes.end(), "only one vote");
 
-    props.modify(pitr, voter, [&](auto& proposal) {
+    props.modify(pitr, _self, [&](auto& proposal) {
         proposal.total += amount;
         proposal.against += amount;
     });
 
-    voice.modify(vitr, voter, [&](auto& voice) {
+    voice.modify(vitr, _self, [&](auto& voice) {
         voice.balance -= amount;
     });
 
