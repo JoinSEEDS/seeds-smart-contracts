@@ -232,6 +232,8 @@ void proposals::refund(uint64_t id) {
   check(pitr->status == name("cancel"), "Proposal state must be cancel");
 
   withdraw(pitr->creator, pitr->staked, contracts::bank);
+
+  props.erase(pitr);
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {

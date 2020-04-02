@@ -54,6 +54,18 @@ describe('Proposals', async assert => {
   await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
   const balanceAfterCancel = await getBalance(firstuser)
 
+  try {
+    await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
+  } catch(err) {
+    console.log('proposal not found')
+  }
+
+  try {
+    await contracts.proposals.refund(2, { authorization: `${firstuser}@active` })
+  } catch(err) {
+    console.log('Proposal state must be cancel')
+  }
+
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
 
