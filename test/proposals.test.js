@@ -54,14 +54,18 @@ describe('Proposals', async assert => {
   await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
   const balanceAfterCancel = await getBalance(firstuser)
 
+  let notRefund = true
   try {
     await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
+    notRefund = false
   } catch(err) {
     console.log('proposal not found')
   }
 
+  let proposalNotCancelled = true
   try {
     await contracts.proposals.refund(2, { authorization: `${firstuser}@active` })
+    proposalNotCancelled = false
   } catch(err) {
     console.log('Proposal state must be cancel')
   }
@@ -222,6 +226,20 @@ describe('Proposals', async assert => {
     should: 'burn staked tokens',
     actual: balancesAfter[1] - balancesBefore[1],
     expected: 0
+  })
+
+  assert({
+    given: 'refund called twice for the same proposal',
+    should: 'has error',
+    actual: notRefund,
+    expected: true
+  })
+
+  assert({
+    given: 'refund called twice for the same proposal',
+    should: 'has error',
+    actual: proposalNotCancelled,
+    expected: true
   })
 
   assert({
