@@ -1,6 +1,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/system.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 

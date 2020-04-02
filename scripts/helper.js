@@ -80,6 +80,14 @@ const applicationKeys = {
 }
 const applicationPublicKey = applicationKeys[chainId]
 
+const exchangeKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
+  [networks.telosMainnet]: 'EOS6Ls7tdHYfo49cUMoeVFe4e7NfPKBzhsFA4sJS8hvgH24UVFPiM', // normal testnet key
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' // special unique key
+}
+
+const exchangePublicKey = exchangeKeys[chainId]
+
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
@@ -280,6 +288,10 @@ var permissions = [{
   key: apiPublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@purchase`,
+  key: exchangePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.invites.account}@api`,
   key: apiPublicKey,
   parent: 'active'
@@ -295,6 +307,9 @@ var permissions = [{
 }, {
   target: `${accounts.invites.account}@api`,
   action: 'accept'
+}, {
+  target: `${accounts.exchange.account}@purchase`,
+  action: 'newpayment'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
@@ -358,7 +373,14 @@ var permissions = [{
   key: activePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.harvest.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.scheduler.account}@execute`,
@@ -381,6 +403,9 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calcrep'
+}, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'onperiod'
 }, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'
@@ -438,7 +463,7 @@ if (isTestnet || isLocalNet) {
 
 const keyProviders = {
   [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
-  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY],
   [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
 }
 

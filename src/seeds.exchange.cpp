@@ -5,69 +5,124 @@ void exchange::reset() {
 
   config.remove();
 
+  auto pitr = payhistory.begin();
+  while(pitr != payhistory.end()) {
+    pitr = payhistory.erase(pitr);
+  }
+
+  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
+
+  asset seeds_per_usd =  asset( uint64_t(1000000), seeds_symbol);
+  asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
+
+  updatelimit(citizen_limit, resident_limit, visitor_limit);
+  updateusd(seeds_per_usd);
+  updatetlos(tlos_per_usd);
+
 }
 
-void exchange::purchase(name buyer, name contract, asset tlos_quantity, string memo) {
+void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
+
+  eosio::multi_index<"users"_n, tables::user_table> users(contracts::accounts, contracts::accounts.value);
+
+  auto uitr = users.find(buyer.value);
+  check(uitr != users.end(), "not a seeds user " + buyer.to_string());
+
+  configtable c = config.get();
+
+  asset seeds_per_usd = c.seeds_per_usd;
+  uint64_t seeds_purchased = 0;
+
+  asset seeds_limit;
+  switch (uitr->status) {
+    case "citizen"_n:
+      seeds_limit = c.citizen_limit;
+      break;
+    case "resident"_n:
+      seeds_limit = c.resident_limit;
+      break;
+    case "visitor"_n:
+      seeds_limit = c.visitor_limit;
+      break;
+    case "inactive"_n:
+      seeds_limit = c.visitor_limit;
+      break;
+  }
+  
+  uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
+  asset seeds_quantity = asset(seeds_amount, seeds_symbol);
+  
+  auto sitr = dailystats.find(buyer.value);
+  if (sitr != dailystats.end()) {
+    seeds_purchased = sitr->seeds_purchased;
+  }
+
+  check(seeds_limit.amount >= seeds_purchased + seeds_amount, "purchase limit overdrawn, tried to buy " + seeds_quantity.to_string() + " limit: " + seeds_limit.to_string() + " new total would be: " + std::to_string(seeds_purchased + seeds_amount));
+
+  if (sitr == dailystats.end()) {
+    dailystats.emplace(get_self(), [&](auto& s) {
+      s.buyer_account = buyer;
+      s.seeds_purchased = seeds_amount;
+    });
+  } else {
+    dailystats.modify(sitr, get_self(), [&](auto& s) {
+      s.seeds_purchased += seeds_amount;
+    }); 
+  }
+  
+  soldtable stb = sold.get_or_create(get_self(), soldtable());
+  stb.total_sold = stb.total_sold + seeds_amount;
+  sold.set(stb, get_self());
+
+  action(
+    permission_level{get_self(), "active"_n},
+    contracts::token, "transfer"_n,
+    make_tuple(get_self(), buyer, seeds_quantity, string(""))
+  ).send();    
+}
+
+void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
 
-    eosio::multi_index<"users"_n, tables::user_table> users(contracts::accounts, contracts::accounts.value);
-
-    auto uitr = users.find(buyer.value);
-    check(uitr != users.end(), "not a seeds user " + buyer.to_string());
+    check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
     configtable c = config.get();
-    asset seeds_per_tlos = c.rate;
-    uint64_t seeds_purchased = 0;
-
-    asset seeds_limit;
-    switch (uitr->status) {
-      case "citizen"_n:
-        seeds_limit = c.citizen_limit;
-        break;
-      case "resident"_n:
-        seeds_limit = c.resident_limit;
-        break;
-      case "visitor"_n:
-        seeds_limit = c.visitor_limit;
-        break;
-      case "inactive"_n:
-        seeds_limit = c.visitor_limit;
-        break;
-    }
-    
-    asset tlos_as_seeds = asset(tlos_quantity.amount, seeds_symbol);
-    uint64_t seeds_amount = (tlos_quantity.amount * seeds_per_tlos.amount) / 10000;
-    asset seeds_quantity = asset(seeds_amount, seeds_symbol);
-    
-    auto sitr = dailystats.find(buyer.value);
-    if (sitr != dailystats.end()) {
-      seeds_purchased = sitr->seeds_purchased;
-    }
   
-    check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
-    check(seeds_limit.amount >= seeds_purchased + seeds_amount, "purchase limit overdrawn, tried to buy " + seeds_quantity.to_string() + " limit: " + seeds_limit.to_string() + " new total would be: " + std::to_string(seeds_purchased + seeds_amount));
+    asset tlos_per_usd = c.tlos_per_usd;
 
-    if (sitr == dailystats.end()) {
-      dailystats.emplace(get_self(), [&](auto& s) {
-        s.buyer_account = buyer;
-        s.seeds_purchased = seeds_amount;
-      });
-    } else {
-      dailystats.modify(sitr, get_self(), [&](auto& s) {
-        s.seeds_purchased += seeds_amount;
-      }); 
-    }
-    
-    soldtable stb = sold.get_or_create(get_self(), soldtable());
-    stb.total_sold = stb.total_sold + seeds_amount;
-    sold.set(stb, get_self());
+    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
 
-    action(
-      permission_level{get_self(), "active"_n},
-      contracts::token, "transfer"_n,
-      make_tuple(get_self(), buyer, seeds_quantity, string(""))
-    ).send();    
+    asset usd_asset = asset(usd_amount, usd_symbol);
+
+    purchase_usd(buyer, usd_asset, memo);
   }
+}
+
+
+void exchange::newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue) {
+
+    require_auth(get_self());
+
+    asset usd_asset = asset(multipliedUsdValue, usd_symbol);
+
+    auto history_by_payment_id = payhistory.get_index<"bypaymentid"_n>();
+
+    uint64_t key = std::hash<std::string>{}(paymentId);
+
+    check( history_by_payment_id.find(key) == history_by_payment_id.end(), "duplicate transaction: "+paymentId);
+
+    purchase_usd(recipientAccount, usd_asset, paymentId);
+
+    payhistory.emplace(_self, [&](auto& item) {
+      item.id = payhistory.available_primary_key();
+      item.recipientAccount = recipientAccount;
+      item.paymentSymbol = paymentSymbol;
+      item.paymentId = paymentId;
+      item.multipliedUsdValue = multipliedUsdValue;
+    });
+
 }
 
 void exchange::onperiod() {
@@ -95,12 +150,23 @@ void exchange::updatelimit(asset citizen_limit, asset resident_limit, asset visi
   config.set(c, get_self());
 }
 
-void exchange::updaterate(asset seeds_per_tlos) {
+void exchange::updateusd(asset seeds_per_usd) {
   require_auth(get_self());
 
   configtable c = config.get_or_create(get_self(), configtable());
   
-  c.rate = seeds_per_tlos;
+  c.seeds_per_usd = seeds_per_usd;
+  c.timestamp = current_time_point().sec_since_epoch();
+  
+  config.set(c, get_self());
+}
+
+void exchange::updatetlos(asset tlos_per_usd) {
+  require_auth(get_self());
+
+  configtable c = config.get_or_create(get_self(), configtable());
+  
+  c.tlos_per_usd = tlos_per_usd;
   c.timestamp = current_time_point().sec_since_epoch();
   
   config.set(c, get_self());

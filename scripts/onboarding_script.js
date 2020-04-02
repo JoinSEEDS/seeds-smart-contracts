@@ -1,48 +1,188 @@
+#!/usr/bin/env node
+
 const program = require('commander')
 const fs = require('fs')
+
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser } = names
- 
+
+
+const bulk_cancel = async (sponsor, hashList) => {
+    const contracts = await initContracts({ onboarding })
+
+    let try_again_hashes = []
+
+    for (let i=0; i<hashList.length; i++) {
+
+        let hash = hashList[i]
+
+        console.log("cancel invite with hash "+hash)
+
+        try {
+            await contracts.onboarding.cancel(sponsor, hash, { authorization: `${sponsor}@active` } )
+            
+        } catch (err) {
+            console.log("error canceling "+hash)
+            console.log(err)
+        }
+    }
+}
+
+// max batched actions - 20 seemed to be stable, 44 would sometimes crash (not good, messy)
+// and 100 would always crash on mainnet but work fine on testnet
+
+const max_batched_actions = 20 
+
 const bulk_invite = async (sponsor, num, totalAmount) => {
+
+    totalAmount = parseInt(totalAmount)
     var secrets = "Secret,Hash,Seeds (total)\n"
     const fileName = 'secrets_'+num+'.csv'
     var log = []
 
+    // deposit 
+    const contracts = await initContracts({ token, onboarding })
+    let depositAmount = num * totalAmount
+    const plantedSeeds = 5
+    const transferredSeeds = totalAmount - plantedSeeds
+    const depositAmmountSeeds = parseInt(depositAmount) + '.0000 SEEDS'
+
+    
     try {
-        totalAmount = parseInt(totalAmount)
+        // create actions
+        let actions = []
+        actions.push( createCPUAction(sponsor) )
+
+
+        // test the payforcpu action
+        const transactionResult = await eos.transaction({
+            actions: actions
+          }, {
+            blocksBehind: 3,
+            expireSeconds: 30,
+          });
+
+        // todo make this transfer part of the transaction that adds the accounts!
+        // in case something goes wrong!
+        
+        console.log("DISABLED comment transaction back in if you need to sponsor...")
+        return
+        // COMMENT THIS BACK IN
+        //console.log("deposit "+depositAmmountSeeds)
+        //await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
+      
         for (i = 0; i < num; i++) {
+            let inv = await createInviteAction(sponsor, transferredSeeds, plantedSeeds)
+    
             console.log("inviting "+(i+1) + "/" + num)
-            let inv = await invite(sponsor, totalAmount, false)
             console.log("secret "+inv.secret)
-            console.log("hashed secret: "+inv.hashedSecret)
+            console.log("hashed secret: "+inv.hashedSecret)    
+    
+            if (i > 0 && i % max_batched_actions == 0) {
+                const transactionResult = await eos.transaction({
+                    actions: actions
+                  }, {
+                    blocksBehind: 3,
+                    expireSeconds: 30,
+                  });
+                
+                  actions = []
+                  actions.push( createCPUAction(sponsor) )
+
+                  fs.writeFileSync(fileName+".tmp."+i, secrets)
+                  fs.writeFileSync('invite_log_'+num+'.json', JSON.stringify(log, null,2))
+      
+            }
+
+            actions.push(inv.action)
             log.push(inv)
             secrets = secrets + inv.secret +"," + inv.hashedSecret + "," + totalAmount + "\n"
         }
     
         console.log("secrets: "+secrets)
     
-        console.log("log: " + JSON.stringify(log, null, 2))
+        console.log("actions: " + JSON.stringify(actions, null, 2))
     
+        if (actions.length > 0) {
+            const transactionResult = await eos.transaction({
+                actions: actions
+              }, {
+                blocksBehind: 3,
+                expireSeconds: 30,
+              });
+        }
+        
     
         fs.writeFileSync(fileName, secrets)
-        fs.writeFileSync('secrets_log_'+num+'.json', JSON.stringify(log, null,2))
+        fs.writeFileSync('invite_log_'+num+'.json', JSON.stringify(log, null,2))
         
         console.log(num + " secrets written to "+fileName)
     
     } catch (err) {
-        console.log("Bulk Invite Error: "+err)
-
         fs.writeFileSync("error_"+fileName, secrets)
-        fs.writeFileSync('error_secrets_log_'+num+'.json', JSON.stringify(log, null,2))
+        fs.writeFileSync('error_invite_log_'+num+'.json', JSON.stringify(log, null,2))
+
+        console.log("Bulk Invite Error: "+err)
+        //if (err instanceof RpcError) // this is in the latest version of eosjs - 20+
+        //    console.log("RpcError in transact" + JSON.stringify(err.json, null, 2));
 
     }
 
 
 }
-  
-const invite = async (sponsor, totalAmount, debug = false) => {
+
+
+const createInviteAction = async (sponsor, transfer, sow) => {
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+    const action = {
+        account: 'join.seeds',
+        name: 'invite',
+        authorization: [{
+          actor: sponsor,
+          permission: 'active',
+        }],
+        data: {
+            sponsor: sponsor,
+            transfer_quantity: parseInt(transfer) + ".0000 SEEDS",
+            sow_quantity: parseInt(sow) + '.0000 SEEDS',
+            invite_hash: inviteHash,
+        }
+      }
+    const result = {
+        secret: inviteSecret,
+        hashedSecret: inviteHash,
+        action: action
+    }
+    return result   
+
+}
+
+const createCPUAction = (sponsor) => {
+    return {
+        account: harvest,
+        name: 'payforcpu',
+        authorization: [
+            {
+                actor: harvest,
+                permission: 'payforcpu',
+            },
+            {
+                actor: sponsor,
+                permission: 'active',
+            }
+        ],
+        data: {
+            account: sponsor
+        }
+      }
+
+}
+
+const invite = async (sponsor, totalAmount, debug = false, depositFunds = false) => {
     
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
@@ -88,7 +228,9 @@ const invite = async (sponsor, totalAmount, debug = false) => {
         }
     }
 
-    await deposit()
+    if (depositFunds) {
+        await deposit()
+    }
 
     if (debug == true) {
         const sponsorsBefore = await getTableRows({
@@ -158,6 +300,10 @@ program
     await invite(sponsor, 20, true) // always 20 seeds
   })
 
+  // join.seeds before
+//   memory: 
+//      quota:     1.432 MiB    used:     879.7 KiB  
+
 program
   .command('bulk_invite <sponsor> <num> <totalAmount>')
   .description('Bulk invite new users')
@@ -165,6 +311,18 @@ program
       console.log("generate "+num+" invites at " + totalAmount + " SEEDS" + " with sponsor " + param)
     await bulk_invite(param, num, totalAmount)
   })
+
+  program
+  .command('bulk_cancel <sponsor> <filename>')
+  .description('Bulk cancel invites from a file, each line contains an invite hash')
+  .action(async function (sponsor, filename) {
+    console.log("cancel invites from " + filename)
+    var text = fs.readFileSync(filename)
+    var textByLine = text.toString().split("\n")
+
+    await bulk_cancel(sponsor, textByLine)
+  })
+
 
 
   program
