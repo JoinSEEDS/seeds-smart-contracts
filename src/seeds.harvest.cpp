@@ -224,13 +224,14 @@ void harvest::calcrep() {
 
   auto users_number = std::distance(usersrep.begin(), usersrep.end());
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
 
   auto uitr = usersrep.begin();
 
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
   while (uitr != usersrep.end()) {
+
     uint64_t score = (current_user * 100) / users_number;
 
     if (uitr->reputation == 0) {
@@ -341,7 +342,7 @@ void harvest::calctrxpt() {
 
   auto users_number = std::distance(users.begin(), users.end());
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
 
   auto uitr = users.begin();
 
@@ -361,7 +362,7 @@ void harvest::calctrx() {
 
   uint64_t users_number = std::distance(users.begin(), users.end());
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
   auto uitr = users.begin();
@@ -399,7 +400,7 @@ void harvest::calccbs() {
 
   uint64_t users_number = std::distance(users.begin(), users.end());
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
   auto uitr = users.begin();
@@ -463,7 +464,7 @@ void harvest::calccs() {
 
   uint64_t users_number = std::distance(users.begin(), users.end());
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
   auto uitr = users.begin();
@@ -540,7 +541,7 @@ void harvest::calcplanted() {
 
   uint64_t users_number = std::distance(users.begin(), users.end()) - 1;
 
-  uint64_t current_user = 1;
+  uint64_t current_user = 0;
 
   auto uitr = users.begin();
 
