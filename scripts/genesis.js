@@ -8,6 +8,8 @@ const { accounts, proposals } = names
 
 
 const makecitizen = async (user, citizen = true) => {
+    console.log("** makec "+ user)
+
     const contracts = await initContracts({ accounts, proposals })
 
     const users = await getTableRows({
@@ -43,7 +45,7 @@ const makecitizen = async (user, citizen = true) => {
       console.log("account "+user +" is already a citizen!")
       console.log(" "+JSON.stringify(users, null, 2))
       return
-    }
+    }  
 
     if (citizen) {
         await contracts.accounts.genesis(user, { authorization: `${accounts}@active` })
@@ -175,6 +177,20 @@ program
       console.log("make " + user + " a citizen of SEEDS!")
     await makecitizen(user, true) 
 })
+
+program
+  .command('bulk_add <file>')
+  .description('read usernames from file, make citizens')
+  .action(async function (file) {
+    console.log("make all users in " + file + " citizens of SEEDS!")
+    var text = fs.readFileSync(file)
+    var textByLine = text.toString().split("\n")
+    for (let i =0; i<textByLine.length; i++) {
+      await makecitizen(textByLine[i], true)
+    }
+    //textByLine.forEach( async (user) => { await makecitizen(user, true) } )
+
+  })
 
 program
   .command('resident <user>')
