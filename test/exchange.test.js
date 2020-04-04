@@ -313,7 +313,7 @@ describe('Token Sale Price', async assert => {
   let b1 = await getBalanceFloat(firstuser)
 
   const updateprice = async (expected_round, expected_price, expected_remaining) => {
-    await contracts.exchange.updateprice( { authorization: `${exchange}@active` })
+
     let price = await eos.getTableRows({
       code: exchange,
       scope: exchange,
@@ -473,8 +473,6 @@ describe('Token Sale 50 Rounds', async assert => {
   let b1 = await getBalanceFloat(firstuser)
 
   const updateprice = async (expected_round, expected_price, expected_remaining) => {
-
-    await contracts.exchange.updateprice( { authorization: `${exchange}@active` })
 
     let price = await eos.getTableRows({
       code: exchange,

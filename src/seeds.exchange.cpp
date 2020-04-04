@@ -237,8 +237,7 @@ void exchange::updatetlos(asset tlos_per_usd) {
   config.set(c, get_self());
 }
 
-ACTION exchange::updateprice() {
-  require_auth(get_self());
+void exchange::updateprice() {
 
   soldtable stb = sold.get_or_create(get_self(), soldtable());
   uint64_t total_sold = stb.total_sold;

@@ -33,8 +33,6 @@ CONTRACT exchange : public contract {
     
     ACTION updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit);
 
-    ACTION updateprice(); // updates price table
-
     ACTION addround(uint64_t volume, asset seeds_per_usd);
 
     ACTION initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd);
@@ -47,6 +45,7 @@ CONTRACT exchange : public contract {
 
     void purchase_usd(name buyer, asset usd_quantity, string memo); 
     asset seeds_for_usd(asset usd_quantity);
+    void updateprice(); // updates price table
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -138,7 +137,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(updateprice)(initsale)(initrounds))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds))
       }
   }
 }
