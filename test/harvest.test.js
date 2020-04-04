@@ -514,13 +514,13 @@ describe("harvest transaction score", async assert => {
   console.log('calculate tx scores with reputation')
   await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await checkScores([15, 0, 0, 0], [75, 0, 0, 0], "1 reputation, 1 tx", "100 score")
+  await checkScores([16, 0, 0, 0], [75, 0, 0, 0], "1 reputation, 1 tx", "100 score")
 
   console.log("transfer with 10 rep, 2 accounts have rep")
   await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
   await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await checkScores([10, 15, 0, 0], [50, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([11, 16, 0, 0], [50, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
@@ -533,13 +533,13 @@ describe("harvest transaction score", async assert => {
     // score from before was 15
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
   }
-  await checkScores([35, 15, 0, 0], [75, 50, 0, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([36, 16, 0, 0], [75, 50, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
-  let third_user_rep_multiplier = 2 * 0.75 
+  let third_user_rep_multiplier = 2 * 0.7575
   await contracts.token.transfer(seconduser, thirduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${seconduser}@active` })
-  await checkScores([35, Math.ceil(15 + tx_max_points * third_user_rep_multiplier), 0, 0], [50, 75, 0, 0], "large tx", "100, 75 score")
+  await checkScores([36, parseInt(16 + tx_max_points * third_user_rep_multiplier), 0, 0], [50, 75, 0, 0], "large tx", "100, 75 score")
   
   // send back 
   await contracts.token.transfer(thirduser, seconduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${thirduser}@active` })

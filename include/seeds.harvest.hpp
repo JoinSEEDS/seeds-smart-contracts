@@ -83,10 +83,10 @@ CONTRACT harvest : public contract {
     }
 
     double rep_multiplier_for_score(uint64_t rep_score) {
-      // rep is 0 - 100
+      // rep is 0 - 99
       check(rep_score < 101, "illegal rep score ");
       // return 0 - 2
-      return rep_score * 2.0 / 100.0; 
+      return rep_score * 2.0 / 99.0; 
     }
 
     // Contract Tables
