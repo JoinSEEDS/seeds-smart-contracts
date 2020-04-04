@@ -27,7 +27,7 @@ CONTRACT exchange : public contract {
     
     ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue);
 
-    ACTION updateusd(asset seeds_per_usd);
+    //ACTION updateusd(asset seeds_per_usd); // we are now in sales rounds
 
     ACTION updatetlos(asset tlos_per_usd);
     
@@ -138,7 +138,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updateusd)(updatetlos)(updatelimit)(newpayment)(addround)(updateprice)(initsale)(initrounds))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(updateprice)(initsale)(initrounds))
       }
   }
 }

@@ -28,9 +28,9 @@ describe('Exchange', async assert => {
   console.log(`update daily limits`)
   await contracts.exchange.updatelimit("2500.0000 SEEDS", "100.0000 SEEDS", "3.0000 SEEDS", { authorization: `${exchange}@active` })
   
-  console.log(`update USD exchange rate - seeds per USD`)
+  //console.log(`update USD exchange rate - seeds per USD`)
   let seeds_per_usd = 100
-  await contracts.exchange.updateusd(""+seeds_per_usd + ".0000 SEEDS", { authorization: `${exchange}@active` })
+  //await contracts.exchange.updateusd(""+seeds_per_usd + ".0000 SEEDS", { authorization: `${exchange}@active` })
 
   console.log(`update TLOS rate - tlos per usd`)
   await contracts.exchange.updatetlos("3.0000 SEEDS", { authorization: `${exchange}@active` })
@@ -298,7 +298,7 @@ describe('Token Sale Price', async assert => {
   
   console.log(`update TLOS rate - tlos per usd`)
   await contracts.exchange.updatetlos("3.0000 SEEDS", { authorization: `${exchange}@active` })
-  await contracts.exchange.updateusd("1.0000 SEEDS", { authorization: `${exchange}@active` })
+  //await contracts.exchange.updateusd("1.0000 SEEDS", { authorization: `${exchange}@active` })
 
   console.log(`init token sale rounds`)
 
@@ -442,7 +442,7 @@ describe('Token Sale 50 Rounds', async assert => {
   
   console.log(`update TLOS rate - tlos per usd`)
   await contracts.exchange.updatetlos("3.0000 SEEDS", { authorization: `${exchange}@active` })
-  await contracts.exchange.updateusd("1.0000 SEEDS", { authorization: `${exchange}@active` })
+  //await contracts.exchange.updateusd("1.0000 SEEDS", { authorization: `${exchange}@active` })
 
   console.log(`init token sale rounds`)
 

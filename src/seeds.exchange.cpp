@@ -6,9 +6,19 @@ void exchange::reset() {
 
   config.remove();
 
-/**/
+  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
+
+  asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
+
+  updatelimit(citizen_limit, resident_limit, visitor_limit);
+  updatetlos(tlos_per_usd);
+
+/**
  
-  // NEVER CHECK THESE IN - we never want to erase rounds or sold table on mainnet
+  // NEVER CHECK THESE IN
+  // we never want to erase rounds or sold table or history except for unit testing
   
   sold.remove();
 
@@ -16,24 +26,14 @@ void exchange::reset() {
   while(pitr != payhistory.end()) {
     pitr = payhistory.erase(pitr);
   }
-
-/**/
-
-  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
-
-  asset seeds_per_usd =  asset( uint64_t(1000000), seeds_symbol);
-  asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
-
-  updatelimit(citizen_limit, resident_limit, visitor_limit);
-  updateusd(seeds_per_usd);
-  updatetlos(tlos_per_usd);
-
+  
   auto ritr = rounds.begin();
   while(ritr != rounds.end()){
     ritr = rounds.erase(ritr);
   }
+
+/**/
+
 }
 
 asset exchange::seeds_for_usd(asset usd_quantity) {
@@ -215,16 +215,16 @@ void exchange::updatelimit(asset citizen_limit, asset resident_limit, asset visi
   config.set(c, get_self());
 }
 
-void exchange::updateusd(asset seeds_per_usd) {
-  require_auth(get_self());
+// void exchange::updateusd(asset seeds_per_usd) {
+//   require_auth(get_self());
 
-  configtable c = config.get_or_create(get_self(), configtable());
+//   configtable c = config.get_or_create(get_self(), configtable());
   
-  c.seeds_per_usd = seeds_per_usd;
-  c.timestamp = current_time_point().sec_since_epoch();
+//   c.seeds_per_usd = seeds_per_usd;
+//   c.timestamp = current_time_point().sec_since_epoch();
   
-  config.set(c, get_self());
-}
+//   config.set(c, get_self());
+// }
 
 void exchange::updatetlos(asset tlos_per_usd) {
   require_auth(get_self());
