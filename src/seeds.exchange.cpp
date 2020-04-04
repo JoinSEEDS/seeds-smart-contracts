@@ -41,9 +41,6 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
 
   soldtable s = sold.get_or_create(get_self(), soldtable());
 
-  //price_table p = price.get_or_create(get_self(), price_table());
-  //auto ritr = rounds.find(p.current_round);
-
   double usd_total = double(usd_quantity.amount);
   double usd_remaining = usd_total;
   double seeds_amount = 0.0;
@@ -64,18 +61,9 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
       // price of available seeds
       double usd_available = available_in_round * usd_per_seeds;
 
-
-    //check(false, "debug. "+std::to_string(ritr->seeds_per_usd.amount)+" usd_per_seeds "+std::to_string(usd_per_seeds) + 
-    //" available: "+std::to_string(available_in_round) + " usd_available: " + std::to_string(usd_available));
-
       // if < usd amount remaining -> calculate, add, and exit
       if (usd_available >= usd_remaining) {
-        
         seeds_amount += (usd_remaining * ritr->seeds_per_usd.amount) / 10000;
-
-        //check(ritr->id < 2, "seeds_amount. "+ std::to_string(seeds_amount) +"seeds-perusd: "+std::to_string(ritr->seeds_per_usd.amount)+" usd_per_seeds "+std::to_string(usd_per_seeds) + 
-        //" available: "+std::to_string(available_in_round) + " usd_available: " + std::to_string(usd_available));
-
         usd_remaining = 0;
         break;
       } else {
@@ -91,12 +79,6 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
     " available USD value: "+std::to_string( (usd_total - usd_remaining) / 10000.0) + " max vol: " + std::to_string(round_end_volume));
 
   }
-
-    // check(false, "DEBUG. requested "+std::to_string(usd_total) + 
-    // " available: "+std::to_string(usd_total - usd_remaining) + " max vol: " + std::to_string(round_start_volume)+
-    // " amount "+std::to_string(seeds_amount));
-
-  updateprice();
 
   return asset(seeds_amount, seeds_symbol);
 }
@@ -154,6 +136,8 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
   soldtable stb = sold.get_or_create(get_self(), soldtable());
   stb.total_sold = stb.total_sold + seeds_amount;
   sold.set(stb, get_self());
+
+  updateprice();
 
   action(
     permission_level{get_self(), "active"_n},
