@@ -235,6 +235,11 @@ describe('Basic Init Check', async assert => {
   let results = []
   for (let i=0; i<50; i++) {
     let seeds_per_usd = 1 / usd_per_seeds
+
+    if (i==43) {
+      console.log("Round 44: usd_per_seeds: "+usd_per_seeds + " seeds_per_usd: "+seeds_per_usd)
+      // note: 225057.49999 is rounded by c++ to 225058 - doesn't matter given our precision requirements of 4 digits.
+    }
     results.push({
       volume: (volume * 10000)+"",
       price: (Math.round(seeds_per_usd*10000.0)/10000.0).toFixed(4)
@@ -246,7 +251,7 @@ describe('Basic Init Check', async assert => {
   for(let i=0; i<results.length; i++) {
     assert({
       given: 'round '+i,
-      should: 'have seeds per usd: ' + results[i].price + " SEEDS",
+      should: 'have seeds per usd: ' + results[i].price + " SEEDS   Volume: "+results[i].volume,
       actual: { 
         price: rounds.rows[i].seeds_per_usd,
         volume: rounds.rows[i].max_sold
@@ -584,8 +589,7 @@ describe('Token Sale 50 Rounds', async assert => {
     await contracts.exchange.newpayment(firstuser, "BTC", "05aaaa", parseInt(1 * 10000), { authorization: `${exchange}@active` })
     out_of_funds_purchase = true
   } catch (err) {
-    console.log("expected error "+err) 
-
+    //console.log("expected error "+err) 
   }
   assert({
     given: 'purchase more than available in rounds',
