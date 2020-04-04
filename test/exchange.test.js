@@ -29,12 +29,16 @@ describe('Exchange', async assert => {
   await contracts.exchange.updatelimit("2500.0000 SEEDS", "100.0000 SEEDS", "3.0000 SEEDS", { authorization: `${exchange}@active` })
   
   console.log(`update USD exchange rate - seeds per USD`)
-  let seeds_per_usd = 101
+  let seeds_per_usd = 100
   await contracts.exchange.updateusd(""+seeds_per_usd + ".0000 SEEDS", { authorization: `${exchange}@active` })
 
   console.log(`update TLOS rate - tlos per usd`)
   await contracts.exchange.updatetlos("3.0000 SEEDS", { authorization: `${exchange}@active` })
-  
+
+  await contracts.exchange.onperiod({ authorization: `${exchange}@active` })
+
+  await contracts.exchange.initrounds( (1100000) * 10000, "100.0000 SEEDS", { authorization: `${exchange}@active` })  
+
   //console.log(`transfer ${tlosQuantity} from ${firstuser} to ${exchange}`)
   //await contracts.tlostoken.transfer(firstuser, exchange, tlosQuantity, '', { authorization: `${firstuser}@active` })
 
@@ -86,6 +90,8 @@ describe('Exchange', async assert => {
 
   console.log(`reset daily stats`)
   await contracts.exchange.onperiod({ authorization: `${exchange}@active` })  
+
+  expectedSeeds = parseFloat(expectedSeeds.toFixed(4))
 
   assert({
     given: `sent ${usd} USD to exchange`,
@@ -206,6 +212,55 @@ describe('Token Sale Rounds', async assert => {
 
 })
 
+describe('Basic Init Check', async assert => {
+
+  const contracts = await initContracts({ accounts, token, exchange })
+  
+  console.log(`reset exchange`)
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })  
+
+  console.log(`init token sale rounds`)
+  await contracts.exchange.initsale({ authorization: `${exchange}@active` })
+  
+  let rounds = await eos.getTableRows({
+      code: exchange,
+      scope: exchange,
+      table: 'rounds',
+      json: true,
+      limit: 100,
+  })
+  
+  let usd_per_seeds = 0.011
+  let volume = 1100000
+  let results = []
+  for (let i=0; i<50; i++) {
+    let seeds_per_usd = 1 / usd_per_seeds
+    results.push({
+      volume: (volume * 10000)+"",
+      price: (Math.round(seeds_per_usd*10000.0)/10000.0).toFixed(4)
+    })
+
+    usd_per_seeds = usd_per_seeds * 1.033
+    volume += 1100000
+  }
+  for(let i=0; i<results.length; i++) {
+    assert({
+      given: 'round '+i,
+      should: 'have seeds per usd: ' + results[i].price + " SEEDS",
+      actual: { 
+        price: rounds.rows[i].seeds_per_usd,
+        volume: rounds.rows[i].max_sold
+      },
+      expected: {
+        price: results[i].price + " SEEDS",
+        volume: results[i].volume
+      }
+    })
+    }
+
+
+
+})
 const getRounds = async () => {
   let rounds = await eos.getTableRows({
     code: exchange,
@@ -248,7 +303,7 @@ describe('Token Sale Price', async assert => {
     await contracts.exchange.addround( 10 * 10000, i+1+".0000 SEEDS", { authorization: `${exchange}@active` })  
   }
 
-  console.log("rounds "+JSON.stringify(await getRounds(), null, 2))
+  //console.log("rounds "+JSON.stringify(await getRounds(), null, 2))
 
   let b1 = await getBalanceFloat(firstuser)
 
@@ -361,7 +416,7 @@ describe('Token Sale Price', async assert => {
 })
 
 
-describe.only('Token Sale 50 Rounds', async assert => {
+describe('Token Sale 50 Rounds', async assert => {
 
   const contracts = await initContracts({ accounts, token, exchange })
   
@@ -387,15 +442,18 @@ describe.only('Token Sale 50 Rounds', async assert => {
   console.log(`init token sale rounds`)
 
   console.log("test init rounds - 10.0000 seeds per round")
-
   
   let usd_per_seeds = 0.011
 
+  var total_usd = 0
+
   for (let i=0; i<50; i++) {
+
+    total_usd = total_usd + usd_per_seeds * 10
 
     let seeds_per_usd = 1 / usd_per_seeds
 
-    console.log("round "+i+" = "+seeds_per_usd.toFixed(4)+" SEEDS")
+    //console.log("round "+i+" = "+seeds_per_usd.toFixed(4)+" SEEDS")
 
     await contracts.exchange.addround( 10 * 10000, seeds_per_usd.toFixed(4)+" SEEDS", { authorization: `${exchange}@active` })  
 
@@ -403,17 +461,21 @@ describe.only('Token Sale 50 Rounds', async assert => {
 
   }
 
-  console.log("rounds "+JSON.stringify(await getRounds(), null, 2))
+  //console.log("rounds "+JSON.stringify(await getRounds(), null, 2))
+
+  console.log("total value "+total_usd)
 
   let b1 = await getBalanceFloat(firstuser)
 
   const updateprice = async (expected_round, expected_price, expected_remaining) => {
+
     await contracts.exchange.updateprice( { authorization: `${exchange}@active` })
+
     let price = await eos.getTableRows({
       code: exchange,
       scope: exchange,
       table: 'price',
-      json: true,
+      json: true
     })
     //console.log("price: "+JSON.stringify(price, null, 2))
 
@@ -427,6 +489,22 @@ describe.only('Token Sale 50 Rounds', async assert => {
         "current_seeds_per_usd": expected_price.toFixed(4)+" SEEDS",
         "remaining": expected_remaining
       }
+    })
+
+    let config = await eos.getTableRows({
+      code: exchange,
+      scope: exchange,
+      table: 'config',
+      json: true,
+    })
+
+    let seedsPerUsdString = expected_price.toFixed(4) + " SEEDS"
+    
+    assert({
+      given: 'config table price',
+      should: "price: "+expected_price,
+      actual: config.rows[0].seeds_per_usd,
+      expected: seedsPerUsdString
     })
 
   }
@@ -445,10 +523,12 @@ describe.only('Token Sale 50 Rounds', async assert => {
   
   }
 
-  console.log("buy seeds 0.011 USD")
+  console.log("buy 1 seeds 0.011 USD")
+  let totalbuy = 0
+  let buy = 0.011
+  totalbuy += buy
 
-  // edge case, buy entire round, check price after
-  await contracts.exchange.newpayment(firstuser, "BTC", "0", parseInt(0.011 * 10000), { authorization: `${exchange}@active` })
+  await contracts.exchange.newpayment(firstuser, "BTC", "0", parseInt(buy * 10000), { authorization: `${exchange}@active` })
 
   let seedsBalance = 1
 
@@ -458,7 +538,8 @@ describe.only('Token Sale 50 Rounds', async assert => {
 
   await updateprice(0, 90.9091, 9 * 10000)
 
-  let buy = 0.099
+  buy = 0.099
+  totalbuy += buy
 
   console.log("buy seeds USD"+buy)
   await contracts.exchange.newpayment(firstuser, "BTC", "01", parseInt(buy * 10000), { authorization: `${exchange}@active` })
@@ -474,8 +555,9 @@ describe.only('Token Sale 50 Rounds', async assert => {
   // == 0.152365386
 
   buy = 0.1524 // 65386
-  console.log("buy seeds "+buy) 
+  totalbuy += buy
 
+  console.log("buy seeds "+buy) 
 
   await contracts.exchange.newpayment(firstuser, "BTC", "02", parseInt(buy * 10000), { authorization: `${exchange}@active` })
 
@@ -484,5 +566,33 @@ describe.only('Token Sale 50 Rounds', async assert => {
   b1 += 13.3029
 
   await updateprice(2, 85.1935,  (10 - 3.3029) * 10000)
+
+  console.log("bought "+totalbuy + " out of "+total_usd) 
+
+
+  console.log("buy until last round ") 
+  await contracts.exchange.newpayment(firstuser, "BTC", "03999", parseInt( (total_usd - totalbuy - 0.1) * 10000), { authorization: `${exchange}@active` })
+  await updateprice(49, 18.5222,  18538)
+
+  console.log("buy in last round ") 
+  await contracts.exchange.newpayment(firstuser, "BTC", "04ss", parseInt(0.001 * 10000), { authorization: `${exchange}@active` })
+  await updateprice(49, 18.5222, Math.ceil(18538 - (18.5222*0.001*10000)))
+
+  console.log("buy more than last round ") 
+  let out_of_funds_purchase = false
+  try {
+    await contracts.exchange.newpayment(firstuser, "BTC", "05aaaa", parseInt(1 * 10000), { authorization: `${exchange}@active` })
+    out_of_funds_purchase = true
+  } catch (err) {
+    console.log("expected error "+err) 
+
+  }
+  assert({
+    given: 'purchase more than available in rounds',
+    should: 'fail',
+    actual: out_of_funds_purchase,
+    expected: false
+  })
+
 
 })
