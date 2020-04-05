@@ -544,7 +544,7 @@ describe('Token Sale 50 Rounds', async assert => {
   buy = 0.099
   totalbuy += buy
 
-  console.log("buy seeds USD"+buy)
+  console.log("buy seeds USD"+buy + " this buys out the entire 1st round, so it should move to round 2, all 10 seeds available")
   await contracts.exchange.newpayment(firstuser, "BTC", "01", parseInt(buy * 10000), { authorization: `${exchange}@active` })
   seedsBalance = 9
   await check(b1, seedsBalance, buy)
