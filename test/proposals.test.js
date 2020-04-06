@@ -37,6 +37,39 @@ describe('Proposals', async assert => {
   console.log('create another proposal')
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
 
+  console.log('create and cancel proposal')
+  await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.proposals.cancel(4, { authorization: `${firstuser}@active` })
+
+  let notOwnerStake = true
+  try {
+    await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
+    notOwnerStake = false
+  } catch(err) {
+    console.log('stake from not owner (failed)')
+  }
+
+  const balanceBeforeCancel = await getBalance(firstuser)
+  await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
+  const balanceAfterCancel = await getBalance(firstuser)
+
+  let notRefund = true
+  try {
+    await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
+    notRefund = false
+  } catch(err) {
+    console.log('proposal not found')
+  }
+
+  let proposalNotCancelled = true
+  try {
+    await contracts.proposals.refund(2, { authorization: `${firstuser}@active` })
+    proposalNotCancelled = false
+  } catch(err) {
+    console.log('Proposal state must be cancel')
+  }
+
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
 
@@ -193,6 +226,34 @@ describe('Proposals', async assert => {
     should: 'burn staked tokens',
     actual: balancesAfter[1] - balancesBefore[1],
     expected: 0
+  })
+
+  assert({
+    given: 'refund called twice for the same proposal',
+    should: 'has error',
+    actual: notRefund,
+    expected: true
+  })
+
+  assert({
+    given: 'refund called twice for the same proposal',
+    should: 'has error',
+    actual: proposalNotCancelled,
+    expected: true
+  })
+
+  assert({
+    given: 'stake from not owner',
+    should: 'has error',
+    actual: notOwnerStake,
+    expected: true
+  })
+
+  assert({
+    given: 'cancel proposal',
+    should: 'refund staked tokens',
+    actual: balanceAfterCancel - balanceBeforeCancel,
+    expected: 50
   })
 
   assert({
