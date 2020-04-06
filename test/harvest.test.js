@@ -346,10 +346,10 @@ describe("Harvest General", async assert => {
     })),
     expected: [{
       account: firstuser,
-      score: 100
+      score: 50
     }, {
       account: seconduser,
-      score: 50
+      score: 0
     }]
   })
 
@@ -357,14 +357,14 @@ describe("Harvest General", async assert => {
     given: 'transactions calculation',
     should: 'assign transactions score to each user',
     actual: rewards.rows.map(({ transactions_score }) => transactions_score).sort((a, b) => b - a),
-    expected: [100, 50]
+    expected: [50, 0]
   })
 
   assert({
     given: 'reputation calculation',
     should: 'assign reputation multiplier to each user',
     actual: rewards.rows.map(({ reputation_score }) => reputation_score),
-    expected: [50, 100]
+    expected: [0, 50]
   })
 
   assert({
@@ -433,7 +433,7 @@ describe("harvest planted score", async assert => {
     given: 'planted calculation',
     should: 'have valies',
     actual: harvestStats.rows.map(({ planted_score }) => planted_score),
-    expected: [100, 50]
+    expected: [50, 0]
   })
 
 })
@@ -490,15 +490,15 @@ describe("harvest transaction score", async assert => {
     //console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
 
     assert({
-      given: 'transaction points',
-      should: 'have expected values',
+      given: 'transaction points ' + given,
+      should: 'have expected values ' + should,
       actual: txpoints.rows.map(({ points }) => points),
       expected: points
     })
 
     assert({
-      given: 'transaction scores',
-      should: 'have expected values',
+      given: 'transaction scores ' + given,
+      should: 'have expected values ' + should,
       actual: harvestStats.rows.map(({ transactions_score }) => transactions_score),
       expected: scores
     })
@@ -514,13 +514,13 @@ describe("harvest transaction score", async assert => {
   console.log('calculate tx scores with reputation')
   await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await checkScores([20, 0, 0, 0], [100, 0, 0, 0], "1 reputation, 1 tx", "100 score")
+  await checkScores([16, 0, 0, 0], [75, 0, 0, 0], "1 reputation, 1 tx", "100 score")
 
   console.log("transfer with 10 rep, 2 accounts have rep")
   await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
   await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await checkScores([15, 20, 0, 0], [75, 100, 0, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([11, 16, 0, 0], [50, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
@@ -533,13 +533,13 @@ describe("harvest transaction score", async assert => {
     // score from before was 15
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
   }
-  await checkScores([53, 20, 0, 0], [100, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([36, 16, 0, 0], [75, 50, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
-  let third_user_rep_multiplier = 2 
+  let third_user_rep_multiplier = 2 * 0.7575
   await contracts.token.transfer(seconduser, thirduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${seconduser}@active` })
-  await checkScores([53, 20 + tx_max_points * third_user_rep_multiplier, 0, 0], [75, 100, 0, 0], "large tx", "100, 75 score")
+  await checkScores([36, parseInt(16 + tx_max_points * third_user_rep_multiplier), 0, 0], [50, 75, 0, 0], "large tx", "100, 75 score")
   
   // send back 
   await contracts.token.transfer(thirduser, seconduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${thirduser}@active` })
@@ -568,14 +568,14 @@ describe("harvest transaction score", async assert => {
     given: 'contribution score points',
     should: 'have contribution score',
     actual: cspoints.rows.map(({ contribution_points }) => contribution_points), 
-    expected: [0, 150, 0, 0]
+    expected: [0, 75, 0, 0]
   })
 
   assert({
     given: 'contribution score',
     should: 'have contribution score',
     actual: harvestStats.rows.map(({ contribution_score }) => contribution_score), 
-    expected: [0, 100, 0, 0]
+    expected: [0, 75, 0, 0]
   })
 
 })
@@ -627,15 +627,15 @@ describe("harvest community building score", async assert => {
     //console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
 
     assert({
-      given: 'cbs points',
-      should: 'have expected values',
+      given: 'cbs points '+given,
+      should: 'have expected values '+should,
       actual: cbs.rows.map(({ community_building_score }) => community_building_score),
       expected: points
     })
 
     assert({
-      given: 'cbs scores',
-      should: 'have expected values',
+      given: 'cbs scores '+given,
+      should: 'have expected values '+should,
       actual: harvestStats.rows.map(({ community_building_score }) => community_building_score),
       expected: scores
     })
@@ -649,14 +649,14 @@ describe("harvest community building score", async assert => {
 
   console.log('calculate cbs scores')
   await contracts.accounts.testsetcbs(firstuser, 1, { authorization: `${accounts}@active` })
-  await checkScores([1], [100], "1 cbs", "100 score")
+  await checkScores([1], [0], "1 cbs", "100 score")
 
   await contracts.accounts.testsetcbs(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetcbs(thirduser, 3, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetcbs(fourthuser, 0, { authorization: `${accounts}@active` })
 
   await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  await checkScores([1, 2, 3, 0], [50, 75, 100, 0], "cbs distribution", "correct")
+  await checkScores([1, 2, 3, 0], [25, 50, 75, 0], "cbs distribution", "correct")
 })
 
 describe("plant for other user", async assert => {
