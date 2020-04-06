@@ -198,6 +198,14 @@ void onboarding::deposit(name from, name to, asset quantity, string memo) {
 }
 
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash);
+}
+
+void onboarding::invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash);
+}
+
+void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
   require_auth(sponsor);
 
   asset total_quantity = asset(transfer_quantity.amount + sow_quantity.amount, seeds_symbol);
@@ -221,7 +229,7 @@ void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantit
     invite.invite_id = invites.available_primary_key();
     invite.transfer_quantity = transfer_quantity;
     invite.sow_quantity = sow_quantity;
-    invite.sponsor = sponsor;
+    invite.sponsor = referrer;
     invite.account = name("");
     invite.invite_hash = invite_hash;
     invite.invite_secret = empty_checksum;

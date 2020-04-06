@@ -25,6 +25,7 @@ CONTRACT onboarding : public contract {
     ACTION reset();
     ACTION deposit(name from, name to, asset quantity, string memo);
     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
+    ACTION invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
@@ -44,6 +45,7 @@ CONTRACT onboarding : public contract {
     void add_referral(name sponsor, name account);
     void invitevouch(name sponsor, name account);
     void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
+    void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
 
     TABLE invite_table {
       uint64_t invite_id;
@@ -90,7 +92,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(accept)(onboardorg)(acceptnew)(acceptexist)(cancel))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(acceptnew)(acceptexist)(cancel))
       }
   }
 }
