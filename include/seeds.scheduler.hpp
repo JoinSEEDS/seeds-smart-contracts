@@ -21,7 +21,8 @@ CONTRACT scheduler : public contract {
 
         ACTION execute();
 
-        ACTION configop(name id, name action, name contract, uint64_t period);
+        // specify start time any time in the future, or use 0 for "now"
+        ACTION configop(name id, name action, name contract, uint64_t period, uint64_t starttime);
 
         ACTION removeop(name id);
 
