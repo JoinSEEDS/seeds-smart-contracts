@@ -34,8 +34,8 @@ describe.only('scheduler', async assert => {
     await contracts.settings.configure('secndstoexec', 1, { authorization: `${settings}@active` })
 
     console.log('add operations')
-    await contracts.scheduler.configop('one', 'test1', 'cycle.seeds', 1, { authorization: `${scheduler}@active` })
-    await contracts.scheduler.configop('two', 'test2', 'cycle.seeds', 7, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('one', 'test1', 'cycle.seeds', 1, 0, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configop('two', 'test2', 'cycle.seeds', 7, 0, { authorization: `${scheduler}@active` })
 
     console.log('init test 1')
     await contracts.scheduler.test1({ authorization: `${scheduler}@active` })

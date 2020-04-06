@@ -150,8 +150,8 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
   check_user(creator);
 
-  if (fund == accounts.milestone) { // Milestone Seeds
-    check(recipient == accounts.hyphabank, "Hypha proposals must go to " + accounts.hyphabank.to_string() " - wrong recepient:" + recipient.to_string());
+  if (fund == accounts::milestone) { // Milestone Seeds
+    check(recipient == accounts::hyphabank, "Hypha proposals must go to " + accounts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
   } else {
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
