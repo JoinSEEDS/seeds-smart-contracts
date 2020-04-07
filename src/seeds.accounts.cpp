@@ -468,26 +468,21 @@ void accounts::testcitizen(name user)
   history_add_citizen(user);
 }
 
-void accounts::genesis(name user) // Remove this after Feb 2020
+void accounts::genesis(name user) // Remove this after April 2020
 { 
   require_auth(_self);
 
-  updatestatus(user, name("citizen"));
-}
+  // do resident
+  auto new_status = name("resident");
+  updatestatus(user, new_status);
+  rewards(user, new_status);
+  
+  // do citizen
+  new_status = name("citizen");
+  updatestatus(user, new_status);
+  rewards(user, new_status);
 
-void accounts::genesisrep() {
-  require_auth(_self);
-  auto uitr = users.begin();
-
-  while (uitr != users.end()) {
-    if (uitr -> status == "citizen"_n && uitr -> reputation < 100) {
-      users.modify(uitr, _self, [&](auto& user) {
-        user.reputation = 100;
-      });
-    }
-    uitr++;
-  }
-
+  history_add_citizen(user);
 }
 
 void accounts::testremove(name user)
