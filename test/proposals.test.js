@@ -347,6 +347,98 @@ describe('Proposals', async assert => {
 
 })
 
+
+describe('Proposals Quorum', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('set settings')
+  await contracts.settings.configure("propminstake", 2 * 10000, { authorization: `${settings}@active` })
+
+  // tested with 25 - pass, pass
+  // 33 - fail, pass
+  // 50 - fail, pass
+  // 51 - fail, fail
+  await contracts.settings.configure("propquorum", 33, { authorization: `${settings}@active` }) 
+  await contracts.settings.configure("propmajority", 50, { authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  await contracts.proposals.create(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  console.log('deposit stake 3')
+  await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  let users = [firstuser, seconduser, thirduser, fourthuser]
+  for (i = 0; i<users.length; i++ ) {
+    let user = users[i]
+    console.log('add voice '+user)
+    await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
+    await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
+  }
+
+
+  console.log('vote on first proposal')
+  await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+
+  console.log('vote on second proposal')
+  await contracts.proposals.favour(seconduser, 2, 3, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 3, { authorization: `${firstuser}@active` })
+
+  console.log('execute proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const props = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true
+  })
+
+  console.log("props "+JSON.stringify(props, null, 2))
+
+  assert({
+    given: 'failed proposal quorum',
+    should: 'be rejected',
+    actual: props.rows[0].status,
+    expected: 'rejected'
+  })
+
+
+  assert({
+    given: 'passed proposal quorum majority',
+    should: 'have passed',
+    actual: props.rows[1].status,
+    expected: "passed"
+  })
+
+})
 describe('Recepient invalid', async assert => {
 
   if (!isLocal()) {
