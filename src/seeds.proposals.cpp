@@ -31,15 +31,22 @@ void proposals::onperiod() {
     auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
     
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
+    uint64_t quorum = config.find(name("propquorum").value)->value;
 
     uint64_t min_stake = min_stake_param.value;
+    uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
+        votes_tables votes(get_self(), pitr->id);
+        uint64_t voters_number = distance(votes.begin(), votes.end());
+
         double majority = double(prop_majority.value) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        if (passed) {
+        bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+
+        if (passed && valid_quorum) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
               withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
               withdraw(pitr->recipient, pitr->staked, contracts::bank);
