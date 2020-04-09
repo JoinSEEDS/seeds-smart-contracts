@@ -263,6 +263,11 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
 
+  auto refitr = referrers.find(iitr->invite_id);
+  if (refitr != referrers.end()) {
+    referrers.erase(refitr);
+  }
+
   asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
 
   transfer_seeds(sponsor, total_quantity);

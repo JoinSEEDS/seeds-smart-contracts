@@ -52,6 +52,9 @@ describe('Onboarding', async assert => {
     const inviteSecret3 = await ramdom64ByteHexString()
     const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
 
+    const inviteSecret4 = await ramdom64ByteHexString()
+    const inviteHash4 = sha256(fromHexString(inviteSecret4)).toString('hex')
+
     const reset = async () => {
         if (!isLocal()) {
             console.log("Don't reset contracts on mainnet or testnet")
@@ -177,13 +180,67 @@ describe('Onboarding', async assert => {
         json: true
     })
 
-    console.log("invitefor - after "+ JSON.stringify(invitesAfter, null, 2))
+    //console.log("invitefor - after "+ JSON.stringify(invitesAfter, null, 2))
 
     console.log("REFS - after "+ JSON.stringify(refs, null, 2))
 
     let refererOfNewAccount = refs.rows.filter( (item) => item.invited == newAccount2)
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
+
+    console.log("cancel invite")
+    let getNumInvites = async () => {
+        invites = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'invites',
+            json: true,
+        })
+        return invites.rows.length
+
+    }
+    let getNumReferrers = async () => {
+        referrers = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'referrers',
+            json: true,
+        })
+        return referrers.rows.length
+    }
+
+    console.log("testing cancel")
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+
+    await contracts.onboarding.invite(firstuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
+    let invites1 = await getNumInvites()
+    let referrers1 = await getNumReferrers()
+    await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+    let invites1_after = await getNumInvites()
+    let referrers1_after = await getNumReferrers()
+
+    await contracts.onboarding.invitefor(firstuser, fourthuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
+
+    let invites2 = await getNumInvites()
+    let referrers2 = await getNumReferrers()
+    await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+    let invites2_after = await getNumInvites()
+    let referrers2_after = await getNumReferrers()
+
+    assert({
+        given: 'invite cancel',
+        should: 'end up with no invites',
+        actual: [invites1, referrers1, invites1_after, referrers1_after],
+        expected: [1, 0, 0, 0]
+    })
+
+    assert({
+        given: 'invite with referrer cancel',
+        should: 'end up with no invites',
+        actual: [invites2, referrers2, invites2_after, referrers2_after],
+        expected: [1, 1, 0, 0]
+    })
 
     assert({
         given: 'invited new user',
