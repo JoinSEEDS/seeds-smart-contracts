@@ -229,26 +229,16 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
 void proposals::cancel(uint64_t id) {
   auto pitr = props.find(id);
-
   check(pitr != props.end(), "Proposal not found");
+
   require_auth(pitr->creator);
   check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
 
-  props.modify(pitr, _self, [&](auto & proposal) {
-    proposal.status = name("cancel");
-  });
-}
-
-void proposals::refund(uint64_t id) {
-  auto pitr = props.find(id);
-
-  check(pitr != props.end(), "Proposal not found");
-  require_auth(pitr->creator);
-  check(pitr->status == name("cancel"), "Proposal state must be cancel");
-
+  // return stake
   withdraw(pitr->creator, pitr->staked, contracts::bank);
 
   props.erase(pitr);
+
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {

@@ -40,7 +40,10 @@ describe('Proposals', async assert => {
   console.log('create and cancel proposal')
   await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  const balanceBeforeCancel = await getBalance(firstuser)
   await contracts.proposals.cancel(4, { authorization: `${firstuser}@active` })
+  const balanceAfterCancel = await getBalance(firstuser)
 
   let notOwnerStake = true
   try {
@@ -48,26 +51,6 @@ describe('Proposals', async assert => {
     notOwnerStake = false
   } catch(err) {
     console.log('stake from not owner (failed)')
-  }
-
-  const balanceBeforeCancel = await getBalance(firstuser)
-  await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
-  const balanceAfterCancel = await getBalance(firstuser)
-
-  let notRefund = true
-  try {
-    await contracts.proposals.refund(4, { authorization: `${firstuser}@active` })
-    notRefund = false
-  } catch(err) {
-    console.log('proposal not found')
-  }
-
-  let proposalNotCancelled = true
-  try {
-    await contracts.proposals.refund(2, { authorization: `${firstuser}@active` })
-    proposalNotCancelled = false
-  } catch(err) {
-    console.log('Proposal state must be cancel')
   }
 
   console.log('update proposal')
@@ -108,6 +91,15 @@ describe('Proposals', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const activeProposals = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  let activeProps = activeProposals.rows.filter( item => item.stage == "active")
 
   const voiceBefore = await eos.getTableRows({
     code: proposals,
@@ -229,20 +221,6 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'refund called twice for the same proposal',
-    should: 'has error',
-    actual: notRefund,
-    expected: true
-  })
-
-  assert({
-    given: 'refund called twice for the same proposal',
-    should: 'has error',
-    actual: proposalNotCancelled,
-    expected: true
-  })
-
-  assert({
     given: 'stake from not owner',
     should: 'has error',
     actual: notOwnerStake,
@@ -254,6 +232,13 @@ describe('Proposals', async assert => {
     should: 'refund staked tokens',
     actual: balanceAfterCancel - balanceBeforeCancel,
     expected: 50
+  })
+
+  assert({
+    given: 'cancel proposal',
+    should: 'should not go active',
+    actual: activeProps.filter( item => item.id == 4).length,
+    expected: 0
   })
 
   assert({
@@ -421,7 +406,7 @@ describe('Proposals Quorum', async assert => {
     json: true
   })
 
-  console.log("props "+JSON.stringify(props, null, 2))
+  //console.log("props "+JSON.stringify(props, null, 2))
 
   assert({
     given: 'failed proposal quorum',
