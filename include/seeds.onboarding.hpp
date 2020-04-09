@@ -19,6 +19,7 @@ CONTRACT onboarding : public contract {
     onboarding(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         sponsors(receiver, receiver.value),
+        referrers(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value)
         {}
 
@@ -61,6 +62,13 @@ CONTRACT onboarding : public contract {
       checksum256 by_hash()const { return invite_hash; }
     };
 
+    TABLE referrer_table {
+      uint64_t invite_id;
+      name referrer;
+
+      uint64_t primary_key()const { return invite_id; }
+    };
+
     TABLE sponsor_table {
       name account;
       asset balance;
@@ -76,6 +84,7 @@ CONTRACT onboarding : public contract {
     > invite_tables;
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
+    typedef multi_index<"referrers"_n, referrer_table> referrer_tables;
 
     typedef eosio::multi_index<"users"_n, tables::user_table,
       indexed_by<"byreputation"_n,
@@ -84,6 +93,7 @@ CONTRACT onboarding : public contract {
 
     sponsor_tables sponsors;
     user_tables users;
+    referrer_tables referrers;
 
 };
 
