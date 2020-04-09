@@ -92,7 +92,14 @@ void accounts::vouch(name sponsor, name account) {
 void accounts::_vouch(name sponsor, name account) {
 
   auto uitrs = users.find(sponsor.value);
-  if (uitrs == users.end()) return;
+
+  if (uitrs == users.end()) {
+    return;
+  }
+
+  if (uitrs->type != individual) {
+    return; // only individuals can vouch
+  }
 
   check_user(account);
   vouch_tables vouch(get_self(), account.value);
