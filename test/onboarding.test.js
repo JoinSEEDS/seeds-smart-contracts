@@ -166,7 +166,7 @@ describe('Onboarding', async assert => {
         json: true,
     })
 
-    let referrers = await getTableRows({
+    let referrersA = await getTableRows({
         code: onboarding,
         scope: onboarding,
         table: 'referrers',
@@ -182,7 +182,9 @@ describe('Onboarding', async assert => {
 
     //console.log("invitefor - after "+ JSON.stringify(invitesAfter, null, 2))
 
-    console.log("REFS - after "+ JSON.stringify(refs, null, 2))
+    //console.log("REFS - after "+ JSON.stringify(refs, null, 2))
+    
+    console.log("invitefor - after referrersA "+ JSON.stringify(referrersA, null, 2))
 
     let refererOfNewAccount = refs.rows.filter( (item) => item.invited == newAccount2)
 
@@ -212,18 +214,30 @@ describe('Onboarding', async assert => {
     console.log("testing cancel")
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
     await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    let sponsors2 = await getSponsors()
+
+    console.log("sponsors2 "+JSON.stringify(sponsors2, null, 2))
 
     await contracts.onboarding.invite(firstuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
     let invites1 = await getNumInvites()
     let referrers1 = await getNumReferrers()
+
+    console.log("cancel")
+    let b1 = await getBalance(firstuser)
     await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+    let b1_after = await getBalance(firstuser)
+
     let invites1_after = await getNumInvites()
     let referrers1_after = await getNumReferrers()
 
-    await contracts.onboarding.invitefor(firstuser, fourthuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
+    console.log("testing cancel after invitefor")
+    await contracts.token.transfer(firstuser, onboarding, '17.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.onboarding.invitefor(firstuser, fourthuser, "12.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
 
     let invites2 = await getNumInvites()
     let referrers2 = await getNumReferrers()
+
+    console.log("cancel after invitefor")
     await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
     let invites2_after = await getNumInvites()
     let referrers2_after = await getNumReferrers()
@@ -234,6 +248,14 @@ describe('Onboarding', async assert => {
         actual: [invites1, referrers1, invites1_after, referrers1_after],
         expected: [1, 0, 0, 0]
     })
+
+    assert({
+        given: 'invite cancel',
+        should: 'return balance',
+        actual: b1_after,
+        expected: b1 + 16
+    })
+
 
     assert({
         given: 'invite with referrer cancel',
@@ -270,7 +292,7 @@ describe('Onboarding', async assert => {
     assert({
         given: 'add invite for referrer',
         should: 'have 1 result',
-        actual: referrers.rows.length,
+        actual: referrersA.rows.length,
         expected: 1
     })
 
