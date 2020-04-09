@@ -232,7 +232,7 @@ void proposals::cancel(uint64_t id) {
   check(pitr != props.end(), "Proposal not found");
 
   require_auth(pitr->creator);
-  check(pitr->status == name("cancel"), "Proposal state is not open, it can no longer be cancelled");
+  check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
 
   // return stake
   withdraw(pitr->creator, pitr->staked, contracts::bank);
