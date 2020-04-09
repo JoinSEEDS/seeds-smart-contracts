@@ -11,3 +11,4 @@ package-lock.json
 
 .vscode/settings.json
 .vscode/c_cpp_properties.json
+secrets_generated/
