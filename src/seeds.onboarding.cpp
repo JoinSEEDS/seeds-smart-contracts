@@ -104,12 +104,17 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   check(iitr != invites_byhash.end(), "invite not found ");
   check(iitr->invite_secret == empty_checksum, "already accepted");
 
+  name referrer = iitr->sponsor;
+  auto refitr = referrers.find(iitr->invite_id);
+  if (refitr != referrers.end()) {
+    referrer = refitr->referrer;
+  }
+
   invites_byhash.modify(iitr, get_self(), [&](auto& invite) {
     invite.account = account;
     invite.invite_secret = invite_secret;
   });
 
-  name sponsor = iitr->sponsor;
   asset transfer_quantity = iitr->transfer_quantity;
   asset sow_quantity = iitr->sow_quantity;
 
@@ -122,8 +127,8 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   
   if (!is_existing_seeds_user) {
     add_user(account, fullname, "individual"_n);
-    add_referral(sponsor, account);  
-    invitevouch(sponsor, account);
+    add_referral(referrer, account);  
+    invitevouch(referrer, account);
   }
 
   transfer_seeds(account, transfer_quantity);
@@ -154,6 +159,11 @@ void onboarding::reset() {
   auto sitr = sponsors.begin();
   while (sitr != sponsors.end()) {
     sitr = sponsors.erase(sitr);
+  }
+
+  auto ritr = referrers.begin();
+  while (ritr != referrers.end()) {
+    ritr = referrers.erase(ritr);
   }
   
   invite_tables invites (get_self(), get_self().value);
@@ -225,15 +235,24 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
 
   checksum256 empty_checksum;
 
+  uint64_t key = invites.available_primary_key();
+
   invites.emplace(get_self(), [&](auto& invite) {
-    invite.invite_id = invites.available_primary_key();
+    invite.invite_id = key;
     invite.transfer_quantity = transfer_quantity;
     invite.sow_quantity = sow_quantity;
-    invite.sponsor = referrer;
+    invite.sponsor = sponsor;
     invite.account = name("");
     invite.invite_hash = invite_hash;
     invite.invite_secret = empty_checksum;
   });
+
+  if (referrer != sponsor) {
+    referrers.emplace(get_self(), [&](auto& item) {
+      item.invite_id = key;
+      item.referrer = referrer;
+    });
+  }
 }
 
 void onboarding::cancel(name sponsor, checksum256 invite_hash) {
@@ -243,6 +262,11 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto invites_byhash = invites.get_index<"byhash"_n>();
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
+
+  auto refitr = referrers.find(iitr->invite_id);
+  if (refitr != referrers.end()) {
+    referrers.erase(refitr);
+  }
 
   asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
 

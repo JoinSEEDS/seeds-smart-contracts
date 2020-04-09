@@ -32,13 +32,16 @@ describe('Onboarding', async assert => {
     const totalQuantity = '15.0000 SEEDS'
     
     const newAccount = randomAccountName()
+    const newAccount2 = randomAccountName()
     console.log("New account "+newAccount)
 
     const keyPair = await createKeypair()
+    const keyPair2 = await createKeypair()
 
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
 
     const newAccountPublicKey = keyPair.public
+    const newAccountPublicKey2 = keyPair2.public
 
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
@@ -48,6 +51,9 @@ describe('Onboarding', async assert => {
 
     const inviteSecret3 = await ramdom64ByteHexString()
     const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
+
+    const inviteSecret4 = await ramdom64ByteHexString()
+    const inviteHash4 = sha256(fromHexString(inviteSecret4)).toString('hex')
 
     const reset = async () => {
         if (!isLocal()) {
@@ -146,20 +152,117 @@ describe('Onboarding', async assert => {
     await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
     await contracts.onboarding.invitefor(firstuser, fourthuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
 
+    console.log(`${onboarding}.accept from ${newAccount2}`)
+    await contracts.onboarding.accept(newAccount2, inviteSecret3, newAccountPublicKey2, { authorization: `${onboarding}@active` })    
+
     let invitesAfter = await getTableRows({
         code: onboarding,
         scope: onboarding,
         table: 'invites',
         key_type: 'name',
         index_position: 3,
-        lower_bound: seconduser,
-        upper_bound: seconduser,
+        lower_bound: fourthuser,
+        upper_bound: fourthuser,
         json: true,
     })
 
-    console.log("invite after "+ JSON.stringify(invitesAfter, null, 2))
+    let referrersA = await getTableRows({
+        code: onboarding,
+        scope: onboarding,
+        table: 'referrers',
+        json: true,
+    })
+
+    const refs = await getTableRows({
+        code: accounts,
+        scope: accounts,
+        table: 'refs',
+        json: true
+    })
+
+    //console.log("invitefor - after "+ JSON.stringify(invitesAfter, null, 2))
+
+    //console.log("REFS - after "+ JSON.stringify(refs, null, 2))
+    
+    console.log("invitefor - after referrersA "+ JSON.stringify(referrersA, null, 2))
+
+    let refererOfNewAccount = refs.rows.filter( (item) => item.invited == newAccount2)
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
+
+    console.log("cancel invite")
+    let getNumInvites = async () => {
+        invites = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'invites',
+            json: true,
+        })
+        return invites.rows.length
+
+    }
+    let getNumReferrers = async () => {
+        referrers = await getTableRows({
+            code: onboarding,
+            scope: onboarding,
+            table: 'referrers',
+            json: true,
+        })
+        return referrers.rows.length
+    }
+
+    console.log("testing cancel")
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    let sponsors2 = await getSponsors()
+
+    console.log("sponsors2 "+JSON.stringify(sponsors2, null, 2))
+
+    await contracts.onboarding.invite(firstuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
+    let invites1 = await getNumInvites()
+    let referrers1 = await getNumReferrers()
+
+    console.log("cancel")
+    let b1 = await getBalance(firstuser)
+    await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+    let b1_after = await getBalance(firstuser)
+
+    let invites1_after = await getNumInvites()
+    let referrers1_after = await getNumReferrers()
+
+    console.log("testing cancel after invitefor")
+    await contracts.token.transfer(firstuser, onboarding, '17.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.onboarding.invitefor(firstuser, fourthuser, "12.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
+
+    let invites2 = await getNumInvites()
+    let referrers2 = await getNumReferrers()
+
+    console.log("cancel after invitefor")
+    await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+    let invites2_after = await getNumInvites()
+    let referrers2_after = await getNumReferrers()
+
+    assert({
+        given: 'invite cancel',
+        should: 'end up with no invites',
+        actual: [invites1, referrers1, invites1_after, referrers1_after],
+        expected: [1, 0, 0, 0]
+    })
+
+    assert({
+        given: 'invite cancel',
+        should: 'return balance',
+        actual: b1_after,
+        expected: b1 + 16
+    })
+
+
+    assert({
+        given: 'invite with referrer cancel',
+        should: 'end up with no invites',
+        actual: [invites2, referrers2, invites2_after, referrers2_after],
+        expected: [1, 1, 0, 0]
+    })
 
     assert({
         given: 'invited new user',
@@ -185,6 +288,14 @@ describe('Onboarding', async assert => {
         actual: invitesBySponsor.rows.length,
         expected: 1
     })
+
+    assert({
+        given: 'add invite for referrer',
+        should: 'have 1 result',
+        actual: referrersA.rows.length,
+        expected: 1
+    })
+
     assert({
         given: 'search by sponsor user 2',
         should: 'contains sponsor',
@@ -192,18 +303,21 @@ describe('Onboarding', async assert => {
         expected: seconduser
     })
 
+
+    console.log("refererOfNewAccount "+JSON.stringify(refererOfNewAccount, null, 2))
+
     assert({
-        given: 'search by sponsor user 4',
+        given: 'search by referrer user 4',
         should: 'have 1 result',
-        actual: invitesAfter.rows.length,
+        actual: refererOfNewAccount.length,
         expected: 1
     })
 
     assert({
-        given: 'search by sponsor user 4',
-        should: 'contains sponsor',
-        actual: invitesAfter.rows[0].sponsor,
-        expected: seconduser
+        given: 'search by referrer user 4',
+        should: 'contains referrer',
+        actual: refererOfNewAccount[0].referrer,
+        expected: fourthuser
     })
 
 
