@@ -43,6 +43,8 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice();
 
+      ACTION syncvoicetbl();
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       
@@ -152,7 +154,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(syncvoicetbl))
       }
   }
 }

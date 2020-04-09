@@ -97,6 +97,16 @@ void proposals::onperiod() {
 void proposals::update_voice_table() {
   auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
   uint64_t voice_base = voice_param.value;
+  auto vitr = voice.begin();
+  while (vitr != voice.end()) {
+      voice.modify(vitr, _self, [&](auto& voice) {
+          voice.balance = voice_base;
+      });
+      vitr++;
+  }
+}
+
+void proposals::syncvoicetbl() {
 
   auto uitr = users.begin();
   
@@ -112,21 +122,11 @@ void proposals::update_voice_table() {
               voice.balance = 0;
           });
       } 
-
     }
-
     uitr++;
   }
-
-  auto vitr = voice.begin();
-  while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& voice) {
-          voice.balance = voice_base;
-      });
-      vitr++;
-  }
-
 }
+
 
 uint64_t proposals::get_cycle_period_sec() {
   auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
