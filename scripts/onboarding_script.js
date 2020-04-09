@@ -11,23 +11,58 @@ const { onboarding, token, accounts, harvest, firstuser } = names
 
 const bulk_cancel = async (sponsor, hashList) => {
     const contracts = await initContracts({ onboarding })
+    
+    let actions = []
+    actions.push( createCPUAction(sponsor) )
 
-    let try_again_hashes = []
+    let max_batched_actions = 27
 
     for (let i=0; i<hashList.length; i++) {
 
         let hash = hashList[i]
 
-        console.log("cancel invite with hash "+hash)
-
-        try {
-            await contracts.onboarding.cancel(sponsor, hash, { authorization: `${sponsor}@active` } )
-            
-        } catch (err) {
-            console.log("error canceling "+hash)
-            console.log(err)
+        let line = hash.split(",")
+        if (line.length>1) {
+            hash = line[1]
         }
+        if (hash.length < 20) {
+            continue
+        }
+        
+        console.log(i+ "/" +hashList.length + " cancel invite with hash "+hash)
+
+        let action = createCancelAction(sponsor, hash)
+
+        if (i > 0 && i % max_batched_actions == 0) {
+
+            const transactionResult = await eos.transaction({
+                actions: actions
+              }, {
+                blocksBehind: 3,
+                expireSeconds: 30,
+              });
+            
+              actions = []
+              actions.push( createCPUAction(sponsor) )
+
+              console.log("Cancelled through "+i)
+  
+        }
+
+        actions.push(action)
+
     }
+
+    if (actions.length > 0) {
+        console.log("Canceling remaining "+actions.length + " actions")
+        const transactionResult = await eos.transaction({
+            actions: actions
+          }, {
+            blocksBehind: 3,
+            expireSeconds: 30,
+          });
+    }
+
 }
 
 // max batched actions - 20 seemed to be stable, 44 would sometimes crash (not good, messy)
@@ -35,7 +70,7 @@ const bulk_cancel = async (sponsor, hashList) => {
 
 const max_batched_actions = 20 
 
-const bulk_invite = async (sponsor, num, totalAmount) => {
+const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
 
     totalAmount = parseInt(totalAmount)
     var secrets = "Secret,Hash,Seeds (total)\n"
@@ -68,13 +103,13 @@ const bulk_invite = async (sponsor, num, totalAmount) => {
         // in case something goes wrong!
         
         console.log("DISABLED comment transaction back in if you need to sponsor...")
-        return
+        //return
         // COMMENT THIS BACK IN
         //console.log("deposit "+depositAmmountSeeds)
         //await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
       
         for (i = 0; i < num; i++) {
-            let inv = await createInviteAction(sponsor, transferredSeeds, plantedSeeds)
+            let inv = await createInviteAction(sponsor, referrer, transferredSeeds, plantedSeeds)
     
             console.log("inviting "+(i+1) + "/" + num)
             console.log("secret "+inv.secret)
@@ -103,7 +138,7 @@ const bulk_invite = async (sponsor, num, totalAmount) => {
     
         console.log("secrets: "+secrets)
     
-        console.log("actions: " + JSON.stringify(actions, null, 2))
+        //console.log("actions: " + JSON.stringify(actions, null, 2))
     
         if (actions.length > 0) {
             const transactionResult = await eos.transaction({
@@ -134,19 +169,20 @@ const bulk_invite = async (sponsor, num, totalAmount) => {
 }
 
 
-const createInviteAction = async (sponsor, transfer, sow) => {
+const createInviteAction = async (sponsor, referrer, transfer, sow) => {
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
     const action = {
         account: 'join.seeds',
-        name: 'invite',
+        name: 'invitefor',
         authorization: [{
           actor: sponsor,
           permission: 'active',
         }],
         data: {
             sponsor: sponsor,
+            referrer: referrer,
             transfer_quantity: parseInt(transfer) + ".0000 SEEDS",
             sow_quantity: parseInt(sow) + '.0000 SEEDS',
             invite_hash: inviteHash,
@@ -160,6 +196,23 @@ const createInviteAction = async (sponsor, transfer, sow) => {
     return result   
 
 }
+const createCancelAction = (sponsor, hash) => {
+
+    const action = {
+        account: 'join.seeds',
+        name: 'cancel',
+        authorization: [{
+          actor: sponsor,
+          permission: 'active',
+        }],
+        data: {
+            sponsor: sponsor,
+            invite_hash: hash,
+        }
+      }
+      return action
+}
+
 
 const createCPUAction = (sponsor) => {
     return {
@@ -168,7 +221,7 @@ const createCPUAction = (sponsor) => {
         authorization: [
             {
                 actor: harvest,
-                permission: 'payforcpu',
+                permission: 'active',
             },
             {
                 actor: sponsor,
@@ -305,11 +358,12 @@ program
 //      quota:     1.432 MiB    used:     879.7 KiB  
 
 program
-  .command('bulk_invite <sponsor> <num> <totalAmount>')
+  .command('bulk_invite <sponsor> <referrer> <numberOfInvites> <numberOfSeedsPerInvite>')
   .description('Bulk invite new users')
-  .action(async function (param, num, totalAmount) {
-      console.log("generate "+num+" invites at " + totalAmount + " SEEDS" + " with sponsor " + param)
-    await bulk_invite(param, num, totalAmount)
+  .action(async function (sponsor, referrer, numberOfInvites, numberOfSeedsPerInvite) {
+      console.log("generate "+numberOfInvites+" invites at " + numberOfSeedsPerInvite + " SEEDS" + " with sponsor " + sponsor)
+      console.log("referrer: "+referrer)
+    await bulk_invite(sponsor, referrer, numberOfInvites, numberOfSeedsPerInvite)
   })
 
   program
