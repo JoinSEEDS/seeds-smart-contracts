@@ -23,7 +23,7 @@ namespace contracts {
   name organization = "orgs.seeds"_n;
   name exchange = "tlosto.seeds"_n;
 }
-namespace accounts {
+namespace bankaccts {
   name milestone = "milest.seeds"_n;
   name alliances = "allies.seeds"_n;
   name campaigns = "gift.seeds"_n;
