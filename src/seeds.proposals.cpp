@@ -81,15 +81,15 @@ void proposals::onperiod() {
 
     update_voice_table();
 
-    transaction trx{};
-    trx.actions.emplace_back(
-      permission_level(_self, "active"_n),
-      _self,
-      "onperiod"_n,
-      std::make_tuple()
-    );
-    trx.delay_sec = get_cycle_period_sec(); 
-    trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+    // transaction trx{};
+    // trx.actions.emplace_back(
+    //   permission_level(_self, "active"_n),
+    //   _self,
+    //   "onperiod"_n,
+    //   std::make_tuple()
+    // );
+    // trx.delay_sec = get_cycle_period_sec(); 
+    // trx.send(eosio::current_time_point().sec_since_epoch(), _self);
 
     update_cycle();
 }
