@@ -29,8 +29,6 @@ CONTRACT proposals : public contract {
 
       ACTION cancel(uint64_t id);
 
-      ACTION refund(uint64_t id);
-
       ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
 
       ACTION stake(name from, name to, asset quantity, string memo);
@@ -44,6 +42,8 @@ CONTRACT proposals : public contract {
       ACTION onperiod();
 
       ACTION decayvoice();
+
+      ACTION syncvoicetbl();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -154,7 +154,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(refund))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(syncvoicetbl))
       }
   }
 }
