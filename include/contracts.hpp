@@ -24,6 +24,9 @@ namespace contracts {
   name exchange = "tlosto.seeds"_n;
 }
 namespace accounts {
-  name milestone = "hypha.seeds"_n;
+  name milestone = "milest.seeds"_n;
+  name alliances = "allies.seeds"_n;
+  name campaigns = "gift.seeds"_n;
+
   name hyphabank = "seeds.hypha"_n;
 }

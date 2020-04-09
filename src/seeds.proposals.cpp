@@ -157,6 +157,9 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
   check_user(creator);
 
+  check(fund == accounts::milestone || fund == accounts::alliances || fund == accounts::campaigns, 
+  "Invalid fund - fund must be one of "+accounts::milestone.to_string() + ", "+ accounts::alliances.to_string() + ", " + accounts::campaigns.to_string() );
+
   if (fund == accounts::milestone) { // Milestone Seeds
     check(recipient == accounts::hyphabank, "Hypha proposals must go to " + accounts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
   } else {

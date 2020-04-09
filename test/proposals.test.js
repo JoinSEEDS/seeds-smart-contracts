@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, token, secondbank, firstuser, seconduser, thirduser, fourthuser } = names
+const { harvest, accounts, proposals, settings, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
 
 describe('Proposals', async assert => {
 
@@ -31,14 +31,14 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
-  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
-  await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
   console.log('create and cancel proposal')
-  await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.proposals.cancel(4, { authorization: `${firstuser}@active` })
 
@@ -147,7 +147,7 @@ describe('Proposals', async assert => {
   const balancesBefore = [
     await getBalance(firstuser),
     await getBalance(seconduser),
-    await getBalance(secondbank),
+    await getBalance(campaignbank),
   ]
 
   console.log('new citizen')
@@ -172,7 +172,7 @@ describe('Proposals', async assert => {
   const balancesAfter = [
     await getBalance(firstuser),
     await getBalance(seconduser),
-    await getBalance(secondbank),
+    await getBalance(campaignbank),
   ]
 
   const { rows } = await getTableRows({
@@ -277,7 +277,7 @@ describe('Proposals', async assert => {
       image: 'image2',
       url: 'url2',
       status: 'passed',
-      fund: secondbank,
+      fund: campaignbank,
     }
   })
 
@@ -302,7 +302,7 @@ describe('Proposals', async assert => {
       image: 'image',
       url: 'url',
       status: 'rejected',
-      fund: secondbank,
+      fund: campaignbank,
     }
   })
 
@@ -327,7 +327,7 @@ describe('Proposals', async assert => {
       image: 'image',
       url: 'url',
       status: 'rejected',
-      fund: secondbank,
+      fund: campaignbank,
     }
   })
 
@@ -382,9 +382,9 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.create(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
-  await contracts.proposals.create(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
-  await contracts.proposals.create(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
@@ -463,7 +463,7 @@ describe('Recepient invalid', async assert => {
   console.log('create proposal')
   var createdProp = false
   try {
-    await contracts.proposals.create(firstuser, "23", '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    await contracts.proposals.create(firstuser, "23", '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
     createdProp = true
     console.log('error')
   } catch (err) {
@@ -483,7 +483,7 @@ describe('Recepient invalid', async assert => {
   console.log('create proposal with non seeds user')
   var createNonSeedsUser = false
   try {
-    await contracts.proposals.create(secondbank, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', secondbank, { authorization: `${firstuser}@active` })
+    await contracts.proposals.create(milestonebank, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
     console.log('error')
     createNonSeedsUser = true
   } catch (err) {
