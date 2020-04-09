@@ -97,6 +97,16 @@ void proposals::onperiod() {
 void proposals::update_voice_table() {
   auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
   uint64_t voice_base = voice_param.value;
+  auto vitr = voice.begin();
+  while (vitr != voice.end()) {
+      voice.modify(vitr, _self, [&](auto& voice) {
+          voice.balance = voice_base;
+      });
+      vitr++;
+  }
+}
+
+void proposals::syncvoicetbl() {
 
   auto uitr = users.begin();
   
@@ -112,21 +122,11 @@ void proposals::update_voice_table() {
               voice.balance = 0;
           });
       } 
-
     }
-
     uitr++;
   }
-
-  auto vitr = voice.begin();
-  while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& voice) {
-          voice.balance = voice_base;
-      });
-      vitr++;
-  }
-
 }
+
 
 uint64_t proposals::get_cycle_period_sec() {
   auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
@@ -156,6 +156,9 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
   require_auth(creator);
 
   check_user(creator);
+
+  check(fund == accounts::milestone || fund == accounts::alliances || fund == accounts::campaigns, 
+  "Invalid fund - fund must be one of "+accounts::milestone.to_string() + ", "+ accounts::alliances.to_string() + ", " + accounts::campaigns.to_string() );
 
   if (fund == accounts::milestone) { // Milestone Seeds
     check(recipient == accounts::hyphabank, "Hypha proposals must go to " + accounts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
@@ -226,26 +229,16 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
 
 void proposals::cancel(uint64_t id) {
   auto pitr = props.find(id);
-
   check(pitr != props.end(), "Proposal not found");
+
   require_auth(pitr->creator);
   check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
 
-  props.modify(pitr, _self, [&](auto & proposal) {
-    proposal.status = name("cancel");
-  });
-}
-
-void proposals::refund(uint64_t id) {
-  auto pitr = props.find(id);
-
-  check(pitr != props.end(), "Proposal not found");
-  require_auth(pitr->creator);
-  check(pitr->status == name("cancel"), "Proposal state must be cancel");
-
+  // return stake
   withdraw(pitr->creator, pitr->staked, contracts::bank);
 
   props.erase(pitr);
+
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
