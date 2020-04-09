@@ -135,10 +135,10 @@ const accountsMetadata = (network) => {
       sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
-      firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
-      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
+      milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
-      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
@@ -162,10 +162,10 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      firstbank: account('gift.seeds',  '525000000.0000 SEEDS'),
-      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
+      milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
-      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
@@ -198,10 +198,10 @@ const accountsMetadata = (network) => {
 
       owner: account(owner),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
-      firstbank: account('gift.seeds',  '500000000.0000 SEEDS'),
-      secondbank: account('milest.seeds', '75000000.0000 SEEDS'),
+      campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
+      milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
-      fourthbank: account('allies.seeds','180000000.0000 SEEDS'),
+      alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
       fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
@@ -233,7 +233,13 @@ const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
 
 var permissions = [{
-  target: `${accounts.secondbank.account}@active`,
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.milestonebank.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.alliancesbank.account}@active`,
   actor: `${accounts.proposals.account}@active`
 }, {
   target: `${accounts.exchange.account}@active`,
