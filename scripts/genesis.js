@@ -186,7 +186,10 @@ program
     var text = fs.readFileSync(file)
     var textByLine = text.toString().split("\n")
     for (let i =0; i<textByLine.length; i++) {
-      await makecitizen(textByLine[i].toLowerCase(), true)
+      let acct = textByLine[i]
+      if (acct.length > 0) {
+        await makecitizen(textByLine[i].toLowerCase(), true)
+      }
     }
     //textByLine.forEach( async (user) => { await makecitizen(user, true) } )
 
