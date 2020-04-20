@@ -128,6 +128,8 @@ describe('vest and escrow', async assert => {
         json: true
     })
 
+    await contracts.token.transfer(seconduser, vstandescrow, "30.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+
     const secondUserBalanceBeforewithdraw = await getTableRows({
         code: token,
         scope: seconduser,
@@ -167,8 +169,28 @@ describe('vest and escrow', async assert => {
     await sleep(50)
     await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
 
+    const severalEscrowsBeforeClaim = await getTableRows({
+        code: vstandescrow,
+        scope: vstandescrow,
+        table: 'locks',
+        json: true
+    })
+    
+    const expectedEscrowLocks = 7
+
     await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
 
+    const expectedAdditionalSeeds = 3
+
+    const expectedRemainingLocks = 4
+
+    const secondUserBalanceAfterThreeEscrows = await getTableRows({
+        code: token,
+        scope: seconduser,
+        table: 'accounts',
+        json: true
+    })
+    
     const severalEscrowsAfter = await getTableRows({
         code: vstandescrow,
         scope: vstandescrow,
@@ -188,33 +210,50 @@ describe('vest and escrow', async assert => {
         should: 'create the sponsors entries in the sponsors table',
         actual: initialBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrow.seeds', balance: '200.0000 SEEDS' },
-            { sponsor: 'seedsuseraaa', balance: '150.0000 SEEDS' },
-            { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
-        ]
+            {
+                "sponsor": "seedsuseraaa",
+                "locked_balance": "0.0000 SEEDS",
+                "liquid_balance": "150.0000 SEEDS"
+              },
+              {
+                "sponsor": "seedsuserbbb",
+                "locked_balance": "0.0000 SEEDS",
+                "liquid_balance": "50.0000 SEEDS"
+              }]
+    })
+
+    let iinitialEscrowRows = initialEscrows.rows.map( row => {
+        delete row.vesting_date
+        delete row.created_date
+        delete row.updated_date
+        return row
     })
 
     assert({
         given: 'the initial escrows',
         shoule: 'create the correspondent entries in the escrows table',
-        actual: initialEscrows.rows.map( row => row),
+        actual: iinitialEscrowRows,
         expected: [
             {
-                id: 0,
-                sponsor: 'seedsuseraaa',
-                beneficiary: 'seedsuserbbb',
-                quantity: '20.0000 SEEDS',
-                vesting_date: vesting_date_passed,
-                type: 0
-            },
-            {
-                id: 1,
-                sponsor: 'seedsuserbbb',
-                beneficiary: 'seedsuseraaa',
-                quantity: '50.0000 SEEDS',
-                vesting_date: vesting_date_future,
-                type: 1
-            }
+                "id": 0,
+                "lock_type": "time",
+                "sponsor": "seedsuseraaa",
+                "beneficiary": "seedsuserbbb",
+                "quantity": "20.0000 SEEDS",
+                "trigger_event": "",
+                "trigger_source": "firstuser",
+                "notes": "notes",
+              },
+              {
+                "id": 1,
+                "lock_type": "time",
+                "sponsor": "seedsuserbbb",
+                "beneficiary": "seedsuseraaa",
+                "quantity": "50.0000 SEEDS",
+                "trigger_event": "",
+                "trigger_source": "seconduser",
+                "notes": "notes",
+              }
         ]
     })
 
@@ -230,17 +269,8 @@ describe('vest and escrow', async assert => {
     assert({
         given: 'the second user has claimed its escrow',
         should: 'erase its entry in the escrows table',
-        actual: escrows.rows.map(row => row),
-        expected: [
-            {
-                id: 1,
-                sponsor: 'seedsuserbbb',
-                beneficiary: 'seedsuseraaa',
-                quantity: '50.0000 SEEDS',
-                vesting_date: vesting_date_future,
-                type: 1
-            }
-        ]
+        actual: escrows.rows.length,
+        expected: 1
     })
 
     assert({
@@ -248,9 +278,8 @@ describe('vest and escrow', async assert => {
         should: 'get the sponsors balances correct',
         actual: middleBalances.rows.map(row => row),
         expected: [
-            { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
-            { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
-            { sponsor: 'seedsuserbbb', balance: '0.0000 SEEDS' }
+            { sponsor: 'seedsuseraaa', locked_balance: "0.0000 SEEDS", liquid_balance: '130.0000 SEEDS' },
+            { sponsor: 'seedsuserbbb', locked_balance: "50.0000 SEEDS", liquid_balance: '0.0000 SEEDS' }
         ]
     })
 
@@ -259,7 +288,6 @@ describe('vest and escrow', async assert => {
     //     should: 'update the sponsors balances correctly',
     //     actual: lastBalances.rows.map(row => row),
     //     expected: [
-    //         { sponsor: 'escrow.seeds', balance: '180.0000 SEEDS' },
     //         { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
     //         { sponsor: 'seedsuserbbb', balance: '50.0000 SEEDS' }
     //     ]
@@ -291,52 +319,30 @@ describe('vest and escrow', async assert => {
         given: 'the withdraw action called',
         should: 'update the sponsors table correctly',
         actual: withdrawBalances.rows.map(row => row),
-        expected: [
-            { sponsor: 'escrow.seeds', balance: '150.0000 SEEDS' },
-            { sponsor: 'seedsuseraaa', balance: '130.0000 SEEDS' },
-            { sponsor: 'seedsuserbbb', balance: '20.0000 SEEDS' }
+        expected: [      
+            { sponsor: 'seedsuseraaa', locked_balance: "0.0000 SEEDS", liquid_balance: '130.0000 SEEDS' },
+            { sponsor: 'seedsuserbbb', locked_balance: "50.0000 SEEDS", liquid_balance: '0.0000 SEEDS' }
         ]
     })
 
     assert({
         given: 'several escrows created',
+        should: 'have the correct number of escrows',
+        actual: severalEscrowsBeforeClaim.rows.length,
+        expected: 8
+    })
+
+    assert({
+        given: 'claimed available locks',
+        should: 'gained 3 seeds',
+        actual: parseFloat(secondUserBalanceAfterThreeEscrows.rows[0].balance).toFixed(4),
+        expected: (parseFloat(secondUserBalanceAfterwithdraw.rows[0].balance) + 3).toFixed(4)
+    })
+
+    assert({
+        given: 'several escrows created',
         should: 'claim all available escrows',
-        actual: severalEscrowsAfter.rows.map(row => row),
-        expected: [
-            {
-                id: 1,
-                sponsor: 'seedsuseraaa',
-                beneficiary: 'seedsuserbbb',
-                quantity: '1.0000 SEEDS',
-                vesting_date: vesting_date_future,
-                type: 0
-            },
-            {
-                id: 2,
-                sponsor: 'seedsuseraaa',
-                beneficiary: 'seedsuserccc',
-                quantity: '1.0000 SEEDS',
-                vesting_date: vesting_date_passed,
-                type: 0
-            },
-            {
-                id: 3,
-                sponsor: 'seedsuseraaa',
-                beneficiary: 'seedsuserccc',
-                quantity: '1.0000 SEEDS',
-                vesting_date: vesting_date_future,
-                type: 0
-            },
-            {
-                id: 5,
-                sponsor: 'seedsuseraaa',
-                beneficiary: 'seedsuserbbb',
-                quantity: '1.0000 SEEDS',
-                vesting_date: vesting_date_future,
-                type: 0
-            }
-        ]
+        actual: severalEscrowsAfter.rows.length,
+        expected: 5
     })
 })
-
-

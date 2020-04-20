@@ -53,7 +53,7 @@ void vstandescrow::lock (   const name&         lock_type,
     // check if the sponsor has enough balance
     auto it_b = sponsors.find(sponsor.value);        
     check(it_b != sponsors.end(), "vstandscrow: The user " + sponsor.to_string() + " does not have a balance entry");
-    check(it_b -> liquid_balance >= quantity, "vstandscrow: The sponsor " + sponsor.to_string() + " does not have enough balance");
+    check(it_b -> liquid_balance >= quantity, "vstandscrow lock: The sponsor " + sponsor.to_string() + " does not have enough balance");
     sponsors.modify(it_b, _self, [&](auto & msponsor){
         msponsor.liquid_balance -= quantity;
         msponsor.locked_balance += quantity;
@@ -120,7 +120,7 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     auto it = sponsors.find(sponsor.value);
     
     check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
-    check(it -> liquid_balance >= quantity, "vstandescrow: the sponsor " + sponsor.to_string() + " does not have enough balance");
+    check(it -> liquid_balance >= quantity, "vstandescrow withdraw: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
     auto token_account = contracts::token;
     token::transfer_action action{name(token_account), {_self, "active"_n}};
