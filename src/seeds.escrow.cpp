@@ -1,4 +1,4 @@
-#include <seeds.vstandescrow.hpp>
+#include <seeds.escrow.hpp>
 
 void vstandescrow::reset() {
     require_auth(get_self());
@@ -119,8 +119,8 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
 
     auto it = sponsors.find(sponsor.value);
     
-    check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
-    check(it -> liquid_balance >= quantity, "vstandescrow withdraw: the sponsor " + sponsor.to_string() + " does not have enough balance");
+    check(it != sponsors.end(), "escrow: the user " + sponsor.to_string() + " does not have a balance entry");
+    check(it -> liquid_balance >= quantity, "escrow withdraw: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
     auto token_account = contracts::token;
     token::transfer_action action{name(token_account), {_self, "active"_n}};

@@ -154,7 +154,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -181,7 +181,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -217,7 +217,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -446,8 +446,8 @@ var permissions = [{
   target: `${accounts.harvest.account}@payforcpu`,
   action: 'payforcpu'
 }, {
-  target: `${accounts.vstandescrow.account}@active`,
-  actor: `${accounts.vstandescrow.account}@eosio.code`
+  target: `${accounts.escrow.account}@active`,
+  actor: `${accounts.escrow.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

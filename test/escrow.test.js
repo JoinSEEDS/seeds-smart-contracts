@@ -1,7 +1,7 @@
 const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
-const { vstandescrow, accounts, token, firstuser, seconduser, thirduser } = names
+const { escrow, accounts, token, firstuser, seconduser, thirduser } = names
 const moment = require('moment');
 
 function sleep(ms) {
@@ -16,15 +16,15 @@ describe('vest and escrow', async assert => {
     }
     
     const contracts = await Promise.all([
-        eos.contract(vstandescrow),
+        eos.contract(escrow),
         eos.contract(accounts),
         eos.contract(token),
-    ]).then(([vstandescrow, accounts, token]) => ({
-        vstandescrow, accounts, token
+    ]).then(([escrow, accounts, token]) => ({
+        escrow, accounts, token
     }))
 
-    console.log('vstandescrow reset')
-    await contracts.vstandescrow.reset({ authorization: `${vstandescrow}@active` })
+    console.log('escrow reset')
+    await contracts.escrow.reset({ authorization: `${escrow}@active` })
 
     console.log('accounts reset')
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -34,12 +34,12 @@ describe('vest and escrow', async assert => {
     await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` }) 
 
     console.log('create balance')
-    await contracts.token.transfer(firstuser, vstandescrow, "150.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(seconduser, vstandescrow, "50.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+    await contracts.token.transfer(firstuser, escrow, "150.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(seconduser, escrow, "50.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
 
     const initialBalances = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'sponsors',
         json: true
     })
@@ -48,19 +48,19 @@ describe('vest and escrow', async assert => {
     const vesting_date_future = moment().utc().add(1000, 's').valueOf() * 1000;
     
     console.log('create escrow')
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '20.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
-    await contracts.vstandescrow.lock("time", seconduser, firstuser, '50.0000 SEEDS', "", "seconduser", vesting_date_future, "notes", { authorization: `${seconduser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '20.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", seconduser, firstuser, '50.0000 SEEDS', "", "seconduser", vesting_date_future, "notes", { authorization: `${seconduser}@active` })
 
     const initialEscrows = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'locks',
         json: true
     })
 
     try {
         console.log('creating an escrow without enough balance')
-        await contracts.vstandescrow.lock("time", firstuser, seconduser, '200.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+        await contracts.escrow.lock("time", firstuser, seconduser, '200.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     }
     catch(err) {
         const e = JSON.parse(err)
@@ -70,7 +70,7 @@ describe('vest and escrow', async assert => {
     let claimBeforeClaimShouldBeFalse = false
     try {
         console.log('try to claim before vesting date')
-        await contracts.vstandescrow.claim(firstuser, { authorization: `${firstuser}@active` })
+        await contracts.escrow.claim(firstuser, { authorization: `${firstuser}@active` })
         console.log('Error: Claim before vesting date worked')
         claimBeforeClaimShouldBeFalse = true
     }
@@ -87,11 +87,11 @@ describe('vest and escrow', async assert => {
     })
 
     console.log('claim escrow')
-    await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
+    await contracts.escrow.claim(seconduser, { authorization: `${seconduser}@active` })
 
     const escrows = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'locks',
         json: true
     })
@@ -104,31 +104,31 @@ describe('vest and escrow', async assert => {
     })
 
     const middleBalances = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'sponsors',
         json: true
     })
 
     // TODO put this back in!
     // console.log('cancel escrow')
-    // await contracts.vstandescrow.cancelescrow(seconduser, firstuser, { authorization: `${seconduser}@active` })
+    // await contracts.escrow.cancelescrow(seconduser, firstuser, { authorization: `${seconduser}@active` })
 
     const escrowsAfter = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'locks',
         json: true
     })
 
     const lastBalances = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'sponsors',
         json: true
     })
 
-    await contracts.token.transfer(seconduser, vstandescrow, "30.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+    await contracts.token.transfer(seconduser, escrow, "30.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
 
     const secondUserBalanceBeforewithdraw = await getTableRows({
         code: token,
@@ -138,11 +138,11 @@ describe('vest and escrow', async assert => {
     })
 
     console.log('withdraw')
-    await contracts.vstandescrow.withdraw(seconduser, '30.0000 SEEDS', { authorization: `${seconduser}@active` })
+    await contracts.escrow.withdraw(seconduser, '30.0000 SEEDS', { authorization: `${seconduser}@active` })
 
     const withdrawBalances = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'sponsors',
         json: true
     })
@@ -155,30 +155,30 @@ describe('vest and escrow', async assert => {
     })
 
     console.log('claim several escrows')
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, thirduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_future, "notes", { authorization: `${firstuser}@active` })
     await sleep(50)
-    await contracts.vstandescrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', "",  "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
 
     const severalEscrowsBeforeClaim = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'locks',
         json: true
     })
     
     const expectedEscrowLocks = 7
 
-    await contracts.vstandescrow.claim(seconduser, { authorization: `${seconduser}@active` })
+    await contracts.escrow.claim(seconduser, { authorization: `${seconduser}@active` })
 
     const expectedAdditionalSeeds = 3
 
@@ -192,8 +192,8 @@ describe('vest and escrow', async assert => {
     })
     
     const severalEscrowsAfter = await getTableRows({
-        code: vstandescrow,
-        scope: vstandescrow,
+        code: escrow,
+        scope: escrow,
         table: 'locks',
         json: true
     })
