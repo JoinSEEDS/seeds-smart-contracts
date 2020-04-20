@@ -175,7 +175,7 @@ program
   .description('make new citizen out of user')
   .action(async function (user) {
       console.log("make " + user + " a citizen of SEEDS!")
-    await makecitizen(user, true) 
+    await makecitizen(user.toLowerCase(), true) 
 })
 
 program
