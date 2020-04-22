@@ -146,7 +146,7 @@ const createKeyPermission = async (account, role, parentRole = 'active', key) =>
       const { keys } = required_auth
   
       if (keys.find(item => item.key === key)) {
-        console.log("createKeyPermission key already exists "+key)
+        console.log("- createKeyPermission key already exists "+key)
         return;
       }  
     }
@@ -183,7 +183,7 @@ const allowAction = async (account, role, action) => {
   } catch (err) {
     let errString = `failed allow action\n* error: ` + err + `\n`
     if (errString.includes("Attempting to update required authority, but new requirement is same as old")) {
-      console.log(`linkauth of ${account}@${action} for ${role} exists`)
+      console.log(`- linkauth of ${account}@${action} for ${role} exists`)
     } else {
       console.error(errString)
     }
