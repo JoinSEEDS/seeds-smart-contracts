@@ -35,6 +35,8 @@ CONTRACT proposals : public contract {
 
       ACTION addvoice(name user, uint64_t amount);
 
+      ACTION changetrust(name user, bool trust);
+
       ACTION favour(name user, uint64_t id, uint64_t amount);
 
       ACTION against(name user, uint64_t id, uint64_t amount);
@@ -56,7 +58,9 @@ CONTRACT proposals : public contract {
       void check_user(name account);
       void check_citizen(name account);
       void deposit(asset quantity);
-      void withdraw(name account, asset quantity, name sender);
+      void withdraw(name account, asset quantity, name sender, string memo);
+      void refund_staked(name beneficiary, asset quantity);
+      void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
 
@@ -154,7 +158,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(favour)(against)(onperiod)(decayvoice)(cancel)(syncvoicetbl))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(onperiod)(decayvoice)(cancel)(syncvoicetbl))
       }
   }
 }

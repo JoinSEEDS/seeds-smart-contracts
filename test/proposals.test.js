@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
+const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
 
 describe('Proposals', async assert => {
 
@@ -11,7 +11,7 @@ describe('Proposals', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
 
   const secondUserInitialBalance = await getBalance(seconduser)
 
@@ -24,26 +24,47 @@ describe('Proposals', async assert => {
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
-  console.log('create proposal')
+  console.log('create proposal '+campaignbank)
+
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
+  const numberOfProposals = async () => {
+    const props = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'props',
+      json: true,
+    })
+    return props.rows.length
+  }
+  
   console.log('create and cancel proposal')
-  await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'prop to cancel', 'will be canceled', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   
+  const numberOfProposalsBeforeCancel = await numberOfProposals()
+
   const balanceBeforeCancel = await getBalance(firstuser)
   await contracts.proposals.cancel(4, { authorization: `${firstuser}@active` })
   const balanceAfterCancel = await getBalance(firstuser)
+
+  const numberOfProposalsAfterCancel = await numberOfProposals()
+
+  console.log('create alliance proposal')
+  await contracts.proposals.create(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${fourthuser}@active` })
 
   let notOwnerStake = true
   try {
@@ -57,12 +78,16 @@ describe('Proposals', async assert => {
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
 
   console.log('deposit stake (memo 1)')
-  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
-  console.log('deposit stake (memo 1)')
-  await contracts.token.transfer(firstuser, proposals, '1000.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
 
   console.log('deposit stake (without memo)')
-  await contracts.token.transfer(seconduser, proposals, '1000.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('deposit stake (without memo)')
+  await contracts.token.transfer(fourthuser, proposals, '500.0000 SEEDS', '', { authorization: `${fourthuser}@active` })
 
   console.log('add voice')
   await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
@@ -98,6 +123,12 @@ describe('Proposals', async assert => {
     table: 'props',
     json: true,
   })
+  const theAllianceProp = activeProposals.rows.filter( item => item.fund == "allies.seeds")[0]
+
+
+  console.log("activeProposals: "+JSON.stringify(activeProposals, null, 2))
+
+  console.log("theAllianceProp: "+JSON.stringify(theAllianceProp, null, 2))
 
   let activeProps = activeProposals.rows.filter( item => item.stage == "active")
 
@@ -116,6 +147,11 @@ describe('Proposals', async assert => {
   console.log('favour second proposal but not enough for 80% majority')
   await contracts.proposals.against(seconduser, 2, 4, { authorization: `${seconduser}@active` })
   await contracts.proposals.favour(firstuser, 2, 6, { authorization: `${firstuser}@active` })
+
+  console.log('favour alliance proposal ' + theAllianceProp.id)
+  await contracts.proposals.favour(seconduser, theAllianceProp.id, 4, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, theAllianceProp.id, 4, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(thirduser, theAllianceProp.id, 4, { authorization: `${thirduser}@active` })
 
   var exceedBalanceHasError = true
   try {
@@ -145,6 +181,15 @@ describe('Proposals', async assert => {
   console.log('new citizen')
   await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
 
+  const voice111 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  console.log("voice "+JSON.stringify(voice111, null, 2))
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
@@ -167,6 +212,15 @@ describe('Proposals', async assert => {
     await getBalance(campaignbank),
   ]
 
+  const escrowLocks = await eos.getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true,
+  })
+
+  //console.log("escrow: "+JSON.stringify(escrowLocks, null, 2))
+  
   const { rows } = await getTableRows({
     code: proposals,
     scope: proposals,
@@ -210,7 +264,7 @@ describe('Proposals', async assert => {
     given: 'passed proposal',
     should: 'send reward and stake',
     actual: balancesAfter[0] - balancesBefore[0],
-    expected: 1100
+    expected: 600
   })
 
   assert({
@@ -235,10 +289,17 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'cancel proposal',
-    should: 'should not go active',
-    actual: activeProps.filter( item => item.id == 4).length,
-    expected: 0
+    given: 'before cancel proposal',
+    should: 'should have 4 proposals',
+    actual: numberOfProposalsBeforeCancel,
+    expected: 4
+  })
+  
+  assert({
+    given: 'after cancel proposal',
+    should: 'should have 3 proposals',
+    actual: numberOfProposalsAfterCancel,
+    expected: 3
   })
 
   assert({
@@ -329,6 +390,81 @@ describe('Proposals', async assert => {
     actual: [hasVoice(voiceBefore, fourthuser), hasVoice(voice2, fourthuser)],
     expected: [false, true]
   })
+
+  let escrowLock = escrowLocks.rows[0]
+
+  delete escrowLock.vesting_date
+  delete escrowLock.created_date
+  delete escrowLock.updated_date
+
+  assert({
+    given: 'alliance proposal passed',
+    should: 'have entry in escrow locks',
+    actual: escrowLock,
+    expected: {
+      "id": 0,
+      "lock_type": "event",
+      "sponsor": "allies.seeds",
+      "beneficiary": "seedsuserxxx",
+      "quantity": "12.0000 SEEDS",
+      "trigger_event": "golive",
+      "trigger_source": "dao.hypha",
+      "notes": "proposal id: 4",
+    }
+  })
+
+})
+
+describe('Change Trust', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+
+  let check = async (given, should, expected) => {
+    const voice = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'voice',
+      json: true,
+    })
+    //console.log('given ' + given + " : "  + JSON.stringify(voice))
+    assert({
+      given: given,
+      should: should,
+      actual: voice.rows.length,
+      expected: expected
+    })
+
+  }
+
+  await check("before", "empty", 0) 
+
+  await contracts.proposals.changetrust(firstuser, 1, { authorization: `${proposals}@active` })
+
+  await check("after", "has voice", 1) 
+
+  await contracts.proposals.changetrust(firstuser, 0, { authorization: `${proposals}@active` })
+
+  await check("off", "no voice", 0) 
+
+  await contracts.proposals.changetrust(firstuser, 1, { authorization: `${proposals}@active` })
+
+  await check("after", "has voice", 1) 
+
+  
 
 })
 

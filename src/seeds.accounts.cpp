@@ -423,6 +423,15 @@ void accounts::updatestatus(name user, name status)
   users.modify(uitr, _self, [&](auto& user) {
     user.status = status;
   });
+
+  bool trust = status == name("citizen");
+
+  action(
+    permission_level{contracts::proposals, "active"_n},
+    contracts::proposals, "changetrust"_n,
+    std::make_tuple(user, trust)
+  ).send();
+
 }
 
 void accounts::makecitizen(name user)
