@@ -260,6 +260,9 @@ var permissions = [{
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.harvest.account}@active`
 }, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.accounts.account}@active`
+}, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.proposals.account}@active`
 }, {

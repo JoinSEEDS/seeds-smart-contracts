@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, harvest, token, settings, organization, onboarding, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, proposals, harvest, token, settings, organization, onboarding, firstuser, seconduser, thirduser, fourthuser } = names
 
 const bulkadd = async (accounts, n) => {
   // todo import acount from helper, account creation func on local net
@@ -49,7 +49,7 @@ describe('genesis testing', async assert => {
 
   let reps = await get_reps()
 
-  console.log("reps: "+JSON.stringify(reps, null, 2))
+  //console.log("reps: "+JSON.stringify(reps, null, 2))
 
   assert({
     given: 'genesis reps',
@@ -74,6 +74,21 @@ const get_reps = async () => {
   return users.rows.map( ({ reputation }) => reputation )
 }
 
+const can_vote = async (user) => {
+  const voice = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    lower_bound: user,
+    upper_bound: user,
+    json: true,
+  })
+
+  console.log("checking for "+user+ "in voice table: "+JSON.stringify(voice))
+
+  return voice.rows.length == 1
+}
+
 describe('accounts', async assert => {
 
   if (!isLocal()) {
@@ -82,6 +97,7 @@ describe('accounts', async assert => {
   }
 
   const contract = await eos.contract(accounts)
+  const proposalsContract = await eos.contract(proposals)
   const thetoken = await eos.contract(token)
   const settingscontract = await eos.contract(settings)
 
@@ -141,13 +157,38 @@ describe('accounts', async assert => {
   }
 
   console.log('test citizen')
+
+
+  assert({
+    given: 'not citizen',
+    should: 'cant vote',
+    actual: await can_vote(firstuser),
+    expected: false
+  })
+
+  await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  assert({
+    given: 'citizen',
+    should: 'can',
+    actual: await can_vote(firstuser),
+    expected: true
+  })
+  await contract.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  assert({
+    given: 'resident',
+    should: 'cant vote',
+    actual: await can_vote(firstuser),
+    expected: false
+  })
+
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
   console.log('add vouch')
   await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
 
   let balanceBeforeResident = await getBalance(firstuser)
-  console.log('balanceBeforeResident'+balanceBeforeResident)
+  //console.log('balanceBeforeResident '+balanceBeforeResident)
 
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
@@ -160,7 +201,7 @@ describe('accounts', async assert => {
   })
 
   let balanceAfterResident = await getBalance(firstuser)
-  console.log('balanceAfterResident'+balanceAfterResident)
+  //console.log('balanceAfterResident'+balanceAfterResident)
 
   const vouch = await eos.getTableRows({
     code: accounts,
@@ -405,7 +446,7 @@ describe('vouching', async assert => {
     await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
     maxVouchExceeded = true
   } catch (err) {
-    console.log("err expected "+err)
+    //console.log("err expected "+err)
   }
 
 
@@ -456,7 +497,7 @@ describe('Ambassador and Org rewards', async assert => {
   let orgaccount = "testorg11111"
 
   console.log('ambassador invites a user named testorgowner')
-  let secret = await invite(ambassador, 800, true)
+  let secret = await invite(ambassador, 800, false)
 
   console.log('user accepts the invite and becomes a Seeds user')
   await accept(orgowner, secret, activePublicKey, contracts)
@@ -475,8 +516,8 @@ describe('Ambassador and Org rewards', async assert => {
   let orguser2 = "seedsorgusr2"
 
   console.log('org invites 2 users')
-  let secret1 = await invite(orgaccount, 50, true)
-  let secret2 = await invite(orgaccount, 100, true)
+  let secret1 = await invite(orgaccount, 50, false)
+  let secret2 = await invite(orgaccount, 100, false)
 
   await accept(orguser1, secret1, activePublicKey, contracts)
   await accept(orguser2, secret2, activePublicKey, contracts)
@@ -502,7 +543,7 @@ describe('Ambassador and Org rewards', async assert => {
   }
 
   let balancesBefore = await balances()
-  console.log("balances before "+JSON.stringify(balancesBefore, null, 2))
+  //console.log("balances before "+JSON.stringify(balancesBefore, null, 2))
 
   console.log("user 1 becomes resident")
   await contracts.accounts.testresident(orguser1, { authorization: `${accounts}@active` })
@@ -520,7 +561,7 @@ describe('Ambassador and Org rewards', async assert => {
   let balancesAfter3 = await balances()
   checkBalances("after citizen 2", balancesAfter2, [3, 12], balancesAfter3)
 
-  console.log("final balances "+JSON.stringify(balancesAfter3, null, 2))
+  //console.log("final balances "+JSON.stringify(balancesAfter3, null, 2))
 
 })
 
