@@ -201,7 +201,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     )
 
     if (existingPermission)
-      return console.error(`permission ${actor}@${actorRole} already exists for ${target}@${targetRole}`)
+      return console.error(`- permission ${actor}@${actorRole} already exists for ${target}@${targetRole}`)
 
     const permissions = {
       account: target,
@@ -227,7 +227,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     }
 
     await eos.updateauth(permissions, { authorization: `${target}@owner` })
-    console.log(`permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
+    console.log(`+ permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
   } catch (err) {
     console.error(`failed permission update on ${target} for ${actor}\n* error: ` + err + `\n`)
   }

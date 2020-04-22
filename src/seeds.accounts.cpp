@@ -525,6 +525,12 @@ void accounts::testremove(name user)
     }
   }
 
+  action(
+    permission_level{contracts::proposals, "active"_n},
+    contracts::proposals, "changetrust"_n,
+    std::make_tuple(user, false)
+  ).send();
+
   users.erase(uitr);
 }
 
