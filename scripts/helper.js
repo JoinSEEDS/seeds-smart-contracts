@@ -245,9 +245,6 @@ var permissions = [{
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
   target: `${accounts.accounts.account}@owner`,
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
