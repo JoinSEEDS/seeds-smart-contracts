@@ -372,6 +372,13 @@ var permissions = [{
   target: `${accounts.forum.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.proposals.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  action: 'onperiod'
+}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -419,16 +426,12 @@ var permissions = [{
   target: `${accounts.scheduler.account}@execute`,
   action: 'test2'
 }, {
-  target: `${accounts.referendums.account}@execute`,
+  target: `${accounts.referendums.account}@execute`, // TODO these active keys are not needed?!
   key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.referendums.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
 }, {
   target: `${accounts.proposals.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -461,6 +464,8 @@ if (isTestnet || isLocalNet) {
       key: testnetDevelopmentKey,
       parent: 'active'
   })
+  // Note: This overrides @execute permission on onperiod - this means that on testnet, the proposals contract 
+  // doesn't work with the scheduler
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
       action: 'onperiod'
