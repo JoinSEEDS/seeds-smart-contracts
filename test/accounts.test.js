@@ -84,7 +84,7 @@ const can_vote = async (user) => {
     json: true,
   })
 
-  console.log("checking for "+user+ "in voice table: "+JSON.stringify(voice))
+  console.log("checking for "+user+" in voice table: "+JSON.stringify(voice))
 
   return voice.rows.length == 1
 }
@@ -100,6 +100,9 @@ describe('accounts', async assert => {
   const proposalsContract = await eos.contract(proposals)
   const thetoken = await eos.contract(token)
   const settingscontract = await eos.contract(settings)
+
+  console.log('reset proposals')
+  await proposalsContract.reset({ authorization: `${proposals}@active` })
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -167,6 +170,7 @@ describe('accounts', async assert => {
   })
 
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
   assert({
     given: 'citizen',
     should: 'can',

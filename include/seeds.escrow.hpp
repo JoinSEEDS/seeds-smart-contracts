@@ -7,10 +7,10 @@
 using namespace eosio;
 using std::string;
 
-CONTRACT vstandescrow : public contract {
+CONTRACT escrow : public contract {
     public:
         using contract::contract;
-        vstandescrow(name receiver, name code, datastream<const char*> ds)
+        escrow(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
         locks(receiver, receiver.value),
         sponsors(receiver, receiver.value)
