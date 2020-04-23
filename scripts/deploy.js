@@ -146,7 +146,7 @@ const createKeyPermission = async (account, role, parentRole = 'active', key) =>
       const { keys } = required_auth
   
       if (keys.find(item => item.key === key)) {
-        console.log("createKeyPermission key already exists "+key)
+        console.log("- createKeyPermission key already exists "+key)
         return;
       }  
     }
@@ -183,7 +183,7 @@ const allowAction = async (account, role, action) => {
   } catch (err) {
     let errString = `failed allow action\n* error: ` + err + `\n`
     if (errString.includes("Attempting to update required authority, but new requirement is same as old")) {
-      console.log(`linkauth of ${account}@${action} for ${role} exists`)
+      console.log(`- linkauth of ${account}@${action} for ${role} exists`)
     } else {
       console.error(errString)
     }
@@ -201,7 +201,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     )
 
     if (existingPermission)
-      return console.error(`permission ${actor}@${actorRole} already exists for ${target}@${targetRole}`)
+      return console.error(`- permission ${actor}@${actorRole} already exists for ${target}@${targetRole}`)
 
     const permissions = {
       account: target,
@@ -227,7 +227,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     }
 
     await eos.updateauth(permissions, { authorization: `${target}@owner` })
-    console.log(`permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
+    console.log(`+ permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
   } catch (err) {
     console.error(`failed permission update on ${target} for ${actor}\n* error: ` + err + `\n`)
   }

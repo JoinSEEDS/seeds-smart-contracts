@@ -154,7 +154,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -181,7 +181,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -217,7 +217,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -245,9 +245,6 @@ var permissions = [{
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
   target: `${accounts.accounts.account}@owner`,
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
@@ -262,6 +259,9 @@ var permissions = [{
 }, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.harvest.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.accounts.account}@active`
 }, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.proposals.account}@active`
@@ -372,6 +372,13 @@ var permissions = [{
   target: `${accounts.forum.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.proposals.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  action: 'onperiod'
+}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -419,16 +426,12 @@ var permissions = [{
   target: `${accounts.scheduler.account}@execute`,
   action: 'test2'
 }, {
-  target: `${accounts.referendums.account}@execute`,
+  target: `${accounts.referendums.account}@execute`, // TODO these active keys are not needed?!
   key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.referendums.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
 }, {
   target: `${accounts.proposals.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -446,8 +449,8 @@ var permissions = [{
   target: `${accounts.harvest.account}@payforcpu`,
   action: 'payforcpu'
 }, {
-  target: `${accounts.vstandescrow.account}@active`,
-  actor: `${accounts.vstandescrow.account}@eosio.code`
+  target: `${accounts.escrow.account}@active`,
+  actor: `${accounts.escrow.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -461,6 +464,8 @@ if (isTestnet || isLocalNet) {
       key: testnetDevelopmentKey,
       parent: 'active'
   })
+  // Note: This overrides @execute permission on onperiod - this means that on testnet, the proposals contract 
+  // doesn't work with the scheduler
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
       action: 'onperiod'

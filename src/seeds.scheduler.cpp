@@ -127,7 +127,7 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period,
             noperation.operation = action;
             noperation.contract = contract;
             noperation.period = period;
-            noperation.timestamp = start;
+            noperation.timestamp = start - period;
         });
     }
 }
@@ -223,7 +223,6 @@ ACTION scheduler::execute() {
     tx.delay_sec = it_s -> value;
     tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
     
-
     // =======================
     // execute operations
     // =======================
@@ -234,7 +233,7 @@ ACTION scheduler::execute() {
     while(itr != ops_by_last_executed.end()) {
         if(is_ready_to_execute(itr -> id)){
 
-            print("Operation to be executed: " + itr -> id.to_string());
+            print("\nOperation to be executed: " + itr -> id.to_string());
 
             action a = action(
                 permission_level{itr -> contract, "execute"_n},

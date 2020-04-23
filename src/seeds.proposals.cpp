@@ -45,11 +45,19 @@ void proposals::onperiod() {
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
         bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+        bool is_alliance_type = pitr->fund == bankaccts::alliances;
+        bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
-              withdraw(pitr->recipient, pitr->quantity, pitr->fund);// TODO limit by amount available
-              withdraw(pitr->recipient, pitr->staked, contracts::bank);
+
+              refund_staked(pitr->recipient, pitr->staked);
+
+              if (is_alliance_type) {
+                send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
+              } else {
+                withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
+              }
 
               props.modify(pitr, _self, [&](auto& proposal) {
                   proposal.executed = true;
@@ -233,9 +241,8 @@ void proposals::cancel(uint64_t id) {
 
   require_auth(pitr->creator);
   check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
-
-  // return stake
-  withdraw(pitr->creator, pitr->staked, contracts::bank);
+  
+  refund_staked(pitr->creator, pitr->staked);
 
   props.erase(pitr);
 
@@ -361,6 +368,22 @@ void proposals::addvoice(name user, uint64_t amount)
     }
 }
 
+void proposals::changetrust(name user, bool trust)
+{
+    require_auth(get_self());
+
+    auto vitr = voice.find(user.value);
+
+    if (vitr == voice.end() && trust) {
+        voice.emplace(_self, [&](auto& voice) {
+            voice.account = user;
+            voice.balance = 0;
+        });
+    } else if (vitr != voice.end() && !trust) {
+        voice.erase(vitr);
+    }
+}
+
 void proposals::deposit(asset quantity)
 {
   utils::check_asset(quantity);
@@ -372,7 +395,35 @@ void proposals::deposit(asset quantity)
   action.send(_self, name(bank_account), quantity, "");
 }
 
-void proposals::withdraw(name beneficiary, asset quantity, name sender)
+void proposals::refund_staked(name beneficiary, asset quantity) {
+  withdraw(beneficiary, quantity, contracts::bank, "");
+}
+
+void proposals::send_to_escrow(name fromfund, name recipient, asset quantity, string memo) {
+
+    action(
+      permission_level{fromfund, "active"_n},
+      contracts::token, "transfer"_n,
+      std::make_tuple(fromfund, contracts::escrow, quantity, memo))
+  .send();
+
+  action(
+      permission_level{fromfund, "active"_n},
+      contracts::escrow, "lock"_n,
+      std::make_tuple("event"_n, 
+                      fromfund,
+                      recipient,
+                      quantity,
+                      "golive"_n,
+                      "dao.hypha"_n,
+                      time_point(current_time_point().time_since_epoch() + 
+                                  current_time_point().time_since_epoch()),  // long time from now
+                      memo))
+  .send();
+
+}
+
+void proposals::withdraw(name beneficiary, asset quantity, name sender, string memo)
 {
   if (quantity.amount == 0) return;
 
@@ -381,7 +432,7 @@ void proposals::withdraw(name beneficiary, asset quantity, name sender)
   auto token_account = contracts::token;
 
   token::transfer_action action{name(token_account), {sender, "active"_n}};
-  action.send(sender, beneficiary, quantity, "");
+  action.send(sender, beneficiary, quantity, memo);
 }
 
 void proposals::burn(asset quantity)

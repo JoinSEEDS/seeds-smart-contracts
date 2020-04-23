@@ -1,6 +1,6 @@
-#include <seeds.vstandescrow.hpp>
+#include <seeds.escrow.hpp>
 
-void vstandescrow::reset() {
+void escrow::reset() {
     require_auth(get_self());
 
     auto it_e = locks.begin();
@@ -15,17 +15,17 @@ void vstandescrow::reset() {
 }
 
 
-void vstandescrow::init_balance(name user) {
+void escrow::init_balance(name user) {
     auto it = sponsors.find(user.value);
     
 }
 
-void vstandescrow::check_asset(asset quantity) {
+void escrow::check_asset(asset quantity) {
     check(quantity.is_valid(), "invalid asset");
     check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
-void vstandescrow::trigger (const name&     trigger_source,
+void escrow::trigger (const name&     trigger_source,
                             const name&     event_name,
                             const string&   notes) {
     require_auth (trigger_source);
@@ -37,7 +37,7 @@ void vstandescrow::trigger (const name&     trigger_source,
     });
 }
 
-void vstandescrow::lock (   const name&         lock_type, 
+void escrow::lock (   const name&         lock_type, 
                             const name&         sponsor, 
                             const name&         beneficiary,
                             const asset&        quantity, 
@@ -72,7 +72,7 @@ void vstandescrow::lock (   const name&         lock_type,
     });
 }
 
-void vstandescrow::cancellock (const uint64_t& lock_id) {
+void escrow::cancellock (const uint64_t& lock_id) {
 
     auto l_itr = locks.find (lock_id);
     check (l_itr != locks.end(), "Lock ID " + std::to_string(lock_id) + " does not exist.");
@@ -88,7 +88,7 @@ void vstandescrow::cancellock (const uint64_t& lock_id) {
     locks.erase (l_itr);
 }
 
-void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
+void escrow::ontransfer(name from, name to, asset quantity, string memo) {
    
     // only catch transfer to self of the SEEDS symbol (could be opened up, but would require other data structure changes)
     // get_first_receiver confirms that the tokens came from the right account
@@ -112,15 +112,15 @@ void vstandescrow::ontransfer(name from, name to, asset quantity, string memo) {
 }
 
 // TODO: should not allow withdraw with funds that have associated locks
-void vstandescrow::withdraw(name sponsor, asset quantity) {
+void escrow::withdraw(name sponsor, asset quantity) {
     require_auth(sponsor);
 
     check_asset(quantity);  
 
     auto it = sponsors.find(sponsor.value);
     
-    check(it != sponsors.end(), "vstandescrow: the user " + sponsor.to_string() + " does not have a balance entry");
-    check(it -> liquid_balance >= quantity, "vstandescrow withdraw: the sponsor " + sponsor.to_string() + " does not have enough balance");
+    check(it != sponsors.end(), "escrow: the user " + sponsor.to_string() + " does not have a balance entry");
+    check(it -> liquid_balance >= quantity, "escrow withdraw: the sponsor " + sponsor.to_string() + " does not have enough balance");
 
     auto token_account = contracts::token;
     token::transfer_action action{name(token_account), {_self, "active"_n}};
@@ -133,7 +133,7 @@ void vstandescrow::withdraw(name sponsor, asset quantity) {
     });
 }
 
-void vstandescrow::deduct_from_sponsor (name sponsor, asset locked_quantity) {
+void escrow::deduct_from_sponsor (name sponsor, asset locked_quantity) {
     auto it_c = sponsors.find(sponsor.value);
 
     // TODO: if it's the last of this sponsor's balance, erase record
@@ -142,7 +142,7 @@ void vstandescrow::deduct_from_sponsor (name sponsor, asset locked_quantity) {
     });
 }
 
-void vstandescrow::claim(name beneficiary) {
+void escrow::claim(name beneficiary) {
     require_auth(beneficiary);
 
     auto locks_by_beneficiary = locks.get_index<"bybneficiary"_n>();

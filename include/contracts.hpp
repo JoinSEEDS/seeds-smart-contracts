@@ -22,6 +22,7 @@ namespace contracts {
   name scheduler = "cycle.seeds"_n;
   name organization = "orgs.seeds"_n;
   name exchange = "tlosto.seeds"_n;
+  name escrow = "escrow.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;
