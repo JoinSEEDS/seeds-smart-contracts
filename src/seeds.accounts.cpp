@@ -381,9 +381,9 @@ void accounts::send_reward(name beneficiary, asset quantity) {
   // TODO: Send from the referral rewards pool
 
   action(
-    permission_level{_self, "active"_n},
+    permission_level{bankaccts::referrals, "active"_n},
     contracts::token, "transfer"_n,
-    make_tuple(_self, beneficiary, quantity, memo)
+    make_tuple(bankaccts::referrals, beneficiary, quantity, memo)
   ).send();
 }
 
