@@ -387,6 +387,15 @@ void accounts::send_reward(name beneficiary, asset quantity) {
   ).send();
 }
 
+void accounts::testreward() {
+  require_auth(get_self());
+
+  asset quantity(1, seeds_symbol);
+
+  send_reward("accts.seeds"_n, quantity);
+
+}
+
 void accounts::makeresident(name user)
 {
     auto uitr = users.find(user.value);
