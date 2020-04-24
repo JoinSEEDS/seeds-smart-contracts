@@ -102,11 +102,11 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
         // todo make this transfer part of the transaction that adds the accounts!
         // in case something goes wrong!
         
-        console.log("DISABLED comment transaction back in if you need to sponsor...")
+        //console.log("DISABLED comment transaction back in if you need to sponsor...")
         //return
         // COMMENT THIS BACK IN
-        //console.log("deposit "+depositAmmountSeeds)
-        //await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
+        console.log("deposit "+depositAmmountSeeds)
+        await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
       
         for (i = 0; i < num; i++) {
             let inv = await createInviteAction(sponsor, referrer, transferredSeeds, plantedSeeds)
