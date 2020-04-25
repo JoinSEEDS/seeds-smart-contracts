@@ -139,7 +139,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -166,7 +166,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -202,7 +202,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -241,6 +241,9 @@ var permissions = [{
 }, {
   target: `${accounts.alliancesbank.account}@active`,
   actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.ambassadorsandreferralsbank.account}@active`,
+  actor: `${accounts.accounts.account}@active`
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`

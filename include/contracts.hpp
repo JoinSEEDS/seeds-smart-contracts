@@ -28,6 +28,7 @@ namespace bankaccts {
   name milestone = "milest.seeds"_n;
   name alliances = "allies.seeds"_n;
   name campaigns = "gift.seeds"_n;
+  name referrals = "refer.seeds"_n;
 
   name hyphabank = "seeds.hypha"_n;
 }
