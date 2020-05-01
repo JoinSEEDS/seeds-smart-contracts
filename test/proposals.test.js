@@ -144,6 +144,7 @@ describe('Proposals', async assert => {
 
   console.log('new citizen')
   await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+  await contracts.harvest.testupdatecs(fourthuser, 90, { authorization: `${harvest}@active` })
 
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })

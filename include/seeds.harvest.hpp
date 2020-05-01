@@ -60,6 +60,8 @@ CONTRACT harvest : public contract {
 
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
+    ACTION testupdatecs(name account, uint64_t contribution_score);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
@@ -259,7 +261,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)(testupdatecs))
       }
   }
 }
