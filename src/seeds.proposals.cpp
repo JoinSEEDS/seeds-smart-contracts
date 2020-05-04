@@ -97,9 +97,12 @@ void proposals::onperiod() {
 void proposals::update_voice_table() {
   auto vitr = voice.begin();
   while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& item) {
-          item.balance = harveststat.get(item.account.value).contribution_score;
-      });
+      auto csitr = harveststat.find(vitr->account.value);
+      if (csitr != harveststat.end()) {
+        voice.modify(vitr, _self, [&](auto& item) {
+          item.balance = csitr->contribution_score;
+        });
+      }
       vitr++;
   }
 }
