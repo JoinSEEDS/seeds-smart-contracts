@@ -3,7 +3,7 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal, initContracts: initContractsHelper, names } = require('./helper')
+const { isLocal, initContracts: initContractsHelper, names, allContractNames, allBankAccountNames } = require('./helper')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
@@ -182,12 +182,15 @@ program
     await updatePermissionAction()
   })
 
-  // program // NOT IN USE AT THE MOMENT
-  // .command('startHarvestCalculations')
-  // .description('Start calculations on harvest contract')
-  // .action(async function(contract) {
-  //   await startHarvestCalculations()
-  // })
+  program
+  .command('list')
+  .description('List all contracts / accounts')
+  .action(async function() {
+    console.print("\nSeeds Bank Accounts\n")
+    allBankAccountNames.forEach(item=>console.print(item))
+    console.print("\nSeeds Contracts\n")
+    allContractNames.forEach(item=>console.print(item))
+  })
 
 
 program.parse(process.argv)

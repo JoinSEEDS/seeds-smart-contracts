@@ -5,11 +5,19 @@ const { eos, isLocal, encodeName, getBalance, accounts, ownerPublicKey, activePu
 
 const debug = process.env.DEBUG || false
 
+console.print = ((showMessage) => {
+  return (msg) => {
+    showMessage(msg)
+  }
+})(console.log)
+
 console.log = ((showMessage) => {
   return (msg) => {
     showMessage('+ ', msg)
   }
 })(console.log)
+
+
 
 console.error = ((showMessage) => {
   return (msg, err) => {

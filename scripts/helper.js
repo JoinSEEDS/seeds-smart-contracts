@@ -231,6 +231,19 @@ const accountsMetadata = (network) => {
 
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
+const allContractNames = []
+const allBankAccountNames = []
+for (let [key, value] of Object.entries(names)) {
+  if (accounts[key].type=="contract" || accounts[key].type=="token") {
+    allContractNames.push(value)
+  } else {
+    if (value.indexOf(".seeds") != -1) {
+      allBankAccountNames.push(value)
+    }
+  }
+}
+allContractNames.sort()
+allBankAccountNames.sort()
 
 var permissions = [{
   target: `${accounts.campaignbank.account}@active`,
@@ -559,6 +572,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allBankAccountNames
 }
 
