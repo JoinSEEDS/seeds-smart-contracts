@@ -21,6 +21,9 @@ describe('Proposals', async assert => {
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
@@ -89,6 +92,11 @@ describe('Proposals', async assert => {
     console.log('against second proposal (failed)')
   }
 
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
+
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
@@ -144,18 +152,19 @@ describe('Proposals', async assert => {
 
   console.log('new citizen')
   await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
-  await contracts.harvest.testupdatecs(fourthuser, 90, { authorization: `${harvest}@active` })
+  await contracts.proposals.addvoice(fourthuser, 0, { authorization: `${proposals}@active` })
+  await contracts.harvest.testupdatecs(fourthuser, 80, { authorization: `${harvest}@active` })
 
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
-  const voice2 = await eos.getTableRows({
+  const voiceAfter = await eos.getTableRows({
     code: proposals,
     scope: proposals,
     table: 'voice',
     json: true,
   })
-
+  
   const hasVoice = (voices, user) => {
     return voices.rows.filter(
       (item) => item.account == user
@@ -188,9 +197,30 @@ describe('Proposals', async assert => {
 
   assert({
     given: 'voice reset after onperiod',
-    should: 'have standard amount of voice',
-    actual: voice,
-    expected: 77 // NOTE THIS will be dynamic and based on rank
+    should: 'have amount of voice proportional to contribution score',
+    actual: voiceAfter.rows[0].balance,
+    expected: 20
+  })
+  
+  assert({
+    given: 'voice reset after onperiod',
+    should: 'hahave amount of voice proportional to contribution score',
+    actual: voiceAfter.rows[1].balance,
+    expected: 40
+  })
+  
+  assert({
+    given: 'voice reset after onperiod',
+    should: 'have amount of voice proportional to contribution score',
+    actual: voiceAfter.rows[2].balance,
+    expected: 60
+  })
+  
+  assert({
+    given: 'voice reset after onperiod',
+    should: 'have amount of voice proportional to contribution score',
+    actual: voiceAfter.rows[3].balance,
+    expected: 80
   })
 
   assert({
@@ -327,7 +357,7 @@ describe('Proposals', async assert => {
   assert({
     given: 'new citizen was added',
     should: 'be added to voice on new cycle',
-    actual: [hasVoice(voiceBefore, fourthuser), hasVoice(voice2, fourthuser)],
+    actual: [hasVoice(voiceBefore, fourthuser), hasVoice(voiceAfter, fourthuser)],
     expected: [false, true]
   })
 
