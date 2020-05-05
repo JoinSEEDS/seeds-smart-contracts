@@ -197,28 +197,28 @@ describe('Proposals', async assert => {
 
   assert({
     given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score',
+    should: 'have amount of voice proportional to contribution score (first account)',
     actual: voiceAfter.rows[0].balance,
     expected: 20
   })
   
   assert({
     given: 'voice reset after onperiod',
-    should: 'hahave amount of voice proportional to contribution score',
+    should: 'have amount of voice proportional to contribution score (second account)',
     actual: voiceAfter.rows[1].balance,
     expected: 40
   })
   
   assert({
     given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score',
+    should: 'have amount of voice proportional to contribution score (third account)',
     actual: voiceAfter.rows[2].balance,
     expected: 60
   })
   
   assert({
     given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score',
+    should: 'have amount of voice proportional to contribution score (fourth account)',
     actual: voiceAfter.rows[3].balance,
     expected: 80
   })
