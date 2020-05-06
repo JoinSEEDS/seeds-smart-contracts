@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser } = names
+const { onboarding, token, accounts, organization, harvest, firstuser } = names
 
 
 const bulk_cancel = async (sponsor, hashList) => {
@@ -102,11 +102,11 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
         // todo make this transfer part of the transaction that adds the accounts!
         // in case something goes wrong!
         
-        console.log("DISABLED comment transaction back in if you need to sponsor...")
+        //console.log("DISABLED comment transaction back in if you need to sponsor...")
         //return
         // COMMENT THIS BACK IN
-        //console.log("deposit "+depositAmmountSeeds)
-        //await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
+        console.log("deposit "+depositAmmountSeeds)
+        await contracts.token.transfer(sponsor, onboarding, depositAmmountSeeds, '', { authorization: `${sponsor}@active` })        
       
         for (i = 0; i < num; i++) {
             let inv = await createInviteAction(sponsor, referrer, transferredSeeds, plantedSeeds)
@@ -345,6 +345,60 @@ const accept = async (newAccount, inviteSecret) => {
 
 }
 
+const traceorgs = async () => {
+
+    const refs = await eos.getTableRows({
+        code: accounts,
+        scope: accounts,
+        table: 'refs',
+        json: true,
+        limit: 1000
+      })
+      const orgs = await eos.getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'organization',
+        json: true,
+        limit: 1000
+      })
+    
+      const getAcct = async (user) => {
+        const { rows } = await eos.getTableRows({
+            code: accounts,
+            scope: accounts,
+            table: 'users',
+            lower_bound: user,
+            upper_bound: user,
+            json: true,
+            limit: 1
+        })
+
+        return rows[0].nickname
+    
+      }
+
+      console.log(orgs.rows.length + " orgs")
+      console.log(refs.rows.length + " refs")
+
+      let refmap = {}
+      refs.rows.forEach(item => {
+          refmap[""+item.invited] = item.referrer
+      });
+
+      var output = ""
+
+      for(i=0; i<orgs.rows.length; i++) {
+        item = orgs.rows[i]
+        let name = await getAcct(item.org_name)
+        output += "Org: "+item.org_name + ": " + name + "\n"
+        output += "Owner: "+item.owner + "\n"
+        output += "Ambassador: " + refmap[item.owner] + "\n"
+        output += "\n"
+      }
+
+      console.log(output)
+}
+
 program
   .command('invite <sponsor>')
   .description('invite new user')
@@ -397,6 +451,13 @@ program
 
     console.log("accept invite with " + newAccount + " secret: " + result.secret)
     await accept(newAccount, result.secret)
+  })
+
+  program
+  .command('orgs')
+  .description('information about organizations')
+  .action(async function () {
+    await traceorgs() 
   })
 
 program.parse(process.argv)

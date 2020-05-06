@@ -32,7 +32,7 @@ cleos create account eosio user3 EOS5tEdJd32ANvoxSecRnY5ucr1jbzaVN2rQZegj6NxsevG
 cleos create account eosio token EOS5tEdJd32ANvoxSecRnY5ucr1jbzaVN2rQZegj6NxsevGU8JoaJ EOS5tEdJd32ANvoxSecRnY5ucr1jbzaVN2rQZegj6NxsevGU8JoaJ
 
 cleos set contract token artifacts/token
-cleos set contract escrow artifacts/vstandescrow
+cleos set contract escrow artifacts/escrow
 
 cleos push action token create '["token", "1000.0000 SEEDS"]' -p token
 cleos push action token issue '["token", "100.0000 SEEDS", "memo"]' -p token

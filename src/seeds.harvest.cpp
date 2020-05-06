@@ -292,7 +292,7 @@ void harvest::calc_tx_points(name account, uint64_t cycle) {
       if (current_to != tx_to_itr->to) {
         current_to = tx_to_itr->to;
         current_num = 0;
-        current_rep_multiplier = get_rep_multiplier(current_to);
+        current_rep_multiplier = utils::get_rep_multiplier(current_to);
       } else {
         current_num++;
       }
@@ -440,7 +440,7 @@ void harvest::calccs() {
   auto hitr = harveststat.begin();
   while (hitr != harveststat.end()) {
 
-    double rep = rep_multiplier_for_score(hitr->reputation_score);
+    double rep = utils::rep_multiplier_for_score(hitr->reputation_score);
 
     uint64_t cs_score = uint64_t((hitr->planted_score + hitr->transactions_score + hitr->community_building_score) * rep);
 
@@ -695,3 +695,19 @@ void harvest::testupdatecs(name account, uint64_t contribution_score) {
     });
   }
 }
+
+void harvest::testsetrs(name account, uint64_t value) {
+  require_auth(get_self());
+  auto hitr = harveststat.find(account.value);
+  if (hitr == harveststat.end()) {
+    init_harvest_stat(account);
+    hitr = harveststat.find(account.value);
+  }
+
+  harveststat.modify(hitr, _self, [&](auto& item) {
+    item.reputation_score = value;
+  });
+
+}
+
+

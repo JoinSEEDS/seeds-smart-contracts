@@ -139,7 +139,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -154,7 +154,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -166,7 +166,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -181,7 +181,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -202,7 +202,7 @@ const accountsMetadata = (network) => {
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
       alliancesbank: account('allies.seeds','180000000.0000 SEEDS'),
-      fifthbank: account('refer.seeds',  '120000000.0000 SEEDS'),
+      ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
       history: contract('histry.seeds', 'history'),
@@ -217,7 +217,7 @@ const accountsMetadata = (network) => {
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
       exchange: contract('tlosto.seeds', 'exchange'),
-      vstandescrow: contract('escrow.seeds', 'vstandescrow'),
+      escrow: contract('escrow.seeds', 'escrow'),
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
@@ -231,6 +231,19 @@ const accountsMetadata = (network) => {
 
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
+const allContractNames = []
+const allBankAccountNames = []
+for (let [key, value] of Object.entries(names)) {
+  if (accounts[key].type=="contract" || accounts[key].type=="token") {
+    allContractNames.push(value)
+  } else {
+    if (value.indexOf(".seeds") != -1) {
+      allBankAccountNames.push(value)
+    }
+  }
+}
+allContractNames.sort()
+allBankAccountNames.sort()
 
 var permissions = [{
   target: `${accounts.campaignbank.account}@active`,
@@ -242,11 +255,11 @@ var permissions = [{
   target: `${accounts.alliancesbank.account}@active`,
   actor: `${accounts.proposals.account}@active`
 }, {
+  target: `${accounts.ambassadorsandreferralsbank.account}@active`,
+  actor: `${accounts.accounts.account}@active`
+}, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@owner`,
   actor: `${accounts.accounts.account}@eosio.code`
@@ -262,6 +275,9 @@ var permissions = [{
 }, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.harvest.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.accounts.account}@active`
 }, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.proposals.account}@active`
@@ -372,6 +388,13 @@ var permissions = [{
   target: `${accounts.forum.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.proposals.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  action: 'onperiod'
+}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -419,16 +442,12 @@ var permissions = [{
   target: `${accounts.scheduler.account}@execute`,
   action: 'test2'
 }, {
-  target: `${accounts.referendums.account}@execute`,
+  target: `${accounts.referendums.account}@execute`, // TODO these active keys are not needed?!
   key: activePublicKey,
   parent: 'active'
 }, {
   target: `${accounts.referendums.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
 }, {
   target: `${accounts.proposals.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -446,8 +465,8 @@ var permissions = [{
   target: `${accounts.harvest.account}@payforcpu`,
   action: 'payforcpu'
 }, {
-  target: `${accounts.vstandescrow.account}@active`,
-  actor: `${accounts.vstandescrow.account}@eosio.code`
+  target: `${accounts.escrow.account}@active`,
+  actor: `${accounts.escrow.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -461,6 +480,8 @@ if (isTestnet || isLocalNet) {
       key: testnetDevelopmentKey,
       parent: 'active'
   })
+  // Note: This overrides @execute permission on onperiod - this means that on testnet, the proposals contract 
+  // doesn't work with the scheduler
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
       action: 'onperiod'
@@ -551,6 +572,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allBankAccountNames
 }
 

@@ -112,6 +112,8 @@ void accounts::_vouch(name sponsor, name account) {
   if (sponsor_status == name("resident")) reps = 5;
   if (sponsor_status == name("citizen")) reps = 10;
 
+  reps = reps * utils::get_rep_multiplier(sponsor);
+
   if (reps == 0) {
     // this is called from invite accept - just no op
     return;
@@ -381,10 +383,19 @@ void accounts::send_reward(name beneficiary, asset quantity) {
   // TODO: Send from the referral rewards pool
 
   action(
-    permission_level{_self, "active"_n},
+    permission_level{bankaccts::referrals, "active"_n},
     contracts::token, "transfer"_n,
-    make_tuple(_self, beneficiary, quantity, memo)
+    make_tuple(bankaccts::referrals, beneficiary, quantity, memo)
   ).send();
+}
+
+void accounts::testreward() {
+  require_auth(get_self());
+
+  asset quantity(1, seeds_symbol);
+
+  send_reward("accts.seeds"_n, quantity);
+
 }
 
 void accounts::makeresident(name user)
@@ -423,6 +434,15 @@ void accounts::updatestatus(name user, name status)
   users.modify(uitr, _self, [&](auto& user) {
     user.status = status;
   });
+
+  bool trust = status == name("citizen");
+
+  action(
+    permission_level{contracts::proposals, "active"_n},
+    contracts::proposals, "changetrust"_n,
+    std::make_tuple(user, trust)
+  ).send();
+
 }
 
 void accounts::makecitizen(name user)
@@ -515,6 +535,12 @@ void accounts::testremove(name user)
       vitr++;
     }
   }
+
+  action(
+    permission_level{contracts::proposals, "active"_n},
+    contracts::proposals, "changetrust"_n,
+    std::make_tuple(user, false)
+  ).send();
 
   users.erase(uitr);
 }

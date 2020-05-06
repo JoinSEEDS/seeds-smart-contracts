@@ -34,19 +34,19 @@ void settings::reset() {
   configure(name("refrep2.ind"), 1);
 
   // reward for individual referrer when user becomes resident  
-  configure(name("refrwd1.ind"), 10 * 10000); // 10 SEEDS
+  configure(name("refrwd1.ind"), 1000 * 10000); // 1000 SEEDS
   // reward for individual referrer when user becomes citizen  
-  configure(name("refrwd2.ind"), 15 * 10000); // 15 SEEDS
+  configure(name("refrwd2.ind"), 1500 * 10000); // 1500 SEEDS
 
   // reward for org when user becomes resident
-  configure(name("refrwd1.org"), 8 * 10000);  // 8 SEEDS
+  configure(name("refrwd1.org"), 800 * 10000);  // 800 SEEDS
   // reward for org when user becomes citizen
-  configure(name("refrwd2.org"), 12 * 10000); // 12 SEEDS
+  configure(name("refrwd2.org"), 1200 * 10000); // 1200 SEEDS
 
   // reward for ambassador of referring org when user becomes resident
-  configure(name("refrwd1.amb"), 2 * 10000);  // 2 SEEDS
+  configure(name("refrwd1.amb"), 200 * 10000);  // 200 SEEDS
   // reward for abmassador of referring org when user becomes citizen
-  configure(name("refrwd2.amb"), 3 * 10000);  // 3 SEEDS
+  configure(name("refrwd2.amb"), 300 * 10000);  // 300 SEEDS
 
   // Maximum number of points a user can gain from others vouching for them
   configure(name("maxvouch"), 50);

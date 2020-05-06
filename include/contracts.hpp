@@ -22,11 +22,13 @@ namespace contracts {
   name scheduler = "cycle.seeds"_n;
   name organization = "orgs.seeds"_n;
   name exchange = "tlosto.seeds"_n;
+  name escrow = "escrow.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;
   name alliances = "allies.seeds"_n;
   name campaigns = "gift.seeds"_n;
+  name referrals = "refer.seeds"_n;
 
   name hyphabank = "seeds.hypha"_n;
 }
