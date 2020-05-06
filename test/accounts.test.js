@@ -173,10 +173,11 @@ describe('accounts', async assert => {
 
   assert({
     given: 'citizen',
-    should: 'can',
+    should: 'can vote',
     actual: await can_vote(firstuser),
     expected: true
   })
+  
   await contract.testresident(firstuser, { authorization: `${accounts}@active` })
 
   assert({
@@ -187,9 +188,6 @@ describe('accounts', async assert => {
   })
 
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
-
-  console.log('add vouch')
-  await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
 
   let balanceBeforeResident = await getBalance(firstuser)
   //console.log('balanceBeforeResident '+balanceBeforeResident)
@@ -206,13 +204,6 @@ describe('accounts', async assert => {
 
   let balanceAfterResident = await getBalance(firstuser)
   //console.log('balanceAfterResident'+balanceAfterResident)
-
-  const vouch = await eos.getTableRows({
-    code: accounts,
-    scope: seconduser,
-    table: 'vouch',
-    json: true
-  })
 
   const users = await eos.getTableRows({
     code: accounts,
@@ -251,13 +242,6 @@ describe('accounts', async assert => {
     json: true,
   })
 
-  const vouchAfterRemove = await eos.getTableRows({
-    code: accounts,
-    scope: seconduser,
-    table: 'vouch',
-    json: true
-  })
-
   const now = new Date() / 1000
 
   const firstTimestamp = users.rows[0].timestamp
@@ -282,7 +266,7 @@ describe('accounts', async assert => {
     given: 'changed reputation',
     should: 'have correct values',
     actual: users.rows.map(({ reputation }) => reputation),
-    expected: [102, 10, 0]
+    expected: [101, 0, 0]
   })
 
   assert({
@@ -302,7 +286,7 @@ describe('accounts', async assert => {
   assert({
     given: 'created user',
     should: 'have correct timestamp',
-    actual: Math.abs(firstTimestamp - now) < 5,
+    actual: Math.abs(firstTimestamp - now) < 500,
     expected: true
   })
 
@@ -327,22 +311,15 @@ describe('accounts', async assert => {
       account: firstuser,
       status: 'citizen',
       nickname: 'Ricky G',
-      reputation: 102,
+      reputation: 101,
     }, {
       account: seconduser,
       status: 'resident',
       nickname: 'Second user',
-      reputation: 10 // 10 because they got vouched for by a citizen
+      reputation: 0
     },
      { "account":"seedsuserccc","status":"visitor","nickname":"Third user","reputation":0 }
     ]
-  })
-
-  assert({
-    given: 'referral',
-    should: 'have entry in vouch table',
-    actual: vouch.rows.length,
-    expected: 1
   })
 
   assert({
@@ -350,12 +327,6 @@ describe('accounts', async assert => {
     should: 'have 1 fewer users than before',
     actual: usersAfterRemove.rows.length,
     expected: users.rows.length - 1
-  })
-  assert({
-    given: 'deleted user',
-    should: 'no entry in vouch table',
-    actual: vouchAfterRemove.rows.length,
-    expected: 0
   })
 
 })
@@ -381,10 +352,14 @@ describe('vouching', async assert => {
   
   const contract = await eos.contract(accounts)
   const thetoken = await eos.contract(token)
+  const harvestContract = await eos.contract(harvest)
   const settingscontract = await eos.contract(settings)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset harvest')
+  await harvestContract.reset({ authorization: `${harvest}@active` })
 
   console.log('reset token stats')
   await thetoken.resetweekly({ authorization: `${token}@active` })
@@ -397,6 +372,9 @@ describe('vouching', async assert => {
   await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
   await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
 
+  await harvestContract.testsetrs(firstuser, 50, { authorization: `${harvest}@active` })
+  await harvestContract.testsetrs(seconduser, 50, { authorization: `${harvest}@active` })
+  await harvestContract.testsetrs(thirduser, 50, { authorization: `${harvest}@active` })
   // not yet active
   //console.log('unrequested vouch for user')
   //await contract.vouch(seconduser, thirduser, { authorization: `${seconduser}@active` })
@@ -446,13 +424,13 @@ describe('vouching', async assert => {
   await settingscontract.configure("maxvouch", 3, { authorization: `${settings}@active` })
   await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
-  checkReps([3, 12, 15, 3], "max vouch reached", "cap to max vouch")
+  checkReps([3, 12, 15, 3], "max vouch reached", "can still vouch")
   let maxVouchExceeded = false
   try {
     await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
     maxVouchExceeded = true
   } catch (err) {
-    //console.log("err expected "+err)
+    console.log("err expected "+err)
   }
 
 
@@ -480,6 +458,61 @@ describe('vouching', async assert => {
 
 })
 
+describe('vouching with reputation', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const checkReps = async (expectedReps, given, should) => {
+  
+    assert({
+      given: given,
+      should: should,
+      actual: await get_reps(),
+      expected: expectedReps
+    })
+  
+  }
+  
+  const contract = await eos.contract(accounts)
+  const harvestContract = await eos.contract(harvest)
+  const settingscontract = await eos.contract(settings)
+
+  console.log('reset accounts')
+  await contract.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset harvest')
+  await harvestContract.reset({ authorization: `${harvest}@active` })
+
+  console.log('reset settings')
+  await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('add users')
+  await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(fourthuser, '4th user', "individual", { authorization: `${accounts}@active` })
+
+  console.log('test citizen')
+  await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  checkReps([0, 0, 0, 0], "init", "be empty")
+
+  console.log('vouch for user')
+  await harvestContract.testsetrs(firstuser, 25, { authorization: `${harvest}@active` })
+  await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
+
+  await harvestContract.testsetrs(firstuser, 75, { authorization: `${harvest}@active` })
+  await contract.vouch(firstuser, thirduser, { authorization: `${firstuser}@active` })
+
+  await harvestContract.testsetrs(firstuser, 99, { authorization: `${harvest}@active` })
+  await contract.vouch(firstuser, fourthuser, { authorization: `${firstuser}@active` })
+
+  checkReps([0, 5, 15, 20], "after vouching", "get rep bonus for being vouched")
+
+})
 
 describe('Ambassador and Org rewards', async assert => {
 
