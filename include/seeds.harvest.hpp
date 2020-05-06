@@ -5,6 +5,7 @@
 #include <eosio/transaction.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <harvest_table.hpp>
 #include <utils.hpp>
 #include <cmath> 
 
@@ -60,6 +61,8 @@ CONTRACT harvest : public contract {
 
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
 
+    ACTION testsetrs(name account, uint64_t value);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
@@ -71,23 +74,6 @@ CONTRACT harvest : public contract {
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
     void calc_tx_points(name account, uint64_t cycle);
-
-    double get_rep_multiplier(name account) {
-        auto hitr = harveststat.find(account.value);
-        if (hitr == harveststat.end()) {
-          // user doesn't have a harvest entry yet
-          // either a new user, or harvest stat not initialized
-          return 0;
-        }
-        return rep_multiplier_for_score(hitr->reputation_score);
-    }
-
-    double rep_multiplier_for_score(uint64_t rep_score) {
-      // rep is 0 - 99
-      check(rep_score < 101, "illegal rep score ");
-      // return 0 - 2
-      return rep_score * 2.0 / 99.0; 
-    }
 
     // Contract Tables
 
@@ -126,30 +112,6 @@ CONTRACT harvest : public contract {
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
       indexed_by<"bycycle"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_cycle>>
     > tx_points_tables;
-
-    TABLE harvest_table {
-      name account;
-
-      uint64_t planted_score;
-      uint64_t planted_timestamp;
-
-      uint64_t transactions_score;
-      uint64_t tx_timestamp;
-
-      uint64_t reputation_score;
-      uint64_t rep_timestamp;
-
-      uint64_t community_building_score;
-      uint64_t community_building_timestamp;
-      
-      uint64_t contribution_score;
-      uint64_t contrib_timestamp;
-
-      uint64_t primary_key()const { return account.value; }
-      
-      uint64_t by_cs_points()const { return ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; }
-
-    };
 
     TABLE cs_points_table {
         name account;
@@ -214,6 +176,8 @@ CONTRACT harvest : public contract {
         uint64_t by_cbs()const { return community_building_score; }
     };
 
+    DEFINE_HARVEST_TABLE
+
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -259,7 +223,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testsetrs)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs))
       }
   }
 }

@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
+#include <harvest_table.hpp>
 
 using namespace eosio;
 
@@ -22,6 +23,28 @@ namespace utils {
   void check_asset(asset quantity) {
     check(quantity.is_valid(), "invalid asset");
     check(quantity.symbol == seeds_symbol, "invalid asset");
+  }
+
+  double rep_multiplier_for_score(uint64_t rep_score) {
+    // rep is 0 - 99
+    check(rep_score < 101, "illegal rep score ");
+    // return 0 - 2
+    return rep_score * 2.0 / 99.0; 
+  }
+
+  double get_rep_multiplier(name account) {
+
+    DEFINE_HARVEST_TABLE
+    eosio::multi_index<"harvest"_n, harvest_table> harvest(contracts::harvest, contracts::harvest.value);
+
+    auto hitr = harvest.find(account.value);
+
+    if (hitr == harvest.end()) {
+      return 0;
+    }
+
+    return rep_multiplier_for_score(hitr->reputation_score);
+
   }
 
 }
