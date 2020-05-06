@@ -10,6 +10,9 @@ const { accounts, proposals } = names
 const makecitizen = async (user, citizen = true) => {
     console.log("** makec "+ user)
 
+    console.log("GET referral and vouch bonuses for genesis! change accounts contract")
+    return
+
     const contracts = await initContracts({ accounts, proposals })
 
     const users = await getTableRows({
