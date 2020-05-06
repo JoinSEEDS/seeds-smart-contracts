@@ -112,6 +112,8 @@ void accounts::_vouch(name sponsor, name account) {
   if (sponsor_status == name("resident")) reps = 5;
   if (sponsor_status == name("citizen")) reps = 10;
 
+  reps = reps * utils::get_rep_multiplier(sponsor);
+
   if (reps == 0) {
     // this is called from invite accept - just no op
     return;
