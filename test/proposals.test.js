@@ -133,11 +133,6 @@ describe('Proposals', async assert => {
   })
   const theAllianceProp = activeProposals.rows.filter( item => item.fund == "allies.seeds")[0]
 
-
-  console.log("activeProposals: "+JSON.stringify(activeProposals, null, 2))
-
-  console.log("theAllianceProp: "+JSON.stringify(theAllianceProp, null, 2))
-
   let activeProps = activeProposals.rows.filter( item => item.stage == "active")
 
   const voiceBefore = await eos.getTableRows({
@@ -198,8 +193,6 @@ describe('Proposals', async assert => {
     json: true,
   })
 
-  console.log("voice "+JSON.stringify(voice111, null, 2))
-
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
@@ -249,32 +242,12 @@ describe('Proposals', async assert => {
     expected: true
   })
 
+  let balances = voiceAfter.rows.map( ({ balance })=>balance )
   assert({
     given: 'voice reset after onperiod',
     should: 'have amount of voice proportional to contribution score (first account)',
-    actual: voiceAfter.rows[0].balance,
-    expected: 20
-  })
-  
-  assert({
-    given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score (second account)',
-    actual: voiceAfter.rows[1].balance,
-    expected: 40
-  })
-  
-  assert({
-    given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score (third account)',
-    actual: voiceAfter.rows[2].balance,
-    expected: 60
-  })
-  
-  assert({
-    given: 'voice reset after onperiod',
-    should: 'have amount of voice proportional to contribution score (fourth account)',
-    actual: voiceAfter.rows[3].balance,
-    expected: 80
+    actual: balances,
+    expected: [20, 40, 60, 80]
   })
 
   assert({
