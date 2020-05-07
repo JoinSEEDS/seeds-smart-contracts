@@ -5,6 +5,7 @@
 #include <seeds.token.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <harvest_table.hpp>
 
 using namespace eosio;
 using namespace utils;
@@ -20,8 +21,7 @@ CONTRACT proposals : public contract {
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
-          users(contracts::accounts, contracts::accounts.value),
-          harveststat(contracts::harvest, contracts::harvest.value)
+          users(contracts::accounts, contracts::accounts.value)
           {}
 
       ACTION reset();
@@ -107,22 +107,6 @@ CONTRACT proposals : public contract {
         uint64_t by_reputation()const { return reputation; }
       };
 
-      TABLE harvest_table {
-        name account;
-        uint64_t planted_score;
-        uint64_t planted_timestamp;
-        uint64_t transactions_score;
-        uint64_t tx_timestamp;
-        uint64_t reputation_score;
-        uint64_t rep_timestamp;
-        uint64_t community_building_score;
-        uint64_t community_building_timestamp;
-        uint64_t contribution_score;
-        uint64_t contrib_timestamp;
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_cs_points()const { return ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; }
-      };
-
       TABLE vote_table {
           uint64_t proposal_id;
           name account;
@@ -153,7 +137,6 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"config"_n, config_table> config_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
-    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
     typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
     typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
@@ -162,7 +145,6 @@ CONTRACT proposals : public contract {
     config_tables config;
     proposal_tables props;
     user_tables users;
-    harvest_tables harveststat;
     voice_tables voice;
     last_proposal_tables lastprops;
     cycle_tables cycle;

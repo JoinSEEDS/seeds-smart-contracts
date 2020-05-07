@@ -103,6 +103,10 @@ void proposals::onperiod() {
 }
 
 void proposals::update_voice_table() {
+  
+  DEFINE_HARVEST_TABLE
+  eosio::multi_index<"harvest"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
+
   auto vitr = voice.begin();
   while (vitr != voice.end()) {
       auto csitr = harveststat.find(vitr->account.value);
