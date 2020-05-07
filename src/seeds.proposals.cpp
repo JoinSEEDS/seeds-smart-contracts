@@ -103,38 +103,21 @@ void proposals::onperiod() {
 }
 
 void proposals::update_voice_table() {
-  auto voice_param = config.get("propvoice"_n.value, "The propvoice parameter has not been initialized yet.");
-  uint64_t voice_base = voice_param.value;
+  
+  DEFINE_HARVEST_TABLE
+  eosio::multi_index<"harvest"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
+
   auto vitr = voice.begin();
   while (vitr != voice.end()) {
-      voice.modify(vitr, _self, [&](auto& voice) {
-          voice.balance = voice_base;
-      });
+      auto csitr = harveststat.find(vitr->account.value);
+      if (csitr != harveststat.end()) {
+        voice.modify(vitr, _self, [&](auto& item) {
+          item.balance = csitr->contribution_score;
+        });
+      }
       vitr++;
   }
 }
-
-void proposals::syncvoicetbl() {
-
-  auto uitr = users.begin();
-  
-  while(uitr != users.end()) {
-    
-    if (uitr->status == "citizen"_n) {
-      name user = uitr->account;
-      auto vitr = voice.find(user.value);
-
-      if (vitr == voice.end()) {
-          voice.emplace(_self, [&](auto& voice) {
-              voice.account = user;
-              voice.balance = 0;
-          });
-      } 
-    }
-    uitr++;
-  }
-}
-
 
 uint64_t proposals::get_cycle_period_sec() {
   auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");

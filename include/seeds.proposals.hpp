@@ -5,6 +5,7 @@
 #include <seeds.token.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <harvest_table.hpp>
 
 using namespace eosio;
 using namespace utils;
@@ -44,8 +45,6 @@ CONTRACT proposals : public contract {
       ACTION onperiod();
 
       ACTION decayvoice();
-
-      ACTION syncvoicetbl();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -104,7 +103,6 @@ CONTRACT proposals : public contract {
         string interests;
         uint64_t reputation;
         uint64_t timestamp;
-
         uint64_t primary_key()const { return account.value; }
         uint64_t by_reputation()const { return reputation; }
       };
@@ -158,7 +156,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(onperiod)(decayvoice)(cancel)(syncvoicetbl))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(onperiod)(decayvoice)(cancel))
       }
   }
 }

@@ -678,6 +678,24 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
   
 }
 
+void harvest::testupdatecs(name account, uint64_t contribution_score) {
+  require_auth(get_self());
+  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
+  auto hitr = harveststat.find(account.value);
+  if (hitr == harveststat.end()) {
+    harveststat.emplace(_self, [&](auto& user) {
+      user.account = account;
+      user.contribution_score = contribution_score;
+      user.contrib_timestamp = now_time;
+    });
+  } else {
+    harveststat.modify(hitr, _self, [&](auto& user) {
+      user.contribution_score = contribution_score;
+      user.contrib_timestamp = now_time;
+    });
+  }
+}
+
 void harvest::testsetrs(name account, uint64_t value) {
   require_auth(get_self());
   auto hitr = harveststat.find(account.value);
