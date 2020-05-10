@@ -51,6 +51,11 @@ void settings::reset() {
   // Maximum number of points a user can gain from others vouching for them
   configure(name("maxvouch"), 50);
 
+  // vouch base reward resident
+  configure(name("res.vouch"), 10);
+  
+  // vouch base reward citizen
+  configure(name("cit.vouch"), 20);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);

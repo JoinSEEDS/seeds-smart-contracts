@@ -85,6 +85,9 @@ CONTRACT accounts : public contract {
 
       const name max_vouch_points = "maxvouch"_n;
 
+      const name resident_vouch_points = "res.vouch"_n;
+      const name citizen_vouch_points = "cit.vouch"_n;
+
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
       void rewards(name account, name new_status);
