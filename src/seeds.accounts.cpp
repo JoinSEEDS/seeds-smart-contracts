@@ -107,9 +107,12 @@ void accounts::_vouch(name sponsor, name account) {
 
   name sponsor_status = uitrs->status;
 
+  auto resident_basepoints = config.get(resident_vouch_points.value, "settgs.seeds::config: the res.vouch parameter has not been initialized");
+  auto citizen_basepoints = config.get(citizen_vouch_points.value, "settgs.seeds::config: the cit.vouch parameter has not been initialized");
+
   uint64_t reps = 0;
-  if (sponsor_status == name("resident")) reps = 5;
-  if (sponsor_status == name("citizen")) reps = 10;
+  if (sponsor_status == name("resident")) reps = resident_basepoints.value;
+  if (sponsor_status == name("citizen")) reps = citizen_basepoints.value;
 
   reps = reps * utils::get_rep_multiplier(sponsor);
 
