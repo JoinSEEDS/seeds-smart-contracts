@@ -447,7 +447,7 @@ program
   .action(async function (sponsor, newAccount) {
       
     console.log("invite from " + sponsor)
-    let result = await invite(sponsor, 20, true) // always 20 seeds
+    let result = await invite(sponsor, 20, true, true) // always 20 seeds
 
     console.log("accept invite with " + newAccount + " secret: " + result.secret)
     await accept(newAccount, result.secret)
