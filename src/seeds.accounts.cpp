@@ -498,11 +498,14 @@ void accounts::testcitizen(name user)
   history_add_citizen(user);
 }
 
-void accounts::genesis(name user) // Remove this after Feb 2020
+void accounts::genesis(name user) // Remove this after Golive
 { 
   require_auth(_self);
 
-  updatestatus(user, name("citizen"));
+  testresident(user);
+  
+  testcitizen(user);
+
 }
 
 void accounts::genesisrep() {
