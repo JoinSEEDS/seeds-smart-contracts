@@ -10,9 +10,6 @@ const { accounts, proposals } = names
 const makecitizen = async (user, citizen = true) => {
     console.log("** makec "+ user)
 
-    console.log("GET referral and vouch bonuses for genesis! change accounts contract")
-    return
-
     const contracts = await initContracts({ accounts, proposals })
 
     const users = await getTableRows({
@@ -44,8 +41,9 @@ const makecitizen = async (user, citizen = true) => {
       return
     } 
 
-    if (users.rows[0].status == "citizen") {
-      console.log("account "+user +" is already a citizen!")
+    let status = users.rows[0].status
+    if (status == "citizen" | status == "resident") {
+      console.log("account "+ user +" is already a "+status + "!")
       console.log(" "+JSON.stringify(users, null, 2))
       return
     }  
@@ -59,7 +57,7 @@ const makecitizen = async (user, citizen = true) => {
           console.log("user already has voice: "+JSON.stringify(voice, null, 2))
         } else {
           console.log('add voice...')
-          await contracts.proposals.addvoice(user, 77, { authorization: `${proposals}@active` })  
+          await contracts.proposals.addvoice(user, 1, { authorization: `${proposals}@active` })  
         }
       
     } else {
