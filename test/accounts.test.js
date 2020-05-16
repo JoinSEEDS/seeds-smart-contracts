@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, organization, onboarding, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, proposals, harvest, token, settings, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
 
 const bulkadd = async (accounts, n) => {
   // todo import acount from helper, account creation func on local net
@@ -100,6 +100,7 @@ describe('accounts', async assert => {
   const proposalsContract = await eos.contract(proposals)
   const thetoken = await eos.contract(token)
   const settingscontract = await eos.contract(settings)
+  const escrowContract = await eos.contract(escrow)
 
   console.log('reset proposals')
   await proposalsContract.reset({ authorization: `${proposals}@active` })
@@ -112,6 +113,9 @@ describe('accounts', async assert => {
 
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('reset escrow')
+  await escrowContract.reset({ authorization: `${escrow}@active` })
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -202,9 +206,6 @@ describe('accounts', async assert => {
     json: true,
   })
 
-  let balanceAfterResident = await getBalance(firstuser)
-  //console.log('balanceAfterResident'+balanceAfterResident)
-
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -221,9 +222,6 @@ describe('accounts', async assert => {
 
   console.log('test citizen second user')
   await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
-
-  let balanceAfterCitizen = await getBalance(firstuser)
-  console.log('balanceAfterCitizen'+balanceAfterCitizen)
 
   console.log('test testremove')
   await contract.testremove(seconduser, { authorization: `${accounts}@active` })
@@ -248,19 +246,44 @@ describe('accounts', async assert => {
 
   let factor = 100
 
-  assert({
-    given: 'referred became resudent',
-    should: 'gain Seeds for referrer',
-    actual: balanceAfterResident,
-    expected: balanceBeforeResident + 10 * factor
-  })
 
-  assert({
-    given: 'referred became citizen',
-    should: 'gain Seeds for referrer',
-    actual: balanceAfterCitizen,
-    expected: balanceAfterResident + 15 * factor
-  })
+  const checkEscrow = async (text, id, user, amount) => {
+    const escrows = await getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      lower_bound: id,
+      upper_bound: id,
+      json: true
+    })
+    //console.log("escrow: "+JSON.stringify(escrows, null, 2))
+
+    let n = escrows.rows.length
+    let item = escrows.rows[n-1]
+
+    delete item.id
+    delete item.vesting_date
+    delete item.notes
+    delete item.created_date
+    delete item.updated_date
+
+    assert({
+      given: text,
+      should: 'reveive Seeds in escrow',
+      actual: item,
+      expected: 
+        {
+          "lock_type": "event",
+          "sponsor": "refer.seeds",
+          "beneficiary": user,
+          "quantity": amount + ".0000 SEEDS",
+          "trigger_event": "golive",
+          "trigger_source": "dao.hypha",
+        },
+    })
+  }
+  await checkEscrow("referred became resudent", 0, firstuser, 10 * factor)
+  await checkEscrow("referred became citizen", 1, firstuser, 15 * factor)
 
   assert({
     given: 'changed reputation',
@@ -521,12 +544,13 @@ describe('Ambassador and Org rewards', async assert => {
     return
   }
 
-  const contracts = await initContracts({ settings, accounts, organization, token, onboarding })
+  const contracts = await initContracts({ settings, accounts, organization, token, onboarding, escrow })
 
   console.log('reset contracts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   await contracts.settings.reset({ authorization: `${settings}@active` })
   await contracts.organization.reset({ authorization: `${organization}@active` })
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -561,44 +585,67 @@ describe('Ambassador and Org rewards', async assert => {
   await accept(orguser1, secret1, activePublicKey, contracts)
   await accept(orguser2, secret2, activePublicKey, contracts)
 
-  const balances = async () => {
-     return { 
-      ambassador: await getBalanceFloat(ambassador),
-      organization: await getBalanceFloat(orgaccount),      
-    }
-  }
+  const checkBalances = async (text, ambassadorReward, orgReward) => {
+    const escrows = await getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      json: true
+    })
+    //console.log("escrow: "+JSON.stringify(escrows, null, 2))
 
-  const checkBalances = (text, base, offset, actual) => {
+    let n = escrows.rows.length
+    let lastTwoEscrows = [ escrows.rows[n-2], escrows.rows[n-1] ]
+
+    lastTwoEscrows.forEach( (item) => {
+      delete item.id
+      delete item.vesting_date
+      delete item.notes
+      delete item.created_date
+      delete item.updated_date
+    })
+
     assert({
       given: text,
-      should: 'gain Seeds',
-      actual: actual,
-      expected: {
-        ambassador: base.ambassador + offset[0], 
-        organization: base.organization + offset[1],
-      }
-    })
-  
-  }
+      should: 'reveive Seeds in escrow',
+      actual: lastTwoEscrows,
+      expected: [
+        {
+          "lock_type": "event",
+          "sponsor": "refer.seeds",
+          "beneficiary": "testorg11111",
+          "quantity": orgReward + ".0000 SEEDS",
+          "trigger_event": "golive",
+          "trigger_source": "dao.hypha",
+        },
+        {
+          "lock_type": "event",
+          "sponsor": "refer.seeds",
+          "beneficiary": "seedsuseraaa",
+          "quantity": ambassadorReward+".0000 SEEDS",
+          "trigger_event": "golive",
+          "trigger_source": "dao.hypha",
+        }
 
-  let balancesBefore = await balances()
-  //console.log("balances before "+JSON.stringify(balancesBefore, null, 2))
+      ]
+        
+      
+    })
+}
 
   console.log("user 1 becomes resident")
   await contracts.accounts.testresident(orguser1, { authorization: `${accounts}@active` })
 
-  let balancesAfter1 = await balances()
-  checkBalances("after resident", balancesBefore, [200, 800], balancesAfter1)
+  await checkBalances("after resident", 200, 800)
 
   console.log("user 2 becomes citizen")
   await contracts.accounts.testcitizen(orguser2, { authorization: `${accounts}@active` })
-  let balancesAfter2 = await balances()
-  checkBalances("after citizen 1", balancesAfter1, [300, 1200], balancesAfter2)
+  await checkBalances("after citizen 1", 300, 1200)
 
   console.log("user 1 becomes citizen")
   await contracts.accounts.testcitizen(orguser1, { authorization: `${accounts}@active` })
-  let balancesAfter3 = await balances()
-  checkBalances("after citizen 2", balancesAfter2, [300, 1200], balancesAfter3)
+
+  await checkBalances("after citizen 2", 300, 1200)
 
   //console.log("final balances "+JSON.stringify(balancesAfter3, null, 2))
 

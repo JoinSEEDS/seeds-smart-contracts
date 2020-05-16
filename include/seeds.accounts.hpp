@@ -101,6 +101,8 @@ CONTRACT accounts : public contract {
       name find_referrer(name account);
       void send_addrep(name user, uint64_t amount);
       void send_subrep(name user, uint64_t amount);
+      void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
+
 
       TABLE ref_table {
         name referrer;
