@@ -377,18 +377,36 @@ void accounts::update(name user, name type, string nickname, string image, strin
     });
 }
 
-void accounts::send_reward(name beneficiary, asset quantity) {
-  string memo = "referral reward";
+void accounts::send_reward(name beneficiary, asset quantity)
+{
 
   // TODO: Check balance - if the balance runs out, the rewards run out too.
 
-  // TODO: Send from the referral rewards pool
+  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
+}
+
+void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
+{
 
   action(
-    permission_level{bankaccts::referrals, "active"_n},
-    contracts::token, "transfer"_n,
-    make_tuple(bankaccts::referrals, beneficiary, quantity, memo)
-  ).send();
+      permission_level{fromfund, "active"_n},
+      contracts::token, "transfer"_n,
+      std::make_tuple(fromfund, contracts::escrow, quantity, memo))
+      .send();
+
+  action(
+      permission_level{fromfund, "active"_n},
+      contracts::escrow, "lock"_n,
+      std::make_tuple("event"_n,
+                      fromfund,
+                      recipient,
+                      quantity,
+                      "golive"_n,
+                      "dao.hypha"_n,
+                      time_point(current_time_point().time_since_epoch() +
+                                 current_time_point().time_since_epoch()), // long time from now
+                      memo))
+      .send();
 }
 
 void accounts::testreward() {
