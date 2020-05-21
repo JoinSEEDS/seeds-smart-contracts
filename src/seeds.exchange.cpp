@@ -6,9 +6,9 @@ void exchange::reset() {
 
   config.remove();
 
-  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  asset visitor_limit =  asset(25000 * 10000, seeds_symbol);
+  asset citizen_limit =  asset(uint64_t(2600000000), seeds_symbol);
+  asset resident_limit =  asset(uint64_t(2600000000), seeds_symbol);
+  asset visitor_limit =  asset(26000 * 10000, seeds_symbol);
 
   asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
 
