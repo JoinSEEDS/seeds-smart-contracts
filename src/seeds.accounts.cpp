@@ -478,19 +478,12 @@ void accounts::makecitizen(name user)
     uint64_t invited_users_number = countrefs(user);
     uint64_t _rep_score = rep_score(user);
 
-// for Resident-Citizen:
-// - 100 planted
-// - 50 outgoing transfers
-// - 3 friends invited
-// - 50 reputation SCORE
-// - 1 resident invited
-// - 60+ days account age
     uint64_t min_planted =  100 * 10000;
     uint64_t min_tx =  50;
     uint64_t min_invited =  3;
     uint64_t min_rep_score =  50;
-    uint64_t min_residents = 1; // NOT implemented
-    uint64_t min_account_age = 60 * 24 * 60 * 60; // NOT implemented
+    //uint64_t min_residents = 1; // 1 resident invited - NOT implemented
+    //uint64_t min_account_age = 60 * 24 * 60 * 60; // 2 cycles account age - NOT implemented
 
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
     check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
