@@ -723,7 +723,7 @@ describe('make resident', async assert => {
 
 })
 
-describe.only('make citizen', async assert => {
+describe('make citizen', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
