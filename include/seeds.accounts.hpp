@@ -14,7 +14,6 @@ CONTRACT accounts : public contract {
         : contract(receiver, code, ds),
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
-          refs2(receiver, receiver.value),
           cbs(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
@@ -61,13 +60,6 @@ CONTRACT accounts : public contract {
       ACTION testsetcbs(name user, uint64_t amount);
 
       ACTION testreward();
-
-      ACTION testcountref(name user);
-
-      ACTION devmigrt(uint64_t num);
-      ACTION devmigrt2(uint64_t num);
-
-      ACTION devrmrefs2();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -121,15 +113,6 @@ CONTRACT accounts : public contract {
 
         uint64_t primary_key() const { return invited.value; }
         uint64_t by_referrer()const { return referrer.value; }
-      };
-
-      TABLE ref_table_2 {
-        name referrer;
-        name invited;
-
-        uint64_t primary_key() const { return invited.value; }
-        uint64_t by_referrer()const { return referrer.value; }
-
       };
 
       TABLE cbs_table {
@@ -192,11 +175,6 @@ CONTRACT accounts : public contract {
       indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
     > ref_tables;
     
-    typedef eosio::multi_index<"refs2"_n, ref_table_2,
-      indexed_by<"byreferrer"_n,
-      const_mem_fun<ref_table_2, uint64_t, &ref_table_2::by_referrer>>
-    > ref_tables_2;
-
     typedef eosio::multi_index<"vouch"_n, vouch_table,
       indexed_by<"byaccount"_n,
       const_mem_fun<vouch_table, uint64_t, &vouch_table::by_account>>
@@ -224,7 +202,6 @@ CONTRACT accounts : public contract {
 
     cbs_tables cbs;
     ref_tables refs;
-    ref_tables_2 refs2;
     req_vouch_tables reqvouch;
     user_tables users;
 
@@ -251,5 +228,4 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch)(testcountref)
-(devmigrt)(devmigrt2)(devrmrefs2));
+(testreward)(punish)(requestvouch)(vouch));
