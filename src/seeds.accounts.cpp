@@ -426,15 +426,14 @@ void accounts::makeresident(name user)
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(contracts::accounts, seeds_symbol.code().raw());
+    transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
+    uint64_t invited_users_number = countrefs(user);
 
-    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
-
-    check(bitr->planted.amount >= 50, "user has less than required seeds planted");
+    check(bitr->planted.amount >= 50 * 10000, "user has less than required seeds planted");
     check(titr->transactions_number >= 1, "user has less than required transactions number");
     check(invited_users_number >= 1, "user has less than required referrals");
-    check(uitr->reputation >= 100, "user has less than required reputation");
+    check(uitr->reputation >= 100, "user has less than required reputation: Required: 100 Actual: " + std::to_string(uitr->reputation));
 
     auto new_status = name("resident");
     updatestatus(user, new_status);
@@ -476,9 +475,9 @@ void accounts::makecitizen(name user)
     transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
-    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+    uint64_t invited_users_number = countrefs(user);
 
-    check(bitr->planted.amount >= 100, "user has less than required seeds planted");
+    check(bitr->planted.amount >= 100 * 10000, "user has less than required seeds planted");
     check(titr->transactions_number >= 2, "user has less than required transactions number");
     check(invited_users_number >= 3, "user has less than required referrals");
     check(uitr->reputation >= 100, "user has less than required reputation");
@@ -601,4 +600,17 @@ void accounts::check_user(name account)
 {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
+}
+
+uint64_t accounts::countrefs(name user) 
+{
+    uint64_t result = 0;
+    auto ritr = refs.begin();
+    while(ritr != refs.end()) {
+      if (ritr->referrer.value == user.value) {
+        result++;
+      }
+      ritr++;
+    }
+    return result;
 }
