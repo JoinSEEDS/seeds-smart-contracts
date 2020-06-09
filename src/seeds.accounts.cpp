@@ -20,11 +20,6 @@ void accounts::reset() {
     refitr = refs.erase(refitr);
   }
 
-  auto refitr2 = refs2.begin();
-  while (refitr2 != refs2.end()) {
-    refitr2 = refs2.erase(refitr2);
-  }
-
   auto cbsitr = cbs.begin();
   while (cbsitr != cbs.end()) {
     cbsitr = cbs.erase(cbsitr);
@@ -225,9 +220,6 @@ void accounts::requestvouch(name account, name sponsor) {
 name accounts::find_referrer(name account) {
   auto ritr = refs.find(account.value);
   if (ritr != refs.end()) return ritr->referrer;
-
-  auto ritr2 = refs2.find(account.value);
-  if (ritr2 != refs2.end()) return ritr2->referrer;
       
   return not_found;
 }
@@ -658,63 +650,6 @@ uint64_t accounts::rep_score(name user)
     return hitr->reputation_score;
 }
 
-void accounts::testcountref(name user) 
-{
-    uint64_t result = countrefs(user);
-    //check(, "user is not a resident");
-}
 
 
-void accounts::devrmrefs2() {
-  require_auth(get_self());
-  auto refitr2 = refs2.begin();
-  while (refitr2 != refs2.end()) {
-    refitr2 = refs2.erase(refitr2);
-  }
-}
-
-void accounts::devmigrt(uint64_t num) {
-  require_auth(get_self());
-
-  auto refitr = refs.begin();
-  uint64_t counter = 0;
-
-  check(refitr != refs.end(), "migration complete");
-
-  while (refitr != refs.end() && counter < num) {
-
-    refs2.emplace(_self, [&](auto& ref2) {
-      ref2.referrer = refitr -> referrer;
-      ref2.invited = refitr -> invited;
-    });
-
-    refitr = refs.erase(refitr);
-
-    counter++;
-  }
-
-}
-
-void accounts::devmigrt2(uint64_t num) {
-  require_auth(get_self());
-
-  auto refitr2 = refs2.begin();
-  uint64_t counter = 0;
-
-  check(refitr2 != refs2.end(), "migration refs2 -> refs1 complete");
-
-  while (refitr2 != refs2.end() && counter < num) {
-
-    refs.emplace(_self, [&](auto& ref) {
-      ref.referrer = refitr2 -> referrer;
-      ref.invited = refitr2 -> invited;
-    });
-
-    refitr2 = refs2.erase(refitr2);
-
-    counter++;
-
-  }
-
-}
 
