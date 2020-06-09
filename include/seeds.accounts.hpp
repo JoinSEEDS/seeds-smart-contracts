@@ -103,6 +103,7 @@ CONTRACT accounts : public contract {
       void send_subrep(name user, uint64_t amount);
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       uint64_t countrefs(name user);
+      uint64_t rep_score(name user);
 
 
       TABLE ref_table {
@@ -202,15 +203,18 @@ CONTRACT accounts : public contract {
 
     config_tables config;
 
+    // From token contract
     struct [[eosio::table]] transaction_stats {
       name account;
       asset transactions_volume;
-      uint64_t transactions_number;
+      uint64_t total_transactions;
+      uint64_t incoming_transactions;
+      uint64_t outgoing_transactions;
 
-      uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
+      uint64_t primary_key()const { return account.value; }
       uint64_t by_transaction_volume()const { return transactions_volume.amount; }
     };
-
+    
     typedef eosio::multi_index< "trxstat"_n, transaction_stats,
       indexed_by<"bytrxvolume"_n,
       const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>

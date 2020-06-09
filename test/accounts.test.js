@@ -702,8 +702,10 @@ describe('make resident', async assert => {
   // 2 DO SHIT
   console.log('plant 50 seeds')
   await contracts.token.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  console.log('make 1 transaction')
-  await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('make 10 transactions')
+  for (var i=0; i<10; i++) {
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
+  }
   console.log('add referral')
   await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
   console.log('update reputation')
@@ -721,14 +723,14 @@ describe('make resident', async assert => {
 
 })
 
-describe('make citizen', async assert => {
+describe.only('make citizen', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ accounts, token })
+  const contracts = await initContracts({ accounts, token, harvest })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -776,15 +778,17 @@ describe('make citizen', async assert => {
   // 2 DO SHIT
   console.log('plant 100 seeds')
   await contracts.token.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  console.log('make 2 transaction')
-  await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(firstuser, thirduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('make 50 transaction')
+  for (var i=0; i<25; i++) {
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(firstuser, thirduser, '1.0000 SEEDS', 'memo2'+i, { authorization: `${firstuser}@active` })
+  }
   console.log('add 3 referrals')
   await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
   await contracts.accounts.addref(firstuser, thirduser, { authorization: `${accounts}@api` })
   await contracts.accounts.addref(firstuser, fourthuser, { authorization: `${accounts}@api` })
   console.log('update reputation')
-  await contracts.accounts.addrep(firstuser, 100, { authorization: `${accounts}@api` })
+  await contracts.harvest.testsetrs(firstuser, 51, { authorization: `${harvest}@active` })
 
   // 3 CHECK STATUS - succeed
   await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
