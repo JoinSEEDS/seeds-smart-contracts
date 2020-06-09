@@ -715,8 +715,8 @@ describe('make resident', async assert => {
   await contracts.accounts.makeresident(firstuser, { authorization: `${firstuser}@active` })
 
   assert({
-    given: 'does not fulfill criteria for resident',
-    should: 'be visitor',
+    given: 'fulfills criteria for resident',
+    should: 'is resident',
     actual: await userStatus(firstuser),
     expected: 'resident'
   })
@@ -770,7 +770,7 @@ describe('make citizen', async assert => {
   // 1 CHECK STATUS - fail
   assert({
     given: 'does not fulfill criteria for citizen',
-    should: 'be visitor',
+    should: 'be resident',
     actual: await userStatus(firstuser),
     expected: 'resident'
   })
@@ -794,8 +794,8 @@ describe('make citizen', async assert => {
   await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
 
   assert({
-    given: 'does not fulfill criteria for resident',
-    should: 'be visitor',
+    given: 'does fulfill criteria for citizen',
+    should: 'is citizen',
     actual: await userStatus(firstuser),
     expected: 'citizen'
   })
