@@ -219,14 +219,9 @@ void accounts::requestvouch(name account, name sponsor) {
 
 name accounts::find_referrer(name account) {
   auto ritr = refs.find(account.value);
-  
-  if (ritr == refs.end()) {
-    return not_found; // our refs tables are incomplete...
-  }
-
-  name referrer = ritr->referrer;
-
-  return referrer;
+  if (ritr != refs.end()) return ritr->referrer;
+      
+  return not_found;
 }
 
 void accounts::refreward(name account, name new_status) {
@@ -236,7 +231,7 @@ void accounts::refreward(name account, name new_status) {
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
-    return; // our refs tables are incomplete...
+    return;
   }
 
   // Add community building point +1
@@ -426,15 +421,19 @@ void accounts::makeresident(name user)
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(contracts::accounts, seeds_symbol.code().raw());
+    transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
+    uint64_t invited_users_number = countrefs(user);
 
-    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+    uint64_t min_planted =  50 * 10000;
+    uint64_t min_tx =  10;
+    uint64_t min_invited =  1;
+    uint64_t min_rep =  50;
 
-    check(bitr->planted.amount >= 50, "user has less than required seeds planted");
-    check(titr->transactions_number >= 1, "user has less than required transactions number");
-    check(invited_users_number >= 1, "user has less than required referrals");
-    check(uitr->reputation >= 100, "user has less than required reputation");
+    check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
+    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
+    check(uitr->reputation >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(uitr->reputation));
 
     auto new_status = name("resident");
     updatestatus(user, new_status);
@@ -476,12 +475,20 @@ void accounts::makecitizen(name user)
     transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
-    uint64_t invited_users_number = std::distance(refs.lower_bound(user.value), refs.upper_bound(user.value));
+    uint64_t invited_users_number = countrefs(user);
+    uint64_t _rep_score = rep_score(user);
 
-    check(bitr->planted.amount >= 100, "user has less than required seeds planted");
-    check(titr->transactions_number >= 2, "user has less than required transactions number");
-    check(invited_users_number >= 3, "user has less than required referrals");
-    check(uitr->reputation >= 100, "user has less than required reputation");
+    uint64_t min_planted =  100 * 10000;
+    uint64_t min_tx =  50;
+    uint64_t min_invited =  3;
+    uint64_t min_rep_score =  50;
+    //uint64_t min_residents = 1; // 1 resident invited - NOT implemented
+    //uint64_t min_account_age = 60 * 24 * 60 * 60; // 2 cycles account age - NOT implemented
+
+    check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
+    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
+    check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
 
     auto new_status = name("citizen");
     updatestatus(user, new_status);
@@ -501,6 +508,15 @@ void accounts::testresident(name user)
   rewards(user, new_status);
   
   history_add_resident(user);
+}
+
+void accounts::testvisitor(name user)
+{
+  require_auth(_self);
+
+  auto new_status = name("visitor");
+  updatestatus(user, new_status);
+  
 }
 
 void accounts::testcitizen(name user)
@@ -602,3 +618,31 @@ void accounts::check_user(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
 }
+
+uint64_t accounts::countrefs(name user) 
+{
+    auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
+
+    auto numrefs = std::distance(refs_by_referrer.lower_bound(user.value), refs_by_referrer.upper_bound(user.value));
+
+    return numrefs;
+
+}
+
+uint64_t accounts::rep_score(name user) 
+{
+    DEFINE_HARVEST_TABLE
+    eosio::multi_index<"harvest"_n, harvest_table> harvest(contracts::harvest, contracts::harvest.value);
+
+    auto hitr = harvest.find(user.value);
+
+    if (hitr == harvest.end()) {
+      return 0;
+    }
+
+    return hitr->reputation_score;
+}
+
+
+
+

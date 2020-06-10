@@ -51,6 +51,7 @@ CONTRACT accounts : public contract {
       ACTION vouch(name sponsor, name account);
 
       ACTION testresident(name user);
+      ACTION testvisitor(name user);
 
       ACTION testremove(name user);
 
@@ -59,7 +60,7 @@ CONTRACT accounts : public contract {
       ACTION testsetcbs(name user, uint64_t amount);
 
       ACTION testreward();
-      
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
@@ -102,6 +103,8 @@ CONTRACT accounts : public contract {
       void send_addrep(name user, uint64_t amount);
       void send_subrep(name user, uint64_t amount);
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
+      uint64_t countrefs(name user);
+      uint64_t rep_score(name user);
 
 
       TABLE ref_table {
@@ -109,6 +112,7 @@ CONTRACT accounts : public contract {
         name invited;
 
         uint64_t primary_key() const { return invited.value; }
+        uint64_t by_referrer()const { return referrer.value; }
       };
 
       TABLE cbs_table {
@@ -167,7 +171,9 @@ CONTRACT accounts : public contract {
       const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
     > user_tables;
     
-    typedef eosio::multi_index<"refs"_n, ref_table> ref_tables;
+    typedef eosio::multi_index<"refs"_n, ref_table,
+      indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
+    > ref_tables;
     
     typedef eosio::multi_index<"vouch"_n, vouch_table,
       indexed_by<"byaccount"_n,
@@ -201,15 +207,18 @@ CONTRACT accounts : public contract {
 
     config_tables config;
 
+    // From token contract
     struct [[eosio::table]] transaction_stats {
       name account;
       asset transactions_volume;
-      uint64_t transactions_number;
+      uint64_t total_transactions;
+      uint64_t incoming_transactions;
+      uint64_t outgoing_transactions;
 
-      uint64_t primary_key()const { return transactions_volume.symbol.code().raw(); }
+      uint64_t primary_key()const { return account.value; }
       uint64_t by_transaction_volume()const { return transactions_volume.amount; }
     };
-
+    
     typedef eosio::multi_index< "trxstat"_n, transaction_stats,
       indexed_by<"bytrxvolume"_n,
       const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
@@ -218,4 +227,5 @@ CONTRACT accounts : public contract {
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
-(subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testremove)(testsetcbs)(testreward)(punish)(requestvouch)(vouch));
+(subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testvisitor)(testremove)(testsetcbs)
+(testreward)(punish)(requestvouch)(vouch));

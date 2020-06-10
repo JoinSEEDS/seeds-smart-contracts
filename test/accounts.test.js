@@ -651,6 +651,159 @@ describe('Ambassador and Org rewards', async assert => {
 
 })
 
+const userStatus = async (name) => {
+  const users = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    lower_bound: name,
+    upper_bound: name,
+    table: 'users',
+    json: true,
+  })
+
+  return users.rows[0].status
+
+}
+
+describe('make resident', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+
+  console.log('make resident - fail')
+  try {
+    await contracts.accounts.makeresident(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    //console.log('expected error' + err)
+  }
+
+  // 1 CHECK STATUS - fail
+  assert({
+    given: 'does not fulfill criteria for resident',
+    should: 'be visitor',
+    actual: await userStatus(firstuser),
+    expected: 'visitor'
+  })
+
+  // 2 DO SHIT
+  console.log('plant 50 seeds')
+  await contracts.token.transfer(firstuser, harvest, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('make 10 transactions')
+  for (var i=0; i<10; i++) {
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
+  }
+  console.log('add referral')
+  await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
+  console.log('update reputation')
+  await contracts.accounts.addrep(firstuser, 100, { authorization: `${accounts}@api` })
+
+  // 3 CHECK STATUS - succeed
+  await contracts.accounts.makeresident(firstuser, { authorization: `${firstuser}@active` })
+
+  assert({
+    given: 'fulfills criteria for resident',
+    should: 'is resident',
+    actual: await userStatus(firstuser),
+    expected: 'resident'
+  })
+
+})
+
+describe('make citizen', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '3 user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, '4 user', "individual", { authorization: `${accounts}@active` })
+
+  console.log('make citizen - fail')
+  try {
+    await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    //console.log('expected error' + err)
+  }
+
+  assert({
+    given: 'does not fulfill criteria for citizen',
+    should: 'be visitor',
+    actual: await userStatus(firstuser),
+    expected: 'visitor'
+  })
+
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  console.log('make citizen - fail')
+  try {
+    await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    //console.log('expected error' + err)
+  }
+
+  // 1 CHECK STATUS - fail
+  assert({
+    given: 'does not fulfill criteria for citizen',
+    should: 'be resident',
+    actual: await userStatus(firstuser),
+    expected: 'resident'
+  })
+
+  // 2 DO SHIT
+  console.log('plant 100 seeds')
+  await contracts.token.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('make 50 transaction')
+  for (var i=0; i<25; i++) {
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(firstuser, thirduser, '1.0000 SEEDS', 'memo2'+i, { authorization: `${firstuser}@active` })
+  }
+  console.log('add 3 referrals')
+  await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
+  await contracts.accounts.addref(firstuser, thirduser, { authorization: `${accounts}@api` })
+  await contracts.accounts.addref(firstuser, fourthuser, { authorization: `${accounts}@api` })
+  console.log('update reputation')
+  await contracts.harvest.testsetrs(firstuser, 51, { authorization: `${harvest}@active` })
+
+  // 3 CHECK STATUS - succeed
+  await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+
+  assert({
+    given: 'does fulfill criteria for citizen',
+    should: 'is citizen',
+    actual: await userStatus(firstuser),
+    expected: 'citizen'
+  })
+
+
+})
+
+
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {
     
