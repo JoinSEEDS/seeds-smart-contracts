@@ -89,6 +89,9 @@ CONTRACT accounts : public contract {
       const name resident_vouch_points = "res.vouch"_n;
       const name citizen_vouch_points = "cit.vouch"_n;
 
+      const name citizen_min_account_age = "cit.minage"_n;
+
+
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
       void rewards(name account, name new_status);

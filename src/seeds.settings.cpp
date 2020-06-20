@@ -57,6 +57,12 @@ void settings::reset() {
   // vouch base reward citizen
   configure(name("cit.vouch"), 20);
 
+  // citizenship 
+
+  // min age of account to be citizen
+  configure(name("cit.minage"), 2 * 29.5 * 24 * 60 * 60); // 2 cycles in seconds
+
+
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
   setcontract(name("harvest"), "harvst.seeds"_n);

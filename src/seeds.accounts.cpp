@@ -483,8 +483,10 @@ void accounts::makecitizen(name user)
     uint64_t min_invited =  3;
     uint64_t min_rep_score =  50;
     //uint64_t min_residents = 1; // 1 resident invited - NOT implemented
-    //uint64_t min_account_age = 60 * 24 * 60 * 60; // 2 cycles account age - NOT implemented
+    auto min_account_age_s = config.get(citizen_min_account_age.value, "settgs.seeds::config: the cit.minage parameter has not been set");
+    uint64_t citizen_timestamp = uitr->timestamp + min_account_age_s.value;
 
+    check(citizen_timestamp >= eosio::current_time_point().sec_since_epoch(), "It's too early. User can apply for citizen at "+std::to_string(citizen_timestamp));
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
     check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
