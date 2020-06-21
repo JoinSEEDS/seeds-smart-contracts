@@ -19,6 +19,9 @@ void settings::reset() {
   // Scheduler cycle
   configure(name("secndstoexec"), 60);
 
+  // harvest batch size
+  configure(name("batchsize.h"), 111);
+
   // =====================================
   // referral rewards 
   // =====================================

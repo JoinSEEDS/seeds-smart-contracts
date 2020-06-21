@@ -359,19 +359,35 @@ void harvest::calctrx() {
   require_auth(_self);
 
   auto users = txpoints.get_index<"bypoints"_n>();
+  
+  uint64_t counted_users_number = std::distance(users.lower_bound(1), users.end());
 
-  uint64_t users_number = std::distance(users.begin(), users.end());
-
-  uint64_t current_user = 0;
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
-  auto uitr = users.begin();
+  uint64_t index = get_cycle_index(calctrx_cycle);
+  uint64_t length = std::distance(users.begin(), users.end());
+  uint64_t number_of_users_with_zero_score = length - counted_users_number;
 
-  while (uitr != users.end()) {
-    uint64_t score = (current_user * 100) / users_number;
+  if (index >= length) {
+    index = 0;
+  } else  if (index < number_of_users_with_zero_score) {
+    index = number_of_users_with_zero_score;
+  }
+
+  auto uitr = users.begin();
+  std::advance(uitr, index);
+
+  uint64_t current_index = index; 
+  
+  uint64_t end_index = index + 100;
+
+  while (uitr != users.end() && current_index < end_index) {
+    uint64_t score;
 
     if (uitr->points == 0) {
       score = 0;
+    } else {
+      score = ( (current_index - number_of_users_with_zero_score) * 100) / counted_users_number;
     }
 
     auto hitr = harveststat.find(uitr->account.value);
@@ -386,10 +402,12 @@ void harvest::calctrx() {
       user.tx_timestamp = now_time;
     });
 
-    current_user++;
+    current_index++;
 
     uitr++;
   }
+
+  set_cycle_index(calctrx_cycle, uitr == users.end() ? 0 : end_index);
 
 }
 
@@ -647,6 +665,183 @@ void harvest::withdraw(name beneficiary, asset quantity)
 
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
   action.send(contracts::bank, beneficiary, quantity, "");
+}
+
+uint64_t harvest::get_cycle_index(name cycle_id) {
+  auto citr = cycle.find(cycle_id.value);
+  if (citr != cycle.end()) {
+    return citr->value;
+  } else {
+    return 0;
+  }
+} 
+
+void harvest::set_cycle_index(name cycle_id, uint64_t index) {
+  auto citr = cycle.find(cycle_id.value);
+  if (citr == cycle.end()) {
+    cycle.emplace(_self, [&](auto& item) {
+      item.cycle_id = cycle_id;
+      item.value = index;
+    });
+  } else {
+    cycle.modify(citr, _self, [&](auto& item) {
+      item.value = index;
+    });
+  }
+}
+
+void harvest::caclharvest() {
+    uint64_t increment = config.get("batchsize.h"_n.value, "settgs.seeds::config: the batchsize.h parameter has not been initialized").value;
+    caclharvestn(increment);
+}
+
+void harvest::caclharvestn(uint64_t increment) {
+
+  require_auth(get_self());
+
+  name harvest_cycle = "harvest"_n;
+
+  uint64_t length = std::distance(users.begin(), users.end());
+  
+  uint64_t start_index = get_cycle_index(harvest_cycle);
+  
+  if (start_index >= length) { start_index = 0; }
+
+  uint64_t end_index = std::min(start_index + increment, length-1);
+
+  check(start_index < end_index, "nothing to calculate!");
+  
+  auto uitr = users.begin();
+
+  std::advance(uitr, start_index);
+
+  uint64_t index = start_index; 
+
+  while (uitr != users.end() && index <= end_index) {
+    calcscore(uitr->account);
+    index++;
+    uitr++;
+  }
+
+  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : end_index);
+
+
+}
+
+void harvest::calcscore(name account) {
+  require_auth(get_self());
+
+  const name organization = "organisation"_n;
+
+  auto user = users.get(account.value, "error: no account!");
+
+  if (user.type == organization) {
+    _scoreorg(user.account);
+  } else {
+    _scoreuser(user.account, user.reputation);
+  }
+  
+}
+void harvest::_scoreuser(name account, uint64_t reputation) {
+
+  calc_tx_points(account, 0);
+
+  uint64_t transactions_score = _calc_tx_score(account);
+
+  uint64_t reputation_score = _calc_reputation_score(account, reputation);
+
+  uint64_t community_building_score = _calc_cb_score(account);
+
+  uint64_t planted_score = _calc_planted_score(account);
+
+  double rep = utils::rep_multiplier_for_score(reputation_score);
+
+  uint64_t contribution_score = uint64_t((planted_score + transactions_score + community_building_score) * rep);
+
+  auto hitr = harveststat.find(account.value);
+
+  if (hitr == harveststat.end()) {
+      init_harvest_stat(account);
+      hitr = harveststat.find(account.value);
+  } 
+
+  string s = "planted_score: " + std::to_string(planted_score) +
+        " transactions_score: " + std::to_string(transactions_score) +
+        " reputation_score: " + std::to_string(reputation_score) +
+        " community_building_score: " + std::to_string(community_building_score) +
+        " contribution_score: " + std::to_string(contribution_score);
+
+  print(s);
+
+/* // TEST MODE - not writing to the chain just yet - I want to test performance on the live data.
+  harveststat.modify(hitr, _self, [&](auto& user) {
+    user.planted_score = planted_score;
+    user.transactions_score = transactions_score;
+    user.reputation_score = reputation_score;
+    user.community_building_score = community_building_score;
+    user.contribution_score = contribution_score;
+  });
+*/
+
+}
+
+uint64_t harvest::_calc_tx_score(name account) {
+
+  auto txitr = txpoints.find(account.value);
+  uint64_t tx_score = 0;
+
+  if (txitr != txpoints.end()) {
+    uint64_t points = txitr->points;
+    auto txpoints_by_points = txpoints.get_index<"bypoints"_n>();
+    auto ptitr = txpoints_by_points.find(points);
+    uint64_t counted_number = std::distance(txpoints_by_points.lower_bound(1), txpoints_by_points.end());
+    uint64_t counted_index = std::distance(txpoints_by_points.lower_bound(1), ptitr);
+    tx_score = (counted_index * 100) / counted_number; // ==> 0 - 99
+  }
+  return tx_score;
+}
+
+uint64_t harvest::_calc_reputation_score(name account, uint64_t reputation) {
+  auto users_by_rep = users.get_index<"byreputation"_n>();
+  auto repitr = users_by_rep.find(reputation);
+  check(repitr != users_by_rep.end(), "rep not found");
+  uint64_t counted_number = std::distance(users_by_rep.lower_bound(1), users_by_rep.end());
+  uint64_t counted_index = std::distance(users_by_rep.lower_bound(1), repitr);
+  return (counted_index * 100) / counted_number; 
+}
+
+uint64_t harvest::_calc_cb_score(name account) {
+  auto citr = cbs.find(account.value);
+  uint64_t cb_score = 0;
+  if (citr != cbs.end()) {
+    uint64_t cb_points = citr->community_building_score;
+    auto users_by_cbs = cbs.get_index<"bycbs"_n>();
+    auto cbs_itr = users_by_cbs.find(cb_points);
+    uint64_t counted_number = std::distance(users_by_cbs.lower_bound(1), users_by_cbs.end());
+    uint64_t counted_index = std::distance(users_by_cbs.lower_bound(1), cbs_itr);
+    cb_score = (counted_index * 100) / counted_number; 
+  }
+  return cb_score;
+}
+
+uint64_t harvest::_calc_planted_score(name account) {
+  auto pitr = balances.find(account.value);
+  uint64_t planted_score = 0;
+  if (pitr != balances.end()) {
+    uint64_t planted_amount = pitr->planted.amount;
+    auto users_by_planted = balances.get_index<"byplanted"_n>();
+    auto by_planted_itr = users_by_planted.find(planted_amount);
+    uint64_t counted_number = std::distance(users_by_planted.lower_bound(1), users_by_planted.end());
+    uint64_t counted_index = std::distance(users_by_planted.lower_bound(1), by_planted_itr);
+    planted_score = (counted_index * 100) / counted_number; 
+  }
+  return planted_score;
+}
+
+
+
+void harvest::_scoreorg(name orgname) {
+  
 }
 
 void harvest::testreward(name from) {

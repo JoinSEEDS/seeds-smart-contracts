@@ -22,6 +22,7 @@ CONTRACT harvest : public contract {
         harveststat(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
+        cycle(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
@@ -55,12 +56,14 @@ CONTRACT harvest : public contract {
 
     ACTION calccs(); // calculate contribution score
 
+    ACTION caclharvest();
+    
+    ACTION calcscore(name user); // Eposed for testing
+
     ACTION payforcpu(name account);
 
     ACTION testreward(name from);
-
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
-
     ACTION testupdatecs(name account, uint64_t contribution_score);
     ACTION testsetrs(name account, uint64_t value);
 
@@ -75,6 +78,16 @@ CONTRACT harvest : public contract {
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
     void calc_tx_points(name account, uint64_t cycle);
+    uint64_t get_cycle_index(name cycle_id);
+    void set_cycle_index(name cycle_id, uint64_t index);
+
+    void _scoreuser(name account, uint64_t reputation);
+    void _scoreorg(name orgname);
+    uint64_t _calc_tx_score(name account);
+    uint64_t _calc_reputation_score(name account, uint64_t reputation);
+    uint64_t _calc_cb_score(name account);
+    uint64_t _calc_planted_score(name account);
+    uint64_t _calc_contribution_score(name account);
 
     // Contract Tables
 
@@ -129,6 +142,24 @@ CONTRACT harvest : public contract {
       indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
     > cs_points_tables;
 
+    TABLE cycle_table {
+        name cycle_id;
+        uint64_t value;
+        uint64_t primary_key()const { return cycle_id.value; }
+      };
+
+      typedef eosio::multi_index<"cycle"_n, cycle_table> cycle_tables;
+
+      cycle_tables cycle;
+
+      // keys for the cycle table
+      // name calcrep_cycle = "calcrep"_n;
+      // name calcplanted_cycle = "calcplanted"_n;
+      // name calctrxpt_cycle = "calctrxpt"_n;
+      name calctrx_cycle = "calctrx"_n;
+      // name calccbs_cycle = "calccbs"_n;
+      // name calccs_cycle = "calccs"_n;
+      // uint64_t batch_size = 144;
 
     // External Tables
 
@@ -224,7 +255,10 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testsetrs)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)(testupdatecs))
+          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testsetrs)(testclaim)
+          (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
+          (calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)(caclharvest)(caclharvestn)(calcscore)
+          (testupdatecs))
       }
   }
 }
