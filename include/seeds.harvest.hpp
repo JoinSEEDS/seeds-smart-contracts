@@ -57,10 +57,10 @@ CONTRACT harvest : public contract {
     ACTION calccs(); // calculate contribution score
 
     ACTION caclharvest();
-    
+
     ACTION caclharvestn(uint64_t increment);
     
-    ACTION calcscore(name user); // Eposed for testing
+    ACTION calcscore(name account); // Eposed for testing
 
     ACTION payforcpu(name account);
 

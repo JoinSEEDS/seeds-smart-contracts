@@ -659,6 +659,49 @@ describe("harvest community building score", async assert => {
   await checkScores([1, 2, 3, 0], [25, 50, 75, 0], "cbs distribution", "correct")
 })
 
+describe.only("harvest calculations new", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  const memoprefix = "" + (new Date()).getTime()
+
+  const contracts = await initContracts({ accounts, harvest, settings, token })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('join users')
+  let users = [firstuser, seconduser, thirduser, fourthuser]
+  users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
+
+
+
+  console.log('make transaction, no reps')
+  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', "xx", { authorization: `${firstuser}@active` })
+  await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrep(firstuser, 2, { authorization: `${accounts}@active` })
+
+  console.log("transfer with 10 rep, 2 accounts have rep")
+  await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
+  await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
+
+
+  console.log("calc individual")
+
+  await contracts.harvest.calcscore(firstuser, { authorization: `${harvest}@active` })
+
+
+
+})
+
 describe("plant for other user", async assert => {
 
   if (!isLocal()) {
@@ -744,3 +787,45 @@ describe("plant for other user", async assert => {
   })
 
 })
+
+const checkScoresS = async (points, scores, given, should) => {
+
+  console.log("checking points "+points + " scores: "+scores)
+  await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  
+  const txpoints = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'txpoints',
+    json: true,
+    limit: 100
+  })
+
+  //console.log(given + " tx points "+JSON.stringify(txpoints, null, 2))
+
+  const harvestStats = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'harvest',
+    json: true,
+    limit: 100
+  })
+
+  //console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
+
+  assert({
+    given: 'transaction points ' + given,
+    should: 'have expected values ' + should,
+    actual: txpoints.rows.map(({ points }) => points),
+    expected: points
+  })
+
+  assert({
+    given: 'transaction scores ' + given,
+    should: 'have expected values ' + should,
+    actual: harvestStats.rows.map(({ transactions_score }) => transactions_score),
+    expected: scores
+  })
+
+}

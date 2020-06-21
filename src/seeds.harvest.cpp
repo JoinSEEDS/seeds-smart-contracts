@@ -260,6 +260,13 @@ void harvest::calcrep() {
 // Calculate Transaction Points for a single account
 void harvest::calc_tx_points(name account, uint64_t cycle) {
 
+  action(
+    permission_level{contracts::history, "active"_n},
+    contracts::history, 
+    "clearoldtrx"_n,
+    std::make_tuple(account)
+  ).send();
+
   auto three_moon_cycles = moon_cycle * 3;
   auto now = eosio::current_time_point().sec_since_epoch();
   auto cutoffdate = now - three_moon_cycles;
@@ -284,7 +291,8 @@ void harvest::calc_tx_points(name account, uint64_t cycle) {
     if (tx_to_itr->timestamp < cutoffdate) {
 
       // remove old transactions
-      tx_to_itr = transactions_by_to.erase(tx_to_itr);
+      //tx_to_itr = transactions_by_to.erase(tx_to_itr);
+      tx_to_itr++;
 
     } else {
 
@@ -794,20 +802,34 @@ uint64_t harvest::_calc_tx_score(name account) {
     uint64_t points = txitr->points;
     auto txpoints_by_points = txpoints.get_index<"bypoints"_n>();
     auto ptitr = txpoints_by_points.find(points);
-    uint64_t counted_number = std::distance(txpoints_by_points.lower_bound(1), txpoints_by_points.end());
-    uint64_t counted_index = std::distance(txpoints_by_points.lower_bound(1), ptitr);
-    tx_score = (counted_index * 100) / counted_number; // ==> 0 - 99
+    auto lower_bound_1_itr = txpoints_by_points.lower_bound(1);
+    if (lower_bound_1_itr != txpoints_by_points.end()) {
+      uint64_t counted_number = std::distance(lower_bound_1_itr, txpoints_by_points.end());
+      uint64_t counted_index = std::distance(lower_bound_1_itr, ptitr);
+      tx_score = (counted_index * 100) / counted_number; // ==> 0 - 99    
+    } 
   }
   return tx_score;
 }
 
 uint64_t harvest::_calc_reputation_score(name account, uint64_t reputation) {
-  auto users_by_rep = users.get_index<"byreputation"_n>();
-  auto repitr = users_by_rep.find(reputation);
-  check(repitr != users_by_rep.end(), "rep not found");
-  uint64_t counted_number = std::distance(users_by_rep.lower_bound(1), users_by_rep.end());
-  uint64_t counted_index = std::distance(users_by_rep.lower_bound(1), repitr);
-  return (counted_index * 100) / counted_number; 
+    uint64_t rep_score = 0;
+
+  if (reputation != 0) {
+    auto users_by_rep = users.get_index<"byreputation"_n>();
+    auto repitr = users_by_rep.find(reputation);
+    check(repitr != users_by_rep.end(), "rep not found");
+    auto lower_bound_1_itr = users_by_rep.lower_bound(1);
+    if (lower_bound_1_itr != users_by_rep.end()) {
+      uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_rep.end());
+      uint64_t counted_index = std::distance(lower_bound_1_itr, repitr);
+      rep_score = (counted_index * 100) / counted_number; 
+    } else {
+      check(false, "lb 1 end");
+    }
+  }
+
+  return rep_score;
 }
 
 uint64_t harvest::_calc_cb_score(name account) {
@@ -817,9 +839,14 @@ uint64_t harvest::_calc_cb_score(name account) {
     uint64_t cb_points = citr->community_building_score;
     auto users_by_cbs = cbs.get_index<"bycbs"_n>();
     auto cbs_itr = users_by_cbs.find(cb_points);
-    uint64_t counted_number = std::distance(users_by_cbs.lower_bound(1), users_by_cbs.end());
-    uint64_t counted_index = std::distance(users_by_cbs.lower_bound(1), cbs_itr);
-    cb_score = (counted_index * 100) / counted_number; 
+    auto lower_bound_1_itr = users_by_cbs.lower_bound(1);
+    if (lower_bound_1_itr != users_by_cbs.end()) {
+      uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_cbs.end());
+      uint64_t counted_index = std::distance(lower_bound_1_itr, cbs_itr);
+      cb_score = (counted_index * 100) / counted_number; 
+    } else {
+      check(false, "lb 1CB end");
+    }
   }
   return cb_score;
 }
@@ -831,9 +858,14 @@ uint64_t harvest::_calc_planted_score(name account) {
     uint64_t planted_amount = pitr->planted.amount;
     auto users_by_planted = balances.get_index<"byplanted"_n>();
     auto by_planted_itr = users_by_planted.find(planted_amount);
-    uint64_t counted_number = std::distance(users_by_planted.lower_bound(1), users_by_planted.end());
-    uint64_t counted_index = std::distance(users_by_planted.lower_bound(1), by_planted_itr);
-    planted_score = (counted_index * 100) / counted_number; 
+    auto lower_bound_1_itr = users_by_planted.lower_bound(1);
+    if (lower_bound_1_itr != users_by_planted.end()) {
+      uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_planted.end());
+      uint64_t counted_index = std::distance(lower_bound_1_itr, by_planted_itr);
+      planted_score = (counted_index * 100) / counted_number; 
+    } else {
+      check(false, "lb planted end");
+    }
   }
   return planted_score;
 }

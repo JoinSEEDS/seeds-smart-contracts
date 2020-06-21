@@ -92,3 +92,31 @@ void history::check_user(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
 }
+
+void history::clearoldtrx(name account) {
+  require_auth(get_self());
+
+  config_tables config(contracts::settings, contracts::settings.value);
+
+  auto three_moon_cycles = config.get("mooncyclesec"_n.value, "moon cycles not set").value;
+
+  auto now = eosio::current_time_point().sec_since_epoch();
+  auto cutoffdate = now - three_moon_cycles;
+
+  transaction_tables transactions(get_self(), account.value);
+
+  auto transactions_by_time = transactions.get_index<"bytimestamp"_n>();
+
+  int maxerase = 10;
+
+  auto titr = transactions_by_time.begin();
+
+  while(titr != transactions_by_time.end() && maxerase > 0) {
+    if (titr->timestamp < cutoffdate) {
+      titr = transactions_by_time.erase(titr);
+    } else {
+      break;
+    }
+    maxerase--;
+  }
+}

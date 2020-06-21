@@ -2,7 +2,12 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { harvest, firstuser, seconduser, history, accounts } = names
+const { harvest, firstuser, seconduser, history, accounts, settings } = names
+
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 describe('make a transaction entry', async assert => {
 
@@ -13,12 +18,16 @@ describe('make a transaction entry', async assert => {
 
   const historyContract = await eos.contract(history)
   const accountsContract = await eos.contract(accounts)
+  const settingsContract = await eos.contract(settings)
   
   console.log('history reset')
   await historyContract.reset(firstuser, { authorization: `${history}@active` })
   
   console.log('accounts reset')
   await accountsContract.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings reset')
+  await settingsContract.reset({ authorization: `${settings}@active` })
   
   console.log('update status')
   await accountsContract.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
@@ -35,6 +44,24 @@ describe('make a transaction entry', async assert => {
     table: 'transactions',
     json: true
   })
+
+  console.log("clear history - wait 1 second");
+  await sleep(1000)
+
+  console.log("make moon cycle short for testing");
+  await settingsContract.configure("mooncyclesec", 0, { authorization: `${settings}@active` })
+  await historyContract.trxentry(firstuser, seconduser, '20.0000 SEEDS', { authorization: `${history}@active` })
+
+  await historyContract.clearoldtrx(firstuser, { authorization: `${history}@active` })
+
+
+  const txAfterClear = await getTableRows({
+    code: history,
+    scope: firstuser,
+    table: 'transactions',
+    json: true
+  })
+  console.log("txAfterClear "+JSON.stringify(txAfterClear))
   
   let txresult = rows[0]
   delete txresult.timestamp
@@ -49,6 +76,14 @@ describe('make a transaction entry', async assert => {
       quantity: '10.0000 SEEDS',
     }
   })
+
+  assert({
+    given: 'tx cleared',
+    should: 'have no transaction entry',
+    actual: txAfterClear.rows.length,
+    expected: 1
+  })
+
 })
 
 describe("make a history entry", async (assert) => {

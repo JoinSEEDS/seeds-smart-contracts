@@ -5,6 +5,7 @@
 
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <utils.hpp>
 
 using namespace eosio;
 using std::string;
@@ -26,6 +27,8 @@ CONTRACT history : public contract {
 
         ACTION trxentry(name from, name to, asset quantity);
         
+        ACTION clearoldtrx(name account);
+
         ACTION addcitizen(name account);
         
         ACTION addresident(name account);
@@ -72,6 +75,15 @@ CONTRACT history : public contract {
        uint64_t by_to() const { return to.value; }
        uint64_t by_quantity() const { return quantity.amount; }
     };
+
+    TABLE config_table {
+        name param;
+        uint64_t value;
+        uint64_t primary_key() const { return param.value; }
+    };
+    
+    typedef eosio::multi_index <"config"_n, config_table> config_tables;
+
     typedef eosio::multi_index<"transactions"_n, transaction_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
       indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
@@ -100,4 +112,4 @@ CONTRACT history : public contract {
     citizen_tables citizens;
 };
 
-EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident));
+EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(clearoldtrx)(addcitizen)(addresident));
