@@ -358,9 +358,6 @@ void harvest::calctrxpt() {
     calc_tx_points(uitr->account, 0);
     uitr++;
   }
-
-  print("HARVEST: calctrx executed");
-
 }
 
 void harvest::calctrx() {
@@ -595,8 +592,6 @@ void harvest::calcplanted() {
     uitr++;
   }
 
-  print("HARVEST: calcplanted executed");
-
 }
 
 void harvest::claimreward(name from) {
@@ -708,30 +703,29 @@ void harvest::caclharvestn(uint64_t increment) {
   require_auth(get_self());
 
   name harvest_cycle = "harvest"_n;
-
-  uint64_t length = std::distance(users.begin(), users.end());
   
   uint64_t start_index = get_cycle_index(harvest_cycle);
-  
-  if (start_index >= length) { start_index = 0; }
-
-  uint64_t end_index = std::min(start_index + increment, length-1);
-
-  check(start_index < end_index, "nothing to calculate!");
-  
+    
   auto uitr = users.begin();
 
   std::advance(uitr, start_index);
 
-  uint64_t index = start_index; 
+  uint64_t count = 0; 
 
-  while (uitr != users.end() && index <= end_index) {
+  //string debugstring = " start ix: "+ std::to_string(start_index);
+
+  while (uitr != users.end() && count < increment) {
+
+    //debugstring = debugstring +  " | " +  std::to_string(start_index + count) + ": acct: "+uitr->account.to_string();
+
     calcscore(uitr->account);
-    index++;
+    count++;
     uitr++;
   }
 
-  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : end_index);
+  //print(debugstring);
+
+  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : start_index + increment);
 
 
 }
@@ -752,19 +746,21 @@ void harvest::calcscore(name account) {
 }
 void harvest::_scoreuser(name account, uint64_t reputation) {
 
-  calc_tx_points(account, 0);
+  // calc_tx_points(account, 0);
 
-  uint64_t transactions_score = _calc_tx_score(account);
+  // uint64_t transactions_score = _calc_tx_score(account);
 
-  uint64_t reputation_score = _calc_reputation_score(account, reputation);
+  // uint64_t reputation_score = _calc_reputation_score(account, reputation);
 
-  uint64_t community_building_score = _calc_cb_score(account);
+  // uint64_t community_building_score = _calc_cb_score(account);
 
   uint64_t planted_score = _calc_planted_score(account);
 
-  double rep = utils::rep_multiplier_for_score(reputation_score);
+  //print("CS..");
 
-  uint64_t contribution_score = uint64_t((planted_score + transactions_score + community_building_score) * rep);
+  // double rep = utils::rep_multiplier_for_score(reputation_score);
+
+  // uint64_t contribution_score = uint64_t((planted_score + transactions_score + community_building_score) * rep);
 
   auto hitr = harveststat.find(account.value);
 
@@ -773,13 +769,13 @@ void harvest::_scoreuser(name account, uint64_t reputation) {
       hitr = harveststat.find(account.value);
   } 
 
-  string s = "planted_score: " + std::to_string(planted_score) +
-        " transactions_score: " + std::to_string(transactions_score) +
-        " reputation_score: " + std::to_string(reputation_score) +
-        " community_building_score: " + std::to_string(community_building_score) +
-        " contribution_score: " + std::to_string(contribution_score);
+  // string s = "planted_score: " + std::to_string(planted_score) +
+  //       " transactions_score: " + std::to_string(transactions_score) +
+  //       " reputation_score: " + std::to_string(reputation_score) +
+  //       " community_building_score: " + std::to_string(community_building_score) +
+  //       " contribution_score: " + std::to_string(contribution_score);
 
-  print(s);
+  //print(s);
 
 /* // TEST MODE - not writing to the chain just yet - I want to test performance on the live data.
   harveststat.modify(hitr, _self, [&](auto& user) {
@@ -800,14 +796,16 @@ uint64_t harvest::_calc_tx_score(name account) {
 
   if (txitr != txpoints.end()) {
     uint64_t points = txitr->points;
-    auto txpoints_by_points = txpoints.get_index<"bypoints"_n>();
-    auto ptitr = txpoints_by_points.find(points);
-    auto lower_bound_1_itr = txpoints_by_points.lower_bound(1);
-    if (lower_bound_1_itr != txpoints_by_points.end()) {
-      uint64_t counted_number = std::distance(lower_bound_1_itr, txpoints_by_points.end());
-      uint64_t counted_index = std::distance(lower_bound_1_itr, ptitr);
-      tx_score = (counted_index * 100) / counted_number; // ==> 0 - 99    
-    } 
+    if (points >= 1) {
+      auto txpoints_by_points = txpoints.get_index<"bypoints"_n>();
+      auto ptitr = txpoints_by_points.find(points);
+      auto lower_bound_1_itr = txpoints_by_points.lower_bound(1);
+      if (lower_bound_1_itr != txpoints_by_points.end()) {
+        uint64_t counted_number = std::distance(lower_bound_1_itr, txpoints_by_points.end());
+        uint64_t counted_index = std::distance(lower_bound_1_itr, ptitr);
+        tx_score = (counted_index * 100) / counted_number; // ==> 0 - 99    
+      } 
+    }
   }
   return tx_score;
 }
@@ -824,9 +822,7 @@ uint64_t harvest::_calc_reputation_score(name account, uint64_t reputation) {
       uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_rep.end());
       uint64_t counted_index = std::distance(lower_bound_1_itr, repitr);
       rep_score = (counted_index * 100) / counted_number; 
-    } else {
-      check(false, "lb 1 end");
-    }
+    } 
   }
 
   return rep_score;
@@ -844,9 +840,7 @@ uint64_t harvest::_calc_cb_score(name account) {
       uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_cbs.end());
       uint64_t counted_index = std::distance(lower_bound_1_itr, cbs_itr);
       cb_score = (counted_index * 100) / counted_number; 
-    } else {
-      check(false, "lb 1CB end");
-    }
+    } 
   }
   return cb_score;
 }
@@ -857,15 +851,15 @@ uint64_t harvest::_calc_planted_score(name account) {
   if (pitr != balances.end()) {
     uint64_t planted_amount = pitr->planted.amount;
     auto users_by_planted = balances.get_index<"byplanted"_n>();
+    
     auto by_planted_itr = users_by_planted.find(planted_amount);
+
     auto lower_bound_1_itr = users_by_planted.lower_bound(1);
     if (lower_bound_1_itr != users_by_planted.end()) {
       uint64_t counted_number = std::distance(lower_bound_1_itr, users_by_planted.end());
       uint64_t counted_index = std::distance(lower_bound_1_itr, by_planted_itr);
       planted_score = (counted_index * 100) / counted_number; 
-    } else {
-      check(false, "lb planted end");
-    }
+    } 
   }
   return planted_score;
 }
