@@ -264,6 +264,7 @@ void accounts::refreward(name account, name new_status) {
       item.account = referrer;
       item.community_building_score = community_building_points.value;
     });
+    size_change("cbs.sz"_n, 1);
   }
 
   // see if referrer is org or individual (or nobody)
@@ -582,44 +583,44 @@ void accounts::genesis(name user) // Remove this after Golive
 
 }
 
-void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
-  require_auth(_self);
-  auto uitr = account == 0 ? users.begin() : users.find(account);
-  uint64_t count = 0;
-  while (uitr != users.end() && count < chunksize) {
-    if (uitr->reputation > 0) {
-      auto ritr = rep.find(uitr->account.value);
-      if (ritr != rep.end()) {
-        rep.modify(ritr, _self, [&](auto& item) {
-          item.rep = uitr->reputation;
-        });
-      } else {
-        add_rep_item(uitr->account, uitr->reputation);
-      }
-    }
-    uitr++;
-    count++;
-  }
-  if (uitr == users.end()) {
-    // done
-    size_set("users.sz"_n, chunksize * cycle + count);
-  } else {
-    // recursive call
-    uint64_t nextaccount = uitr->account.value;
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "migraterep"_n,
-        std::make_tuple(nextaccount, cycle+1, chunksize)
-    );
+// void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
+//   require_auth(_self);
+//   auto uitr = account == 0 ? users.begin() : users.find(account);
+//   uint64_t count = 0;
+//   while (uitr != users.end() && count < chunksize) {
+//     if (uitr->reputation > 0) {
+//       auto ritr = rep.find(uitr->account.value);
+//       if (ritr != rep.end()) {
+//         rep.modify(ritr, _self, [&](auto& item) {
+//           item.rep = uitr->reputation;
+//         });
+//       } else {
+//         add_rep_item(uitr->account, uitr->reputation);
+//       }
+//     }
+//     uitr++;
+//     count++;
+//   }
+//   if (uitr == users.end()) {
+//     // done
+//     size_set("users.sz"_n, chunksize * cycle + count);
+//   } else {
+//     // recursive call
+//     uint64_t nextaccount = uitr->account.value;
+//     action next_execution(
+//         permission_level{get_self(), "active"_n},
+//         get_self(),
+//         "migraterep"_n,
+//         std::make_tuple(nextaccount, cycle+1, chunksize)
+//     );
 
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(nextaccount + 1, _self);
+//     transaction tx;
+//     tx.actions.emplace_back(next_execution);
+//     tx.delay_sec = 1;
+//     tx.send(nextaccount + 1, _self);
     
-  }
-}
+//   }
+// }
 
 void accounts::rankreps() {
   rankrep(0, 0, 200);
@@ -629,9 +630,9 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
   // DEBUG REMOVE THIS - THIS IS SO THE FUNCTION DOESN"T RUN AMOK
-  if (chunk > 10) { 
-    return;
-  }
+  //if (chunk > 10) { 
+  //  return;
+  //}
 
   uint64_t total = sizes.get("rep.sz"_n.value, "user rep size not set").size;
   uint64_t current = chunk * chunksize;
@@ -650,10 +651,6 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
     current++;
     count++;
     ritr++;
-
-    //print("current: "+std::to_string(current));
-    //print("ct: "+std::to_string(count));
-    //print("index: "+std::to_string(ritr->by_rep()));
   }
 
   if (ritr == rep_by_rep.end()) {
@@ -679,17 +676,43 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
 
 
-void accounts::resetrep() {
+// void accounts::resetrep() {
+//   require_auth(_self);
+
+//   auto ritr = rep.begin();
+//   while (ritr != rep.end()) {
+//     ritr = rep.erase(ritr);
+//   }
+
+//   size_set("rep.sz"_n, 0);
+
+// }
+
+void accounts::clearcbs() {
   require_auth(_self);
 
-  auto ritr = rep.begin();
-  while (ritr != rep.end()) {
-    ritr = rep.erase(ritr);
+  auto cbsitr = cbs.begin();
+  while (cbsitr != cbs.end()) {
+    cbsitr = cbs.erase(cbsitr);
   }
-
-  size_set("rep.sz"_n, 0);
+  size_set("cbs.sz"_n, 0);
 
 }
+
+void accounts::migratecbs() {
+  require_auth(_self);
+
+  auto cbsitr = cbs.begin();
+  while (cbsitr != cbs.end()) {
+    cbs2.emplace(_self, [&](auto& item) {
+      item.account = cbsitr->account;
+      item.community_building_score = cbsitr->community_building_score;
+    });
+    cbsitr++;
+  }
+
+}
+
 
 
 void accounts::add_rep_item(name account, uint64_t reputation) {
@@ -793,6 +816,7 @@ void accounts::testsetcbs(name user, uint64_t amount) {
       item.account = user;
       item.community_building_score = amount;
     });
+    size_change("cbs.sz"_n, 1);
   } else {
     cbs.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
