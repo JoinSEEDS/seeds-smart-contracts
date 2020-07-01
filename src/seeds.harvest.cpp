@@ -305,7 +305,7 @@ void harvest::calc_tx_points(name account, uint64_t cycle) {
         current_num++;
       }
 
-      if (current_num < max_number_of_transactions) {
+      if (current_num < max_number_of_transactions && current_rep_multiplier > 0.00001) {
         uint64_t volume = tx_to_itr->quantity.amount;
 
         // limit max volume
@@ -343,29 +343,94 @@ void harvest::calc_tx_points(name account, uint64_t cycle) {
 
 }
 
-void harvest::calctrxpt() {
+uint64_t harvest::_calctrxpt(uint64_t start_index, uint64_t increment) {
   require_auth(_self);
 
-  //auto userstrx = transactions.get_index<"bytrxvolume"_n>();
+  auto uitr = start_index == 0 ? users.begin() : users.find(start_index);
 
-  auto users_number = std::distance(users.begin(), users.end());
+  uint64_t count = 0; 
+
+  string debugstring = "xx start ix: "+ std::to_string(start_index);
 
   uint64_t current_user = 0;
 
-  auto uitr = users.begin();
+  while (uitr != users.end() && count < increment) {
+    debugstring = debugstring +  " | " +  std::to_string(start_index + count) + ": acct: "+uitr->account.to_string();
 
-  while (uitr != users.end()) {
     calc_tx_points(uitr->account, 0);
+    count++;
     uitr++;
+  }
+
+  print(debugstring);
+
+  return uitr == users.end() ? 0 : uitr->account.value;
+
+}
+
+
+
+const name harvest_table_size = "size.hrvst"_n; 
+const name trxpt_1_size       = "size.trx.1"_n; 
+const name planted_1_size     = "size.plnt.1"_n;
+const name cbs_1_size         = "size.cbs.1"_n;
+const name rep_1_size         = "size.rep.1"_n;
+
+
+uint64_t harvest::_cget(name key) {
+  auto citr = cycle.find(key.value);
+  if (citr != cycle.end()) {
+    return citr->value;
+  } else {
+    return 0;
   }
 }
 
-void harvest::calctrx() {
+void harvest::cset(name key, uint64_t value) {
+  auto citr = cycle.find(key.value);
+  if (citr == cycle.end()) {
+    cycle.emplace(_self, [&](auto& item) {
+      item.cycle_id = key;
+      item.value = value;
+    });
+  } else {
+    cycle.modify(citr, _self, [&](auto& item) {
+      item.value = value;
+    });
+  }
+}
+
+void harvest::_cincrement(name key) {
+  _cincby(key, 1);
+}
+
+void harvest::_cdecrement(name key) {
+  _cincby(key, -1);
+}
+
+void harvest::_cincby(name key, int by) {
+  auto citr = cycle.find(key.value);
+  if (citr == cycle.end()) {
+    cycle.emplace(_self, [&](auto& item) {
+      item.cycle_id = key;
+      item.value = 0;
+    });
+  } else {
+    if (by > 0 || citr->value >= -by) {
+      cycle.modify(citr, _self, [&](auto& item) {
+        item.value = item.value + by;
+      });
+    }
+  }
+}
+
+
+uint64_t harvest::calctrx(uint64_t start_index, uint64_t increment) {
   require_auth(_self);
 
   auto users = txpoints.get_index<"bypoints"_n>();
   
-  uint64_t counted_users_number = std::distance(users.lower_bound(1), users.end());
+  //uint64_t counted_users_number = std::distance(users.lower_bound(1), users.end());
 
   uint64_t now_time = eosio::current_time_point().sec_since_epoch();
 
@@ -702,13 +767,13 @@ void harvest::caclharvestn(uint64_t increment) {
 
   require_auth(get_self());
 
-  name harvest_cycle = "harvest"_n;
+  name harvest_cycle = "harvest.1"_n;
   
-  uint64_t start_index = get_cycle_index(harvest_cycle);
-    
-  auto uitr = users.begin();
+  uint64_t start_value = get_cycle_index(harvest_cycle);
 
-  std::advance(uitr, start_index);
+  //uint64_t start_type = get_cycle_index("type"_n);
+    
+  auto uitr = start_value == 0 ? users.begin() : users.find(start_index);
 
   uint64_t count = 0; 
 
@@ -725,10 +790,79 @@ void harvest::caclharvestn(uint64_t increment) {
 
   //print(debugstring);
 
-  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : start_index + increment);
+  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : uitr->account.value);
 
 
 }
+
+void harvest::caclharvestm(uint64_t increment) {
+
+  require_auth(get_self());
+
+  check(increment > 0, "increment must be > 0");
+
+  name harvest_cycle = "harvest.1"_n;
+
+  // keys for the cycle table
+  name calctrxpt_cycle = "calctrxpt"_n;
+  name calctrx_cycle = "calctrx"_n;
+  name calcrep_cycle = "calcrep"_n;
+  name calcplanted_cycle = "calcplanted"_n;
+  name calccbs_cycle = "calccbs"_n;
+  name calccs_cycle = "calccs"_n;
+
+  uint64_t start_value = get_cycle_index(harvest_cycle);
+
+  uint64_t start_type = get_cycle_index("type"_n);
+    
+  uint64_t next_value = 0;
+
+  uint64_t next_type = start_type;
+
+  switch (start_type)
+  {
+  case calctrxpt_cycle.value:
+    next_value = _calctrxpt(start_value, increment);
+    if (next_value == 0) next_type = calctrx_cycle.value;
+    break;
+
+  case calctrx_cycle.value:
+    next_value = _calctrx(start_value, increment);
+    if (next_value == 0) next_type = calcrep_cycle.value;
+    break;
+  
+  case calcrep_cycle.value:
+    next_value = _calcrep(start_value, increment);
+    if (next_value == 0) next_type = calcplanted_cycle.value;
+    break;
+
+  case calcplanted_cycle.value:
+    next_value = _calcplanted(start_value, increment);
+    if (next_value == 0) next_type = calccbs_cycle.value;
+    break;
+
+  case calccbs_cycle.value:
+    next_value = _calccbs(start_value, increment);
+    if (next_value == 0) next_type = calccs_cycle.value;
+    break;
+
+  case calccs_cycle.value:
+    next_value = _calc_cs(start_value, increment);
+    if (next_value == 0) next_type = calctrxpt_cycle.value;
+    break;
+
+  default:
+    next_value = 0;
+    next_type = calctrxpt_cycle.value
+    break;
+  }
+
+  set_cycle_index(harvest_cycle, uitr == users.end() ? 0 : uitr->account.value);
+  set_cycle_index("type"_n, next_type);
+
+
+}
+
 
 void harvest::calcscore(name account) {
   require_auth(get_self());
