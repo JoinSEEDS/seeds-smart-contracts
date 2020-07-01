@@ -1,5 +1,6 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
+#include <eosio/transaction.hpp>
 
 void accounts::reset() {
   require_auth(_self);
@@ -555,6 +556,68 @@ void accounts::genesisrep() {
     uitr++;
   }
 
+}
+
+void accounts::migraterep(uint64_t account, uint64_t chunksize) {
+  require_auth(_self);
+  auto uitr = account == 0 ? users.begin() : users.find(account);
+  uint64_t count = 0;
+  while (uitr != users.end() || count > chunksize) {
+    if (uitr->reputation > 0) {
+      auto ritr = rep.find(uitr->account.value);
+      if (ritr != rep.end()) {
+        rep.modify(ritr, _self, [&](auto& item) {
+          item.rep = uitr->reputation;
+        });
+      } else {
+        add_rep_item(uitr->account, uitr->reputation);
+      }
+    }
+    uitr++;
+    count++;
+  }
+  if (uitr == users.end()) {
+    // done
+  } else {
+    // recursive call
+    uint64_t nextaccount = uitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "migraterep"_n,
+        std::make_tuple(nextaccount, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(nextaccount + 1, _self);
+    
+  }
+}
+
+void accounts::add_rep_item(name account, uint64_t reputation) {
+  check(reputation > 0, "reputation must be > 0");
+  rep.emplace(_self, [&](auto& item) {
+    item.account = account;
+    item.rep = reputation;
+  });
+  size_change("rep.sz"_n, 1);
+}
+
+void accounts::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size > delta ? sitr->size - delta : 0;
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
 }
 
 void accounts::testremove(name user)

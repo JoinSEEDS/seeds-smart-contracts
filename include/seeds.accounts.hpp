@@ -2,6 +2,8 @@
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <tables/rep_table.hpp>
+#include <tables/size_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -16,6 +18,8 @@ CONTRACT accounts : public contract {
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
+          rep(receiver, receiver.value),
+          sizes(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value)
           {}
@@ -50,15 +54,13 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
+      ACTION migraterep(uint64_t account, uint64_t chunksize);
+
       ACTION testresident(name user);
       ACTION testvisitor(name user);
-
       ACTION testremove(name user);
-
       ACTION testsetrep(name user, uint64_t amount);
-
       ACTION testsetcbs(name user, uint64_t amount);
-
       ACTION testreward();
 
   private:
@@ -105,7 +107,17 @@ CONTRACT accounts : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       uint64_t countrefs(name user);
       uint64_t rep_score(name user);
+      void add_rep_item(name account, uint64_t reputation);
+      void size_change(name id, int delta);
 
+
+      DEFINE_REP_TABLE
+
+      DEFINE_REP_TABLE_MULTI_INDEX
+
+      DEFINE_SIZE_TABLE
+
+      DEFINE_SIZE_TABLE_MULTI_INDEX
 
       TABLE ref_table {
         name referrer;
@@ -204,6 +216,8 @@ CONTRACT accounts : public contract {
     ref_tables refs;
     req_vouch_tables reqvouch;
     user_tables users;
+    rep_tables rep;
+    size_tables sizes;
 
     config_tables config;
 
@@ -228,4 +242,4 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch));
+(testreward)(punish)(requestvouch)(vouch)(migraterep));
