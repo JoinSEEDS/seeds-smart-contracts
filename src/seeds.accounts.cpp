@@ -675,6 +675,52 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
 }
 
+void accounts::rankcbss() {
+  rankcbs(0, 0, 200);
+}
+
+void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  uint64_t total = sizes.get("cbs.sz"_n.value, "cbs table size not set").size;
+  uint64_t current = chunk * chunksize;
+  auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
+  auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (citr != cbs_by_cbs.end() && count < chunksize) {
+
+    uint64_t rank = (current * 100) / total;
+
+    cbs_by_cbs.modify(citr, _self, [&](auto& item) {
+      item.rank = rank;
+    });
+
+    current++;
+    count++;
+    citr++;
+  }
+
+  if (citr == cbs_by_cbs.end()) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = citr->by_cbs();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "rankcbs"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+    
+  }
+
+}
 
 
 // void accounts::resetrep() {

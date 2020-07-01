@@ -60,6 +60,9 @@ CONTRACT accounts : public contract {
       ACTION rankreps();
       ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
+      ACTION rankcbss();
+      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+
       ACTION migratecbs(); // MIGRATION - REMOVE
       ACTION clearcbs(); // MIGRATION - REMOVE
 
@@ -257,4 +260,5 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(add
 (subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (migratecbs)(clearcbs)
-(rankreps)(rankrep));
+(rankreps)(rankrep)(rankcbss)(rankcbs)
+);
