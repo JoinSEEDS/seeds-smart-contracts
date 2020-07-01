@@ -704,15 +704,17 @@ void accounts::migratecbs() {
   require_auth(_self);
 
   auto cbsitr = cbs2.begin();
+  int count = 0;
   while (cbsitr != cbs2.end()) {
     cbs.emplace(_self, [&](auto& item) {
       item.account = cbsitr->account;
       item.community_building_score = cbsitr->community_building_score;
       item.rank = 0;
     });
+    count++;
     cbsitr++;
   }
-
+  size_set("cbs.sz"_n, count);
 }
 
 
