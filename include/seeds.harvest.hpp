@@ -59,8 +59,6 @@ CONTRACT harvest : public contract {
 
     ACTION payforcpu(name account);
 
-    ACTION countrep();
-
     ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
@@ -241,7 +239,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (payforcpu)(reset)(runharvest)
           (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
           (calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)
-          (countrep)
           (testreward)(testsetrs)(testclaim)(testupdatecs))
       }
   }
