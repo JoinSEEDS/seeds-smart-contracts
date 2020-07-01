@@ -45,20 +45,6 @@ describe('genesis testing', async assert => {
     expected: "citizen"
   })
 
-  await contract.genesisrep({ authorization: `${accounts}@active` })
-
-  let reps = await get_reps()
-
-  //console.log("reps: "+JSON.stringify(reps, null, 2))
-
-  assert({
-    given: 'genesis reps',
-    should: 'citizens have 100 rep',
-    actual: reps,
-    expected: [0, 100]
-  })
-
-
 
 })
 

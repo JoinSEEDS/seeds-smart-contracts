@@ -329,11 +329,22 @@ void accounts::addrep(name user, uint64_t amount)
   require_auth(get_self());
 
   check(is_account(user), "non existing user");
+  check(amount > 0, "amount must be > 0");
 
   auto uitr = users.find(user.value);
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
+
+  auto ritr = rep.find(user.value);
+  if (ritr == rep.end()) {
+    add_rep_item(user, amount);
+  } else {
+    rep.modify(ritr, _self, [&](auto& item) {
+      item.rep += amount;
+    });
+  }
+
 }
 
 void accounts::subrep(name user, uint64_t amount)
@@ -341,7 +352,9 @@ void accounts::subrep(name user, uint64_t amount)
   require_auth(get_self());
 
   check(is_account(user), "non existing user");
+  check(amount > 0, "amount must be > 0");
 
+  // modify user reputation - deprecated
   auto uitr = users.find(user.value);
   users.modify(uitr, _self, [&](auto& user) {
     if (user.reputation < amount) {
@@ -350,6 +363,19 @@ void accounts::subrep(name user, uint64_t amount)
       user.reputation -= amount;
     }
   });
+
+  auto ritr = rep.find(user.value);
+  if (ritr != rep.end()) {
+    if (ritr->rep > amount) {
+      rep.modify(ritr, _self, [&](auto& item) {
+        item.rep -= amount;
+      });
+    } else {
+      rep.erase(ritr);
+      size_change("rep.sz"_n, -1);
+    }
+  }
+
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
@@ -543,21 +569,6 @@ void accounts::genesis(name user) // Remove this after Golive
 
 }
 
-void accounts::genesisrep() {
-  require_auth(_self);
-  auto uitr = users.begin();
-
-  while (uitr != users.end()) {
-    if (uitr -> status == "citizen"_n && uitr -> reputation < 100) {
-      users.modify(uitr, _self, [&](auto& user) {
-        user.reputation = 100;
-      });
-    }
-    uitr++;
-  }
-
-}
-
 void accounts::migraterep(uint64_t account, uint64_t chunksize) {
   require_auth(_self);
   auto uitr = account == 0 ? users.begin() : users.find(account);
@@ -656,6 +667,13 @@ void accounts::testsetrep(name user, uint64_t amount) {
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation = amount;
   });
+
+
+  auto ritr = rep.find(user.value);
+  rep.modify(ritr, _self, [&](auto& item) {
+    item.rep = amount;
+  });
+
 }
 
 void accounts::testsetcbs(name user, uint64_t amount) {
