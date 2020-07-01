@@ -26,6 +26,16 @@ void accounts::reset() {
     cbsitr = cbs.erase(cbsitr);
   }
 
+  auto repitr = rep.begin();
+  while (repitr != rep.end()) {
+    repitr = rep.erase(repitr);
+  }
+
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
+  }
+
 }
 
 void accounts::history_add_resident(name account) {
@@ -62,6 +72,9 @@ void accounts::adduser(name account, string nickname, name type)
       user.nickname = nickname;
       user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+
+  size_change("users.sz"_n, 1);
+
 }
 
 void accounts::vouch(name sponsor, name account) {
@@ -569,11 +582,11 @@ void accounts::genesis(name user) // Remove this after Golive
 
 }
 
-void accounts::migraterep(uint64_t account, uint64_t chunksize) {
+void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
   require_auth(_self);
   auto uitr = account == 0 ? users.begin() : users.find(account);
   uint64_t count = 0;
-  while (uitr != users.end() || count > chunksize) {
+  while (uitr != users.end() && count < chunksize) {
     if (uitr->reputation > 0) {
       auto ritr = rep.find(uitr->account.value);
       if (ritr != rep.end()) {
@@ -589,6 +602,7 @@ void accounts::migraterep(uint64_t account, uint64_t chunksize) {
   }
   if (uitr == users.end()) {
     // done
+    size_set("users.sz"_n, chunksize * cycle + count);
   } else {
     // recursive call
     uint64_t nextaccount = uitr->account.value;
@@ -596,7 +610,7 @@ void accounts::migraterep(uint64_t account, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "migraterep"_n,
-        std::make_tuple(nextaccount, chunksize)
+        std::make_tuple(nextaccount, cycle+1, chunksize)
     );
 
     transaction tx;
@@ -606,6 +620,19 @@ void accounts::migraterep(uint64_t account, uint64_t chunksize) {
     
   }
 }
+
+void accounts::resetrep() {
+  require_auth(_self);
+
+  auto ritr = rep.begin();
+  while (ritr != rep.end()) {
+    ritr = rep.erase(ritr);
+  }
+
+  size_set("rep.sz"_n, 0);
+
+}
+
 
 void accounts::add_rep_item(name account, uint64_t reputation) {
   check(reputation > 0, "reputation must be > 0");
@@ -624,7 +651,26 @@ void accounts::size_change(name id, int delta) {
       item.size = delta;
     });
   } else {
-    uint64_t newsize = sitr->size > delta ? sitr->size - delta : 0;
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+void accounts::size_set(name id, uint64_t newsize) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = newsize;
+    });
+  } else {
     sizes.modify(sitr, _self, [&](auto& item) {
       item.size = newsize;
     });
@@ -656,6 +702,8 @@ void accounts::testremove(name user)
   ).send();
 
   users.erase(uitr);
+  size_change("users.sz"_n, -1);
+  
 }
 
 void accounts::testsetrep(name user, uint64_t amount) {

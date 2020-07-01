@@ -52,7 +52,8 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
-      ACTION migraterep(uint64_t account, uint64_t chunksize);
+      ACTION migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize);
+      ACTION resetrep();
 
       ACTION testresident(name user);
       ACTION testvisitor(name user);
@@ -107,6 +108,7 @@ CONTRACT accounts : public contract {
       uint64_t rep_score(name user);
       void add_rep_item(name account, uint64_t reputation);
       void size_change(name id, int delta);
+      void size_set(name id, uint64_t newsize);
 
 
       DEFINE_REP_TABLE
@@ -240,4 +242,4 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch)(migraterep));
+(testreward)(punish)(requestvouch)(vouch)(migraterep)(resetrep));
