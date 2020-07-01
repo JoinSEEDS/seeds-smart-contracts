@@ -263,6 +263,7 @@ void accounts::refreward(name account, name new_status) {
     cbs.emplace(_self, [&](auto& item) {
       item.account = referrer;
       item.community_building_score = community_building_points.value;
+      item.rank = 0;
     });
     size_change("cbs.sz"_n, 1);
   }
@@ -702,11 +703,12 @@ void accounts::clearcbs() {
 void accounts::migratecbs() {
   require_auth(_self);
 
-  auto cbsitr = cbs.begin();
-  while (cbsitr != cbs.end()) {
-    cbs2.emplace(_self, [&](auto& item) {
+  auto cbsitr = cbs2.begin();
+  while (cbsitr != cbs2.end()) {
+    cbs.emplace(_self, [&](auto& item) {
       item.account = cbsitr->account;
       item.community_building_score = cbsitr->community_building_score;
+      item.rank = 0;
     });
     cbsitr++;
   }
@@ -815,6 +817,7 @@ void accounts::testsetcbs(name user, uint64_t amount) {
     cbs.emplace(_self, [&](auto& item) {
       item.account = user;
       item.community_building_score = amount;
+      item.rank = 0;
     });
     size_change("cbs.sz"_n, 1);
   } else {

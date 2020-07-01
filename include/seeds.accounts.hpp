@@ -4,6 +4,7 @@
 #include <tables.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
+#include <tables/cbs_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -126,20 +127,16 @@ CONTRACT accounts : public contract {
 
       DEFINE_SIZE_TABLE_MULTI_INDEX
 
+      DEFINE_CBS_TABLE
+
+      DEFINE_CBS_TABLE_MULTI_INDEX
+
       TABLE ref_table {
         name referrer;
         name invited;
 
         uint64_t primary_key() const { return invited.value; }
         uint64_t by_referrer()const { return referrer.value; }
-      };
-
-      TABLE cbs_table {
-        name account;
-        uint64_t community_building_score;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cbs()const { return community_building_score; }
       };
 
       TABLE cbs2_table {
@@ -219,11 +216,6 @@ CONTRACT accounts : public contract {
         const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
     > balance_tables;
     balance_tables balances;
-
-    typedef eosio::multi_index<"cbs"_n, cbs_table,
-      indexed_by<"bycbs"_n,
-      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
-    > cbs_tables;
 
     typedef eosio::multi_index<"cbs2"_n, cbs2_table,
       indexed_by<"bycbs"_n,
