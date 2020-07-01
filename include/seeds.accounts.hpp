@@ -55,6 +55,11 @@ CONTRACT accounts : public contract {
       ACTION migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize);
       ACTION resetrep();
 
+      ACTION rankreps();
+
+      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+
+
       ACTION testresident(name user);
       ACTION testvisitor(name user);
       ACTION testremove(name user);
@@ -242,4 +247,4 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch)(migraterep)(resetrep));
+(testreward)(punish)(requestvouch)(vouch)(migraterep)(resetrep)(rankreps)(rankrep));

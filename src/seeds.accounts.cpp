@@ -621,6 +621,64 @@ void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) 
   }
 }
 
+void accounts::rankreps() {
+  rankrep(0, 0, 200);
+}
+
+void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  // DEBUG REMOVE THIS - THIS IS SO THE FUNCTION DOESN"T RUN AMOK
+  if (chunk > 10) { 
+    return;
+  }
+
+  uint64_t total = sizes.get("rep.sz"_n.value, "user rep size not set").size;
+  uint64_t current = chunk * chunksize;
+  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (ritr != rep_by_rep.end() && count < chunksize) {
+
+    uint64_t rank = (current * 100) / total;
+
+    rep_by_rep.modify(ritr, _self, [&](auto& item) {
+      item.rank = rank;
+    });
+
+    current++;
+    count++;
+    ritr++;
+
+    //print("current: "+std::to_string(current));
+    //print("ct: "+std::to_string(count));
+    //print("index: "+std::to_string(ritr->by_rep()));
+  }
+
+  if (ritr == rep_by_rep.end()) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = ritr->by_rep();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "rankrep"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+    
+  }
+
+}
+
+
+
 void accounts::resetrep() {
   require_auth(_self);
 
@@ -771,7 +829,4 @@ uint64_t accounts::rep_score(name user)
 
     return hitr->reputation_score;
 }
-
-
-
 
