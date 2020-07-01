@@ -791,8 +791,7 @@ describe('make citizen', async assert => {
 
 })
 
-
-describe.only('reputation', async assert => {
+describe('reputation', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -820,7 +819,6 @@ describe.only('reputation', async assert => {
     table: 'rep',
     json: true
   })
-
 
   const sizes = await getTableRows({
     code: accounts,
@@ -859,7 +857,6 @@ describe.only('reputation', async assert => {
     json: true
   })
 
-
   const sizesAfter = await getTableRows({
     code: accounts,
     scope: accounts,
@@ -897,7 +894,6 @@ describe.only('reputation', async assert => {
     expected: 2
   })
 
-
   assert({
     given: 'removed rep from first user',
     should: 'had 100, minus 2 is 98',
@@ -912,10 +908,8 @@ describe.only('reputation', async assert => {
     expected: 2
   })
 
-
-
-
 })
+
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {
     
