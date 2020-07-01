@@ -840,13 +840,20 @@ describe('reputation', async assert => {
 
   await contracts.accounts.subrep(firstuser, 2, { authorization: `${accounts}@api` })
   await contracts.accounts.subrep(thirduser, 2, { authorization: `${accounts}@api` })
-  
+
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
+
+  await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
+
   const repsAfter = await getTableRows({
     code: accounts,
     scope: accounts,
     table: 'rep',
     json: true
   })
+  
+  console.log("reps "+JSON.stringify(repsAfter, null, 2))
+
 
   const repsAfterFirstUser = await getTableRows({
     code: accounts,
