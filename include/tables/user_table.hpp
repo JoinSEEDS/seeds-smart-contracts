@@ -2,7 +2,7 @@
 
 using eosio::name;
 
-#define DEFINE_USER_TABLE TABLE         TABLE user_table { \
+#define DEFINE_USER_TABLE TABLE user_table { \
         name account; \
         name status; \
         name type; \
