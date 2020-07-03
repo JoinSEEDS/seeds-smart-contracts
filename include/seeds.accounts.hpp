@@ -5,6 +5,7 @@
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/cbs_table.hpp>
+#include<tables/user_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -121,6 +122,9 @@ CONTRACT accounts : public contract {
       void size_change(name id, int delta);
       void size_set(name id, uint64_t newsize);
 
+      DEFINE_USER_TABLE
+
+      DEFINE_USER_TABLE_MULTI_INDEX
 
       DEFINE_REP_TABLE
 
@@ -150,23 +154,6 @@ CONTRACT accounts : public contract {
         uint64_t by_cbs()const { return community_building_score; }
       };
 
-      TABLE user_table {
-        name account;
-        name status;
-        name type;
-        string nickname;
-        string image;
-        string story;
-        string roles;
-        string skills;
-        string interests;
-        uint64_t reputation;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return account.value; }
-        uint64_t by_reputation()const { return reputation; }
-      };
-
       TABLE vouch_table {
         name account;
         name sponsor;
@@ -192,11 +179,6 @@ CONTRACT accounts : public contract {
         uint64_t value;
         uint64_t primary_key() const { return param.value; }
       };
-
-    typedef eosio::multi_index<"users"_n, user_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-    > user_tables;
     
     typedef eosio::multi_index<"refs"_n, ref_table,
       indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
