@@ -419,6 +419,123 @@ describe('Proposals', async assert => {
 
 })
 
+describe('Neutral Vote', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  const secondUserInitialBalance = await getBalance(seconduser)
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal '+campaignbank)
+  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  // await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  // console.log('deposit stake (memo 2)')
+  // await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const voiceBefore = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  console.log('favour first proposal')
+  await contracts.proposals.neutral(seconduser, 1, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+
+  const votes = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
+  const voiceAfter = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  assert({
+    given: 'voice before voting',
+    should: 'have all voice points',
+    actual: voiceBefore.rows,
+    expected: [
+      { account: firstuser, balance: 44 },
+      { account: seconduser, balance: 44 }
+    ]
+  })
+
+  assert({
+    given: 'voice after voting',
+    should: 'not decrease voice if voted for noopinion',
+    actual: voiceAfter.rows,
+    expected: [
+      { account: firstuser, balance: 36 },
+      { account: seconduser, balance: 44 }
+    ]
+  })
+
+  assert({
+    given: 'voted for a proposal',
+    should: 'have entry in votes table',
+    actual: votes.rows,
+    expected: [
+      {
+        proposal_id: 1,
+        account: firstuser,
+        amount: 8,
+        vote: 'distrust'
+      },
+      {
+        proposal_id: 1,
+        account: seconduser,
+        amount: 0,
+        vote: 'abstain'
+      }
+    ]
+  })
+
+})
+
 describe('Change Trust', async assert => {
 
   if (!isLocal()) {

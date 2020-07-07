@@ -259,13 +259,13 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
   }
 }
 
-void proposals::favour(name voter, uint64_t id, uint64_t amount) {
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(voter);
   check_citizen(voter);
 
   auto pitr = props.find(id);
-  check(pitr != props.end(), "no proposal");
-  check(pitr->executed == false, "already executed");
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->executed == false, "Proposal was already executed");
 
   uint64_t min_stake = config.find(name("propminstake").value)->value;
   check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
@@ -274,63 +274,50 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "User does not have voice");
   check(vitr->balance >= amount, "voice balance exceeded");
-
+  
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
   check(voteitr == votes.end(), "only one vote");
 
-  props.modify(pitr, _self, [&](auto& proposal) {
-    proposal.total += amount;
-    proposal.favour += amount;
-  });
+  check(option == trust || option == distrust || option == abstain, "Invalid option");
 
-  voice.modify(vitr, _self, [&](auto& voice) {
-    voice.balance -= amount;
-  });
-
+  if (option == trust) {
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total += amount;
+      proposal.favour += amount;
+    });
+    voice.modify(vitr, _self, [&](auto& voice) {
+      voice.balance -= amount;
+    });
+  } else if (option == distrust) {
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total += amount;
+      proposal.against += amount;
+    });
+    voice.modify(vitr, _self, [&](auto& voice) {
+      voice.balance -= amount;
+    });
+  }
+  
   votes.emplace(_self, [&](auto& vote) {
     vote.account = voter;
     vote.amount = amount;
-    vote.favour = true;
+    vote.vote = option;
     vote.proposal_id = id;
   });
+
+}
+
+void proposals::favour(name voter, uint64_t id, uint64_t amount) {
+  vote_aux(voter, id, amount, trust);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
-    require_auth(voter);
-    check_citizen(voter);
+  vote_aux(voter, id, amount, distrust);
+}
 
-    auto pitr = props.find(id);
-    check(pitr != props.end(), "Proposal not found");
-    check(pitr->executed == false, "Proposal was already executed");
-
-    uint64_t min_stake = config.find(name("propminstake").value)->value;
-    check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
-    check(pitr->stage == name("active"), "not active stage");
-
-    auto vitr = voice.find(voter.value);
-    check(vitr != voice.end(), "User does not have voice");
-    check(vitr->balance >= amount, "voice balance exceeded");
-
-    votes_tables votes(get_self(), id);
-    auto voteitr = votes.find(voter.value);
-    check(voteitr == votes.end(), "only one vote");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-        proposal.total += amount;
-        proposal.against += amount;
-    });
-
-    voice.modify(vitr, _self, [&](auto& voice) {
-        voice.balance -= amount;
-    });
-
-    votes.emplace(_self, [&](auto& vote) {
-      vote.account = voter;
-      vote.amount = amount;
-      vote.favour = false;
-      vote.proposal_id = id;
-    });
+void proposals::neutral(name voter, uint64_t id) {
+  vote_aux(voter, id, (uint64_t)0, abstain);
 }
 
 void proposals::addvoice(name user, uint64_t amount)

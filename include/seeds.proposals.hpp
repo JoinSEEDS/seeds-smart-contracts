@@ -42,12 +42,17 @@ CONTRACT proposals : public contract {
 
       ACTION against(name user, uint64_t id, uint64_t amount);
 
+      ACTION neutral(name user, uint64_t id);
+
       ACTION onperiod();
 
       ACTION decayvoice();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
+      name trust = name("trust");
+      name distrust = name("distrust");
+      name abstain = name("abstain");
       
       void update_cycle();
       void update_voicedecay();
@@ -62,6 +67,7 @@ CONTRACT proposals : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
+      void vote_aux (name voter, uint64_t id, uint64_t amount, name option);
 
       TABLE config_table {
           name param;
@@ -111,7 +117,8 @@ CONTRACT proposals : public contract {
           uint64_t proposal_id;
           name account;
           uint64_t amount;
-          bool favour;
+          // bool favour;
+          name vote;
           uint64_t primary_key()const { return account.value; }
       };
 
@@ -156,7 +163,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(onperiod)(decayvoice)(cancel))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(onperiod)(decayvoice)(cancel))
       }
   }
 }
