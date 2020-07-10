@@ -123,10 +123,13 @@ const token = (accountName, issuer, supply) => ({
   supply
 })
 
+const bdc = 'bdc'
+
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
+      bdc: account(bdc),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
@@ -163,6 +166,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
+      bdc: account(bdc),
       campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -199,6 +203,7 @@ const accountsMetadata = (network) => {
       sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
+      bdc: account(bdc),
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -265,6 +270,9 @@ var permissions = [{
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@owner`,
+  actor: `${accounts.accounts.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@active`,
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -411,6 +419,22 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.bdc.account}@active`,
+  actor: `${accounts.onboarding.account}@eosio.code`
+}, {
+  target: `${accounts.onboarding.account}@createbio`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.onboarding.account}@createbio`,
+  action: 'createbio'
+}, {
+  target: `${accounts.onboarding.account}@createbio`,
+  actor: `${accounts.bioregion.account}@active`
+}, {
+  target: `${accounts.bioregion.account}@active`,
+  actor: `${accounts.bioregion.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`

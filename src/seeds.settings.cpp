@@ -15,6 +15,7 @@ void settings::reset() {
   configure(name("org.minplant"), 200 * 10000);
   configure(name("mooncyclesec"), utils::moon_cycle);
   configure(name("propdecaysec"), utils::seconds_per_day);
+  configure(name("bio.fee"), uint64_t(1000) * uint64_t(10000));
   
   // Scheduler cycle
   configure(name("secndstoexec"), 60);
