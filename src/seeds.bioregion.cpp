@@ -256,7 +256,7 @@ ACTION bioregion::setfounder(name bioregion, name founder, name new_founder) {
 void bioregion::create_telos_account(name sponsor, name orgaccount, string publicKey) 
 {
     action(
-        permission_level{contracts::onboarding, "createbio"_n},
+        permission_level{contracts::onboarding, "active"_n},
         contracts::onboarding, "createbio"_n,
         make_tuple(sponsor, orgaccount, publicKey)
     ).send();

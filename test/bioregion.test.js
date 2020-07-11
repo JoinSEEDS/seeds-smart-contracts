@@ -3,6 +3,17 @@ const { eos, encodeName, names, getTableRows, isLocal, initContracts, createKeyp
 
 const { accounts, harvest, bioregion, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser } = names
 
+const randomAccountNameBDC = () => {
+  let length = 8
+  var result           = '';
+  var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+  var charactersLength = characters.length;
+  for ( var i = 0; i < length; i++ ) {
+     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result + ".bdc";
+}
+
 describe("Bioregions General", async assert => {
 
   if (!isLocal()) {
@@ -37,7 +48,7 @@ describe("Bioregions General", async assert => {
   console.log('transfer fee for a bioregion')
   await contracts.token.transfer(firstuser, bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
 
-  const bioname = "test2.bdc"
+  const bioname = randomAccountNameBDC()
 
   const getMembers = async () => {
     return await getTableRows({
@@ -56,8 +67,8 @@ describe("Bioregions General", async assert => {
     })
   }
 
+  console.log('create a bioregion named '+bioname)
 
-  console.log('create a bioregion')
   await contracts.bioregion.create(
     firstuser, 
     bioname, 
@@ -78,6 +89,14 @@ describe("Bioregions General", async assert => {
   
     const initialMembers = await getMembers()
     
+    var hasNewDomain = false
+    try {
+      const accountInfo = await eos.getAccount(bioname)
+      hasNewDomain = true;
+    } catch {
+  
+    }
+  
   console.log('join a bioregion')
   await contracts.bioregion.join(bioname, seconduser, { authorization: `${seconduser}@active` })
 

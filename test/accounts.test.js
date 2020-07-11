@@ -157,7 +157,6 @@ describe('accounts', async assert => {
 
   console.log('test citizen')
 
-
   assert({
     given: 'not citizen',
     should: 'cant vote',
@@ -174,6 +173,8 @@ describe('accounts', async assert => {
     expected: true
   })
   
+  console.log('test resident')
+
   await contract.testresident(firstuser, { authorization: `${accounts}@active` })
 
   assert({
@@ -182,6 +183,8 @@ describe('accounts', async assert => {
     actual: await can_vote(firstuser),
     expected: false
   })
+
+  console.log('test citizen again')
 
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
