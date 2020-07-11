@@ -356,6 +356,9 @@ var permissions = [{
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.organization.account}@active`,
 }, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.bioregion.account}@active`,
+}, {
   target: `${accounts.onboarding.account}@application`,
   key: applicationPublicKey,
   parent: 'active'
@@ -422,16 +425,6 @@ var permissions = [{
 }, {
   target: `${accounts.bdc.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
-}, {
-  target: `${accounts.onboarding.account}@createbio`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.onboarding.account}@createbio`,
-  action: 'createbio'
-}, {
-  target: `${accounts.onboarding.account}@createbio`,
-  actor: `${accounts.bioregion.account}@active`
 }, {
   target: `${accounts.bioregion.account}@active`,
   actor: `${accounts.bioregion.account}@eosio.code`

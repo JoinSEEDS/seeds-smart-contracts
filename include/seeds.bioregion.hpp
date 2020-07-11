@@ -36,7 +36,10 @@ CONTRACT bioregion : public contract {
 
         ACTION addrole(name bioregion, name admin, name account, name role);
         ACTION removerole(name bioregion, name admin, name account);
+        ACTION leaverole(name bioregion, name account);
         ACTION removemember(name bioregion, name admin, name account);
+
+        ACTION setfounder(name bioregion, name founder, name new_founder);
 
         ACTION reset();
 
@@ -46,7 +49,7 @@ CONTRACT bioregion : public contract {
         symbol seeds_symbol = symbol("SEEDS", 4);
         
         name founder_role = name("founder");
-        name admin_role = name("founder");
+        name admin_role = name("admin");
         
 
         void auth_founder(name bioregion, name founder);
@@ -55,6 +58,9 @@ CONTRACT bioregion : public contract {
         void remove_member(name account);
         void create_telos_account(name sponsor, name orgaccount, string publicKey); 
         void size_change(name bioregion, int delta);
+        void delete_role(name bioregion, name account);
+        bool is_member(name bioregion, name account);
+        bool is_admin(name bioregion, name account);
 
         TABLE bioregion_table {
             name id;
@@ -139,7 +145,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<bioregion>(name(receiver), name(code), &bioregion::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(bioregion, (reset)(create)(join))
+          EOSIO_DISPATCH_HELPER(bioregion, (reset)(create)(join)(leave)(addrole)(removerole)(removemember)(leaverole)(setfounder))
       }
   }
 }

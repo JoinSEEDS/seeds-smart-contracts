@@ -157,17 +157,13 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
 }
 
-ACTION onboarding::createbio(name sponsor, name account, string fullname, string publicKey) {
+ACTION onboarding::createbio(name sponsor, name account, string publicKey) {
   require_auth(get_self());
 
   bool is_existing_telos_user = is_account(account);
 
-  auto bitr = bioregions.find(account.value);
-
-  check(bitr == bioregions.end(), "bioregion already exists");
-
   if (!is_existing_telos_user) {
-    create_account(account, publicKey, "bdc"_n);
+    create_account(account, publicKey, ""_n);
   }
   
 }

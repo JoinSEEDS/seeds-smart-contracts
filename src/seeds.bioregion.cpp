@@ -7,17 +7,25 @@
 ACTION bioregion::reset() {
     require_auth(_self);
 
+        // roles_tables roles(get_self(), name("testbr.bdc").value);
+        // auto ritr = roles.begin();
+        // while(ritr != roles.end()) {
+        //     ritr = roles.erase(ritr);
+        // }
+
     auto itr = bioregions.begin();
     while(itr != bioregions.end()) {
-        name bio = itr -> id;
-        members_tables members(get_self(), bio.value);
-
-        auto mitr = members.begin();
-        while(mitr != members.end()) {
-            mitr = members.erase(mitr);
+        roles_tables roles(get_self(), itr->id.value);
+        auto ritr = roles.begin();
+        while(ritr != roles.end()) {
+            ritr = roles.erase(ritr);
         }
-
         itr = bioregions.erase(itr);
+    }
+
+    auto mitr = members.begin();
+    while(mitr != members.end()) {
+        mitr = members.erase(mitr);
     }
 
     auto sitr = sponsors.begin();
@@ -31,6 +39,23 @@ void bioregion::auth_founder(name bioregion, name founder) {
     auto itr = bioregions.get(bioregion.value, "The bioregion does not exist.");
     check(itr.founder == founder, "Only the bioregion's founder can do that.");
     check_user(founder);
+}
+
+bool bioregion::is_member(name bioregion, name account) {
+    auto mitr = members.find(account.value);
+    if (mitr != members.end()) {
+        return mitr->bioregion == bioregion;
+    }
+    return false;
+}
+
+bool bioregion::is_admin(name bioregion, name account) {
+    roles_tables roles(get_self(), bioregion.value);
+    auto ritr = roles.find(account.value);
+    if (ritr != roles.end()) {
+        return ritr->role == admin_role || ritr->role == founder_role;
+    }
+    return false;
 }
 
 
@@ -79,6 +104,7 @@ ACTION bioregion::create(
     string publicKey) 
 {
     require_auth(founder);
+    check_user(founder);
 
     //string acct_string = bioaccount.to_string();
     check(bioaccount.suffix().to_string() == "bdc", "Bioregion name must end in '.bdc' Your suffix: " + bioaccount.suffix().to_string());
@@ -148,6 +174,8 @@ ACTION bioregion::join(name bioregion, name account) {
 ACTION bioregion::addrole(name bioregion, name admin, name account, name role) {
     auth_founder(bioregion, admin);
     check_user(account);
+    check(role == admin_role, "invalid role");
+    check(is_member(bioregion, account), "account is not a member, can't have a role");
 
     roles_tables roles(get_self(), bioregion.value);
 
@@ -166,21 +194,26 @@ ACTION bioregion::addrole(name bioregion, name admin, name account, name role) {
 
 }
 
-ACTION bioregion::removerole(name bioregion, name admin, name account) {
-    auth_founder(bioregion, admin);
+ACTION bioregion::removerole(name bioregion, name founder, name account) {
+    auth_founder(bioregion, founder);
+    delete_role(bioregion, account);
+}
 
+ACTION bioregion::leaverole(name bioregion, name account) {
+    require_auth(account);
+    delete_role(bioregion, account);
+}
+
+void bioregion::delete_role(name bioregion, name account) {
     roles_tables roles(get_self(), bioregion.value);
-
     auto ritr = roles.find(account.value);
-
     check(ritr != roles.end(), "no role");
-
     roles.erase(ritr);
-
 }
 
 ACTION bioregion::removemember(name bioregion, name admin, name account) {
-    auth_founder(bioregion, admin);
+    require_auth(admin);
+    is_admin(bioregion, admin);
 
     auto bitr = bioregions.find(bioregion.value);
     check(bitr -> founder != account, "Change the organization's owner before removing this account.");
@@ -201,6 +234,22 @@ void bioregion::remove_member(name account) {
     size_change(mitr->bioregion, -1);
 
     members.erase(mitr);
+
+}
+
+ACTION bioregion::setfounder(name bioregion, name founder, name new_founder) {
+    auth_founder(bioregion, founder);
+    check(founder.value != new_founder.value, "need to set new account");
+
+    delete_role(bioregion, founder);
+    addrole(bioregion, founder, founder, "admin"_n);
+
+    auto bitr = bioregions.find(bioregion.value);
+    check(bitr != bioregions.end(), "The bioregion does not exist.");
+    bioregions.modify(bitr, _self, [&](auto& item) {
+      item.founder = new_founder;
+    });
+    
 
 }
 

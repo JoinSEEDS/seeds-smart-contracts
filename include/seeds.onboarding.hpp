@@ -32,6 +32,7 @@ CONTRACT onboarding : public contract {
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION createbio(name sponsor, name bioregion, string publicKey);
+
     ACTION cancel(name sponsor, checksum256 invite_hash);
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
