@@ -7,12 +7,6 @@
 ACTION bioregion::reset() {
     require_auth(_self);
 
-        // roles_tables roles(get_self(), name("testbr.bdc").value);
-        // auto ritr = roles.begin();
-        // while(ritr != roles.end()) {
-        //     ritr = roles.erase(ritr);
-        // }
-
     auto itr = bioregions.begin();
     while(itr != bioregions.end()) {
         roles_tables roles(get_self(), itr->id.value);
@@ -249,8 +243,26 @@ ACTION bioregion::setfounder(name bioregion, name founder, name new_founder) {
     bioregions.modify(bitr, _self, [&](auto& item) {
       item.founder = new_founder;
     });
-    
+}
 
+ACTION bioregion::removebr(name bioregion) {
+    require_auth(get_self());
+    auto bitr = bioregions.find(bioregion.value);
+    check(bitr != bioregions.end(), "The bioregion does not exist.");
+    bioregions.erase(bitr);
+
+    roles_tables roles(get_self(), bioregion.value);
+    auto ritr = roles.begin();
+    while(ritr != roles.end()) {
+        ritr = roles.erase(ritr);
+    }
+    auto biomembers = members.get_index<"bybio"_n>();
+    uint64_t current_user = 0;
+
+    auto mitr = biomembers.find(bioregion.value);
+    while (mitr != biomembers.end() && mitr->bioregion.value == bioregion.value) {
+        mitr = biomembers.erase(mitr);
+    }
 }
 
 void bioregion::create_telos_account(name sponsor, name orgaccount, string publicKey) 

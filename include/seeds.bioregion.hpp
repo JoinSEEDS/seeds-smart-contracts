@@ -43,6 +43,9 @@ CONTRACT bioregion : public contract {
 
         ACTION reset();
 
+        ACTION removebr(name bioregion);
+
+
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
@@ -145,7 +148,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<bioregion>(name(receiver), name(code), &bioregion::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(bioregion, (reset)(create)(join)(leave)(addrole)(removerole)(removemember)(leaverole)(setfounder))
+          EOSIO_DISPATCH_HELPER(bioregion, (reset)(create)(join)(leave)(addrole)(removerole)
+          (removemember)(leaverole)(setfounder)(removebr))
       }
   }
 }
