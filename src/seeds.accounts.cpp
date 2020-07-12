@@ -1,5 +1,6 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
+#include <eosio/transaction.hpp>
 
 void accounts::reset() {
   require_auth(_self);
@@ -23,6 +24,16 @@ void accounts::reset() {
   auto cbsitr = cbs.begin();
   while (cbsitr != cbs.end()) {
     cbsitr = cbs.erase(cbsitr);
+  }
+
+  auto repitr = rep.begin();
+  while (repitr != rep.end()) {
+    repitr = rep.erase(repitr);
+  }
+
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
   }
 
 }
@@ -61,6 +72,9 @@ void accounts::adduser(name account, string nickname, name type)
       user.nickname = nickname;
       user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+
+  size_change("users.sz"_n, 1);
+
 }
 
 void accounts::vouch(name sponsor, name account) {
@@ -249,7 +263,9 @@ void accounts::refreward(name account, name new_status) {
     cbs.emplace(_self, [&](auto& item) {
       item.account = referrer;
       item.community_building_score = community_building_points.value;
+      item.rank = 0;
     });
+    size_change("cbs.sz"_n, 1);
   }
 
   // see if referrer is org or individual (or nobody)
@@ -328,11 +344,22 @@ void accounts::addrep(name user, uint64_t amount)
   require_auth(get_self());
 
   check(is_account(user), "non existing user");
+  check(amount > 0, "amount must be > 0");
 
   auto uitr = users.find(user.value);
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
+
+  auto ritr = rep.find(user.value);
+  if (ritr == rep.end()) {
+    add_rep_item(user, amount);
+  } else {
+    rep.modify(ritr, _self, [&](auto& item) {
+      item.rep += amount;
+    });
+  }
+
 }
 
 void accounts::subrep(name user, uint64_t amount)
@@ -340,7 +367,9 @@ void accounts::subrep(name user, uint64_t amount)
   require_auth(get_self());
 
   check(is_account(user), "non existing user");
+  check(amount > 0, "amount must be > 0");
 
+  // modify user reputation - deprecated
   auto uitr = users.find(user.value);
   users.modify(uitr, _self, [&](auto& user) {
     if (user.reputation < amount) {
@@ -349,6 +378,19 @@ void accounts::subrep(name user, uint64_t amount)
       user.reputation -= amount;
     }
   });
+
+  auto ritr = rep.find(user.value);
+  if (ritr != rep.end()) {
+    if (ritr->rep > amount) {
+      rep.modify(ritr, _self, [&](auto& item) {
+        item.rep -= amount;
+      });
+    } else {
+      rep.erase(ritr);
+      size_change("rep.sz"_n, -1);
+    }
+  }
+
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
@@ -542,19 +584,228 @@ void accounts::genesis(name user) // Remove this after Golive
 
 }
 
-void accounts::genesisrep() {
-  require_auth(_self);
-  auto uitr = users.begin();
+// void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
+//   require_auth(_self);
+//   auto uitr = account == 0 ? users.begin() : users.find(account);
+//   uint64_t count = 0;
+//   while (uitr != users.end() && count < chunksize) {
+//     if (uitr->reputation > 0) {
+//       auto ritr = rep.find(uitr->account.value);
+//       if (ritr != rep.end()) {
+//         rep.modify(ritr, _self, [&](auto& item) {
+//           item.rep = uitr->reputation;
+//         });
+//       } else {
+//         add_rep_item(uitr->account, uitr->reputation);
+//       }
+//     }
+//     uitr++;
+//     count++;
+//   }
+//   if (uitr == users.end()) {
+//     // done
+//     size_set("users.sz"_n, chunksize * cycle + count);
+//   } else {
+//     // recursive call
+//     uint64_t nextaccount = uitr->account.value;
+//     action next_execution(
+//         permission_level{get_self(), "active"_n},
+//         get_self(),
+//         "migraterep"_n,
+//         std::make_tuple(nextaccount, cycle+1, chunksize)
+//     );
 
-  while (uitr != users.end()) {
-    if (uitr -> status == "citizen"_n && uitr -> reputation < 100) {
-      users.modify(uitr, _self, [&](auto& user) {
-        user.reputation = 100;
-      });
-    }
-    uitr++;
+//     transaction tx;
+//     tx.actions.emplace_back(next_execution);
+//     tx.delay_sec = 1;
+//     tx.send(nextaccount + 1, _self);
+    
+//   }
+// }
+
+void accounts::rankreps() {
+  rankrep(0, 0, 200);
+}
+
+void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  // DEBUG REMOVE THIS - THIS IS SO THE FUNCTION DOESN"T RUN AMOK
+  //if (chunk > 10) { 
+  //  return;
+  //}
+
+  uint64_t total = sizes.get("rep.sz"_n.value, "user rep size not set").size;
+  uint64_t current = chunk * chunksize;
+  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (ritr != rep_by_rep.end() && count < chunksize) {
+
+    uint64_t rank = (current * 100) / total;
+
+    rep_by_rep.modify(ritr, _self, [&](auto& item) {
+      item.rank = rank;
+    });
+
+    current++;
+    count++;
+    ritr++;
   }
 
+  if (ritr == rep_by_rep.end()) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = ritr->by_rep();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "rankrep"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+    
+  }
+
+}
+
+void accounts::rankcbss() {
+  rankcbs(0, 0, 200);
+}
+
+void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  uint64_t total = sizes.get("cbs.sz"_n.value, "cbs table size not set").size;
+  uint64_t current = chunk * chunksize;
+  auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
+  auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (citr != cbs_by_cbs.end() && count < chunksize) {
+
+    uint64_t rank = (current * 100) / total;
+
+    cbs_by_cbs.modify(citr, _self, [&](auto& item) {
+      item.rank = rank;
+    });
+
+    current++;
+    count++;
+    citr++;
+  }
+
+  if (citr == cbs_by_cbs.end()) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = citr->by_cbs();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "rankcbs"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+    
+  }
+
+}
+
+
+// void accounts::resetrep() {
+//   require_auth(_self);
+
+//   auto ritr = rep.begin();
+//   while (ritr != rep.end()) {
+//     ritr = rep.erase(ritr);
+//   }
+
+//   size_set("rep.sz"_n, 0);
+
+// }
+
+void accounts::clearcbs() {
+  require_auth(_self);
+
+  auto cbsitr = cbs.begin();
+  while (cbsitr != cbs.end()) {
+    cbsitr = cbs.erase(cbsitr);
+  }
+  size_set("cbs.sz"_n, 0);
+
+}
+
+void accounts::migratecbs() {
+  require_auth(_self);
+
+  auto cbsitr = cbs2.begin();
+  int count = 0;
+  while (cbsitr != cbs2.end()) {
+    cbs.emplace(_self, [&](auto& item) {
+      item.account = cbsitr->account;
+      item.community_building_score = cbsitr->community_building_score;
+      item.rank = 0;
+    });
+    count++;
+    cbsitr++;
+  }
+  size_set("cbs.sz"_n, count);
+}
+
+
+
+void accounts::add_rep_item(name account, uint64_t reputation) {
+  check(reputation > 0, "reputation must be > 0");
+  rep.emplace(_self, [&](auto& item) {
+    item.account = account;
+    item.rep = reputation;
+  });
+  size_change("rep.sz"_n, 1);
+}
+
+void accounts::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+void accounts::size_set(name id, uint64_t newsize) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = newsize;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
 }
 
 void accounts::testremove(name user)
@@ -582,6 +833,8 @@ void accounts::testremove(name user)
   ).send();
 
   users.erase(uitr);
+  size_change("users.sz"_n, -1);
+  
 }
 
 void accounts::testsetrep(name user, uint64_t amount) {
@@ -593,6 +846,13 @@ void accounts::testsetrep(name user, uint64_t amount) {
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation = amount;
   });
+
+
+  auto ritr = rep.find(user.value);
+  rep.modify(ritr, _self, [&](auto& item) {
+    item.rep = amount;
+  });
+
 }
 
 void accounts::testsetcbs(name user, uint64_t amount) {
@@ -605,7 +865,9 @@ void accounts::testsetcbs(name user, uint64_t amount) {
     cbs.emplace(_self, [&](auto& item) {
       item.account = user;
       item.community_building_score = amount;
+      item.rank = 0;
     });
+    size_change("cbs.sz"_n, 1);
   } else {
     cbs.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
@@ -642,7 +904,4 @@ uint64_t accounts::rep_score(name user)
 
     return hitr->reputation_score;
 }
-
-
-
 

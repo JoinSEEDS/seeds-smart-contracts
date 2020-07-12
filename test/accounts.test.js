@@ -7,6 +7,10 @@ const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
 const { accounts, proposals, harvest, token, settings, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const bulkadd = async (accounts, n) => {
   // todo import acount from helper, account creation func on local net
   for (let i=0; i<n; i++) {
@@ -44,20 +48,6 @@ describe('genesis testing', async assert => {
     actual: user.status,
     expected: "citizen"
   })
-
-  await contract.genesisrep({ authorization: `${accounts}@active` })
-
-  let reps = await get_reps()
-
-  //console.log("reps: "+JSON.stringify(reps, null, 2))
-
-  assert({
-    given: 'genesis reps',
-    should: 'citizens have 100 rep',
-    actual: reps,
-    expected: [0, 100]
-  })
-
 
 
 })
@@ -133,6 +123,8 @@ describe('accounts', async assert => {
 
   console.log('add referral firstuser is referrer for seconduser')
   await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
+
+
 
   console.log('update reputation')
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
@@ -803,6 +795,197 @@ describe('make citizen', async assert => {
 
 })
 
+describe('reputation & cbs ranking', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '3 user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, '4 user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.accounts.addrep(firstuser, 100, { authorization: `${accounts}@api` })
+  await contracts.accounts.addrep(seconduser, 4, { authorization: `${accounts}@api` })
+  await contracts.accounts.addrep(thirduser, 2, { authorization: `${accounts}@api` })
+
+  await contracts.accounts.testsetcbs(firstuser, 10, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetcbs(seconduser, 20, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetcbs(thirduser, 30, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetcbs(fourthuser, 40, { authorization: `${accounts}@active` })
+
+  const reps = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    json: true
+  })
+
+  const cbs = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  const sizes = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'sizes',
+    lower_bound: 'rep.sz',
+    upper_bound: 'rep.sz',
+    json: true
+  })
+
+  const sizesCBS = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'sizes',
+    lower_bound: 'cbs.sz',
+    upper_bound: 'cbs.sz',
+    json: true
+  })
+
+  const userSize = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'sizes',
+    lower_bound: 'users.sz',
+    upper_bound: 'users.sz',
+    json: true
+  })
+
+  await contracts.accounts.subrep(firstuser, 2, { authorization: `${accounts}@api` })
+  await contracts.accounts.subrep(thirduser, 2, { authorization: `${accounts}@api` })
+
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
+
+  await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
+
+  await contracts.accounts.rankcbs(0, 0, 1, { authorization: `${accounts}@active` })
+  await sleep(4000)
+
+  const repsAfter = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    json: true
+  })
+  
+  const cbsAfter = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+  
+  await contracts.accounts.rankcbs(0, 0, 40, { authorization: `${accounts}@active` })
+
+  const cbsAfter2 = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  //console.log("reps "+JSON.stringify(repsAfter, null, 2))
+
+  //console.log("cbs "+JSON.stringify(cbsAfter, null, 2))
+
+
+  const repsAfterFirstUser = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower_bound: firstuser,
+    upper_bound: firstuser,
+    json: true
+  })
+
+  const sizesAfter = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'sizes',
+    lower_bound: 'rep.sz',
+    upper_bound: 'rep.sz',
+    json: true
+  })
+
+  assert({
+    given: '3 users with rep',
+    should: 'have entries in rep table',
+    actual: reps.rows.length,
+    expected: 3
+  })
+
+  assert({
+    given: '4 users with cbs',
+    should: 'have entries in cbs table',
+    actual: cbsAfter.rows.map(({rank})=>rank),
+    expected: [0,25,50,75]
+  })
+
+  assert({
+    given: 'cbs ranked in one go',
+    should: 'have same order',
+    actual: cbsAfter2.rows.map(({rank})=>rank),
+    expected: cbsAfter.rows.map(({rank})=>rank),
+  })
+
+
+
+  assert({
+    given: '3 users with rep',
+    should: 'have number in sizes table',
+    actual: sizes.rows[0].size,
+    expected: 3
+  })
+
+  assert({
+    given: '4 users with cbs',
+    should: 'have number in sizes table',
+    actual: sizesCBS.rows[0].size,
+    expected: 4
+  })
+
+
+  assert({
+    given: '4 users total',
+    should: 'have 4 in sizes table',
+    actual: userSize.rows[0].size,
+    expected: 4
+  })
+
+  assert({
+    given: 'removed rep',
+    should: 'have entries in rep table',
+    actual: repsAfter.rows.length,
+    expected: 2
+  })
+
+  assert({
+    given: 'removed rep from first user',
+    should: 'had 100, minus 2 is 98',
+    actual: repsAfterFirstUser.rows[0].rep,
+    expected: 98
+  })
+
+  assert({
+    given: 'removed rep',
+    should: 'have number in sizes table',
+    actual: sizesAfter.rows[0].size,
+    expected: 2
+  })
+
+})
 
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {

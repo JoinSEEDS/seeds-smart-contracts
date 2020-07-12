@@ -6,6 +6,7 @@
 #include <seeds.token.hpp>
 #include <contracts.hpp>
 #include <harvest_table.hpp>
+#include <cycle_table.hpp>
 #include <utils.hpp>
 #include <cmath> 
 
@@ -22,6 +23,7 @@ CONTRACT harvest : public contract {
         harveststat(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
+        cycle(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
@@ -58,15 +60,19 @@ CONTRACT harvest : public contract {
     ACTION payforcpu(name account);
 
     ACTION testreward(name from);
-
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
-
     ACTION testupdatecs(name account, uint64_t contribution_score);
     ACTION testsetrs(name account, uint64_t value);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
+
+    name rep_rank_name = "rep.rnk"_n;
+    name tx_rank_name = "tx.rnk"_n;
+    name planted_rank_name = "planted.rnk"_n;
+    name cbs_rank_name = "cbs.rnk"_n;
+    name cs_rank_name = "cs.rnk"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
@@ -179,6 +185,10 @@ CONTRACT harvest : public contract {
 
     DEFINE_HARVEST_TABLE
 
+    DEFINE_CYCLE_TABLE
+
+    DEFINE_CYCLE_TABLE_MULTI_INDEX
+
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -211,6 +221,7 @@ CONTRACT harvest : public contract {
     tx_points_tables txpoints;
     harvest_tables harveststat;
     cs_points_tables cspoints;
+    cycle_tables cycle;
 
     // External Tables
     config_tables config;
@@ -224,7 +235,11 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<harvest>(name(receiver), name(code), &harvest::plant);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(harvest, (payforcpu)(reset)(runharvest)(testreward)(testsetrs)(testclaim)(unplant)(claimreward)(claimrefund)(cancelrefund)(sow)(calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)(testupdatecs))
+          EOSIO_DISPATCH_HELPER(harvest, 
+          (payforcpu)(reset)(runharvest)
+          (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
+          (calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)
+          (testreward)(testsetrs)(testclaim)(testupdatecs))
       }
   }
 }

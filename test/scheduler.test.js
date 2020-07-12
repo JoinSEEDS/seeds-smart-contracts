@@ -10,7 +10,7 @@ function sleep(ms) {
 
 var contracts = null
 
-describe.only('scheduler', async assert => {
+describe('scheduler', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset on mainnet or testnet")

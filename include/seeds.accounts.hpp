@@ -2,6 +2,9 @@
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <tables/rep_table.hpp>
+#include <tables/size_table.hpp>
+#include <tables/cbs_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -15,7 +18,10 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
+          cbs2(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
+          rep(receiver, receiver.value),
+          sizes(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value)
           {}
@@ -31,8 +37,6 @@ CONTRACT accounts : public contract {
       ACTION testcitizen(name user);
 
       ACTION genesis(name user);
-
-      ACTION genesisrep();
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
@@ -50,15 +54,23 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
+      //ACTION migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize); // MIGRATION - REMOVE
+      //ACTION resetrep();  // MIGRATION - REMOVE
+
+      ACTION rankreps();
+      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+
+      ACTION rankcbss();
+      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+
+      ACTION migratecbs(); // MIGRATION - REMOVE
+      ACTION clearcbs(); // MIGRATION - REMOVE
+
       ACTION testresident(name user);
       ACTION testvisitor(name user);
-
       ACTION testremove(name user);
-
       ACTION testsetrep(name user, uint64_t amount);
-
       ACTION testsetcbs(name user, uint64_t amount);
-
       ACTION testreward();
 
   private:
@@ -105,7 +117,22 @@ CONTRACT accounts : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       uint64_t countrefs(name user);
       uint64_t rep_score(name user);
+      void add_rep_item(name account, uint64_t reputation);
+      void size_change(name id, int delta);
+      void size_set(name id, uint64_t newsize);
 
+
+      DEFINE_REP_TABLE
+
+      DEFINE_REP_TABLE_MULTI_INDEX
+
+      DEFINE_SIZE_TABLE
+
+      DEFINE_SIZE_TABLE_MULTI_INDEX
+
+      DEFINE_CBS_TABLE
+
+      DEFINE_CBS_TABLE_MULTI_INDEX
 
       TABLE ref_table {
         name referrer;
@@ -115,7 +142,7 @@ CONTRACT accounts : public contract {
         uint64_t by_referrer()const { return referrer.value; }
       };
 
-      TABLE cbs_table {
+      TABLE cbs2_table {
         name account;
         uint64_t community_building_score;
 
@@ -193,17 +220,20 @@ CONTRACT accounts : public contract {
     > balance_tables;
     balance_tables balances;
 
-    typedef eosio::multi_index<"cbs"_n, cbs_table,
+    typedef eosio::multi_index<"cbs2"_n, cbs2_table,
       indexed_by<"bycbs"_n,
-      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
-    > cbs_tables;
+      const_mem_fun<cbs2_table, uint64_t, &cbs2_table::by_cbs>>
+    > cbs2_tables;
 
     typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
     cbs_tables cbs;
+    cbs2_tables cbs2;
     ref_tables refs;
     req_vouch_tables reqvouch;
     user_tables users;
+    rep_tables rep;
+    size_tables sizes;
 
     config_tables config;
 
@@ -227,5 +257,8 @@ CONTRACT accounts : public contract {
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
-(subrep)(testsetrep)(testcitizen)(genesis)(genesisrep)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch));
+(subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
+(testreward)(punish)(requestvouch)(vouch)
+(migratecbs)(clearcbs)
+(rankreps)(rankrep)(rankcbss)(rankcbs)
+);
