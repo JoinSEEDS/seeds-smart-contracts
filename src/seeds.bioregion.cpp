@@ -104,7 +104,7 @@ ACTION bioregion::create(
     check(bioaccount.suffix().to_string() == "bdc", "Bioregion name must end in '.bdc' Your suffix: " + bioaccount.suffix().to_string());
 
     auto sitr = sponsors.find(founder.value);
-    check(sitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
+    check(sitr != sponsors.end(), "The founder account does not have a balance entry in this contract.");
 
     auto feeparam = config.get("bio.fee"_n.value, "The bio.fee parameter has not been initialized yet.");
     asset quantity(feeparam.value, seeds_symbol);
@@ -115,7 +115,10 @@ ACTION bioregion::create(
     check(bitr == bioregions.end(), "This bioregion already exists.");
     
     auto uitr = users.find(founder.value);
-    check(uitr != users.end(), "Sponsor is not a Seeds account.");
+    check(uitr != users.end(), "Founder is not a Seeds account.");
+
+    auto mitr = members.find(founder.value);
+    check(mitr == members.end(), "Founder is part of another bioregion. Leave the other bioregion first.");
 
     create_telos_account(founder, bioaccount, publicKey);
 

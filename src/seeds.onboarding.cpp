@@ -12,7 +12,7 @@ void onboarding::create_account(name account, string publicKey, name domain) {
   action(
     permission_level{domain, "owner"_n},
     "eosio"_n, "newaccount"_n,
-    make_tuple(_self, account, auth, auth)
+    make_tuple(domain, account, auth, auth)
   ).send();
 
   action(
@@ -24,7 +24,7 @@ void onboarding::create_account(name account, string publicKey, name domain) {
   action(
     permission_level{_self, "owner"_n},
     "eosio"_n, "delegatebw"_n,
-    make_tuple(_self, account, asset(1000, network_symbol), asset(20000, network_symbol), 0)
+    make_tuple(_self, account, asset(5000, network_symbol), asset(20000, network_symbol), 0)
   ).send();
 }
 
@@ -157,13 +157,13 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
 }
 
-ACTION onboarding::createbio(name sponsor, name account, string publicKey) {
+ACTION onboarding::createbio(name sponsor, name bioregion, string publicKey) {
   require_auth(get_self());
 
-  bool is_existing_telos_user = is_account(account);
+  bool is_existing_telos_user = is_account(bioregion);
 
   if (!is_existing_telos_user) {
-    create_account(account, publicKey, ""_n);
+    create_account(bioregion, publicKey, "bdc"_n);
   }
   
 }

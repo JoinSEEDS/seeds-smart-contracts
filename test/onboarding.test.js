@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -15,6 +15,17 @@ const randomAccountName = () => {
     return result;
  }
  
+ const randomAccountNameBDC = () => {
+    let length = 8
+    var result           = '';
+    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result + ".bdc";
+  }
+  
 const fromHexString = hexString =>
   new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
@@ -610,6 +621,40 @@ describe('Campaign reward for existing user', async assert => {
             planted: "505.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
+    })
+})
+
+
+describe.only('Create bioregion', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+    
+    const contracts = await initContracts({ onboarding, bioregion })
+    
+    const newAccount = randomAccountNameBDC()
+    console.log("New account "+newAccount)
+    const keyPair = await createKeypair()
+    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    const newAccountPublicKey = keyPair.public
+  
+    await contracts.onboarding.createbio(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+
+    var hasNewDomain = false
+    try {
+      const accountInfo = await eos.getAccount(newAccount)
+      hasNewDomain = true;
+    } catch {
+  
+    }
+
+    assert({
+        given: 'created bioregion',
+        should: 'have account',
+        actual: hasNewDomain,
+        expected: true
     })
 })
 

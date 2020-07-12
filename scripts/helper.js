@@ -423,7 +423,7 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.bdc.account}@active`,
+  target: `${accounts.bdc.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.bioregion.account}@active`,
