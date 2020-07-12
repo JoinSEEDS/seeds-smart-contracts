@@ -4,7 +4,7 @@
 #include <eosio/asset.hpp>
 
 #include <contracts.hpp>
-#include <tables.hpp>
+#include <tables/user_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -90,10 +90,9 @@ CONTRACT history : public contract {
     
     typedef eosio::multi_index<"history"_n, history_table> history_tables;
     
-    typedef eosio::multi_index<"users"_n, tables::user_table,
-      indexed_by<"byreputation"_n,
-      const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
-    > user_tables;
+    DEFINE_USER_TABLE
+    
+    DEFINE_USER_TABLE_MULTI_INDEX
 
     user_tables users;
     resident_tables residents;

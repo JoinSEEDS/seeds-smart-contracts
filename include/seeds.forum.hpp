@@ -2,6 +2,7 @@
 #include <eosio/system.hpp>
 #include <contracts.hpp>
 #include <string>
+#include <tables/user_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -71,22 +72,9 @@ CONTRACT forum : public contract {
             uint64_t primary_key() const { return account.value; }
         };
 
-        TABLE user_table {
-            name account;
-            name status;
-            name type;
-            string nickname;
-            string image;
-            string story;
-            string roles;
-            string skills;
-            string interests;
-            uint64_t reputation;
-            uint64_t timestamp;
+        DEFINE_USER_TABLE
 
-            uint64_t primary_key() const { return account.value; }
-            uint64_t by_reputation() const { return reputation; }
-        };
+        DEFINE_USER_TABLE_MULTI_INDEX
 
         TABLE vote_power_table {
             name account;
@@ -120,11 +108,6 @@ CONTRACT forum : public contract {
         typedef eosio::multi_index <"vote"_n, vote_table> vote_tables;
 
         typedef eosio::multi_index <"forumrep"_n, forum_rep_table> forum_rep_tables;
-
-        typedef eosio::multi_index <"users"_n, user_table,
-            indexed_by<"byreputation"_n,
-            const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-        > user_tables;
 
         typedef eosio::multi_index <"votepower"_n, vote_power_table> vote_power_tables;
 
