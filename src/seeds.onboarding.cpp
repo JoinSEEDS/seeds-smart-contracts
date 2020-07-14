@@ -1,14 +1,18 @@
 #include <seeds.onboarding.hpp>
 
-void onboarding::create_account(name account, string publicKey) {
+void onboarding::create_account(name account, string publicKey, name domain) {
   if (is_account(account)) return;
 
   authority auth = keystring_authority(publicKey);
 
+  if (domain == ""_n) {
+    domain = _self;
+  }
+
   action(
-    permission_level{_self, "owner"_n},
+    permission_level{domain, "owner"_n},
     "eosio"_n, "newaccount"_n,
-    make_tuple(_self, account, auth, auth)
+    make_tuple(domain, account, auth, auth)
   ).send();
 
   action(
@@ -20,7 +24,7 @@ void onboarding::create_account(name account, string publicKey) {
   action(
     permission_level{_self, "owner"_n},
     "eosio"_n, "delegatebw"_n,
-    make_tuple(_self, account, asset(1000, network_symbol), asset(20000, network_symbol), 0)
+    make_tuple(_self, account, asset(5000, network_symbol), asset(20000, network_symbol), 0)
   ).send();
 }
 
@@ -122,7 +126,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   bool is_existing_seeds_user = is_seeds_user(account);
 
   if (!is_existing_telos_user) {
-    create_account(account, publicKey);
+    create_account(account, publicKey, ""_n);
   }
   
   if (!is_existing_seeds_user) {
@@ -144,13 +148,24 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
     bool is_existing_seeds_user = is_seeds_user(account);
 
   if (!is_existing_telos_user) {
-    create_account(account, publicKey);
+    create_account(account, publicKey, ""_n);
   }
   
   if (!is_existing_seeds_user) {
     add_user(account, fullname, "organisation"_n);
     add_referral(sponsor, account);  
   }
+}
+
+ACTION onboarding::createbio(name sponsor, name bioregion, string publicKey) {
+  require_auth(get_self());
+
+  bool is_existing_telos_user = is_account(bioregion);
+
+  if (!is_existing_telos_user) {
+    create_account(bioregion, publicKey, "bdc"_n);
+  }
+  
 }
 
 void onboarding::reset() {
