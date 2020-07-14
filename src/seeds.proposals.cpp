@@ -21,6 +21,11 @@ void proposals::reset() {
   while (voiceitr != voice.end()) {
     voiceitr = voice.erase(voiceitr);
   }
+
+  auto paitr = participants.begin();
+  while (paitr != participants.end()) {
+    paitr = participants.erase(paitr);
+  }
 }
 
 void proposals::onperiod() {
@@ -33,11 +38,13 @@ void proposals::onperiod() {
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
     uint64_t quorum = config.find(name("propquorum").value)->value;
 
+    uint64_t number_active_proposals = 0;
     uint64_t min_stake = min_stake_param.value;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
+        number_active_proposals += 1;
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
 
@@ -88,6 +95,17 @@ void proposals::onperiod() {
     }
 
     update_voice_table();
+    
+    transaction trx_erase_participants{};
+    trx_erase_participants.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "erasepartpts"_n,
+      std::make_tuple(number_active_proposals)
+    );
+    // I don't know how long delay I should use
+    // trx_erase_participants.delay_sec = 5;
+    trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
 
     // transaction trx{};
     // trx.actions.emplace_back(
@@ -259,13 +277,45 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
   }
 }
 
-void proposals::favour(name voter, uint64_t id, uint64_t amount) {
+void proposals::erasepartpts(uint64_t active_proposals) {
+  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  auto reward_points = config.get(name("voterep1.ind").value, "The voterep1.ind parameter has not been initialized yet.");
+
+  uint64_t counter = 0;
+  auto pitr = participants.begin();
+  while (pitr != participants.end() && counter < batch_size.value) {
+    if (pitr -> count == active_proposals && pitr -> nonneutral) {
+      action(
+        permission_level{contracts::accounts, "active"_n},
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(pitr -> account, reward_points.value)
+      ).send();
+    }
+    counter += 1;
+    pitr = participants.erase(pitr);
+  }
+
+  if (counter == batch_size.value) {
+    transaction trx_erase_participants{};
+    trx_erase_participants.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "erasepartpts"_n,
+      std::make_tuple(active_proposals)
+    );
+    // I don't know how long delay I should use
+    trx_erase_participants.delay_sec = 5;
+    trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
+  }
+}
+
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(voter);
   check_citizen(voter);
 
   auto pitr = props.find(id);
-  check(pitr != props.end(), "no proposal");
-  check(pitr->executed == false, "already executed");
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->executed == false, "Proposal was already executed");
 
   uint64_t min_stake = config.find(name("propminstake").value)->value;
   check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
@@ -274,63 +324,81 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "User does not have voice");
   check(vitr->balance >= amount, "voice balance exceeded");
-
+  
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
   check(voteitr == votes.end(), "only one vote");
 
-  props.modify(pitr, _self, [&](auto& proposal) {
-    proposal.total += amount;
-    proposal.favour += amount;
-  });
+  check(option == trust || option == distrust || option == abstain, "Invalid option");
 
-  voice.modify(vitr, _self, [&](auto& voice) {
-    voice.balance -= amount;
-  });
-
+  if (option == trust) {
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total += amount;
+      proposal.favour += amount;
+    });
+    voice.modify(vitr, _self, [&](auto& voice) {
+      voice.balance -= amount;
+    });
+  } else if (option == distrust) {
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total += amount;
+      proposal.against += amount;
+    });
+    voice.modify(vitr, _self, [&](auto& voice) {
+      voice.balance -= amount;
+    });
+  }
+  
   votes.emplace(_self, [&](auto& vote) {
     vote.account = voter;
     vote.amount = amount;
-    vote.favour = true;
+    if (option == trust) {
+      vote.favour = true;
+    } else if (option == distrust) {
+      vote.favour = false;
+    }
     vote.proposal_id = id;
   });
+
+  auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+  auto paitr = participants.find(voter.value);
+  if (paitr == participants.end()) {
+    // add reputation for entering in the table
+    action(
+      permission_level{contracts::accounts, "active"_n},
+      contracts::accounts, "addrep"_n,
+      std::make_tuple(voter, rep.value)
+    ).send();
+    // add the voter to the table
+    participants.emplace(_self, [&](auto & participant){
+      participant.account = voter;
+      if (option == abstain) {
+        participant.nonneutral = false;
+      } else {
+        participant.nonneutral = true;
+      }
+      participant.count = 1;
+    });
+  } else {
+    participants.modify(paitr, _self, [&](auto & participant){
+      participant.count += 1;
+      if (option != abstain) {
+        participant.nonneutral = true;
+      }
+    });
+  }
+}
+
+void proposals::favour(name voter, uint64_t id, uint64_t amount) {
+  vote_aux(voter, id, amount, trust);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
-    require_auth(voter);
-    check_citizen(voter);
+  vote_aux(voter, id, amount, distrust);
+}
 
-    auto pitr = props.find(id);
-    check(pitr != props.end(), "Proposal not found");
-    check(pitr->executed == false, "Proposal was already executed");
-
-    uint64_t min_stake = config.find(name("propminstake").value)->value;
-    check(pitr->staked >= asset(min_stake, seeds_symbol), "Proposal does not have enough stake and cannot be voted on.");
-    check(pitr->stage == name("active"), "not active stage");
-
-    auto vitr = voice.find(voter.value);
-    check(vitr != voice.end(), "User does not have voice");
-    check(vitr->balance >= amount, "voice balance exceeded");
-
-    votes_tables votes(get_self(), id);
-    auto voteitr = votes.find(voter.value);
-    check(voteitr == votes.end(), "only one vote");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-        proposal.total += amount;
-        proposal.against += amount;
-    });
-
-    voice.modify(vitr, _self, [&](auto& voice) {
-        voice.balance -= amount;
-    });
-
-    votes.emplace(_self, [&](auto& vote) {
-      vote.account = voter;
-      vote.amount = amount;
-      vote.favour = false;
-      vote.proposal_id = id;
-    });
+void proposals::neutral(name voter, uint64_t id) {
+  vote_aux(voter, id, (uint64_t)0, abstain);
 }
 
 void proposals::addvoice(name user, uint64_t amount)

@@ -4,6 +4,10 @@ const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require
 
 const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('Proposals', async assert => {
 
   if (!isLocal()) {
@@ -418,6 +422,184 @@ describe('Proposals', async assert => {
   })
 
 })
+
+
+describe('Participants', async assert => {
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  await sleep(2000)
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal '+campaignbank)
+  await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(10000)
+
+  const participantsBefore = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'participants',
+    json: true,
+  })
+
+  const reputationBefore = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+  })
+
+  console.log('favour first proposal')
+  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+  await contracts.proposals.neutral(firstuser, 2, { authorization: `${firstuser}@active` })
+  await contracts.proposals.neutral(thirduser, 1, { authorization: `${thirduser}@active` })
+  await contracts.proposals.neutral(thirduser, 2, { authorization: `${thirduser}@active` })
+
+  const votes = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
+  const voiceAfter = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+
+  const participantsAfter = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'participants',
+    json: true,
+  })
+
+  console.log('erase participants')
+  await sleep(10000)
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(10000)
+
+  const reputationAfter = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+  })
+
+  const participantsAfterOnPeriod = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'participants',
+    json: true,
+  })
+
+  assert({
+    given: 'voice after voting',
+    should: 'have the correct voice amount',
+    actual: voiceAfter.rows,
+    expected: [
+      { account: firstuser, balance: 36 },
+      { account: seconduser, balance: 36 },
+      { account: thirduser, balance: 44 }
+    ]
+  })
+
+  assert({
+    given: 'voted for a proposal',
+    should: 'have votes entry',
+    actual: votes.rows,
+    expected: [
+      { proposal_id: 1, account: firstuser, amount: 8, favour: 0 },
+      { proposal_id: 1, account: seconduser, amount: 8, favour: 1 },
+      { proposal_id: 1, account: thirduser, amount: 0, favour: 0 }
+    ]
+  })
+
+  assert({
+    given: 'before voting',
+    should: 'have no participants entries',
+    actual: participantsBefore.rows,
+    expected: []
+  })
+
+  assert({
+    given: 'after voting',
+    should: 'have participants entries',
+    actual: participantsAfter.rows,
+    expected: [
+      { account: firstuser, nonneutral: 1, count: 2 },
+      { account: seconduser, nonneutral: 1, count: 1 },
+      { account: thirduser, nonneutral: 0, count: 2 }
+    ]
+  })
+
+  assert({
+    given: 'after on period',
+    should: 'have no participants entries',
+    actual: participantsAfterOnPeriod.rows,
+    expected: []
+  })
+
+  assert({
+    given: 'before voting',
+    should: 'not have reputation',
+    actual: reputationBefore.rows.map(({reputation}) => reputation),
+    expected: [ 0, 0, 0 ]
+  })
+
+  assert({
+    given: 'after voting',
+    should: 'have reputation',
+    actual: reputationAfter.rows.map(({reputation}) => reputation),
+    expected: [ 6, 1, 1 ]
+  })
+})
+
 
 describe('Change Trust', async assert => {
 

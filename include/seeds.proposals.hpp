@@ -21,6 +21,7 @@ CONTRACT proposals : public contract {
           voice(receiver, receiver.value),
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
+          participants(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
@@ -43,13 +44,20 @@ CONTRACT proposals : public contract {
 
       ACTION against(name user, uint64_t id, uint64_t amount);
 
+      ACTION neutral(name user, uint64_t id);
+
+      ACTION erasepartpts(uint64_t active_proposals);
+
       ACTION onperiod();
 
       ACTION decayvoice();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
-      
+      name trust = "trust"_n;
+      name distrust = "distrust"_n;
+      name abstain = "abstain"_n;
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
@@ -63,6 +71,7 @@ CONTRACT proposals : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
+      void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
 
       TABLE config_table {
           name param;
@@ -102,6 +111,14 @@ CONTRACT proposals : public contract {
           uint64_t primary_key()const { return account.value; }
       };
 
+      TABLE participant_table {
+        name account;
+        bool nonneutral;
+        uint64_t count;
+        // bool complete;
+        uint64_t primary_key()const { return account.value; }
+      };
+
       TABLE voice_table {
         name account;
         uint64_t balance;
@@ -122,6 +139,7 @@ CONTRACT proposals : public contract {
     
     typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
+    typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"config"_n, config_table> config_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
     typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
@@ -131,6 +149,7 @@ CONTRACT proposals : public contract {
 
     config_tables config;
     proposal_tables props;
+    participant_tables participants;
     user_tables users;
     voice_tables voice;
     last_proposal_tables lastprops;
@@ -143,7 +162,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(onperiod)(decayvoice)(cancel))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(erasepartpts)(onperiod)(decayvoice)(cancel))
       }
   }
 }

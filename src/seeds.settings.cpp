@@ -15,6 +15,7 @@ void settings::reset() {
   configure(name("org.minplant"), 200 * 10000);
   configure(name("mooncyclesec"), utils::moon_cycle);
   configure(name("propdecaysec"), utils::seconds_per_day);
+  configure(name("batchsize"), 200);
   configure(name("bio.fee"), uint64_t(1000) * uint64_t(10000));
   
   // Scheduler cycle
@@ -33,6 +34,11 @@ void settings::reset() {
   configure(name("refrep1.ind"), 1);
   // reputation points for referrer when user becomes citizen
   configure(name("refrep2.ind"), 1);
+
+  // reputation points for voting all active proposals
+  configure(name("voterep1.ind"), 5);
+  // reputation points for entering in the participants table
+  configure(name("voterep2.ind"), 1);
 
   // reward for individual referrer when user becomes resident  
   configure(name("refrwd1.ind"), 1000 * 10000); // 1000 SEEDS
