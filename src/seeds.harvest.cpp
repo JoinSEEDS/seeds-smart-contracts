@@ -351,8 +351,6 @@ void harvest::calctrxpt() {
     uitr++;
   }
 
-  print("HARVEST: calctrx executed");
-
 }
 
 void harvest::calctrx() {

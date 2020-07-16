@@ -8,6 +8,7 @@
 #include <harvest_table.hpp>
 #include <cycle_table.hpp>
 #include <utils.hpp>
+#include <tables/size_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -24,6 +25,7 @@ CONTRACT harvest : public contract {
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
         cycle(receiver, receiver.value),
+        sizes(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
@@ -81,6 +83,9 @@ CONTRACT harvest : public contract {
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
     void calc_tx_points(name account, uint64_t cycle);
+    
+    void size_change(name id, int delta);
+    void size_set(name id, uint64_t newsize);
 
     // Contract Tables
 
@@ -135,6 +140,13 @@ CONTRACT harvest : public contract {
       indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
     > cs_points_tables;
 
+    DEFINE_REP_TABLE
+
+    DEFINE_REP_TABLE_MULTI_INDEX
+
+    DEFINE_SIZE_TABLE
+
+    DEFINE_SIZE_TABLE_MULTI_INDEX
 
     // External Tables
 
