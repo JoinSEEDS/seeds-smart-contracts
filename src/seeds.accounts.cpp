@@ -1,6 +1,7 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/transaction.hpp>
+#include <harvest_table.hpp>
 
 void accounts::reset() {
   require_auth(_self);
@@ -128,7 +129,7 @@ void accounts::_vouch(name sponsor, name account) {
   if (sponsor_status == name("resident")) reps = resident_basepoints.value;
   if (sponsor_status == name("citizen")) reps = citizen_basepoints.value;
 
-  reps = reps * utils::get_rep_multiplier(sponsor);
+  reps = reps * utils::get_rep_multiplier(sponsor); // REPLACE with local function
 
   if (reps == 0) {
     // this is called from invite accept - just no op
@@ -467,15 +468,18 @@ void accounts::makeresident(name user)
     auto titr = transactions.find(user.value);
     uint64_t invited_users_number = countrefs(user);
 
+
     uint64_t min_planted =  50 * 10000;
     uint64_t min_tx =  10;
     uint64_t min_invited =  1;
     uint64_t min_rep =  50;
 
+    uint64_t reputation_points = rep.get(user.value,  "user has less than required reputation. Actual: 0").rep;
+
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
     check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
-    check(uitr->reputation >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(uitr->reputation));
+    check(reputation_points >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(reputation_points));
 
     auto new_status = name("resident");
     updatestatus(user, new_status);
@@ -804,13 +808,35 @@ void accounts::testsetrep(name user, uint64_t amount) {
     user.reputation = amount;
   });
 
+  auto ritr = rep.find(user.value);
+  if (ritr == rep.end()) {
+    add_rep_item(user, amount);
+  } else {
+    rep.modify(ritr, _self, [&](auto& item) {
+      item.rep = amount;
+    });
+  }
+}
+
+void accounts::testsetrs(name user, uint64_t amount) {
+  require_auth(get_self());
+
+  check(is_account(user), "non existing user");
 
   auto ritr = rep.find(user.value);
-  rep.modify(ritr, _self, [&](auto& item) {
-    item.rep = amount;
-  });
-
+  if (ritr == rep.end()) {
+    rep.emplace(_self, [&](auto& item) {
+      item.account = user;
+      item.rank = amount;
+    });
+    size_change("rep.sz"_n, 1);  
+  } else {
+    rep.modify(ritr, _self, [&](auto& item) {
+      item.rank = amount;
+    });
+  }
 }
+
 
 void accounts::testsetcbs(name user, uint64_t amount) {
   require_auth(get_self());
@@ -850,15 +876,13 @@ uint64_t accounts::countrefs(name user)
 
 uint64_t accounts::rep_score(name user) 
 {
-    DEFINE_HARVEST_TABLE
-    eosio::multi_index<"harvest"_n, harvest_table> harvest(contracts::harvest, contracts::harvest.value);
 
-    auto hitr = harvest.find(user.value);
+    auto ritr = rep.find(user.value);
 
-    if (hitr == harvest.end()) {
+    if (ritr == rep.end()) {
       return 0;
     }
 
-    return hitr->reputation_score;
+    return ritr->rank;
 }
 

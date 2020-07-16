@@ -64,6 +64,7 @@ CONTRACT accounts : public contract {
       ACTION testvisitor(name user);
       ACTION testremove(name user);
       ACTION testsetrep(name user, uint64_t amount);
+      ACTION testsetrs(name user, uint64_t amount);
       ACTION testsetcbs(name user, uint64_t amount);
       ACTION testreward();
 
@@ -218,7 +219,7 @@ CONTRACT accounts : public contract {
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
-(subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
+(subrep)(testsetrep)(testsetrs)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 );

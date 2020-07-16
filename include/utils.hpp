@@ -1,6 +1,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
-#include <harvest_table.hpp>
+#include <tables/rep_table.hpp>
+#include <tables/size_table.hpp>
 
 using namespace eosio;
 
@@ -34,16 +35,29 @@ namespace utils {
 
   double get_rep_multiplier(name account) {
 
-    DEFINE_HARVEST_TABLE
-    eosio::multi_index<"harvest"_n, harvest_table> harvest(contracts::harvest, contracts::harvest.value);
+    DEFINE_REP_TABLE
+    DEFINE_REP_TABLE_MULTI_INDEX
+    
+    rep_tables rep(contracts::accounts, contracts::accounts.value);
 
-    auto hitr = harvest.find(account.value);
+    auto ritr = rep.find(account.value);
 
-    if (hitr == harvest.end()) {
+    if (ritr == rep.end()) {
       return 0;
     }
 
-    return rep_multiplier_for_score(hitr->reputation_score);
+    return rep_multiplier_for_score(ritr->rank);
+
+  }
+
+  uint64_t get_users_size() {
+
+    DEFINE_SIZE_TABLE
+    DEFINE_SIZE_TABLE_MULTI_INDEX
+    
+    size_tables size(contracts::accounts, contracts::accounts.value);
+
+    return size.get("users.sz"_n.value, "users size unknown").size;
 
   }
 
