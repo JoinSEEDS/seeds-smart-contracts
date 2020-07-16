@@ -19,7 +19,6 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
-          cbs2(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
@@ -55,17 +54,11 @@ CONTRACT accounts : public contract {
 
       ACTION vouch(name sponsor, name account);
 
-      //ACTION migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize); // MIGRATION - REMOVE
-      //ACTION resetrep();  // MIGRATION - REMOVE
-
       ACTION rankreps();
       ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
       ACTION rankcbss();
       ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
-
-      ACTION migratecbs(); // MIGRATION - REMOVE
-      ACTION clearcbs(); // MIGRATION - REMOVE
 
       ACTION testresident(name user);
       ACTION testvisitor(name user);
@@ -146,14 +139,6 @@ CONTRACT accounts : public contract {
         uint64_t by_referrer()const { return referrer.value; }
       };
 
-      TABLE cbs2_table {
-        name account;
-        uint64_t community_building_score;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cbs()const { return community_building_score; }
-      };
-
       TABLE vouch_table {
         name account;
         name sponsor;
@@ -202,15 +187,9 @@ CONTRACT accounts : public contract {
     > balance_tables;
     balance_tables balances;
 
-    typedef eosio::multi_index<"cbs2"_n, cbs2_table,
-      indexed_by<"bycbs"_n,
-      const_mem_fun<cbs2_table, uint64_t, &cbs2_table::by_cbs>>
-    > cbs2_tables;
-
     typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
     cbs_tables cbs;
-    cbs2_tables cbs2;
     ref_tables refs;
     req_vouch_tables reqvouch;
     user_tables users;
@@ -241,6 +220,5 @@ CONTRACT accounts : public contract {
 EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
-(migratecbs)(clearcbs)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 );

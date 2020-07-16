@@ -722,49 +722,6 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
 }
 
-
-// void accounts::resetrep() {
-//   require_auth(_self);
-
-//   auto ritr = rep.begin();
-//   while (ritr != rep.end()) {
-//     ritr = rep.erase(ritr);
-//   }
-
-//   size_set("rep.sz"_n, 0);
-
-// }
-
-void accounts::clearcbs() {
-  require_auth(_self);
-
-  auto cbsitr = cbs.begin();
-  while (cbsitr != cbs.end()) {
-    cbsitr = cbs.erase(cbsitr);
-  }
-  size_set("cbs.sz"_n, 0);
-
-}
-
-void accounts::migratecbs() {
-  require_auth(_self);
-
-  auto cbsitr = cbs2.begin();
-  int count = 0;
-  while (cbsitr != cbs2.end()) {
-    cbs.emplace(_self, [&](auto& item) {
-      item.account = cbsitr->account;
-      item.community_building_score = cbsitr->community_building_score;
-      item.rank = 0;
-    });
-    count++;
-    cbsitr++;
-  }
-  size_set("cbs.sz"_n, count);
-}
-
-
-
 void accounts::add_rep_item(name account, uint64_t reputation) {
   check(reputation > 0, "reputation must be > 0");
   rep.emplace(_self, [&](auto& item) {
