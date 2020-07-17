@@ -224,7 +224,8 @@ ACTION harvest::updatetxpt(name account) {
 }
 
 
-// DEBUG actions to clear scores
+// DEBUG action to clear scores tables
+// Deploy before
 ACTION harvest::clearscores() {
   uint64_t limit = 200;
 
@@ -249,7 +250,7 @@ ACTION harvest::clearscores() {
 
 }
 // Calculate Transaction Points for a single account
-void harvest::calc_tx_points(name account) {
+uint32_t harvest::calc_tx_points(name account) {
 
   auto three_moon_cycles = moon_cycle * 3;
   auto now = eosio::current_time_point().sec_since_epoch();
@@ -270,14 +271,17 @@ void harvest::calc_tx_points(name account) {
   uint64_t  current_num = 0;
   double    current_rep_multiplier = 0.0;
 
-  while(tx_to_itr != transactions_by_to.rend()) {
+  uint64_t  iterations = 0;
+  uint64_t  limit = 200;
+
+  while(tx_to_itr != transactions_by_to.rend() && iterations < limit) {
 
     if (tx_to_itr->timestamp < cutoffdate) {
 
       // remove old transactions
       //tx_to_itr = transactions_by_to.erase(tx_to_itr);
       
-      auto it = transactions_by_to.erase(--tx_to_itr.base());
+      auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
       tx_to_itr = std::reverse_iterator(it);            
     } else {
 
@@ -308,15 +312,19 @@ void harvest::calc_tx_points(name account) {
       } 
 
       tx_to_itr++;
+      iterations++;
     }
+
+    return iterations;
+
   }
 
   // use ceil function so each schore is counted if it is > 0
     
   // DEBUG
-  if (result == 0) {
-    result = 33.0;
-  }
+  // if (result == 0) {
+  //   result = 33.0;
+  // }
   // enter into transaction points table
   auto hitr = txpoints.find(account.value);
   if (hitr == txpoints.end()) {
@@ -333,25 +341,43 @@ void harvest::calc_tx_points(name account) {
 }
 
 void harvest::calctrxpt() {
-    calctrxpts(0, 0, 100);
+    calctrxpts(0, 0, 400);
 }
 
 void harvest::calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
+  check(chunksize > 0, "chunk size must be > 0");
+
   uint64_t total = utils::get_users_size();
-  uint64_t current = chunk * chunksize;
+  //uint64_t current = chunk * chunksize;
   auto uitr = start_val == 0 ? users.begin() : users.lower_bound(start_val);
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    calc_tx_points(uitr->account);
+    uint32_t iter = calc_tx_points(uitr->account);
 
-    current++;
+    //current++; // we only need this for ranking
     count++;
     uitr++;
   }
 
+  if (uitr == users.end()) {
+    // done
+  } else {
+    uint64_t next_value = uitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "calctrxpts"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+  }
 }
 
 void harvest::calctrx() {
