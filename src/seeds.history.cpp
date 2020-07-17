@@ -90,25 +90,17 @@ void history::trxentry(name from, name to, asset quantity) {
   });
 
   // delayed update
-  // action a(
-  //     permission_level{contracts::harvest, "active"_n},
-  //     contracts::harvest,
-  //     "updatetxpt"_n,
-  //     std::make_tuple(from)
-  //   );
-
-  //   transaction tx;
-  //   tx.actions.emplace_back(a);
-  //   tx.delay_sec = 1; // DEBUG no delay
-  //   tx.send(key, _self);
-
-  // debug instant update
-  action(
+  action a(
       permission_level{contracts::harvest, "active"_n},
       contracts::harvest,
       "updatetxpt"_n,
       std::make_tuple(from)
-    ).send();
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(a);
+    tx.delay_sec = 1; // DEBUG no delay
+    tx.send(key, _self);
 
 }
 

@@ -88,7 +88,7 @@ CONTRACT harvest : public contract {
     void check_asset(asset quantity);
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
-    uint32_t calc_tx_points(name account);
+    uint32_t calc_transaction_points(name account);
     double get_rep_multiplier(name account);
 
     void size_change(name id, int delta);

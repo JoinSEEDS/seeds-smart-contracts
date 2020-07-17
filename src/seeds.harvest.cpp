@@ -220,7 +220,7 @@ void harvest::runharvest() {}
 ACTION harvest::updatetxpt(name account) {
   require_auth(_self);
 
-  calc_tx_points(account);
+  calc_transaction_points(account);
 }
 
 
@@ -250,8 +250,7 @@ ACTION harvest::clearscores() {
 
 }
 // Calculate Transaction Points for a single account
-uint32_t harvest::calc_tx_points(name account) {
-
+uint32_t harvest::calc_transaction_points(name account) {
   auto three_moon_cycles = moon_cycle * 3;
   auto now = eosio::current_time_point().sec_since_epoch();
   auto cutoffdate = now - three_moon_cycles;
@@ -271,12 +270,15 @@ uint32_t harvest::calc_tx_points(name account) {
   uint64_t  current_num = 0;
   double    current_rep_multiplier = 0.0;
 
-  uint64_t  iterations = 0;
+  uint64_t  count = 0;
   uint64_t  limit = 200;
+    
+  //print("start " + account.to_string());
 
-  while(tx_to_itr != transactions_by_to.rend() && iterations < limit) {
+  while(tx_to_itr != transactions_by_to.rend() && count < limit) {
 
     if (tx_to_itr->timestamp < cutoffdate) {
+      //print("date trigger ");
 
       // remove old transactions
       //tx_to_itr = transactions_by_to.erase(tx_to_itr);
@@ -284,6 +286,7 @@ uint32_t harvest::calc_tx_points(name account) {
       auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
       tx_to_itr = std::reverse_iterator(it);            
     } else {
+      //print("update to ");
 
       // update "to"
       if (current_to != tx_to_itr->to) {
@@ -294,30 +297,35 @@ uint32_t harvest::calc_tx_points(name account) {
         current_num++;
       }
 
-      print("iterating over "+std::to_string(tx_to_itr->id));
+      //print("iterating over "+std::to_string(tx_to_itr->id));
 
       if (current_num < max_number_of_transactions) {
         uint64_t volume = tx_to_itr->quantity.amount;
 
+      //print("volume "+std::to_string(volume));
+
         // limit max volume
         if (volume > max_quantity * 10000) {
+              //print("max limit "+std::to_string(max_quantity * 10000));
           volume = max_quantity * 10000;
         }
 
+
         // multiply by receiver reputation
         double points = (double(volume) / 10000.0) * current_rep_multiplier;
+        
+        //print("tx points "+std::to_string(points));
 
         result += points;
 
       } 
 
       tx_to_itr++;
-      iterations++;
+      count++;
     }
-
-    return iterations;
-
   }
+
+  //print("set result "+std::to_string(result));
 
   // use ceil function so each schore is counted if it is > 0
     
@@ -338,6 +346,8 @@ uint32_t harvest::calc_tx_points(name account) {
     });
   }
 
+  return count;
+
 }
 
 void harvest::calctrxpt() {
@@ -350,15 +360,13 @@ void harvest::calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize)
   check(chunksize > 0, "chunk size must be > 0");
 
   uint64_t total = utils::get_users_size();
-  //uint64_t current = chunk * chunksize;
   auto uitr = start_val == 0 ? users.begin() : users.lower_bound(start_val);
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    uint32_t iter = calc_tx_points(uitr->account);
+    uint32_t iter = calc_transaction_points(uitr->account);
 
-    //current++; // we only need this for ranking
-    count++;
+    count += iter;
     uitr++;
   }
 
@@ -376,7 +384,7 @@ void harvest::calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize)
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(next_value + 1, _self);
+    tx.send(next_value, _self);
   }
 }
 
@@ -557,7 +565,7 @@ void harvest::calcplanted() {
     uitr++;
   }
 
-  print("HARVEST: calcplanted executed");
+  //print("HARVEST: calcplanted executed");
 
 }
 
@@ -685,11 +693,13 @@ void harvest::testupdatecs(name account, uint64_t contribution_score) {
 }
 
   double harvest::get_rep_multiplier(name account) {
-    auto ritr = rep.find(account.value);
-    if (ritr == rep.end()) {
-      return 0;
-    }
-    return utils::rep_multiplier_for_score(ritr->rank);
+    return 1.0;  // DEBUg FOR TESTINg otherwise everyone on testnet has 0
+
+    // auto ritr = rep.find(account.value);
+    // if (ritr == rep.end()) {
+    //   return 0;
+    // }
+    // return utils::rep_multiplier_for_score(ritr->rank);
 
   }
 
