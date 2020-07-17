@@ -27,9 +27,7 @@ describe('token.transfer.history', async assert => {
   const contract = await eos.contract(token)
   const historyContract = await eos.contract(history)
   const accountsContract = await eos.contract(accounts)
-  
-  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
-  
+    
   console.log('reset token')
   await contract.resetweekly({ authorization: `${token}@active` })
 
@@ -46,8 +44,8 @@ describe('token.transfer.history', async assert => {
   await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
   console.log('transfer token')
-  await transfer()
-  
+  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `0`, { authorization: `${firstuser}@active` })
+
   const { rows } = await getTableRows({
     code: history,
     scope: firstuser,
@@ -67,7 +65,7 @@ describe('token.transfer.history', async assert => {
     }]
   })
 
-  await transfer()
+  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `1`, { authorization: `${firstuser}@active` })
 
   const stats = await getTableRows({
     code: token,
@@ -81,7 +79,7 @@ describe('token.transfer.history', async assert => {
   assert({
     given: 'transactions',
     should: 'have transaction stat entries',
-    actual: stats.rows,
+    actual: stats.rows.filter( (item) => item.account == firstuser || item.account == seconduser),
     expected: [
       {
         "account": "seedsuseraaa",
@@ -113,7 +111,6 @@ describe('token.transfer', async assert => {
   const contract = await eos.contract(token)
 
   let limit = 10;
-  const transfer = (n) => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `x${n}`, { authorization: `${firstuser}@active` })
 
   const balances = [await getBalance(firstuser)]
   
@@ -122,16 +119,8 @@ describe('token.transfer', async assert => {
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
-    await transfer(limit)
+    await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
   }
-
-  // Test limit - should be by planted - put this back in when implemented
-  // try {
-  //   await transfer()
-  //   console.log('transferred over limit (NOT expected)')
-  // } catch (err) {
-  //   console.log('transfer over limit failed (as expected)')
-  // }
 
   balances.push(await getBalance(firstuser))
 
@@ -187,13 +176,12 @@ describe('token calculate circulating supply', async assert => {
 
   const contract = await eos.contract(token)
   
-  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
   console.log('update circulating')
   await contract.updatecirc({ authorization: `${token}@active` })
   
   console.log('transfer token')
-  await transfer()
+  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `cc1`, { authorization: `${firstuser}@active` })
   
   const { rows } = await getTableRows({
     code: token,

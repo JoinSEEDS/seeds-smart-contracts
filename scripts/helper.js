@@ -314,6 +314,9 @@ var permissions = [{
   target: `${accounts.history.account}@active`,
   actor: `${accounts.harvest.account}@active`
 }, {
+  target: `${accounts.harvest.account}@active`,
+  actor: `${accounts.history.account}@eosio.code`
+}, {
   target: `${accounts.token.account}@active`,
   actor: `${accounts.token.account}@eosio.code`
 }, {
@@ -442,9 +445,6 @@ var permissions = [{
   action: 'calcplanted'
 }, {
   target: `${accounts.harvest.account}@execute`, 
-  action: 'calccbs'
-}, {
-  target: `${accounts.harvest.account}@execute`, 
   action: 'calccs'
 }, {
   target: `${accounts.harvest.account}@execute`,
@@ -452,9 +452,6 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calctrxpt'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calcrep'
 }, {
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'

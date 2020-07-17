@@ -234,7 +234,7 @@ describe("Harvest General", async assert => {
   console.log('calculate reputation multiplier')
   await contracts.accounts.addrep(firstuser, 1, { authorization: `${accounts}@active` })
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
 
   console.log('claim reward')
   await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
@@ -261,6 +261,8 @@ describe("Harvest General", async assert => {
     table: 'harvest',
     json: true
   })
+
+  console.log("XX rewards "+JSON.stringify(rewards, null, 2))
 
   let transactionAsString = JSON.stringify(transactionRefund.processed)
 
@@ -361,13 +363,6 @@ describe("Harvest General", async assert => {
   })
 
   assert({
-    given: 'reputation calculation',
-    should: 'assign reputation multiplier to each user',
-    actual: rewards.rows.map(({ reputation_score }) => reputation_score),
-    expected: [0, 50]
-  })
-
-  assert({
     given: 'harvest process',
     should: 'distribute rewards based on contribution scores'
   })
@@ -409,7 +404,7 @@ describe("harvest planted score", async assert => {
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
   await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
   await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
 
@@ -477,7 +472,7 @@ describe("harvest transaction score", async assert => {
       limit: 100
     })
 
-    //console.log(given + " tx points "+JSON.stringify(txpoints, null, 2))
+    console.log(" tx points "+JSON.stringify(txpoints, null, 2))
   
     const harvestStats = await eos.getTableRows({
       code: harvest,
@@ -487,7 +482,7 @@ describe("harvest transaction score", async assert => {
       limit: 100
     })
   
-    //console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
+    console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
 
     assert({
       given: 'transaction points ' + given,
@@ -507,19 +502,20 @@ describe("harvest transaction score", async assert => {
 
   console.log('make transaction, no reps')
   await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', memoprefix, { authorization: `${firstuser}@active` })
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
 
   await checkScores([0, 0, 0, 0], [0, 0, 0, 0], "no reputation", "be empty")
 
   console.log('calculate tx scores with reputation')
   await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  console.log('rank reputation')
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
   await checkScores([16, 0, 0, 0], [75, 0, 0, 0], "1 reputation, 1 tx", "100 score")
 
   console.log("transfer with 10 rep, 2 accounts have rep")
   await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
   await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
   await checkScores([11, 16, 0, 0], [50, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
 
 
@@ -604,7 +600,7 @@ describe("harvest community building score", async assert => {
   const checkScores = async (points, scores, given, should) => {
 
     console.log("checking points "+points + " scores: "+scores)
-    await contracts.harvest.calccbs({ authorization: `${harvest}@active` })
+    await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
     
     const cbs = await eos.getTableRows({
       code: accounts,
@@ -616,16 +612,6 @@ describe("harvest community building score", async assert => {
 
     //console.log(given + " cba points "+JSON.stringify(cbs, null, 2))
   
-    const harvestStats = await eos.getTableRows({
-      code: harvest,
-      scope: harvest,
-      table: 'harvest',
-      json: true,
-      limit: 100
-    })
-  
-    //console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
-
     assert({
       given: 'cbs points '+given,
       should: 'have expected values '+should,
@@ -636,26 +622,26 @@ describe("harvest community building score", async assert => {
     assert({
       given: 'cbs scores '+given,
       should: 'have expected values '+should,
-      actual: harvestStats.rows.map(({ community_building_score }) => community_building_score),
+      actual: cbs.rows.map(({ rank }) => rank),
       expected: scores
     })
 
   }
 
   console.log('add cbs')
-  await contracts.harvest.calccbs({ authorization: `${harvest}@active` })
+  //await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
 
-  await checkScores([], [], "no cbs", "be empty")
+  //await checkScores([], [], "no cbs", "be empty")
 
   console.log('calculate cbs scores')
   await contracts.accounts.testsetcbs(firstuser, 1, { authorization: `${accounts}@active` })
-  await checkScores([1], [0], "1 cbs", "100 score")
+  await checkScores([1], [0], "1 cbs", "0 score")
 
   await contracts.accounts.testsetcbs(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetcbs(thirduser, 3, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetcbs(fourthuser, 0, { authorization: `${accounts}@active` })
 
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
+  await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
   await checkScores([1, 2, 3, 0], [25, 50, 75, 0], "cbs distribution", "correct")
 })
 

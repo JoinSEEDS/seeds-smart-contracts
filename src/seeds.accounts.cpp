@@ -639,7 +639,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   //  return;
   //}
 
-  uint64_t total = sizes.get("rep.sz"_n.value, "user rep size not set").size;
+  uint64_t total = get_size("rep.sz"_n);
   uint64_t current = chunk * chunksize;
   auto rep_by_rep = rep.get_index<"byrep"_n>();
   auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
@@ -686,7 +686,7 @@ void accounts::rankcbss() {
 void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
-  uint64_t total = sizes.get("cbs.sz"_n.value, "cbs table size not set").size;
+  uint64_t total = get_size("cbs.sz"_n);
   uint64_t current = chunk * chunksize;
   auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
   auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);
@@ -766,6 +766,15 @@ void accounts::size_set(name id, uint64_t newsize) {
     sizes.modify(sitr, _self, [&](auto& item) {
       item.size = newsize;
     });
+  }
+}
+
+uint64_t accounts::get_size(name id) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    return 0;
+  } else {
+    return sitr->size;
   }
 }
 

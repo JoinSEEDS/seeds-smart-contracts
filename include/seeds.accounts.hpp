@@ -115,6 +115,7 @@ CONTRACT accounts : public contract {
       void add_rep_item(name account, uint64_t reputation);
       void size_change(name id, int delta);
       void size_set(name id, uint64_t newsize);
+      uint64_t get_size(name id);
 
       DEFINE_USER_TABLE
 

@@ -8,7 +8,11 @@
 #include <harvest_table.hpp>
 #include <cycle_table.hpp>
 #include <utils.hpp>
+#include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
+#include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
+#include <tables/cbs_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -28,6 +32,7 @@ CONTRACT harvest : public contract {
         sizes(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
+        rep(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
         {}
         
@@ -50,21 +55,22 @@ CONTRACT harvest : public contract {
     ACTION calcplanted(); // caluclate planted score
 
     ACTION calctrxpt(); // calculate transaction points
+    ACTION calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION calctrx(); // calculate transaction score
 
-    ACTION calcrep(); // calculate reputation score
-
-    ACTION calccbs(); // calculate community building score
-
     ACTION calccs(); // calculate contribution score
+
+    ACTION updatetxpt(name account);
+
 
     ACTION payforcpu(name account);
 
     ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
-    ACTION testsetrs(name account, uint64_t value);
+
+    ACTION clearscores();  // DEBUG REMOVE - migrate method
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -82,10 +88,12 @@ CONTRACT harvest : public contract {
     void check_asset(asset quantity);
     void deposit(asset quantity);
     void withdraw(name account, asset quantity);
-    void calc_tx_points(name account, uint64_t cycle);
-    
+    void calc_tx_points(name account);
+    double get_rep_multiplier(name account);
+
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
+    uint64_t get_size(name id);
 
     // Contract Tables
 
@@ -140,41 +148,29 @@ CONTRACT harvest : public contract {
       indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
     > cs_points_tables;
 
-    DEFINE_REP_TABLE
-
-    DEFINE_REP_TABLE_MULTI_INDEX
-
     DEFINE_SIZE_TABLE
 
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
     // External Tables
 
-    TABLE config_table {
-      name param;
-      uint64_t value;
-      uint64_t primary_key()const { return param.value; }
-    };
+    DEFINE_REP_TABLE
 
-    TABLE user_table {
-      name account;
-      name status;
-      name type;
-      string nickname;
-      string image;
-      string story;
-      string roles;
-      string skills;
-      string interests;
-      uint64_t reputation;
-      uint64_t timestamp;
+    DEFINE_REP_TABLE_MULTI_INDEX
 
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_reputation()const { return reputation; }
-    };
+    DEFINE_USER_TABLE
 
-    // from History contract - scoped by 'from'
-    TABLE transaction_table {
+    DEFINE_USER_TABLE_MULTI_INDEX
+
+    DEFINE_CONFIG_TABLE
+
+    DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+    DEFINE_CBS_TABLE
+
+    DEFINE_CBS_TABLE_MULTI_INDEX
+
+    TABLE transaction_table { // from History contract - scoped by 'from'
        uint64_t id;
        name to;
        asset quantity;
@@ -184,15 +180,6 @@ CONTRACT harvest : public contract {
        uint64_t by_timestamp() const { return timestamp; }
        uint64_t by_to() const { return to.value; }
        uint64_t by_quantity() const { return quantity.amount; }
-    };
-
-    // from accounts contract
-    TABLE cbs_table {
-        name account;
-        uint64_t community_building_score;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cbs()const { return community_building_score; }
     };
 
     DEFINE_HARVEST_TABLE
@@ -210,23 +197,11 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-    typedef eosio::multi_index<"users"_n, user_table,
-        indexed_by<"byreputation"_n,
-        const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-    > user_tables;
-
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
-
     typedef eosio::multi_index<"transactions"_n, transaction_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
       indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
       indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
-
-    typedef eosio::multi_index<"cbs"_n, cbs_table,
-      indexed_by<"bycbs"_n,
-      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
-    > cbs_tables;
 
     // Contract Tables
     balance_tables balances;
@@ -234,11 +209,13 @@ CONTRACT harvest : public contract {
     harvest_tables harveststat;
     cs_points_tables cspoints;
     cycle_tables cycle;
+    size_tables sizes;
 
     // External Tables
     config_tables config;
     user_tables users;
     cbs_tables cbs;
+    rep_tables rep;
 
 };
 
@@ -250,8 +227,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
           (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
-          (calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)
-          (testreward)(testsetrs)(testclaim)(testupdatecs))
+          (calctrx)(calctrxpt)(calctrxpts)(calcplanted)(calccs)
+          (updatetxpt)(clearscores)
+          (testreward)(testclaim)(testupdatecs))
       }
   }
 }

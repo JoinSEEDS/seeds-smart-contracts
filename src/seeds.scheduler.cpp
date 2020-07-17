@@ -43,36 +43,6 @@ ACTION scheduler::reset() {
         titr = test.erase(titr);
     }
 
-    std::vector<name> id_v = { 
-        name("cs.rep"), 
-        name("cs.planted"),
-        name("cs.trxpt"), 
-        name("cs.trx"),
-        name("cs.cbs"),
-        name("cs.cs"),
-        name("exch.period"),
-    };
-    
-    std::vector<name> operations_v = {
-        name("calcrep"),
-        name("calcplanted"),
-        name("calctrxpt"),
-        name("calctrx"),
-        name("calccbs"),
-        name("calccs"),
-        name("onperiod"),
-    };
-
-    std::vector<name> contracts_v = {
-        contracts::harvest,
-        contracts::harvest,
-        contracts::harvest,
-        contracts::harvest,
-        contracts::harvest,
-        contracts::harvest,
-        contracts::exchange,
-    };
-
     std::vector<uint64_t> delay_v = {
         60,
         60,
