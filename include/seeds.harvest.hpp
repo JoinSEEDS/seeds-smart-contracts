@@ -25,7 +25,7 @@ CONTRACT harvest : public contract {
     harvest(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
-        harveststat(receiver, receiver.value),
+        planted(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
         cycle(receiver, receiver.value),
@@ -57,7 +57,8 @@ CONTRACT harvest : public contract {
     ACTION calctrxpt(); // calculate transaction points
     ACTION calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calctrx(); // calculate transaction score
+    ACTION ranktxs(); // rank transaction points
+    ACTION ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION calccs(); // calculate contribution score
 
@@ -71,16 +72,15 @@ CONTRACT harvest : public contract {
     ACTION testupdatecs(name account, uint64_t contribution_score);
 
     ACTION clearscores();  // DEBUG REMOVE - migrate method
+    ACTION migrateplant(uint64_t startval);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
 
-    name rep_rank_name = "rep.rnk"_n;
-    name tx_rank_name = "tx.rnk"_n;
-    name planted_rank_name = "planted.rnk"_n;
-    name cbs_rank_name = "cbs.rnk"_n;
-    name cs_rank_name = "cs.rnk"_n;
+    name planted_size = "planted.sz"_n;
+    name tx_points_size = "txpt.sz"_n;
+    name cs_size = "cs.sz"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
@@ -97,10 +97,11 @@ CONTRACT harvest : public contract {
 
     // Contract Tables
 
+    // Migration plan - leave this data in there, but start using the planted table
     TABLE balance_table {
       name account;
       asset planted;
-      asset reward;
+      asset reward; // UNUSED - remove when we have migrated to planted
 
       uint64_t primary_key()const { return account.value; }
       uint64_t by_planted()const { return planted.amount; }
@@ -117,35 +118,51 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return refund_id; }
     };
 
+    TABLE planted_table {
+      name account;
+      asset planted;
+      uint64_t rank;  
+
+      uint64_t primary_key()const { return account.value; }
+      uint128_t by_planted() const { return (uint64_t(planted.amount) << 64) + account.value; } 
+      uint64_t by_rank() const { return rank; } 
+
+    };
+
+    typedef eosio::multi_index<"planted"_n, planted_table,
+      indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
+      indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
+    > planted_tables;
+
     TABLE tx_points_table {
       name account;
-      uint64_t points;  // transaction points
-      uint64_t cycle;   // calculation cycle - we will use this when we have too many users to do them all
+      uint32_t points;
+      uint64_t rank;  
 
-      uint64_t primary_key() const { return account.value; }
-      uint64_t by_points() const { return points; }
-      uint64_t by_cycle() const { return cycle; }
+      uint64_t primary_key() const { return account.value; } 
+      uint64_t by_points() const { return (uint64_t(points) << 32) +  ( (account.value <<32) >> 32) ; } 
+      uint64_t by_rank() const { return rank; } 
 
     };
 
     typedef eosio::multi_index<"txpoints"_n, tx_points_table,
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
-      indexed_by<"bycycle"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_cycle>>
+      indexed_by<"byrank"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_rank>>
     > tx_points_tables;
 
     TABLE cs_points_table {
-        name account;
-        uint64_t contribution_points;
-        uint64_t cycle;
+      name account;
+      uint32_t contribution_points;
+      uint64_t rank;  
 
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cs_points()const { return contribution_points; }
-        uint64_t by_cycle()const { return cycle; }
+      uint64_t primary_key() const { return account.value; }
+      uint64_t by_cs_points() const { return (uint64_t(contribution_points) << 32) +  ( (account.value <<32) >> 32) ; } \
+      uint64_t by_rank() const { return rank; } \
     };
 
     typedef eosio::multi_index<"cspoints"_n, cs_points_table,
       indexed_by<"bycspoints"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cs_points>>,
-      indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
+      indexed_by<"byrank"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_rank>>
     > cs_points_tables;
 
     DEFINE_SIZE_TABLE
@@ -182,15 +199,11 @@ CONTRACT harvest : public contract {
        uint64_t by_quantity() const { return quantity.amount; }
     };
 
-    DEFINE_HARVEST_TABLE
-
     DEFINE_CYCLE_TABLE
 
     DEFINE_CYCLE_TABLE_MULTI_INDEX
 
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
-
-    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
@@ -205,8 +218,8 @@ CONTRACT harvest : public contract {
 
     // Contract Tables
     balance_tables balances;
+    planted_tables planted;
     tx_points_tables txpoints;
-    harvest_tables harveststat;
     cs_points_tables cspoints;
     cycle_tables cycle;
     size_tables sizes;
@@ -227,8 +240,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
           (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
-          (calctrx)(calctrxpt)(calctrxpts)(calcplanted)(calccs)
-          (updatetxpt)(clearscores)
+          (ranktx)(calctrxpt)(calctrxpts)(calcplanted)(calccs)
+          (updatetxpt)(clearscores)(migrateplant)
           (testreward)(testclaim)(testupdatecs))
       }
   }

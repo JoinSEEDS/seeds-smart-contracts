@@ -241,7 +241,7 @@ describe("Harvest General", async assert => {
 
   console.log('calculate transactions score')
   await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
-  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
 
 
   var balanceBefore = await getBalance(seconduser);
@@ -406,7 +406,7 @@ describe("harvest planted score", async assert => {
   await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
   await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
-  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+  await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
 
   const balances = await eos.getTableRows({
     code: harvest,
@@ -462,7 +462,7 @@ describe("harvest transaction score", async assert => {
 
     console.log("checking points "+points + " scores: "+scores)
     await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
-    await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
+    await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
     
     const txpoints = await eos.getTableRows({
       code: harvest,
