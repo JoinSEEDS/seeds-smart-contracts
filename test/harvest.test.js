@@ -236,8 +236,8 @@ describe("Harvest General", async assert => {
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
 
-  console.log('claim reward')
-  await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
+  //console.log('claim reward')
+  //await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
 
   console.log('calculate transactions score')
   await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
@@ -245,7 +245,7 @@ describe("Harvest General", async assert => {
 
 
   var balanceBefore = await getBalance(seconduser);
-  const transactionReward = await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
+  //const transactionReward = await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
   var balanceAfter = await getBalance(seconduser);
 
   assert({

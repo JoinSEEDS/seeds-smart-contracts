@@ -46,13 +46,15 @@ CONTRACT harvest : public contract {
 
     ACTION cancelrefund(name from, uint64_t request_id);
 
-    ACTION claimreward(name from);
+    //ACTION claimreward(name from);
 
     ACTION sow(name from, name to, asset quantity);
 
     ACTION runharvest();
 
-    ACTION calcplanted(); // caluclate planted score
+    ACTION rankplanteds();
+
+    ACTION rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION calctrxpt(); // calculate transaction points
     ACTION calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
@@ -64,13 +66,10 @@ CONTRACT harvest : public contract {
 
     ACTION updatetxpt(name account);
 
-
     ACTION payforcpu(name account);
 
-    ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
-
     ACTION clearscores();  // DEBUG REMOVE - migrate method
     ACTION migrateplant(uint64_t startval);
 
@@ -90,6 +89,8 @@ CONTRACT harvest : public contract {
     void withdraw(name account, asset quantity);
     uint32_t calc_transaction_points(name account);
     double get_rep_multiplier(name account);
+    void add_planted(name account, asset quantity);
+    void sub_planted(name account, asset quantity);
 
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
@@ -239,10 +240,10 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
-          (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(calcplanted)(calccs)
+          (unplant)(claimrefund)(cancelrefund)(sow)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccs)
           (updatetxpt)(clearscores)(migrateplant)
-          (testreward)(testclaim)(testupdatecs))
+          (testclaim)(testupdatecs))
       }
   }
 }
