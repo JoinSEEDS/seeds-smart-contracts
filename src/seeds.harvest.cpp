@@ -545,7 +545,44 @@ void harvest::calccs() {
 }
 
 void harvest::calc_contribution_score(name account) {
-  
+  uint64_t planted_score = 0;
+  uint64_t transactions_score = 0;
+  uint64_t community_building_score = 0;
+  uint64_t reputation_score = 0;
+
+  auto pitr = planted.find(account);
+  if (pitr != planted.end()) planted_score = pitr->rank;
+
+  auto titr = txpoints.find(account);
+  if (titr != txpoints.end()) transactions_score = titr->rank;
+
+  auto citr = cbs.find(account);
+  if (citr != cbs.end()) community_building_score = citr->rank;
+
+  auto ritr = rep.find(account);
+  if (ritr != rep.end()) reputation_score = ritr->rank;
+
+  uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; 
+
+  auto csitr = cspoints.find(account);
+  if (csitr == cspoints.end()) {
+    if (contribution_points > 0) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = account;
+        item.contribution_points = contribution_points;
+      });
+      size_change(cs_size, 1);
+    }
+  } else {
+    if (contribution_points > 0) {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.contribution_points = contribution_points;
+      });
+    } else {
+      cspoints.erase(csitr);
+      size_change(cs_size, -1);
+    }
+  }
 }
 
 void harvest::payforcpu(name account) {
