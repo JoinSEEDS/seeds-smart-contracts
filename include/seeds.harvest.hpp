@@ -91,7 +91,8 @@ CONTRACT harvest : public contract {
     double get_rep_multiplier(name account);
     void add_planted(name account, asset quantity);
     void sub_planted(name account, asset quantity);
-
+    void calc_contribution_score(name account);
+    
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
     uint64_t get_size(name id);

@@ -550,21 +550,21 @@ void harvest::calc_contribution_score(name account) {
   uint64_t community_building_score = 0;
   uint64_t reputation_score = 0;
 
-  auto pitr = planted.find(account);
+  auto pitr = planted.find(account.value);
   if (pitr != planted.end()) planted_score = pitr->rank;
 
-  auto titr = txpoints.find(account);
+  auto titr = txpoints.find(account.value);
   if (titr != txpoints.end()) transactions_score = titr->rank;
 
-  auto citr = cbs.find(account);
+  auto citr = cbs.find(account.value);
   if (citr != cbs.end()) community_building_score = citr->rank;
 
-  auto ritr = rep.find(account);
+  auto ritr = rep.find(account.value);
   if (ritr != rep.end()) reputation_score = ritr->rank;
 
   uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; 
 
-  auto csitr = cspoints.find(account);
+  auto csitr = cspoints.find(account.value);
   if (csitr == cspoints.end()) {
     if (contribution_points > 0) {
       cspoints.emplace(_self, [&](auto& item) {
