@@ -97,6 +97,34 @@ describe('scheduler', async assert => {
 
 })
 
+describe('scheduler, token.resetweekly', async assert => {
 
+    // this test is to see that scheduler can execute token.resetweekly
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
 
+    contracts = await Promise.all([
+        eos.contract(scheduler),
+        eos.contract(settings)
+    ]).then(([scheduler, settings]) => ({
+        scheduler, settings
+    }))
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('add operations')
+    await contracts.scheduler.configop('tokn.resetw', 'resetweekly', 'token.seeds', 1, 0, { authorization: `${scheduler}@active` })
+
+    console.log('scheduler execute')
+    await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
+
+    await sleep(10 * 1000)
+
+})
