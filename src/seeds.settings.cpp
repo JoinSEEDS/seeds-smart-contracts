@@ -24,17 +24,19 @@ void settings::reset() {
   // =====================================
   // citizenship path 
   // =====================================
-  configure(name("res.plant"), 50 * 10000);
-  configure(name("res.tx"), 10);
-  configure(name("res.referred"), 1);
-  configure(name("res.rep.pt"), 50); // rep points
+  // Resident
+  configure(name("res.plant"), 50 * 10000);   // min planted 50 Seeds
+  configure(name("res.tx"), 10);              // min 10 transactions
+  configure(name("res.referred"), 1);         // min referred 1 other user
+  configure(name("res.rep.pt"), 50);          // min rep points
 
-  configure(name("cit.plant"), 200 * 10000);
-  configure(name("cit.tx"), 10);
-  configure(name("cit.referred"), 3);
-  configure(name("cit.ref.res"), 1);
-  configure(name("cit.rep.sc"), 50); // reputation score, not points
-  configure(name("cit.age"), 59 * 24 * 60 * 60);  // 2 cycles account age 
+  // Citizen
+  configure(name("cit.plant"), 200 * 10000);  // min planted 200 Seeds
+  configure(name("cit.tx"), 10);              // min 10 transactions
+  configure(name("cit.referred"), 3);         // min referred 3 other users
+  configure(name("cit.ref.res"), 1);          // min referred 1 resident or citizen
+  configure(name("cit.rep.sc"), 50);          // min reputation score (not points)
+  configure(name("cit.age"), 59 * 24 * 60 * 60);  // min account age 2 cycles 
 
 
 
