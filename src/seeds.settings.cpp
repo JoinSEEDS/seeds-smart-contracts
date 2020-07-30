@@ -22,6 +22,23 @@ void settings::reset() {
   configure(name("secndstoexec"), 60);
 
   // =====================================
+  // citizenship path 
+  // =====================================
+  configure(name("res.plant"), 50 * 10000);
+  configure(name("res.tx"), 10);
+  configure(name("res.referred"), 1);
+  configure(name("res.rep.pt"), 50); // rep points
+
+  configure(name("cit.plant"), 200 * 10000);
+  configure(name("cit.tx"), 10);
+  configure(name("cit.referred"), 3);
+  configure(name("cit.ref.res"), 1);
+  configure(name("cit.rep.sc"), 50); // reputation score, not points
+  configure(name("cit.age"), 59 * 24 * 60 * 60);  // 2 cycles account age 
+
+
+
+  // =====================================
   // referral rewards 
   // =====================================
 

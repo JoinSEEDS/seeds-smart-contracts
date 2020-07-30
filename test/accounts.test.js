@@ -725,7 +725,13 @@ describe('make citizen', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, token, harvest })
+  const contracts = await initContracts({ accounts, settings, token, harvest })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -771,8 +777,8 @@ describe('make citizen', async assert => {
   })
 
   // 2 DO SHIT
-  console.log('plant 100 seeds')
-  await contracts.token.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  console.log('plant 200 seeds')
+  await contracts.token.transfer(firstuser, harvest, '200.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   console.log('make 50 transaction')
   for (var i=0; i<25; i++) {
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
@@ -786,7 +792,45 @@ describe('make citizen', async assert => {
   await contracts.harvest.testsetrs(firstuser, 51, { authorization: `${harvest}@active` })
 
   // 3 CHECK STATUS - succeed
+  try {
+    await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+  }
+
+  assert({
+    given: 'does not fulfill criteria for citizen',
+    should: 'is resident still',
+    actual: await userStatus(firstuser),
+    expected: 'resident'
+  })
+
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  
+  try {
+    await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+  }
+  assert({
+    given: 'does not fulfill criteria for citizen',
+    should: 'is resident still',
+    actual: await userStatus(firstuser),
+    expected: 'resident'
+  })
+  await contracts.settings.configure("cit.age", 0, { authorization: `${settings}@active` })
+
+  const bal = await eos.getTableRows({
+    code: harvest,
+    scope: harvest,
+    lower_bound: firstuser,
+    upper_bound: firstuser,
+    table: 'balances',
+    json: true,
+  })
+  console.log("balances: "+JSON.stringify(bal, null, 2))
+
   await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+
+
 
   assert({
     given: 'does fulfill criteria for citizen',
