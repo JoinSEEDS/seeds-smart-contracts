@@ -318,8 +318,9 @@ ACTION organization::subregen(name organization, name account) {
     vote(organization, account, -1 * getregenp(account));
 }
 
-ACTION organization::registerapp(name organization, name appname, string applongname) {
-    require_auth(get_self());
+ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
+    require_auth(owner);
+    check_owner(organization, owner);
 
     auto orgitr = organizations.find(organization.value);
     check(orgitr != organizations.end(), "This organization does not exist.");
@@ -398,6 +399,10 @@ ACTION organization::appuse(name organization, name appname, name account) {
             dau.number_app_uses = 1;
         });
     }
+
+    apps.modify(appitr, _self, [&](auto & app){
+        app.number_of_uses += 1;
+    });
 }
 
 

@@ -43,7 +43,7 @@ CONTRACT organization : public contract {
 
         ACTION refund(name beneficiary, asset quantity);
 
-        ACTION registerapp(name organization, name appname, string applongname);
+        ACTION registerapp(name owner, name organization, name appname, string applongname);
 
         ACTION banapp(name organization, name appname);
 
@@ -82,7 +82,7 @@ CONTRACT organization : public contract {
 
         TABLE vote_table {
             name account;
-            uint64_t timestamp; // is it relevant?
+            uint64_t timestamp;
             int64_t regen_points;
 
             uint64_t primary_key() const { return account.value; }
@@ -98,7 +98,7 @@ CONTRACT organization : public contract {
             name app_name;
             string app_long_name;
             bool is_banned;
-            uint64_t number_of_uses; // is this really helpful
+            uint64_t number_of_uses;
 
             uint64_t primary_key() const { return app_name.value; }
         };

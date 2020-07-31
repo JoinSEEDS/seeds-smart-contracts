@@ -365,7 +365,7 @@ describe('organization', async assert => {
 })
 
 
-describe('organization', async assert => {
+describe('app', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -391,34 +391,98 @@ describe('organization', async assert => {
     console.log('join users')
     await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
-
-    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
     
+    console.log('create organization')
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
     await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
 
-    await contracts.organization.registerapp('testorg1', 'app1', 'app long name', { authorization: `${organization}@active` })
+    console.log('register app')
+    await contracts.organization.registerapp(firstuser, 'testorg1', 'app1', 'app long name', { authorization: `${firstuser}@active` })
 
+    let createOrgNotBeingOwner = true
+    try {
+        await contracts.organization.registerapp(seconduser, 'testorg1', 'app2', 'app2 long name', { authorization: `${seconduser}@active` })
+        console.log('app2 registered (not expected)')
+    } catch (err) {
+        createOrgNotBeingOwner = false
+        console.log('only the owner can register an app (expected)')
+    }
+
+    const appsTable = await getTableRows({
+        code: organization,
+        scope: 'testorg1',
+        table: 'apps',
+        json: true
+    })
+
+    const apps = appsTable.rows
+
+    console.log('use app')
     await contracts.organization.appuse('testorg1', 'app1', firstuser, { authorization: `${firstuser}@active` })
-
+    await sleep(300)
+    
     for (let i = 0; i < 10; i++) {
         await contracts.organization.appuse('testorg1', 'app1', seconduser, { authorization: `${seconduser}@active` })
         await sleep(300)
     }
 
-    const regen = await getTableRows({
+    const dausTable = await getTableRows({
         code: organization,
         scope: 'app1',
         table: 'daus',
         json: true
     })
 
-    const rows = regen.rows.map(values => values.number_app_uses)
+    const rows = dausTable.rows.map(values => values.number_app_uses)
+
+    console.log('ban app')
+    await contracts.organization.banapp('testorg1', 'app1', { authorization: `${organization}@active` })
+
+    const appsTableAfter = await getTableRows({
+        code: organization,
+        scope: 'testorg1',
+        table: 'apps',
+        json: true
+    })
+
+    const appsAfter = appsTableAfter.rows
+
+    assert({
+        given: 'registered an app',
+        should: 'have an entry in the apps table',
+        actual: apps,
+        expected: [{ 
+            app_name: 'app1',
+            app_long_name: 'app long name',
+            is_banned: 0,
+            number_of_uses: 0
+        }]
+    })
 
     assert({
         given: 'appuse called',
         should: 'increment the app use counter',
         actual: rows,
         expected: [1, 10]
+    })
+
+    assert({
+        given: 'register app by not the owner',
+        should: 'not register the app',
+        actual: createOrgNotBeingOwner,
+        expected: false
+    })
+
+    assert({
+        given: 'registered an app',
+        should: 'have an entry in the apps table',
+        actual: appsAfter,
+        expected: [{ 
+            app_name: 'app1',
+            app_long_name: 'app long name',
+            is_banned: 1,
+            number_of_uses: 11
+        }]
     })
 
 })
