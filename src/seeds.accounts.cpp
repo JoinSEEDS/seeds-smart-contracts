@@ -122,12 +122,12 @@ void accounts::_vouch(name sponsor, name account) {
 
   name sponsor_status = uitrs->status;
 
-  auto resident_basepoints = config.get(resident_vouch_points.value, "settgs.seeds::config: the res.vouch parameter has not been initialized");
-  auto citizen_basepoints = config.get(citizen_vouch_points.value, "settgs.seeds::config: the cit.vouch parameter has not been initialized");
+  auto resident_basepoints = config_get(resident_vouch_points);
+  auto citizen_basepoints = config_get(citizen_vouch_points);
 
   uint64_t reps = 0;
-  if (sponsor_status == name("resident")) reps = resident_basepoints.value;
-  if (sponsor_status == name("citizen")) reps = citizen_basepoints.value;
+  if (sponsor_status == name("resident")) reps = resident_basepoints;
+  if (sponsor_status == name("citizen")) reps = citizen_basepoints;
 
   reps = reps * utils::get_rep_multiplier(sponsor); // REPLACE with local function
 
@@ -144,11 +144,11 @@ void accounts::_vouch(name sponsor, name account) {
     vitr++;
   }
 
-  auto maxvouch = config.get(max_vouch_points.value, "settgs.seeds::config: the maxvouch parameter has not been initialized");
+  auto maxvouch = config_get(max_vouch_points);
   
-  check(total_vouch < maxvouch.value, "user is already fully vouched!");
-  if ( (total_vouch + reps) > maxvouch.value) {
-    reps = maxvouch.value - total_vouch; // limit to max vouch
+  check(total_vouch < maxvouch, "user is already fully vouched!");
+  if ( (total_vouch + reps) > maxvouch) {
+    reps = maxvouch - total_vouch; // limit to max vouch
   }
 
   // add vouching table entry
@@ -253,17 +253,17 @@ void accounts::refreward(name account, name new_status) {
 
   name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
 
-  auto community_building_points = config.get(cbp_param.value, "The community building reward parameter has not been initialized yet.");
+  auto community_building_points = config_get(cbp_param);
 
   auto citr = cbs.find(referrer.value);
   if (citr != cbs.end()) {
     cbs.modify(citr, _self, [&](auto& item) {
-      item.community_building_score += community_building_points.value;
+      item.community_building_score += community_building_points;
     });
   } else {
     cbs.emplace(_self, [&](auto& item) {
       item.account = referrer;
-      item.community_building_score = community_building_points.value;
+      item.community_building_score = community_building_points;
       item.rank = 0;
     });
     size_change("cbs.sz"_n, 1);
@@ -277,12 +277,12 @@ void accounts::refreward(name account, name new_status) {
     if (user_type == "organisation"_n) 
     {
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
-      auto org_seeds_reward = config.get(org_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
-      asset org_quantity(org_seeds_reward.value, seeds_symbol);
+      auto org_seeds_reward = config_get(org_reward_param);
+      asset org_quantity(org_seeds_reward, seeds_symbol);
 
       name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
-      auto amb_seeds_reward = config.get(amb_reward_param.value, "The seeds reward for orgs parameter has not been initialized yet.");
-      asset amb_quantity(amb_seeds_reward.value, seeds_symbol);
+      auto amb_seeds_reward = config_get(amb_reward_param);
+      asset amb_quantity(amb_seeds_reward, seeds_symbol);
 
       // send reward to org
       send_reward(referrer, org_quantity);
@@ -301,13 +301,13 @@ void accounts::refreward(name account, name new_status) {
     {
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
-      auto rep_points = config.get(reputation_reward_param.value, "The reputation reward for individuals parameter has not been initialized yet.");
+      auto rep_points = config_get(reputation_reward_param);
 
       name seed_reward_param = is_citizen ? individual_seeds_reward_citizen : individual_seeds_reward_resident;
-      auto seeds_reward = config.get(seed_reward_param.value, "The seeds reward for individuals parameter has not been initialized yet.");
-      asset quantity(seeds_reward.value, seeds_symbol);
+      auto seeds_reward = config_get(seed_reward_param);
+      asset quantity(seeds_reward, seeds_symbol);
 
-      send_addrep(referrer, rep_points.value);
+      send_addrep(referrer, rep_points);
 
       send_reward(referrer, quantity);
     }
@@ -466,13 +466,12 @@ void accounts::makeresident(name user)
 
     transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
-    uint64_t invited_users_number = countrefs(user);
+    uint64_t invited_users_number = countrefs(user, 0);
 
-
-    uint64_t min_planted =  50 * 10000;
-    uint64_t min_tx =  10;
-    uint64_t min_invited =  1;
-    uint64_t min_rep =  50;
+    uint64_t min_planted = config_get("res.plant"_n);
+    uint64_t min_tx = config_get("res.tx"_n);
+    uint64_t min_invited = config_get("res.referred"_n);
+    uint64_t min_rep = config_get("res.rep.pt"_n);
 
     uint64_t reputation_points = rep.get(user.value,  "user has less than required reputation. Actual: 0").rep;
 
@@ -510,6 +509,15 @@ void accounts::updatestatus(name user, name status)
 
 }
 
+uint64_t accounts::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
 void accounts::makecitizen(name user)
 {
     auto uitr = users.find(user.value);
@@ -521,20 +529,22 @@ void accounts::makecitizen(name user)
     transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
     auto titr = transactions.find(user.value);
 
-    uint64_t invited_users_number = countrefs(user);
-    uint64_t _rep_score = rep_score(user);
 
-    uint64_t min_planted =  100 * 10000;
-    uint64_t min_tx =  50;
-    uint64_t min_invited =  3;
-    uint64_t min_rep_score =  50;
-    //uint64_t min_residents = 1; // 1 resident invited - NOT implemented
-    //uint64_t min_account_age = 60 * 24 * 60 * 60; // 2 cycles account age - NOT implemented
+    uint64_t min_planted = config_get("cit.plant"_n);
+    uint64_t min_tx = config_get("cit.tx"_n);
+    uint64_t min_invited = config_get("cit.referred"_n);
+    uint64_t min_residents_invited = config_get("cit.ref.res"_n);
+    uint64_t min_rep_score = config_get("cit.rep.sc"_n);
+    uint64_t min_account_age = config_get("cit.age"_n);
+
+    uint64_t invited_users_number = countrefs(user, min_residents_invited);
+    uint64_t _rep_score = rep_score(user);
 
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
     check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
+    check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     auto new_status = name("citizen");
     updatestatus(user, new_status);
@@ -873,13 +883,29 @@ void accounts::check_user(name account)
   check(uitr != users.end(), "no user");
 }
 
-uint64_t accounts::countrefs(name user) 
+uint64_t accounts::countrefs(name user, int check_num_residents) 
 {
     auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
+    if (check_num_residents == 0) {
+      return std::distance(refs_by_referrer.lower_bound(user.value), refs_by_referrer.upper_bound(user.value));
+    } else {
+      uint64_t count = 0;
+      int residents = 0;
+      auto ritr = refs_by_referrer.lower_bound(user.value);
+      while (ritr != refs_by_referrer.end() && ritr->referrer == user) {
+        auto uitr = users.find(ritr->invited.value);
+        if (uitr != users.end()) {
+          if (uitr->status == "resident"_n || uitr->status == "citizen"_n) {
+            residents++;
+          }
+        }
+        ritr++;
+        count++;
+      }
+      check(residents >= check_num_residents, "user has not referred enough residents or citizens: "+std::to_string(residents));
+      return count;
+    }
 
-    auto numrefs = std::distance(refs_by_referrer.lower_bound(user.value), refs_by_referrer.upper_bound(user.value));
-
-    return numrefs;
 
 }
 

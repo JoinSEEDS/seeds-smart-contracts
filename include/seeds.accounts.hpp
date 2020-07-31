@@ -110,9 +110,10 @@ CONTRACT accounts : public contract {
       void send_addrep(name user, uint64_t amount);
       void send_subrep(name user, uint64_t amount);
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
-      uint64_t countrefs(name user);
+      uint64_t countrefs(name user, int check_num_residents);
       uint64_t rep_score(name user);
       void add_rep_item(name account, uint64_t reputation);
+      uint64_t config_get(name key);
       void size_change(name id, int delta);
       void size_set(name id, uint64_t newsize);
       uint64_t get_size(name id);

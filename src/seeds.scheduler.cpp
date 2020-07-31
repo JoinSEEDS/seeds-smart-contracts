@@ -43,20 +43,26 @@ ACTION scheduler::reset() {
         titr = test.erase(titr);
     }
 
+    std::vector<name> id_v = { 
+        name("exch.period"),
+    };
+    
+    std::vector<name> operations_v = {
+        name("onperiod"),
+    };
+
+    std::vector<name> contracts_v = {
+        contracts::exchange,
+    };
+
     std::vector<uint64_t> delay_v = {
-        60,
-        60,
-        60,
-        60,
-        60,
-        60,
         utils::seconds_per_day * 7,
     };
 
     int i = 0;
     uint64_t now = current_time_point().sec_since_epoch()+1;
 
-    while(i < 6){
+    while(i < operations_v.size()){
         operations.emplace(_self, [&](auto & noperation){
             noperation.id = id_v[i];
             noperation.operation = operations_v[i];
