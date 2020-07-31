@@ -228,32 +228,31 @@ void token::reset_weekly_aux(uint64_t begin) {
 
   auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
   auto sym_code_raw = seeds_symbol.code().raw();
-  uint64_t counter = 0;
+  uint64_t count = 0;
 
   transaction_tables transactions(get_self(), sym_code_raw);
 
-  auto titr = transactions.begin();
-  std::advance(titr, begin);
-  while (titr != transactions.end() && counter < batch_size.value) {
-    transactions.modify(titr, get_self(), [&](auto& user) {
+  auto titr = begin == 0 ? transactions.begin() : transactions.lower_bound(begin);
+  while (titr != transactions.end() && count < batch_size.value) {
+    transactions.modify(titr, _self, [&](auto& user) {
       user.incoming_transactions = 0;
       user.outgoing_transactions = 0;
       user.total_transactions = 0;
       user.transactions_volume = asset(0, seeds_symbol);
     });
     titr++;
-    counter++;
+    count++;
   }
 
-  if (counter == batch_size.value) {
+  if (titr != transactions.end()) {
     transaction trx{};
     trx.actions.emplace_back(
       permission_level(_self, "active"_n),
       _self,
       "resetwhelper"_n,
-      std::make_tuple(counter)
+      std::make_tuple((titr -> account).value)
     );
-    trx.delay_sec = 5;
+    trx.delay_sec = 1;
     trx.send(eosio::current_time_point().sec_since_epoch(), _self);
   }
 
