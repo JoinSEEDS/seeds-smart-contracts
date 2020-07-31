@@ -6,6 +6,10 @@ const { organization, accounts, token, firstuser, seconduser, thirduser, bank, s
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}  
+
 describe('organization', async assert => {
 
     if (!isLocal()) {
@@ -361,7 +365,63 @@ describe('organization', async assert => {
 })
 
 
+describe('organization', async assert => {
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+    const contracts = await Promise.all([
+        eos.contract(organization),
+        eos.contract(token),
+        eos.contract(accounts),
+        eos.contract(settings),
+        eos.contract(harvest),
+    ]).then(([organization, token, accounts, settings, harvest]) => ({
+        organization, token, accounts, settings, harvest
+    }))
+
+    console.log('reset organization')
+    await contracts.organization.reset({ authorization: `${organization}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    
+    await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+
+    await contracts.organization.registerapp('testorg1', 'app1', 'app long name', { authorization: `${organization}@active` })
+
+    await contracts.organization.appuse('testorg1', 'app1', firstuser, { authorization: `${firstuser}@active` })
+
+    for (let i = 0; i < 10; i++) {
+        await contracts.organization.appuse('testorg1', 'app1', seconduser, { authorization: `${seconduser}@active` })
+        await sleep(300)
+    }
+
+    const regen = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const rows = regen.rows.map(values => values.number_app_uses)
+
+    assert({
+        given: 'appuse called',
+        should: 'increment the app use counter',
+        actual: rows,
+        expected: [1, 10]
+    })
+
+})
 
 
 

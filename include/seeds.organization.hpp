@@ -43,6 +43,12 @@ CONTRACT organization : public contract {
 
         ACTION refund(name beneficiary, asset quantity);
 
+        ACTION registerapp(name organization, name appname, string applongname);
+
+        ACTION banapp(name organization, name appname);
+
+        ACTION appuse(name organization, name appname, name account);
+
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
@@ -88,6 +94,26 @@ CONTRACT organization : public contract {
             uint64_t primary_key()const { return param.value; }
         };
 
+        TABLE app_table {
+            name app_name;
+            string app_long_name;
+            bool is_banned;
+            uint64_t number_of_uses; // is this really helpful
+
+            uint64_t primary_key() const { return app_name.value; }
+        };
+
+        TABLE dau_table {
+            uint64_t id;
+            name account;
+            uint64_t date;
+            uint64_t number_app_uses;
+
+            uint64_t primary_key() const { return id; }
+            uint64_t by_account() const { return account.value; }
+            uint64_t by_date() const { return date; }
+        };
+
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
             indexed_by<"byplanted"_n,
             const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
@@ -110,6 +136,14 @@ CONTRACT organization : public contract {
 
         typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
+        typedef eosio::multi_index<"apps"_n, app_table> app_tables;
+
+        typedef eosio::multi_index<"daus"_n, dau_table,
+            indexed_by<"byaccount"_n,
+            const_mem_fun<dau_table, uint64_t, &dau_table::by_account>>,
+            indexed_by<"bydate"_n,
+            const_mem_fun<dau_table, uint64_t, &dau_table::by_date>>
+        > dau_tables;
 
         organization_tables organizations;
         sponsors_tables sponsors;
@@ -133,7 +167,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<organization>(name(receiver), name(code), &organization::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund))
+          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp))
       }
   }
 }

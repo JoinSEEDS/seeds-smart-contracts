@@ -71,6 +71,7 @@ ACTION organization::reset() {
         name org = itr -> org_name;
         members_tables members(get_self(), org.value);
         vote_tables votes(get_self(), org.value);
+        app_tables apps(get_self(), org.value);
 
         auto mitr = members.begin();
         while(mitr != members.end()) {
@@ -80,6 +81,16 @@ ACTION organization::reset() {
         auto vitr = votes.begin();
         while(vitr != votes.end()){
             vitr = votes.erase(vitr);
+        }
+
+        auto aitr = apps.begin();
+        while(aitr != apps.end()) {
+            dau_tables daus(get_self(), aitr->app_name.value);
+            auto dauitr = daus.begin();
+            while (dauitr != daus.end()) {
+                dauitr = daus.erase(dauitr);
+            }
+            aitr = apps.erase(aitr);
         }
 
         itr = organizations.erase(itr);
@@ -94,7 +105,7 @@ ACTION organization::reset() {
 
 ACTION organization::create(name sponsor, name orgaccount, string orgfullname, string publicKey) 
 {
-    require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
+    require_auth(sponsor);
 
     auto bitr = sponsors.find(sponsor.value);
     check(bitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
@@ -305,6 +316,88 @@ ACTION organization::subregen(name organization, name account) {
     }
     
     vote(organization, account, -1 * getregenp(account));
+}
+
+ACTION organization::registerapp(name organization, name appname, string applongname) {
+    require_auth(get_self());
+
+    auto orgitr = organizations.find(organization.value);
+    check(orgitr != organizations.end(), "This organization does not exist.");
+
+    app_tables apps(get_self(), organization.value);
+
+    auto appitr = apps.find(appname.value);
+    check(appitr == apps.end(), "This application already exists.");
+
+    apps.emplace(_self, [&](auto & app){
+        app.app_name = appname;
+        app.app_long_name = applongname;
+        app.is_banned = false;
+        app.number_of_uses = 0;
+    });
+}
+
+ACTION organization::banapp(name organization, name appname) {
+    require_auth(get_self());
+
+    auto orgitr = organizations.find(organization.value);
+    check(orgitr != organizations.end(), "This organization does not exist.");
+
+    app_tables apps(get_self(), organization.value);
+
+    auto appitr = apps.find(appname.value);
+    check(appitr != apps.end(), "This application does not exists.");
+    
+    apps.modify(appitr, _self, [&](auto & app){
+        app.is_banned = true;
+    });
+}
+
+ACTION organization::appuse(name organization, name appname, name account) {
+    require_auth(account);
+    check_user(account);
+
+    auto orgitr = organizations.find(organization.value);
+    check(orgitr != organizations.end(), "This organization does not exist.");
+
+    app_tables apps(get_self(), organization.value);
+
+    auto appitr = apps.find(appname.value);
+    check(appitr != apps.end(), "This application does not exists.");
+    
+    dau_tables daus(get_self(), appname.value);
+    
+    bool found = false;
+    auto daus_by_account = daus.get_index<"byaccount"_n>();
+    auto daus_by_account_itr = daus_by_account.find(account.value);
+
+    auto sec = eosio::current_time_point().sec_since_epoch();
+    auto date = eosio::time_point_sec(sec / 86400 * 86400);
+
+    uint64_t milliseconds = date.utc_seconds;
+    milliseconds *= 1000;
+
+    if (daus_by_account_itr != daus_by_account.end()) {
+        while (daus_by_account_itr != daus_by_account.end() && 
+               daus_by_account_itr -> account == account) {
+            if (milliseconds == daus_by_account_itr -> date) {
+                found = true;
+                daus_by_account.modify(daus_by_account_itr, _self, [&](auto & dau){
+                    dau.number_app_uses += 1;
+                });
+                break;
+            }
+            daus_by_account_itr++;
+        }
+    }
+    if (!found) {
+        daus.emplace(_self, [&](auto & dau){
+            dau.id = daus.available_primary_key();
+            dau.account = account;
+            dau.date = milliseconds;
+            dau.number_app_uses = 1;
+        });
+    }
 }
 
 
