@@ -382,6 +382,9 @@ describe('app', async assert => {
         organization, token, accounts, settings, harvest
     }))
 
+    console.log('changing batch size')
+    await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
     console.log('reset organization')
     await contracts.organization.reset({ authorization: `${organization}@active` })
 
@@ -394,76 +397,136 @@ describe('app', async assert => {
     
     console.log('create organization')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(seconduser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
     await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.create(seconduser, 'testorg2', "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
 
     console.log('register app')
     await contracts.organization.registerapp(firstuser, 'testorg1', 'app1', 'app long name', { authorization: `${firstuser}@active` })
+    await contracts.organization.registerapp(seconduser, 'testorg2', 'app2', 'app long name 2', { authorization: `${seconduser}@active` })
 
     let createOrgNotBeingOwner = true
     try {
-        await contracts.organization.registerapp(seconduser, 'testorg1', 'app2', 'app2 long name', { authorization: `${seconduser}@active` })
-        console.log('app2 registered (not expected)')
+        await contracts.organization.registerapp(seconduser, 'testorg1', 'app3', 'app3 long name', { authorization: `${seconduser}@active` })
+        console.log('app3 registered (not expected)')
     } catch (err) {
         createOrgNotBeingOwner = false
         console.log('only the owner can register an app (expected)')
     }
 
-    const appsTable = await getTableRows({
-        code: organization,
-        scope: 'testorg1',
-        table: 'apps',
-        json: true
-    })
-
-    const apps = appsTable.rows
-
     console.log('use app')
-    await contracts.organization.appuse('testorg1', 'app1', firstuser, { authorization: `${firstuser}@active` })
+    await contracts.organization.appuse('app1', firstuser, { authorization: `${firstuser}@active` })
     await sleep(300)
     
     for (let i = 0; i < 10; i++) {
-        await contracts.organization.appuse('testorg1', 'app1', seconduser, { authorization: `${seconduser}@active` })
+        await contracts.organization.appuse('app1', seconduser, { authorization: `${seconduser}@active` })
         await sleep(300)
     }
 
-    const dausTable = await getTableRows({
+    await contracts.organization.appuse('app2', seconduser, { authorization: `${seconduser}@active` })
+
+    const daus1Table = await getTableRows({
         code: organization,
         scope: 'app1',
         table: 'daus',
         json: true
     })
 
-    const rows = dausTable.rows.map(values => values.number_app_uses)
+    const daus2Table = await getTableRows({
+        code: organization,
+        scope: 'app2',
+        table: 'daus',
+        json: true
+    })
+
+    const appsTable = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'apps',
+        json: true
+    })
+    const apps = appsTable.rows
+
+    console.log('clean daus')
+    await contracts.organization.cleandaus({ authorization: `${organization}@active` })
+    await sleep(3000)
+
+    const daus1TableAfterClean = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const daus2TableAfterClean = await getTableRows({
+        code: organization,
+        scope: 'app2',
+        table: 'daus',
+        json: true
+    })
+
+    const dausHistory1 = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'dauhistory',
+        json: true
+    })
+
+    const dausHistory2 = await getTableRows({
+        code: organization,
+        scope: 'app2',
+        table: 'dauhistory',
+        json: true
+    })
+
+    const now = new Date()
+    now.setUTCHours(0, 0, 0, 0)
+    now.setDate(now.getDate() - 1)
+    const yesterday = now.getTime() / 1000
 
     console.log('ban app')
-    await contracts.organization.banapp('testorg1', 'app1', { authorization: `${organization}@active` })
+    await contracts.organization.banapp('app1', { authorization: `${organization}@active` })
 
-    const appsTableAfter = await getTableRows({
+    const appsTableAfterBan = await getTableRows({
         code: organization,
-        scope: 'testorg1',
+        scope: organization,
         table: 'apps',
         json: true
     })
 
-    const appsAfter = appsTableAfter.rows
+    console.log('reset settings')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
 
     assert({
         given: 'registered an app',
         should: 'have an entry in the apps table',
         actual: apps,
-        expected: [{ 
-            app_name: 'app1',
-            app_long_name: 'app long name',
-            is_banned: 0,
-            number_of_uses: 0
-        }]
+        expected: [
+            { 
+                app_name: 'app1',
+                org_name: 'testorg1',
+                app_long_name: 'app long name',
+                is_banned: 0,
+                number_of_uses: 11
+            },
+            { 
+                app_name: 'app2',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 2',
+                is_banned: 0,
+                number_of_uses: 1
+            }
+        ]
     })
 
     assert({
         given: 'appuse called',
         should: 'increment the app use counter',
-        actual: rows,
-        expected: [1, 10]
+        actual: [
+            daus1Table.rows.map(values => values.number_app_uses),
+            daus2Table.rows.map(values => values.number_app_uses)
+        ],
+        expected: [[1, 10], [1]]
     })
 
     assert({
@@ -474,15 +537,68 @@ describe('app', async assert => {
     })
 
     assert({
-        given: 'registered an app',
-        should: 'have an entry in the apps table',
-        actual: appsAfter,
-        expected: [{ 
-            app_name: 'app1',
-            app_long_name: 'app long name',
-            is_banned: 1,
-            number_of_uses: 11
-        }]
+        given: 'cleandaus called',
+        should: 'reset the app tables',
+        actual: [
+            daus1TableAfterClean.rows.map(r => r.number_app_uses),
+            daus2TableAfterClean.rows.map(r => r.number_app_uses)
+        ],
+        expected: [[0, 0], [0]]
+    })
+
+    assert({
+        given: 'cleandaus called',
+        should: 'create dau history entries',
+        actual: [
+            [ 
+                { 
+                    dau_history_id: 0,
+                    account: 'seedsuseraaa',
+                    date: yesterday,
+                    number_app_uses: 1
+                },
+                { 
+                    dau_history_id: 1,
+                    account: 'seedsuserbbb',
+                    date: yesterday,
+                    number_app_uses: 10 
+                }
+            ],
+            [ 
+                { 
+                    dau_history_id: 0,
+                    account: 'seedsuserbbb',
+                    date: yesterday,
+                    number_app_uses: 1 
+                } 
+            ]
+        ],
+        expected: [
+            dausHistory1.rows,
+            dausHistory2.rows
+        ]
+    })
+
+    assert({
+        given: 'ban app called',
+        should: 'ban the app',
+        actual: appsTableAfterBan.rows,
+        expected: [
+            { 
+                app_name: 'app1',
+                org_name: 'testorg1',
+                app_long_name: 'app long name',
+                is_banned: 1,
+                number_of_uses: 11
+            },
+            { 
+                app_name: 'app2',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 2',
+                is_banned: 0,
+                number_of_uses: 1
+            }
+        ]
     })
 
 })
