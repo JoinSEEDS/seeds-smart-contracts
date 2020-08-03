@@ -445,9 +445,8 @@ void harvest::calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize) 
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    uint32_t iter = calc_transaction_points(uitr->account);
-
-    count += iter;
+    uint32_t num = calc_transaction_points(uitr->account);
+    count += 1 + num;
     uitr++;
   }
 
