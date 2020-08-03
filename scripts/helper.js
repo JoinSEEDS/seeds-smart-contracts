@@ -415,6 +415,19 @@ var permissions = [{
   target: `${accounts.proposals.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.accounts.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankreps'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankcbss'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -445,13 +458,13 @@ var permissions = [{
   action: 'calcplanted'
 }, {
   target: `${accounts.harvest.account}@execute`, 
-  action: 'calccs'
+  action: 'calccss'
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calctrx'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'calctrxpt'
+  action: 'calctrxpts'
 }, {
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'

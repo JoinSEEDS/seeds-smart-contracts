@@ -13,6 +13,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/cbs_table.hpp>
+#include <eosio/singleton.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -28,8 +29,9 @@ CONTRACT harvest : public contract {
         planted(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
-        cycle(receiver, receiver.value),
         sizes(receiver, receiver.value),
+        total(receiver, receiver.value),
+        harveststat(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
@@ -46,23 +48,25 @@ CONTRACT harvest : public contract {
 
     ACTION cancelrefund(name from, uint64_t request_id);
 
-    //ACTION claimreward(name from);
-
     ACTION sow(name from, name to, asset quantity);
 
     ACTION runharvest();
 
     ACTION rankplanteds();
-
     ACTION rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calctrxpt(); // calculate transaction points
-    ACTION calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+    ACTION calctrxpts(); // calculate transaction points // 24h interval
+    ACTION calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION ranktxs(); // rank transaction points
+    ACTION ranktxs(); // rank transaction score // 1h interval
     ACTION ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calccs(); // calculate contribution score
+    ACTION calccss(); // calculate contribution points // 1h inteval
+    ACTION updatecs(name account); 
+    ACTION calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+
+    ACTION rankcss(); // rank contribution score //
+    ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION updatetxpt(name account);
 
@@ -91,8 +95,9 @@ CONTRACT harvest : public contract {
     double get_rep_multiplier(name account);
     void add_planted(name account, asset quantity);
     void sub_planted(name account, asset quantity);
+    void change_total(bool add, asset quantity);
     void calc_contribution_score(name account);
-    
+
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
     uint64_t get_size(name id);
@@ -103,7 +108,7 @@ CONTRACT harvest : public contract {
     TABLE balance_table {
       name account;
       asset planted;
-      asset reward; // UNUSED - remove when we have migrated to planted
+      asset reward; // harvest reward - unused
 
       uint64_t primary_key()const { return account.value; }
       uint64_t by_planted()const { return planted.amount; }
@@ -126,7 +131,7 @@ CONTRACT harvest : public contract {
       uint64_t rank;  
 
       uint64_t primary_key()const { return account.value; }
-      uint128_t by_planted() const { return (uint64_t(planted.amount) << 64) + account.value; } 
+      uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
       uint64_t by_rank() const { return rank; } 
 
     };
@@ -171,6 +176,9 @@ CONTRACT harvest : public contract {
 
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
+    // DEPRECATED - REMOVE ONCE APPS ARE UPDATED // 
+    DEFINE_HARVEST_TABLE
+    
     // External Tables
 
     DEFINE_REP_TABLE
@@ -189,6 +197,16 @@ CONTRACT harvest : public contract {
 
     DEFINE_CBS_TABLE_MULTI_INDEX
 
+
+    TABLE total_table {
+      uint64_t id;
+      asset total_planted;
+      uint64_t primary_key()const { return id; }
+    };
+    
+    typedef singleton<"total"_n, total_table> total_tables;
+    typedef eosio::multi_index<"total"_n, total_table> dump_for_total;
+
     TABLE transaction_table { // from History contract - scoped by 'from'
        uint64_t id;
        name to;
@@ -200,10 +218,6 @@ CONTRACT harvest : public contract {
        uint64_t by_to() const { return to.value; }
        uint64_t by_quantity() const { return quantity.amount; }
     };
-
-    DEFINE_CYCLE_TABLE
-
-    DEFINE_CYCLE_TABLE_MULTI_INDEX
 
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
@@ -223,8 +237,13 @@ CONTRACT harvest : public contract {
     planted_tables planted;
     tx_points_tables txpoints;
     cs_points_tables cspoints;
-    cycle_tables cycle;
     size_tables sizes;
+    total_tables total;
+
+    // DEPRECATED - remove
+    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
+    harvest_tables harveststat;
+
 
     // External Tables
     config_tables config;
@@ -242,7 +261,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
           (unplant)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccs)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(updatecs)
           (updatetxpt)(clearscores)(migrateplant)
           (testclaim)(testupdatecs))
       }

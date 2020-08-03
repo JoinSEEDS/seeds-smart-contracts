@@ -650,6 +650,8 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   //}
 
   uint64_t total = get_size("rep.sz"_n);
+  if (total == 0) return;
+
   uint64_t current = chunk * chunksize;
   auto rep_by_rep = rep.get_index<"byrep"_n>();
   auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
@@ -697,6 +699,8 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
   uint64_t total = get_size("cbs.sz"_n);
+  if (total == 0) return;
+
   uint64_t current = chunk * chunksize;
   auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
   auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);

@@ -29,6 +29,11 @@ void harvest::reset() {
     sitr = sizes.erase(sitr);
   }
 
+  auto pitr = planted.begin();
+  while (pitr != planted.end()) {
+    pitr = planted.erase(pitr);
+  }
+
   init_balance(_self);
 }
 
@@ -54,7 +59,6 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
     init_balance(_self);
 
     add_planted(target, quantity);
-    add_planted(_self, quantity);
 
     deposit(quantity);
   }
@@ -78,6 +82,9 @@ void harvest::add_planted(name account, asset quantity) {
       item.planted += quantity;
     });
   }
+  
+  change_total(true, quantity);
+
 }
 
 void harvest::sub_planted(name account, asset quantity) {
@@ -97,6 +104,9 @@ void harvest::sub_planted(name account, asset quantity) {
       item.planted -= quantity;
     });
   }
+  
+  change_total(false, quantity);
+
 }
 
 void harvest::sow(name from, name to, asset quantity) {
@@ -108,7 +118,6 @@ void harvest::sow(name from, name to, asset quantity) {
     init_balance(to);
 
     sub_planted(from, quantity);
-
     add_planted(to, quantity);
 
 }
@@ -165,7 +174,8 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
         auto bitr = balances.find(from.value);
 
         add_planted(from, ritr->amount);
-        add_planted(_self, ritr->amount);
+        change_total(true, ritr->amount);
+
         totalReplanted += ritr->amount.amount;
 
         ritr = refunds.erase(ritr);
@@ -225,16 +235,21 @@ void harvest::unplant(name from, asset quantity) {
   }
 
   sub_planted(from, quantity);
-  sub_planted(_self, quantity);
 
 }
 
-void harvest::runharvest() {}
+void harvest::runharvest() {
+    require_auth(_self);
+}
 
 ACTION harvest::updatetxpt(name account) {
-  require_auth(_self);
-
+  require_auth(get_self());
   calc_transaction_points(account);
+}
+
+ACTION harvest::updatecs(name account) {
+  require_auth(account);
+  calc_contribution_score(account);
 }
 
 
@@ -261,17 +276,23 @@ ACTION harvest::clearscores() {
 
 // copy everything to planted table
 ACTION harvest::migrateplant(uint64_t startval) {
+
+  total_table tt = total.get_or_create(get_self(), total_table());
+  tt.total_planted = asset(0, seeds_symbol);
+  total.set(tt, get_self());
+
   uint64_t limit = 200;
 
   auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
 
   while (bitr != balances.end() && limit > 0) {
-    if (bitr->planted.amount > 0) {
+    if (bitr->planted.amount > 0 && bitr->account != _self) {
       planted.emplace(_self, [&](auto& entry) {
         entry.account = bitr->account;
         entry.planted = bitr->planted;
       });
       size_change(planted_size, 1);
+      change_total(true, bitr->planted);
     }
     bitr++;
     limit--;
@@ -385,14 +406,17 @@ uint32_t harvest::calc_transaction_points(name account) {
   // }
   // enter into transaction points table
   auto titr = txpoints.find(account.value);
+  uint64_t points = ceil(result);
+
   if (titr == txpoints.end()) {
-    txpoints.emplace(_self, [&](auto& entry) {
-      entry.account = account;
-      entry.points = (uint64_t) ceil(result);
-    });
-    size_change(tx_points_size, 1);
+    if (points > 0) {
+      txpoints.emplace(_self, [&](auto& entry) {
+        entry.account = account;
+        entry.points = (uint64_t) ceil(result);
+      });
+      size_change(tx_points_size, 1);
+    }
   } else {
-    uint64_t points = ceil(result);
     if (points > 0) {
       txpoints.modify(titr, _self, [&](auto& entry) {
         entry.points = points; 
@@ -407,11 +431,11 @@ uint32_t harvest::calc_transaction_points(name account) {
 
 }
 
-void harvest::calctrxpt() {
-    calctrxpts(0, 0, 400);
+void harvest::calctrxpts() {
+    calctrxpt(0, 0, 400);
 }
 
-void harvest::calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void harvest::calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
   check(chunksize > 0, "chunk size must be > 0");
@@ -434,7 +458,7 @@ void harvest::calctrxpts(uint64_t start_val, uint64_t chunk, uint64_t chunksize)
     action next_execution(
         permission_level{get_self(), "active"_n},
         get_self(),
-        "calctrxpts"_n,
+        "calctrxpt"_n,
         std::make_tuple(next_value, chunk + 1, chunksize)
     );
 
@@ -453,6 +477,8 @@ void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
   uint64_t total = get_size(tx_points_size);
+  if (total == 0) return;
+
   uint64_t current = chunk * chunksize;
   auto txpt_by_points = txpoints.get_index<"bypoints"_n>();
   auto titr = start_val == 0 ? txpt_by_points.begin() : txpt_by_points.lower_bound(start_val);
@@ -461,6 +487,9 @@ void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   while (titr != txpt_by_points.end() && count < chunksize) {
 
     uint64_t rank = (current * 100) / total;
+
+    //print(" rank: "+std::to_string(rank) + " total: " +std::to_string(total));
+
 
     txpt_by_points.modify(titr, _self, [&](auto& item) {
       item.rank = rank;
@@ -500,6 +529,8 @@ void harvest::rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksiz
   require_auth(_self);
 
   uint64_t total = get_size(planted_size);
+  if (total == 0) return;
+
   uint64_t current = chunk * chunksize;
   auto planted_by_planted = planted.get_index<"byplanted"_n>();
   auto pitr = start_val == 0 ? planted_by_planted.begin() : planted_by_planted.lower_bound(start_val);
@@ -539,11 +570,44 @@ void harvest::rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksiz
 
 }
 
-// [PS+RT+CB X Rep = Total Contribution Score]
-void harvest::calccs() {
-
+void harvest::calccss() {
+  calccs(0, 0, 100);
 }
 
+void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  check(chunksize > 0, "chunk size must be > 0");
+
+  uint64_t total = utils::get_users_size();
+  auto uitr = start_val == 0 ? users.begin() : users.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < chunksize) {
+    calc_contribution_score(uitr->account);
+    count++;
+    uitr++;
+  }
+
+  if (uitr == users.end()) {
+    // done
+  } else {
+    uint64_t next_value = uitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "calccs"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
+// [PS+RT+CB X Rep = Total Contribution Score]
 void harvest::calc_contribution_score(name account) {
   uint64_t planted_score = 0;
   uint64_t transactions_score = 0;
@@ -583,6 +647,56 @@ void harvest::calc_contribution_score(name account) {
       size_change(cs_size, -1);
     }
   }
+}
+
+void harvest::rankcss() {
+  rankcs(0, 0, 200);
+}
+
+void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(_self);
+
+  uint64_t total = get_size(cs_size);
+  if (total == 0) return;
+
+  uint64_t current = chunk * chunksize;
+  auto cs_by_points = cspoints.get_index<"bycspoints"_n>();
+  auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
+  uint64_t count = 0;
+
+  while (citr != cs_by_points.end() && count < chunksize) {
+
+    uint64_t rank = (current * 100) / total;
+
+    cs_by_points.modify(citr, _self, [&](auto& item) {
+      item.rank = rank;
+    });
+
+    current++;
+    count++;
+    citr++;
+  }
+
+  if (citr == cs_by_points.end()) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = citr->by_cs_points();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "rankcs"_n,
+        std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+    
+  }
+
+
 }
 
 void harvest::payforcpu(name account) {
@@ -714,4 +828,14 @@ uint64_t harvest::get_size(name id) {
   } else {
     return sitr->size;
   }
+}
+
+void harvest::change_total(bool add, asset quantity) {
+  total_table tt = total.get_or_create(get_self(), total_table());
+  if (add) {
+    tt.total_planted = tt.total_planted + quantity;
+  } else {
+    tt.total_planted = tt.total_planted - quantity;
+  }
+  total.set(tt, get_self());
 }

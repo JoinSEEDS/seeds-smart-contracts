@@ -22,6 +22,8 @@ describe("Harvest General", async assert => {
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
+  await contracts.harvest.migrateplant(0, { authorization: `${harvest}@active` })
+
   console.log('configure')
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
 
@@ -52,14 +54,6 @@ describe("Harvest General", async assert => {
   console.log('plant seeds')
   await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, firstuser, '0.1000 SEEDS', '', { authorization: `${seconduser}@active` })
-
-  const plantedBalances = await getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'balances',
-    json: true,
-    limit: 100
-  })
 
   const balanceBeforeUnplanted = await getBalanceFloat(seconduser)
 
@@ -229,40 +223,40 @@ describe("Harvest General", async assert => {
   }
 
   console.log('calculate planted score')
-  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  await contracts.harvest.rankplanteds({ authorization: `${harvest}@active` })
+  const planted = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'planted',
+    json: true
+  })
+  const sizes = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'sizes',
+    json: true
+  })
+  console.log("plantedXX  "+JSON.stringify(planted, null, 2))
+  console.log("sizesxx  "+JSON.stringify(sizes, null, 2))
+
 
   console.log('calculate reputation multiplier')
   await contracts.accounts.addrep(firstuser, 1, { authorization: `${accounts}@active` })
   await contracts.accounts.addrep(seconduser, 2, { authorization: `${accounts}@active` })
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
 
-  //console.log('claim reward')
-  //await contracts.harvest.testreward(seconduser, { authorization: `${harvest}@active` })
-
   console.log('calculate transactions score')
-  await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
   await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
 
-
-  var balanceBefore = await getBalance(seconduser);
-  //const transactionReward = await contracts.harvest.claimreward(seconduser, { authorization: `${seconduser}@active` })
-  var balanceAfter = await getBalance(seconduser);
-
-  assert({
-    given: 'user received 10 refund',
-    should: 'after balance should be 10 bigger than before',
-    actual: balanceAfter,
-    expected: balanceBefore + 10
-  })
-
-  const rewards = await getTableRows({
+  const txpoints = await getTableRows({
     code: harvest,
     scope: harvest,
-    table: 'harvest',
+    table: 'txpoints',
     json: true
   })
 
-  console.log("XX rewards "+JSON.stringify(rewards, null, 2))
+
 
   let transactionAsString = JSON.stringify(transactionRefund.processed)
 
@@ -290,13 +284,6 @@ describe("Harvest General", async assert => {
     expected: true
   })
   
-  assert({
-    given: 'claim reward transaction',
-    should: 'call inline action to history',
-    actual: transactionReward.processed.action_traces[0].inline_traces[1].act.account,
-    expected: history
-  })
-
   assert({
     given: 'cancel refund transaction',
     should: 'call inline action to history',
@@ -342,9 +329,9 @@ describe("Harvest General", async assert => {
   assert({
     given: 'planted calculation',
     should: 'assign planted score to each user',
-    actual: rewards.rows.map(row => ({
+    actual: planted.rows.map(row => ({
       account: row.account,
-      score: row.planted_score
+      score: row.rank
     })),
     expected: [{
       account: firstuser,
@@ -355,16 +342,13 @@ describe("Harvest General", async assert => {
     }]
   })
 
+  console.log("txpoints 77: "+JSON.stringify(txpoints, null, 2))
+  
   assert({
     given: 'transactions calculation',
     should: 'assign transactions score to each user',
-    actual: rewards.rows.map(({ transactions_score }) => transactions_score).sort((a, b) => b - a),
-    expected: [50, 0]
-  })
-
-  assert({
-    given: 'harvest process',
-    should: 'distribute rewards based on contribution scores'
+    actual: txpoints.rows.map(({ rank }) => rank).sort((a, b) => b - a),
+    expected: [0]
   })
 
   assert({
@@ -403,31 +387,25 @@ describe("harvest planted score", async assert => {
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
+  await contracts.harvest.rankplanteds({ authorization: `${harvest}@active` })
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
-  await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
+  await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
   await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
 
-  const balances = await eos.getTableRows({
+  const planted = await eos.getTableRows({
     code: harvest,
     scope: harvest,
-    table: 'balances',
+    table: 'planted',
     json: true,
     limit: 100
   })
 
-  const harvestStats = await eos.getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'harvest',
-    json: true,
-    limit: 100
-  })
+  console.log('planted '+JSON.stringify(planted, null, 2))
 
   assert({
     given: 'planted calculation',
     should: 'have valies',
-    actual: harvestStats.rows.map(({ planted_score }) => planted_score),
+    actual: planted.rows.map(({ rank }) => rank),
     expected: [50, 0]
   })
 
@@ -460,8 +438,8 @@ describe("harvest transaction score", async assert => {
 
   const checkScores = async (points, scores, given, should) => {
 
-    console.log("checking points "+points + " scores: "+scores)
-    await contracts.harvest.calctrxpt({ authorization: `${harvest}@active` })
+    console.log("checking points " + points + " scores: " + scores)
+    await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
     await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
     
     const txpoints = await eos.getTableRows({
@@ -471,19 +449,8 @@ describe("harvest transaction score", async assert => {
       json: true,
       limit: 100
     })
-
     console.log(" tx points "+JSON.stringify(txpoints, null, 2))
-  
-    const harvestStats = await eos.getTableRows({
-      code: harvest,
-      scope: harvest,
-      table: 'harvest',
-      json: true,
-      limit: 100
-    })
-  
-    console.log(given + " tx scores "+JSON.stringify(harvestStats, null, 2))
-
+    
     assert({
       given: 'transaction points ' + given,
       should: 'have expected values ' + should,
@@ -494,7 +461,7 @@ describe("harvest transaction score", async assert => {
     assert({
       given: 'transaction scores ' + given,
       should: 'have expected values ' + should,
-      actual: harvestStats.rows.map(({ transactions_score }) => transactions_score),
+      actual: txpoints.rows.map(({ rank }) => rank),
       expected: scores
     })
 
@@ -502,22 +469,18 @@ describe("harvest transaction score", async assert => {
 
   console.log('make transaction, no reps')
   await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', memoprefix, { authorization: `${firstuser}@active` })
-  await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
+  //await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
 
-  await checkScores([0, 0, 0, 0], [0, 0, 0, 0], "no reputation", "be empty")
+  await checkScores([], [], "no reputation no points", "be empty")
 
   console.log('calculate tx scores with reputation')
-  await contracts.accounts.testsetrep(seconduser, 1, { authorization: `${accounts}@active` })
-  console.log('rank reputation')
-  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
-  await checkScores([16, 0, 0, 0], [75, 0, 0, 0], "1 reputation, 1 tx", "100 score")
+  await contracts.accounts.testsetrs(seconduser, 49, { authorization: `${accounts}@active` })
+  await checkScores([10], [0], "1 reputation, 1 tx", "100 score")
 
   console.log("transfer with 10 rep, 2 accounts have rep")
   await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', '0'+memoprefix, { authorization: `${seconduser}@active` })
-  await contracts.accounts.testsetrep(thirduser, 10, { authorization: `${accounts}@active` })
-  await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
-  await checkScores([11, 16, 0, 0], [50, 75, 0, 0], "2 reputation, 2 tx", "75, 100 score")
-
+  await contracts.accounts.testsetrs(thirduser, 75, { authorization: `${accounts}@active` })
+  await checkScores([10, 16], [0, 50], "2 reputation, 2 tx", "0, 50 score")
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
   console.log("More than 26 transactions. Expected tx points: "+ expectedScore)
@@ -529,26 +492,20 @@ describe("harvest transaction score", async assert => {
     // score from before was 15
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
   }
-  await checkScores([36, 16, 0, 0], [75, 50, 0, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([26, 16], [50, 0], "2 reputation, 2 tx", "75, 100 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
   let third_user_rep_multiplier = 2 * 0.7575
   await contracts.token.transfer(seconduser, thirduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${seconduser}@active` })
-  await checkScores([36, parseInt(16 + tx_max_points * third_user_rep_multiplier), 0, 0], [50, 75, 0, 0], "large tx", "100, 75 score")
+  await checkScores([26, parseInt(16 + tx_max_points * third_user_rep_multiplier)], [0, 50], "large tx", "100, 75 score")
   
   // send back 
   await contracts.token.transfer(thirduser, seconduser, '3000.0000 SEEDS', memoprefix+" tx max pt", { authorization: `${thirduser}@active` })
 
   console.log("calc CS score")
-  await contracts.harvest.calccs({ authorization: `${harvest}@active` })
-  const harvestStats = await eos.getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'harvest',
-    json: true,
-    limit: 100
-  })
+  await contracts.harvest.calccss({ authorization: `${harvest}@active` })
+
   const cspoints = await eos.getTableRows({
     code: harvest,
     scope: harvest,
@@ -560,18 +517,20 @@ describe("harvest transaction score", async assert => {
   // let secondCSpoints = cspoints.rows.filter( item => item.account == seconduser )[0].contribution_points
   // let secondCS = harvestStats.rows.filter( item => item.account == seconduser )[0].contribution_score
 
+  console.log("cs points "+JSON.stringify(cspoints, null, 2))
+
   assert({
     given: 'contribution score points',
-    should: 'have contribution score',
+    should: 'have contribution points',
     actual: cspoints.rows.map(({ contribution_points }) => contribution_points), 
-    expected: [0, 75, 0, 0]
+    expected: [49]
   })
 
   assert({
     given: 'contribution score',
-    should: 'have contribution score',
-    actual: harvestStats.rows.map(({ contribution_score }) => contribution_score), 
-    expected: [0, 75, 0, 0]
+    should: 'have contribution score score',
+    actual: cspoints.rows.map(({ rank }) => rank), 
+    expected: [0]
   })
 
 })
