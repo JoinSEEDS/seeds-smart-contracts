@@ -234,11 +234,11 @@ ACTION harvest::clearscores() {
     limit--;
   }  
 
-  auto hitr = harveststat.begin();
-  while (hitr != harveststat.end() && limit > 0) {
-    hitr = harveststat.erase(hitr);
-    limit--;
-  }  
+  // auto hitr = harveststat.begin();
+  // while (hitr != harveststat.end() && limit > 0) {
+  //   hitr = harveststat.erase(hitr);
+  //   limit--;
+  // }  
 
   auto citr = cspoints.begin();
   while (citr != cspoints.end() && limit > 0) {
