@@ -226,7 +226,7 @@ ACTION harvest::updatetxpt(name account) {
 
 // DEBUG actions to clear scores
 ACTION harvest::clearscores() {
-  uint64_t limit = 200;
+  uint64_t limit = 100;
 
   auto titr = txpoints.begin();
   while (titr != txpoints.end() && limit > 0) {
@@ -248,6 +248,8 @@ ACTION harvest::clearscores() {
 
 
 }
+
+
 // Calculate Transaction Points for a single account
 void harvest::calc_tx_points(name account) {
 
