@@ -92,8 +92,8 @@ CONTRACT harvest : public contract {
     void init_harvest_stat(name account);
     void check_user(name account);
     void check_asset(asset quantity);
-    void deposit(asset quantity);
-    void withdraw(name account, asset quantity);
+    void _deposit(asset quantity);
+    void _withdraw(name account, asset quantity);
     uint32_t calc_transaction_points(name account);
     double get_rep_multiplier(name account);
     void add_planted(name account, asset quantity);

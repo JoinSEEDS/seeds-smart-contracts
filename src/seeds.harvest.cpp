@@ -62,7 +62,7 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 
     add_planted(target, quantity);
 
-    deposit(quantity);
+    _deposit(quantity);
   }
 }
 
@@ -149,7 +149,7 @@ void harvest::claimrefund(name from, uint64_t request_id) {
     }
   }
   if (total.amount > 0) {
-    withdraw(beneficiary, total);
+    _withdraw(beneficiary, total);
   }
   action(
       permission_level(contracts::history, "active"_n),
@@ -240,7 +240,7 @@ void harvest::unplant(name from, asset quantity) {
 }
 
 void harvest::runharvest() {
-    require_auth(_self);
+  require_auth(get_self());
 }
 
 ACTION harvest::updatetxpt(name account) {
@@ -257,6 +257,8 @@ ACTION harvest::updatecs(name account) {
 // DEBUG action to clear scores tables
 // Deploy before
 ACTION harvest::clearscores() {
+  require_auth(get_self());
+
   uint64_t limit = 200;
 
   auto titr = txpoints.begin();
@@ -278,6 +280,8 @@ ACTION harvest::clearscores() {
 // copy everything to planted table
 
 ACTION harvest::updtotal() { // remove when balances are retired
+  require_auth(get_self());
+
   auto bitr = balances.find(_self.value);
   total_table tt = total.get_or_create(get_self(), total_table());
   tt.total_planted = bitr->planted;
@@ -285,6 +289,7 @@ ACTION harvest::updtotal() { // remove when balances are retired
 }
 
 ACTION harvest::migrateplant(uint64_t startval) {
+  require_auth(get_self());
 
   uint64_t limit = 100;
 
@@ -329,6 +334,7 @@ ACTION harvest::migrateplant(uint64_t startval) {
 }
 
 ACTION harvest::calctotal(uint64_t startval) {
+  require_auth(get_self());
 
   uint64_t limit = 300;
   total_table tt = total.get_or_create(get_self(), total_table());
@@ -819,7 +825,7 @@ void harvest::check_asset(asset quantity)
   check(quantity.symbol == seeds_symbol, "invalid asset");
 }
 
-void harvest::deposit(asset quantity)
+void harvest::_deposit(asset quantity)
 {
   check_asset(quantity);
 
@@ -827,7 +833,7 @@ void harvest::deposit(asset quantity)
   action.send(_self, contracts::bank, quantity, "");
 }
 
-void harvest::withdraw(name beneficiary, asset quantity)
+void harvest::_withdraw(name beneficiary, asset quantity)
 {
   check_asset(quantity);
 
