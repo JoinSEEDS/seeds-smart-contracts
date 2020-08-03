@@ -47,6 +47,11 @@ ACTION scheduler::reset() {
         name("exch.period"),
         name("acct.rankrep"),
         name("acct.rankcbs"),
+        name("hrvst.txpt"),
+        name("hrvst.txsc"),
+        name("hrvst.plant"),
+        name("hrvst.cspt"),
+        name("hrvst.cs"),
     };
     
     std::vector<name> operations_v = {
@@ -153,7 +158,7 @@ ACTION scheduler::confirm(name operation) {
 ACTION scheduler::execute() {
    // require_auth(_self);
 
-   print("Executing...");
+   // print("Executing...");
 
     /*
         Just as quick reminder.
