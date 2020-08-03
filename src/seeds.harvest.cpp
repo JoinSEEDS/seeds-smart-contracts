@@ -34,6 +34,8 @@ void harvest::reset() {
     pitr = planted.erase(pitr);
   }
 
+  total.remove();
+
   init_balance(_self);
 }
 
@@ -174,7 +176,6 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
         auto bitr = balances.find(from.value);
 
         add_planted(from, ritr->amount);
-        change_total(true, ritr->amount);
 
         totalReplanted += ritr->amount.amount;
 
@@ -275,24 +276,35 @@ ACTION harvest::clearscores() {
 }
 
 // copy everything to planted table
+
+ACTION harvest::updtotal() { // remove when balances are retired
+  auto bitr = balances.find(_self.value);
+  total_table tt = total.get_or_create(get_self(), total_table());
+  tt.total_planted = bitr->planted;
+  total.set(tt, get_self());
+}
+
 ACTION harvest::migrateplant(uint64_t startval) {
 
-  total_table tt = total.get_or_create(get_self(), total_table());
-  tt.total_planted = asset(0, seeds_symbol);
-  total.set(tt, get_self());
-
-  uint64_t limit = 200;
+  uint64_t limit = 100;
 
   auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
 
   while (bitr != balances.end() && limit > 0) {
     if (bitr->planted.amount > 0 && bitr->account != _self) {
-      planted.emplace(_self, [&](auto& entry) {
-        entry.account = bitr->account;
-        entry.planted = bitr->planted;
-      });
-      size_change(planted_size, 1);
-      change_total(true, bitr->planted);
+      auto pitr = planted.find(bitr->account.value);
+      if (pitr == planted.end()) {
+        planted.emplace(_self, [&](auto& entry) {
+          entry.account = bitr->account;
+          entry.planted = bitr->planted;
+        });
+        size_change(planted_size, 1);
+      } else {
+        planted.modify(pitr, _self, [&](auto& entry) {
+          entry.account = bitr->account;
+          entry.planted = bitr->planted;
+        });
+      }
     }
     bitr++;
     limit--;
@@ -314,10 +326,84 @@ ACTION harvest::migrateplant(uint64_t startval) {
     tx.send(next_value, _self);
 
   } 
-
-
-
 }
+
+ACTION harvest::calctotal(uint64_t startval) {
+
+  uint64_t limit = 300;
+  total_table tt = total.get_or_create(get_self(), total_table());
+  if (startval == 0) {
+    tt.total_planted = asset(0, seeds_symbol);
+  }
+
+  auto pitr = startval == 0 ? planted.begin() : planted.find(startval);
+
+  while (pitr != planted.end() && limit > 0) {
+    tt.total_planted += pitr->planted;
+    pitr++;
+    limit--;
+  }
+  total.set(tt, get_self());
+
+  if (pitr != planted.end()) {
+
+    uint64_t next_value = pitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "calctotal"_n,
+        std::make_tuple(next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+
+  } 
+}
+
+// copy everything to harvest table
+// ACTION harvest::updharvest(uint64_t startval) {
+
+//   total_table tt = total.get_or_create(get_self(), total_table());
+//   tt.total_planted = asset(0, seeds_symbol);
+//   total.set(tt, get_self());
+
+//   uint64_t limit = 50;
+
+//   auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
+
+//   while (bitr != balances.end() && limit > 0) {
+//     if (bitr->planted.amount > 0 && bitr->account != _self) {
+//       planted.emplace(_self, [&](auto& entry) {
+//         entry.account = bitr->account;
+//         entry.planted = bitr->planted;
+//       });
+//       size_change(planted_size, 1);
+//       change_total(true, bitr->planted);
+//     }
+//     bitr++;
+//     limit--;
+//   }
+
+//   if (bitr != balances.end()) {
+
+//     uint64_t next_value = bitr->account.value;
+//     action next_execution(
+//         permission_level{get_self(), "active"_n},
+//         get_self(),
+//         "updharvest"_n,
+//         std::make_tuple(next_value)
+//     );
+
+//     transaction tx;
+//     tx.actions.emplace_back(next_execution);
+//     tx.delay_sec = 1;
+//     tx.send(next_value, _self);
+
+//   } 
+// }
 
 // Calculate Transaction Points for a single account
 // Returns count of iterations
@@ -354,8 +440,8 @@ uint32_t harvest::calc_transaction_points(name account) {
       // remove old transactions
       //tx_to_itr = transactions_by_to.erase(tx_to_itr);
       
-      auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
-      tx_to_itr = std::reverse_iterator(it);            
+      //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
+      //tx_to_itr = std::reverse_iterator(it);            
     } else {
       //print("update to ");
 
@@ -391,9 +477,9 @@ uint32_t harvest::calc_transaction_points(name account) {
 
       } 
 
-      tx_to_itr++;
-      count++;
     }
+    tx_to_itr++;
+    count++;
   }
 
   //print("set result "+std::to_string(result));
@@ -831,6 +917,9 @@ uint64_t harvest::get_size(name id) {
 
 void harvest::change_total(bool add, asset quantity) {
   total_table tt = total.get_or_create(get_self(), total_table());
+  if (tt.total_planted.amount == 0) {
+    tt.total_planted = asset(0, seeds_symbol);
+  }
   if (add) {
     tt.total_planted = tt.total_planted + quantity;
   } else {

@@ -69,6 +69,7 @@ CONTRACT harvest : public contract {
     ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION updatetxpt(name account);
+    ACTION calctotal(uint64_t startval);
 
     ACTION payforcpu(name account);
 
@@ -76,7 +77,9 @@ CONTRACT harvest : public contract {
     ACTION testupdatecs(name account, uint64_t contribution_score);
     ACTION clearscores();  // DEBUG REMOVE - migrate method
     ACTION migrateplant(uint64_t startval);
-
+    
+    ACTION updtotal(); // MIGRATION ACTION
+    
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
@@ -262,7 +265,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (payforcpu)(reset)(runharvest)
           (unplant)(claimrefund)(cancelrefund)(sow)
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(updatecs)
-          (updatetxpt)(clearscores)(migrateplant)
+          (updatetxpt)(clearscores)(migrateplant)(updtotal)(calctotal)
           (testclaim)(testupdatecs))
       }
   }

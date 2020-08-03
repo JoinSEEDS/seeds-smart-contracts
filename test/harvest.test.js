@@ -47,18 +47,46 @@ describe("Harvest General", async assert => {
   console.log(" tx points 1 "+JSON.stringify(txpoints1, null, 2))
 
   
-  console.log('plant seeds')
+  console.log('plant seeds x')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-  console.log('plant seeds')
+  console.log('transfer seeds')
   await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, firstuser, '0.1000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   const balanceBeforeUnplanted = await getBalanceFloat(seconduser)
 
+  const checkTotal = async (check) => {
+    const total = await eos.getTableRows({
+      code: harvest,
+      scope: harvest,
+      table: 'total',
+      json: true,
+    })
+    // const planted = await eos.getTableRows({
+    //   code: harvest,
+    //   scope: harvest,
+    //   table: 'planted',
+    //   json: true,
+    // })
+    // console.log("planted "+JSON.stringify(planted, null, 2))
+    // console.log("total "+JSON.stringify(total, null, 2))
+
+    assert({
+      given: 'checking total '+check,
+      should: 'be able the same',
+      actual: total.rows[0].total_planted,
+      expected: check + ".0000 SEEDS"
+    })
+  }
+
+  await checkTotal(700);
+
   let num_seeds_unplanted = 100
   await contracts.harvest.unplant(seconduser, num_seeds_unplanted + '.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+  await checkTotal(600);
 
   var unplantedOverdrawCheck = true
   try {
