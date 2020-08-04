@@ -56,11 +56,25 @@ describe('scheduler', async assert => {
     console.log("before "+JSON.stringify(beforeValues, null, 2))
 
     console.log('scheduler execute')
-    await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
+    await contracts.scheduler.start( { authorization: `${scheduler}@active` } )
 
     await sleep(30 * 1000)
 
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
     const afterValues = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
+    })
+
+    await sleep(5 * 1000)
+
+    const afterValues2 = await getTableRows({
         code: scheduler,
         scope: scheduler,
         table: 'test',
@@ -92,8 +106,17 @@ describe('scheduler', async assert => {
         given: '7 second delay was executed 30 seconds',
         should: 'be executed 4 times',
         actual: delta2,
-        expected: 4
+        expected: 5
     })
+
+    assert({
+        given: 'stopped',
+        should: 'no more executions',
+        actual: [afterValues.rows[0].value, afterValues.rows[1].value],
+        expected: [afterValues2.rows[0].value, afterValues2.rows[1].value],
+    })
+
+    
 
 })
 
@@ -126,5 +149,8 @@ describe('scheduler, token.resetweekly', async assert => {
     await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
 
     await sleep(10 * 1000)
+
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
 
 })
