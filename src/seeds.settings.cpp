@@ -17,7 +17,8 @@ void settings::reset() {
   configure(name("propdecaysec"), utils::seconds_per_day);
   configure(name("batchsize"), 200);
   configure(name("bio.fee"), uint64_t(1000) * uint64_t(10000));
-  
+  configure(name("txlimit.mul"), 10);
+  configure(name("txlimit.min"), 7);
   // Scheduler cycle
   configure(name("secndstoexec"), 60);
 

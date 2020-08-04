@@ -110,6 +110,8 @@ void token::transfer( const name&    from,
     require_recipient( from );
     require_recipient( to );
 
+    check_limit_transactions(from);
+
     // check_limit(from);
 
     check( quantity.is_valid(), "seeds: invalid quantity" );
@@ -169,6 +171,33 @@ void token::save_transaction(name from, name to, asset quantity) {
 
 }
 
+void token::check_limit_transactions(name from) {
+  user_tables users(contracts::accounts, contracts::accounts.value);
+  config_tables config(contracts::settings, contracts::settings.value);
+  balance_tables balances(contracts::harvest, contracts::harvest.value);
+
+  auto bitr = balances.find(from.value);
+  auto uitr = users.find(from.value);
+
+  if (uitr != users.end()) {
+    uint64_t max_trx = 0;
+    if (bitr != balances.end() && bitr -> planted > asset(0, seeds_symbol)) {
+      auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
+      max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
+    } else {
+      auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
+      max_trx = min_trx.value;
+    }
+
+    transaction_tables transactions(get_self(), seeds_symbol.code().raw());
+    auto titr = transactions.find(from.value);
+
+    if (titr != transactions.end()) {
+      check(max_trx > titr -> outgoing_transactions, "Maximum limit of allowed transactions reached.");
+    }
+  }
+}
+
 void token::check_limit(const name& from) {
   user_tables users(contracts::accounts, contracts::accounts.value);
   auto uitr = users.find(from.value);
@@ -193,33 +222,50 @@ void token::check_limit(const name& from) {
   check(current < limit, "too many outgoing transactions");
 }
 
-void token::resetweekly() {
-  require_auth(get_self());
-  
+void token::reset_weekly_aux(uint64_t begin) {
+
+  config_tables config(contracts::settings, contracts::settings.value);
+
+  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
   auto sym_code_raw = seeds_symbol.code().raw();
+  uint64_t count = 0;
 
   transaction_tables transactions(get_self(), sym_code_raw);
 
-  auto titr = transactions.begin();
-  while (titr != transactions.end()) {
-    transactions.modify(titr, get_self(), [&](auto& user) {
+  auto titr = begin == 0 ? transactions.begin() : transactions.lower_bound(begin);
+  while (titr != transactions.end() && count < batch_size.value) {
+    transactions.modify(titr, _self, [&](auto& user) {
       user.incoming_transactions = 0;
       user.outgoing_transactions = 0;
       user.total_transactions = 0;
       user.transactions_volume = asset(0, seeds_symbol);
     });
     titr++;
+    count++;
   }
 
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(_self, "active"_n),
-    _self,
-    "resetweekly"_n,
-    std::make_tuple()
-  );
-  trx.delay_sec = 3600 * 7;
-  trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+  if (titr != transactions.end()) {
+    transaction trx{};
+    trx.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "resetwhelper"_n,
+      std::make_tuple((titr -> account).value)
+    );
+    trx.delay_sec = 1;
+    trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+  }
+
+}
+
+void token::resetweekly() {
+  require_auth(get_self());
+  reset_weekly_aux((uint64_t)0);
+}
+
+void token::resetwhelper (uint64_t begin) {
+  require_auth(get_self());
+  reset_weekly_aux(begin);
 }
 
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
@@ -361,4 +407,4 @@ uint64_t token::balance_for( const name& owner ) {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(updatecirc) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc) )
