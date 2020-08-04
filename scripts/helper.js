@@ -412,6 +412,16 @@ var permissions = [{
   target: `${accounts.proposals.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.token.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.token.account}@execute`,
+  action: 'resetweekly'
+}, {
+  target: `${accounts.token.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
