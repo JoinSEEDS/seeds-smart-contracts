@@ -426,6 +426,14 @@ var permissions = [{
   action: 'rankcbss'
 }, {
   target: `${accounts.accounts.account}@execute`,
+  target: `${accounts.token.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.token.account}@execute`,
+  action: 'resetweekly'
+}, {
+  target: `${accounts.token.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.forum.account}@execute`,
@@ -484,6 +492,16 @@ var permissions = [{
 }, {
   target: `${accounts.proposals.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.token.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.token.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.token.account}@execute`,
+  action: 'resetweekly'
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
