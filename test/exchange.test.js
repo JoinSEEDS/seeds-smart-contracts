@@ -37,7 +37,7 @@ describe('Exchange', async assert => {
 
   await contracts.exchange.onperiod({ authorization: `${exchange}@active` })
 
-  await contracts.exchange.initrounds( (1100000) * 10000, "100.0000 SEEDS", { authorization: `${exchange}@active` })  
+  await contracts.exchange.initrounds( (1100000) * 10000, "100.0000 SEEDS", { authorization: `${exchange}@active` })
 
   //console.log(`transfer ${tlosQuantity} from ${firstuser} to ${exchange}`)
   //await contracts.tlostoken.transfer(firstuser, exchange, tlosQuantity, '', { authorization: `${firstuser}@active` })
@@ -171,8 +171,8 @@ describe('Token Sale Rounds', async assert => {
   await getRounds()
 
   console.log("test init rounds - 100 seeds per round")
-  await contracts.exchange.initrounds( (100) * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })  
-
+  await contracts.exchange.initrounds( (100) * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+  
   let rounds = await getRounds()
 
   rounds = rounds.rows.map( ( item ) => { return { 
@@ -221,7 +221,7 @@ describe('Basic Init Check', async assert => {
 
   console.log(`init token sale rounds`)
   await contracts.exchange.initsale({ authorization: `${exchange}@active` })
-  
+
   let rounds = await eos.getTableRows({
       code: exchange,
       scope: exchange,
@@ -262,8 +262,6 @@ describe('Basic Init Check', async assert => {
       }
     })
     }
-
-
 
 })
 const getRounds = async () => {
@@ -376,6 +374,23 @@ describe('Token Sale Price', async assert => {
 
   console.log("buy seeds 6 USD") 
 
+  let priceHistoryAfter = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'pricehistory',
+    json: true,
+  })
+
+  assert({
+    given: 'price changed',
+    should: 'insert new entry in price history',
+    actual: priceHistoryAfter.rows,
+    expected: [ 
+      { id: 0, price: '1.0000 SEEDS', date: parseInt(Date.now() / 1000) },
+      { id: 1, price: '2.0000 SEEDS', date: parseInt(Date.now() / 1000) }
+    ]
+  })
+
   // 9 seeds left at 2 seeds / usd = 4.5 USD
   // 1.5 * 3 seeds = 4.5
 
@@ -415,8 +430,6 @@ describe('Token Sale Price', async assert => {
   await check(b1, 37.04, "")
 
   await updateprice(6, 7, 84600)
-
-
 
 })
 
@@ -460,7 +473,8 @@ describe('Token Sale 50 Rounds', async assert => {
 
     //console.log("round "+i+" = "+seeds_per_usd.toFixed(4)+" SEEDS")
 
-    await contracts.exchange.addround( 10 * 10000, seeds_per_usd.toFixed(4)+" SEEDS", { authorization: `${exchange}@active` })  
+    await contracts.exchange.addround( 10 * 10000, seeds_per_usd.toFixed(4)+" SEEDS", { authorization: `${exchange}@active` })
+    await sleep(300)  
 
     usd_per_seeds = usd_per_seeds * 1.033
 
