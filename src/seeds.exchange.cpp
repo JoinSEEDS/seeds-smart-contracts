@@ -15,6 +15,7 @@ void exchange::reset() {
   updatelimit(citizen_limit, resident_limit, visitor_limit);
   updatetlos(tlos_per_usd);
 
+
 /**
  
   // NEVER CHECK THESE IN
@@ -343,13 +344,13 @@ ACTION exchange::priceupdate() {
   auto phitr = pricehistory.rbegin();
 
   if (
-    (phitr != pricehistory.rend() && p.current_seeds_per_usd != phitr -> price) ||
+    (phitr != pricehistory.rend() && p.current_seeds_per_usd != phitr -> seeds_usd) ||
     (phitr == pricehistory.rend())
   ) {
     pricehistory.emplace(_self, [&](auto & ph){
       ph.id = pricehistory.available_primary_key();
-      ph.price = p.current_seeds_per_usd;
-      ph.date = eosio::current_time_point().sec_since_epoch();
+      ph.seeds_usd = p.current_seeds_per_usd;
+      ph.date = eosio::current_time_point();
     });
   }
 }

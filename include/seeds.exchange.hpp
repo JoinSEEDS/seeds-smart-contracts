@@ -106,8 +106,8 @@ CONTRACT exchange : public contract {
 
     TABLE price_history_table {
       uint64_t id;
-      asset price;
-      uint64_t date;
+      asset seeds_usd;
+      time_point date;
 
       uint64_t primary_key()const { return id; }
     };
