@@ -16,6 +16,7 @@ CONTRACT exchange : public contract {
         config(receiver, receiver.value),
         sold(receiver, receiver.value),
         price(receiver, receiver.value),
+        pricehistory(receiver, receiver.value),
         rounds(receiver, receiver.value),
         dailystats(receiver, receiver.value),
         payhistory(receiver, receiver.value)
@@ -38,6 +39,8 @@ CONTRACT exchange : public contract {
     ACTION initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd);
 
     ACTION initsale();
+
+    ACTION priceupdate();
 
     ACTION reset();
 
@@ -101,6 +104,14 @@ CONTRACT exchange : public contract {
       uint64_t primary_key()const { return id; }
     };
 
+    TABLE price_history_table {
+      uint64_t id;
+      asset seeds_usd;
+      time_point date;
+
+      uint64_t primary_key()const { return id; }
+    };
+
     typedef singleton<"config"_n, configtable> configtables;
     typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
 
@@ -109,6 +120,8 @@ CONTRACT exchange : public contract {
 
     typedef singleton<"price"_n, price_table> price_tables;
     typedef eosio::multi_index<"price"_n, price_table> dump_for_price;
+    
+    typedef eosio::multi_index<"pricehistory"_n, price_history_table> price_history_tables;
 
     typedef multi_index<"dailystats"_n, stattable> stattables;
     
@@ -124,6 +137,8 @@ CONTRACT exchange : public contract {
 
     price_tables price;
 
+    price_history_tables pricehistory;
+
     round_tables rounds;
 
     stattables dailystats;
@@ -137,7 +152,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds)(priceupdate))
       }
   }
 }
