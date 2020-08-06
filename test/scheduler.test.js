@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const { scheduler, settings, firstuser } = names
+const { scheduler, settings, organization, firstuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -94,6 +94,53 @@ describe('scheduler', async assert => {
         actual: delta2,
         expected: 4
     })
+
+})
+
+describe('scheduler, organization.cleandaus', async assert => {
+
+    // this test is to see that scheduler can execute organization.cleandaus
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
+
+    contracts = await Promise.all([
+        eos.contract(scheduler),
+        eos.contract(settings)
+    ]).then(([scheduler, settings]) => ({
+        scheduler, settings
+    }))
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('add operations')
+    await contracts.scheduler.configop('org.clndaus', 'cleandaus', organization, 1, 0, { authorization: `${scheduler}@active` })
+
+    console.log('scheduler execute')
+    let canExecute = false
+    try {
+        await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
+        canExecute = true
+    } catch (err) {
+        console.log('can not execute (unexpected, permission may be needed)')
+    }
+
+    await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+
+    assert({
+        given: 'called execute',
+        should: 'be able to execute cleandaus',
+        actual: canExecute,
+        expected: true
+    })
+
+    await sleep(1 * 1000)
 
 })
 

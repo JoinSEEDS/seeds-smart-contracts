@@ -113,6 +113,7 @@ CONTRACT organization : public contract {
 
         TABLE dau_table {
             name account;
+            uint64_t date;
             uint64_t number_app_uses;
 
             uint64_t primary_key() const { return account.value; }

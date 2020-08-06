@@ -1,6 +1,7 @@
 const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
+const { asset } = require("eosjs/lib/schema")
 
 const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history } = names
 
@@ -420,7 +421,7 @@ describe('app', async assert => {
     
     for (let i = 0; i < 10; i++) {
         await contracts.organization.appuse('app1', seconduser, { authorization: `${seconduser}@active` })
-        await sleep(300)
+        await sleep(400)
     }
 
     await contracts.organization.appuse('app2', seconduser, { authorization: `${seconduser}@active` })
@@ -447,42 +448,50 @@ describe('app', async assert => {
     })
     const apps = appsTable.rows
 
-    console.log('clean daus')
+    console.log('clean daus today')
     await contracts.organization.cleandaus({ authorization: `${organization}@active` })
     await sleep(3000)
 
-    const daus1TableAfterClean = await getTableRows({
+    const daus1TableAfterClean1 = await getTableRows({
         code: organization,
         scope: 'app1',
         table: 'daus',
         json: true
     })
 
-    const daus2TableAfterClean = await getTableRows({
+    const daus2TableAfterClean1 = await getTableRows({
         code: organization,
         scope: 'app2',
         table: 'daus',
         json: true
     })
 
-    const dausHistory1 = await getTableRows({
+    let today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    today = today.getTime() / 1000
+
+    let tomorrow = new Date()
+    tomorrow.setUTCHours(0, 0, 0, 0)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow = tomorrow.getTime() / 1000
+
+    console.log('clean app1 dau')
+    await contracts.organization.cleandau('app1', tomorrow, 0, { authorization: `${organization}@active` })
+    await sleep(2000)
+
+    const daus1TableAfterClean2 = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const daus1History1 = await getTableRows({
         code: organization,
         scope: 'app1',
         table: 'dauhistory',
         json: true
     })
-
-    const dausHistory2 = await getTableRows({
-        code: organization,
-        scope: 'app2',
-        table: 'dauhistory',
-        json: true
-    })
-
-    const now = new Date()
-    now.setUTCHours(0, 0, 0, 0)
-    now.setDate(now.getDate() - 1)
-    const yesterday = now.getTime() / 1000
 
     console.log('ban app')
     await contracts.organization.banapp('app1', { authorization: `${organization}@active` })
@@ -537,45 +546,46 @@ describe('app', async assert => {
     })
 
     assert({
-        given: 'cleandaus called',
-        should: 'reset the app tables',
-        actual: [
-            daus1TableAfterClean.rows.map(r => r.number_app_uses),
-            daus2TableAfterClean.rows.map(r => r.number_app_uses)
-        ],
-        expected: [[0, 0], [0]]
+        given: 'call cleandaus on the same day',
+        should: 'not clean daus app1 table',
+        actual: daus1TableAfterClean1.rows,
+        expected: daus1Table.rows
     })
 
     assert({
-        given: 'cleandaus called',
-        should: 'create dau history entries',
-        actual: [
-            [ 
-                { 
-                    dau_history_id: 0,
-                    account: 'seedsuseraaa',
-                    date: yesterday,
-                    number_app_uses: 1
-                },
-                { 
-                    dau_history_id: 1,
-                    account: 'seedsuserbbb',
-                    date: yesterday,
-                    number_app_uses: 10 
-                }
-            ],
-            [ 
-                { 
-                    dau_history_id: 0,
-                    account: 'seedsuserbbb',
-                    date: yesterday,
-                    number_app_uses: 1 
-                } 
-            ]
-        ],
-        expected: [
-            dausHistory1.rows,
-            dausHistory2.rows
+        given: 'call cleandaus on the same day',
+        should: 'not clean daus app2 table',
+        actual: daus2TableAfterClean1.rows,
+        expected: daus2Table.rows
+    })
+
+    assert({
+        given: 'call cleandau for app1 on a different day',
+        should: 'clean daus app1 table',
+        actual: daus1TableAfterClean2.rows,
+        expected: [ 
+            { account: 'seedsuseraaa', date: tomorrow, number_app_uses: 0 },
+            { account: 'seedsuserbbb', date: tomorrow, number_app_uses: 0 } 
+        ]
+    })
+
+    assert({
+        given: 'call cleandau for app1 on a different day',
+        should: 'have entries in the dau history table',
+        actual: daus1History1.rows,
+        expected: [ 
+            { 
+                dau_history_id: 0,
+                account: 'seedsuseraaa',
+                date: today,
+                number_app_uses: 1 
+            },
+            { 
+                dau_history_id: 1,
+                account: 'seedsuserbbb',
+                date: today,
+                number_app_uses: 10 
+            } 
         ]
     })
 

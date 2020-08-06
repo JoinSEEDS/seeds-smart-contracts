@@ -45,18 +45,22 @@ ACTION scheduler::reset() {
 
     std::vector<name> id_v = { 
         name("exch.period"),
+        name("org.clndaus")
     };
     
     std::vector<name> operations_v = {
         name("onperiod"),
+        name("cleandaus")
     };
 
     std::vector<name> contracts_v = {
         contracts::exchange,
+        contracts::organization
     };
 
     std::vector<uint64_t> delay_v = {
         utils::seconds_per_day * 7,
+        utils::seconds_per_day / 2
     };
 
     int i = 0;

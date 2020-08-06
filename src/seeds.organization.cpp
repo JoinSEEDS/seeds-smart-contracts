@@ -367,15 +367,34 @@ ACTION organization::appuse(name appname, name account) {
     check(!(appitr -> is_banned), "Can not use a banned app.");
     
     dau_tables daus(get_self(), appname.value);
+
+    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
     
     auto dauitr = daus.find(account.value);
     if (dauitr != daus.end()) {
-        daus.modify(dauitr, _self, [&](auto & dau){
-            dau.number_app_uses += 1;
-        });
+        if (dauitr -> date == today_timestamp) {
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.number_app_uses += 1;
+            });
+        } else {
+            if (dauitr -> number_app_uses != 0) {
+                dau_history_tables dau_history(get_self(), appname.value); 
+                dau_history.emplace(_self, [&](auto & dau_h){
+                    dau_h.dau_history_id = dau_history.available_primary_key();
+                    dau_h.account = dauitr -> account;
+                    dau_h.date = dauitr -> date;
+                    dau_h.number_app_uses = dauitr -> number_app_uses;
+                });
+            }
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.date = today_timestamp;
+                dau.number_app_uses = 1;
+            }); 
+        }
     } else {
         daus.emplace(_self, [&](auto & dau){
             dau.account = account;
+            dau.date = today_timestamp;
             dau.number_app_uses = 1;
         });
     }
@@ -388,11 +407,7 @@ ACTION organization::appuse(name appname, name account) {
 ACTION organization::cleandaus () {
     require_auth(get_self());
 
-    // if this function is supposed to be run every 24h,
-    // the get_beginning_of_day_in_seconds will give the current day, but
-    // those values are from the previous day, that's why the timestamp is
-    // from yesterday and not from today
-    uint64_t utc_timestamp_yesterday = get_beginning_of_day_in_seconds() - utils::seconds_per_day;
+    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
 
     auto appitr = apps.begin();
     while (appitr != apps.end()) {
@@ -404,7 +419,7 @@ ACTION organization::cleandaus () {
             permission_level{get_self(), "active"_n},
             get_self(),
             "cleandau"_n,
-            std::make_tuple(appitr -> app_name, utc_timestamp_yesterday, (uint64_t)0)
+            std::make_tuple(appitr -> app_name, today_timestamp, (uint64_t)0)
         );
 
         transaction tx;
@@ -416,7 +431,7 @@ ACTION organization::cleandaus () {
     }
 }
 
-ACTION organization::cleandau (name appname, uint64_t timestamp, uint64_t start) {
+ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t start) {
     require_auth(get_self());
 
     auto appitr = apps.get(appname.value, "This application does not exist.");
@@ -431,17 +446,18 @@ ACTION organization::cleandau (name appname, uint64_t timestamp, uint64_t start)
     uint64_t count = 0;
 
     while (dauitr != daus.end() && count < batch_size) {
-        dau_history.emplace(_self, [&](auto & dau_h){
-            dau_h.dau_history_id = dau_history.available_primary_key();
-            dau_h.account = dauitr -> account;
-            dau_h.date = timestamp;
-            dau_h.number_app_uses = dauitr -> number_app_uses;
-        });
-
-        daus.modify(dauitr, _self, [&](auto & dau){
-            dau.number_app_uses = 0;
-        });
-
+        if (dauitr -> date != todaytimestamp) {
+            dau_history.emplace(_self, [&](auto & dau_h){
+                dau_h.dau_history_id = dau_history.available_primary_key();
+                dau_h.account = dauitr -> account;
+                dau_h.date = dauitr -> date;
+                dau_h.number_app_uses = dauitr -> number_app_uses;
+            });
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.date = todaytimestamp;
+                dau.number_app_uses = 0;
+            });
+        }
         count++;
         dauitr++;
     }
@@ -451,7 +467,7 @@ ACTION organization::cleandau (name appname, uint64_t timestamp, uint64_t start)
             permission_level{get_self(), "active"_n},
             get_self(),
             "cleandau"_n,
-            std::make_tuple(appname, timestamp, (dauitr -> account).value)
+            std::make_tuple(appname, todaytimestamp, (dauitr -> account).value)
         );
 
         transaction tx;
