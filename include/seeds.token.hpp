@@ -9,6 +9,7 @@
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <tables/config_table.hpp>
 #include <eosio/singleton.hpp>
 
 #include <string>
@@ -174,6 +175,9 @@ namespace eosio {
          [[eosio::action]]
          void resetweekly();
 
+         [[eosio::action]]
+         void resetwhelper(uint64_t begin);
+
          ACTION updatecirc();
 
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
@@ -185,6 +189,8 @@ namespace eosio {
          using close_action = eosio::action_wrapper<"close"_n, &token::close>;
       private:
           symbol seeds_symbol = symbol("SEEDS", 4);
+
+         DEFINE_CONFIG_TABLE
 
          struct [[eosio::table]] account {
             asset    balance;
@@ -229,6 +235,8 @@ namespace eosio {
          void save_transaction(name from, name to, asset quantity);
          void check_limit( const name& from );
          uint64_t balance_for( const name& owner );
+         void check_limit_transactions(name from);
+         void reset_weekly_aux(uint64_t begin);
 
          TABLE circulating_supply_table {
             uint64_t id;
@@ -241,6 +249,12 @@ namespace eosio {
          typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
 
          circulating_supply_tables circulating;
+
+         typedef eosio::multi_index<"config"_n, config_table> config_tables;
+         typedef eosio::multi_index<"balances"_n, tables::balance_table,
+         indexed_by<"byplanted"_n,
+            const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
+         > balance_tables;
 
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token

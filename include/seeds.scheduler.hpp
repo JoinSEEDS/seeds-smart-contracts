@@ -29,14 +29,21 @@ CONTRACT scheduler : public contract {
         ACTION pauseop(name id, uint8_t pause);
 
         ACTION confirm(name operation);
-
-        ACTION cancelexec();
+        
+        ACTION stop();
+        
+        ACTION start();
 
         ACTION test1();
 
         ACTION test2();
 
+        ACTION testexec(name op);
+
     private:
+        void exec_op(name id, name contract, name action);
+        void cancel_exec();
+        
         TABLE operations_table {
             name id;
             name operation;

@@ -28,10 +28,20 @@ bool scheduler::is_ready_to_execute(name operation){
 }
 
 
+ACTION scheduler::start() {
+    require_auth(get_self());
+    execute();
+}
+
+ACTION scheduler::stop() {
+    require_auth(get_self());
+    cancel_exec();
+}
+
 ACTION scheduler::reset() {
     require_auth(get_self());
 
-    cancelexec();
+    cancel_exec();
 
     auto itr = operations.begin();
     while(itr != operations.end()){
@@ -46,21 +56,25 @@ ACTION scheduler::reset() {
     std::vector<name> id_v = { 
         name("exch.period"),
         name("org.clndaus")
+        name("tokn.resetw")
     };
     
     std::vector<name> operations_v = {
         name("onperiod"),
         name("cleandaus")
+        name("resetweekly")
     };
 
     std::vector<name> contracts_v = {
         contracts::exchange,
         contracts::organization
+        contracts::token
     };
 
     std::vector<uint64_t> delay_v = {
         utils::seconds_per_day * 7,
         utils::seconds_per_day / 2
+        utils::seconds_per_day * 7
     };
 
     int i = 0;
@@ -215,28 +229,7 @@ ACTION scheduler::execute() {
 
             print("\nOperation to be executed: " + itr -> id.to_string());
 
-            action a = action(
-                permission_level{itr -> contract, "execute"_n},
-                itr -> contract,
-                itr -> operation,
-                std::make_tuple()
-            );
-
-            // transaction txa;
-            // txa.actions.emplace_back(a);
-            // txa.delay_sec = 0;
-            // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
-
-            a.send();
-
-            action c = action(
-                permission_level{get_self(), "active"_n},
-                get_self(),
-                "confirm"_n,
-                std::make_tuple(itr -> id)
-            );
-
-            c.send();
+            exec_op(itr->id, itr->contract, itr->operation);
 
             break;
         }
@@ -245,7 +238,7 @@ ACTION scheduler::execute() {
 
 }
 
-ACTION scheduler::cancelexec() {
+void scheduler::cancel_exec() {
     require_auth(get_self());
     cancel_deferred(contracts::scheduler.value);
 }
@@ -292,6 +285,37 @@ ACTION scheduler::test2() {
 
 }
 
+ACTION scheduler::testexec(name op) {
+    require_auth(get_self());
+    auto operation = operations.get(op.value, "op not found");
+    exec_op(op, operation.contract, operation.operation);
+
+}
+void scheduler::exec_op(name id, name contract, name operation) {
+    
+    action a = action(
+        permission_level{contract, "execute"_n},
+        contract,
+        operation,
+        std::make_tuple()
+    );
+
+    // transaction txa;
+    // txa.actions.emplace_back(a);
+    // txa.delay_sec = 0;
+    // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
+
+    a.send();
+
+    action c = action(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "confirm"_n,
+        std::make_tuple(id)
+    );
+
+    c.send();
+}
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(cancelexec)(test1)(test2));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec));

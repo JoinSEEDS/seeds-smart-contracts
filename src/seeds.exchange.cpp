@@ -15,6 +15,7 @@ void exchange::reset() {
   updatelimit(citizen_limit, resident_limit, visitor_limit);
   updatetlos(tlos_per_usd);
 
+
 /**
  
   // NEVER CHECK THESE IN
@@ -32,7 +33,12 @@ void exchange::reset() {
     ritr = rounds.erase(ritr);
   }
 
-/**/
+  auto phitr = pricehistory.begin();
+  while(phitr != pricehistory.end()) {
+    phitr = pricehistory.erase(phitr);
+  }
+
+*/
 
 }
 
@@ -269,6 +275,9 @@ void exchange::updateprice() {
 
     ritr++;
   }
+
+  priceupdate();
+
 }
 
 ACTION exchange::addround(uint64_t volume, asset seeds_per_usd) {
@@ -326,3 +335,24 @@ ACTION exchange::initrounds(uint64_t volume_per_round, asset initial_seeds_per_u
   updateprice();
 
 }
+
+ACTION exchange::priceupdate() {
+  require_auth(get_self());
+
+  price_table p = price.get();
+
+  auto phitr = pricehistory.rbegin();
+
+  if (
+    (phitr != pricehistory.rend() && p.current_seeds_per_usd != phitr -> seeds_usd) ||
+    (phitr == pricehistory.rend())
+  ) {
+    pricehistory.emplace(_self, [&](auto & ph){
+      ph.id = pricehistory.available_primary_key();
+      ph.seeds_usd = p.current_seeds_per_usd;
+      ph.date = eosio::current_time_point();
+    });
+  }
+}
+
+
