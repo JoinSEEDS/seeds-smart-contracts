@@ -66,6 +66,7 @@ ACTION scheduler::reset() {
         name("hrvst.rankpl"),
 
         name("hrvst.calccs"), // after the above 4
+        name("hrvst.rankcs"), 
         name("hrvst.calctx"), // 24h
     };
     
@@ -77,9 +78,10 @@ ACTION scheduler::reset() {
         name("rankcbss"),
         
         name("ranktxs"),
-        name("rankcbss"),
+        name("rankplanteds"),
 
         name("calccss"),
+        name("rankcss"),
         name("calctrxpts"),
     };
 
@@ -95,6 +97,7 @@ ACTION scheduler::reset() {
 
         contracts::harvest,
         contracts::harvest,
+        contracts::harvest,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -107,6 +110,7 @@ ACTION scheduler::reset() {
         utils::seconds_per_hour,
         utils::seconds_per_hour,
 
+        utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_day,
     };
@@ -124,6 +128,7 @@ ACTION scheduler::reset() {
         now,
 
         now + 120, // kicks off 2 minutes later
+        now + 240, // kicks off 4 minutes later
         now,
     };
 
@@ -271,7 +276,7 @@ ACTION scheduler::execute() {
     // schedule next execution
     // =======================
 
-    auto it_s = has_executed ? 1 : config.get(seconds_to_execute.value, contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string()).value;
+    auto it_s = has_executed ? 1 : config.get(seconds_to_execute.value, (contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string()).c_str()).value;
 
     action next_execution(
         permission_level{get_self(), "active"_n},
@@ -284,7 +289,7 @@ ACTION scheduler::execute() {
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
-    tx.delay_sec = it_s -> value;
+    tx.delay_sec = it_s;
     tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
     
 

@@ -253,32 +253,6 @@ ACTION harvest::updatecs(name account) {
   calc_contribution_score(account);
 }
 
-
-// DEBUG action to clear scores tables
-// Deploy before
-ACTION harvest::clearscores() {
-  require_auth(get_self());
-
-  uint64_t limit = 200;
-
-  auto titr = txpoints.begin();
-  while (titr != txpoints.end() && limit > 0) {
-    titr = txpoints.erase(titr);
-    limit--;
-  }  
-  size_set(tx_points_size, 0);
-
-  auto citr = cspoints.begin();
-  while (citr != cspoints.end() && limit > 0) {
-    citr = cspoints.erase(citr);
-    limit--;
-  }  
-
-
-}
-
-// copy everything to planted table
-
 ACTION harvest::updtotal() { // remove when balances are retired
   require_auth(get_self());
 
@@ -286,51 +260,6 @@ ACTION harvest::updtotal() { // remove when balances are retired
   total_table tt = total.get_or_create(get_self(), total_table());
   tt.total_planted = bitr->planted;
   total.set(tt, get_self());
-}
-
-ACTION harvest::migrateplant(uint64_t startval) {
-  require_auth(get_self());
-
-  uint64_t limit = 100;
-
-  auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
-
-  while (bitr != balances.end() && limit > 0) {
-    if (bitr->planted.amount > 0 && bitr->account != _self) {
-      auto pitr = planted.find(bitr->account.value);
-      if (pitr == planted.end()) {
-        planted.emplace(_self, [&](auto& entry) {
-          entry.account = bitr->account;
-          entry.planted = bitr->planted;
-        });
-        size_change(planted_size, 1);
-      } else {
-        planted.modify(pitr, _self, [&](auto& entry) {
-          entry.account = bitr->account;
-          entry.planted = bitr->planted;
-        });
-      }
-    }
-    bitr++;
-    limit--;
-  }
-
-  if (bitr != balances.end()) {
-
-    uint64_t next_value = bitr->account.value;
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "migrateplant"_n,
-        std::make_tuple(next_value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(next_value, _self);
-
-  } 
 }
 
 ACTION harvest::calctotal(uint64_t startval) {
@@ -662,7 +591,7 @@ void harvest::rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksiz
 }
 
 void harvest::calccss() {
-  calccs(0, 0, 100);
+  calccs(0, 0, 200);
 }
 
 void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {

@@ -463,13 +463,16 @@ var permissions = [{
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`, 
-  action: 'calcplanted'
+  action: 'ranktxs'
 }, {
   target: `${accounts.harvest.account}@execute`, 
+  action: 'rankplanteds'
+}, {
+  target: `${accounts.harvest.account}@execute`,
   action: 'calccss'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'calctrx'
+  action: 'rankcss'
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'calctrxpts'

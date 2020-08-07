@@ -76,8 +76,6 @@ CONTRACT harvest : public contract {
 
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
-    ACTION clearscores();  // DEBUG REMOVE - migrate method
-    ACTION migrateplant(uint64_t startval);
     
     ACTION updtotal(); // MIGRATION ACTION
     
@@ -255,7 +253,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (payforcpu)(reset)(runharvest)
           (unplant)(claimrefund)(cancelrefund)(sow)
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(updatecs)
-          (updatetxpt)(clearscores)(migrateplant)(updtotal)(calctotal)
+          (updatetxpt)(updtotal)(calctotal)
           (testclaim)(testupdatecs))
       }
   }

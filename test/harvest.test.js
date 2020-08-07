@@ -22,8 +22,6 @@ describe("Harvest General", async assert => {
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
-  await contracts.harvest.migrateplant(0, { authorization: `${harvest}@active` })
-
   console.log('configure')
   await contracts.settings.configure("hrvstreward", 10000 * 100, { authorization: `${settings}@active` })
 
