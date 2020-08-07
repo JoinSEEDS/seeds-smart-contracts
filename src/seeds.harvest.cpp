@@ -864,7 +864,25 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
 
 void harvest::testupdatecs(name account, uint64_t contribution_score) {
   require_auth(get_self());
-  check(false, "implement testupdatecs");
+  auto csitr = cspoints.find(account.value);
+  if (csitr == cspoints.end()) {
+    if (contribution_score > 0) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = account;
+        item.rank = contribution_score;
+      });
+      size_change(cs_size, 1);
+    }
+  } else {
+    if (contribution_score > 0) {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.rank = contribution_score;
+      });
+    } else {
+      cspoints.erase(csitr);
+      size_change(cs_size, -1);
+    }
+  }
 }
 
   double harvest::get_rep_multiplier(name account) {

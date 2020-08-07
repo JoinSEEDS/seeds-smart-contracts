@@ -13,6 +13,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/cbs_table.hpp>
+#include <tables/cspoints_table.hpp>
 #include <eosio/singleton.hpp>
 #include <cmath> 
 
@@ -160,20 +161,9 @@ CONTRACT harvest : public contract {
       indexed_by<"byrank"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_rank>>
     > tx_points_tables;
 
-    TABLE cs_points_table {
-      name account;
-      uint32_t contribution_points;
-      uint64_t rank;  
+    DEFINE_CS_POINTS_TABLE
 
-      uint64_t primary_key() const { return account.value; }
-      uint64_t by_cs_points() const { return (uint64_t(contribution_points) << 32) +  ( (account.value <<32) >> 32) ; } \
-      uint64_t by_rank() const { return rank; } \
-    };
-
-    typedef eosio::multi_index<"cspoints"_n, cs_points_table,
-      indexed_by<"bycspoints"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cs_points>>,
-      indexed_by<"byrank"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_rank>>
-    > cs_points_tables;
+    DEFINE_CS_POINTS_TABLE_MULTI_INDEX
 
     DEFINE_SIZE_TABLE
 

@@ -122,15 +122,18 @@ void proposals::onperiod() {
 
 void proposals::update_voice_table() {
   
-  DEFINE_HARVEST_TABLE
-  eosio::multi_index<"harvest"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
+  DEFINE_CS_POINTS_TABLE
+  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
+  //eosio::multi_index<"cspoints"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
+  
+  cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
 
   auto vitr = voice.begin();
   while (vitr != voice.end()) {
-      auto csitr = harveststat.find(vitr->account.value);
-      if (csitr != harveststat.end()) {
+      auto csitr = cspoints.find(vitr->account.value);
+      if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
-          item.balance = csitr->contribution_score;
+          item.balance = csitr->rank;
         });
       }
       vitr++;

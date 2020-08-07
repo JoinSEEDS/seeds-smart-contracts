@@ -219,6 +219,18 @@ describe('Proposals', async assert => {
     await getBalance(campaignbank),
   ]
 
+  const repsAfter = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower: firstuser,
+    upper: firstuser,
+    json: true,
+  })
+  console.log("reps: "+JSON.stringify(repsAfter))
+
+
+
   const escrowLocks = await eos.getTableRows({
     code: escrow,
     scope: escrow,
@@ -273,6 +285,13 @@ describe('Proposals', async assert => {
     should: 'send reward and stake',
     actual: balancesAfter[0] - balancesBefore[0],
     expected: 600
+  })
+
+  assert({
+    given: 'passed proposal',
+    should: 'send reward and stake',
+    actual: repsAfter.rows[0].rep,
+    expected: 10
   })
 
   assert({
