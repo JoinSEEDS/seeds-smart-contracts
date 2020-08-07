@@ -5,7 +5,7 @@
 #include <seeds.token.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
-#include <harvest_table.hpp>
+#include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
 
 using namespace eosio;

@@ -680,13 +680,44 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
 
 void harvest::testupdatecs(name account, uint64_t contribution_score) {
   require_auth(get_self());
-  uint64_t now_time = eosio::current_time_point().sec_since_epoch();
-  auto hitr = harveststat.find(account.value);
-  if (hitr == harveststat.end()) {
-    harveststat.emplace(_self, [&](auto& user) {
-      user.account = account;
-      user.contribution_score = contribution_score;
-      user.contrib_timestamp = now_time;
+  auto csitr = cspoints.find(account.value);
+  if (csitr == cspoints.end()) {
+    if (contribution_score > 0) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = account;
+        item.rank = contribution_score;
+      });
+      size_change(cs_size, 1);
+    }
+  } else {
+    if (contribution_score > 0) {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.rank = contribution_score;
+      });
+    } else {
+      cspoints.erase(csitr);
+      size_change(cs_size, -1);
+    }
+  }
+}
+
+  double harvest::get_rep_multiplier(name account) {
+    //return 1.0;  // DEBUg FOR TESTINg otherwise everyone on testnet has 0
+
+    auto ritr = rep.find(account.value);
+    if (ritr == rep.end()) {
+      return 0;
+    }
+    return utils::rep_multiplier_for_score(ritr->rank);
+
+  }
+
+void harvest::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
     });
   } else {
     harveststat.modify(hitr, _self, [&](auto& user) {
