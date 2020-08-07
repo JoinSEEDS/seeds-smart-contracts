@@ -197,6 +197,15 @@ describe('Proposals', async assert => {
     json: true,
   })
 
+  const repsBefore = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower: firstuser,
+    upper: firstuser,
+    json: true,
+  })
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
@@ -289,8 +298,8 @@ describe('Proposals', async assert => {
 
   assert({
     given: 'passed proposal',
-    should: 'send reward and stake',
-    actual: repsAfter.rows[0].rep,
+    should: 'gain rep',
+    actual: repsAfter.rows[0].rep - repsBefore.rows[0].rep,
     expected: 10
   })
 
@@ -482,11 +491,6 @@ describe('Participants', async assert => {
   console.log('deposit stake (memo 2)')
   await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
 
-  console.log('add voice')
-  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
-
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
@@ -494,7 +498,7 @@ describe('Participants', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(10000)
+  await sleep(3000)
 
   const participantsBefore = await eos.getTableRows({
     code: proposals,
@@ -562,9 +566,9 @@ describe('Participants', async assert => {
     should: 'have the correct voice amount',
     actual: voiceAfter.rows,
     expected: [
-      { account: firstuser, balance: 36 },
-      { account: seconduser, balance: 36 },
-      { account: thirduser, balance: 44 }
+      { account: firstuser, balance: 12 },
+      { account: seconduser, balance: 32 },
+      { account: thirduser, balance: 60 }
     ]
   })
 
@@ -665,9 +669,9 @@ describe('Change Trust', async assert => {
 
   await check("off", "no voice", 0) 
 
-  await contracts.proposals.changetrust(firstuser, 1, { authorization: `${proposals}@active` })
+  //await contracts.proposals.changetrust(firstuser, 1, { authorization: `${proposals}@active` })
 
-  await check("after", "has voice", 1) 
+  //await check("after", "has voice", 1) 
 
   
 

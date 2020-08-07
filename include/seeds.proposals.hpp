@@ -72,6 +72,7 @@ CONTRACT proposals : public contract {
       void burn(asset quantity);
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
+      void change_rep(name beneficiary, bool passed);
 
       TABLE config_table {
           name param;

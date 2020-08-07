@@ -58,7 +58,9 @@ void proposals::onperiod() {
         if (passed && valid_quorum) {
             if (pitr->staked >= asset(min_stake, seeds_symbol)) {
 
-              refund_staked(pitr->recipient, pitr->staked);
+              refund_staked(pitr->creator, pitr->staked);
+
+              change_rep(pitr->creator, true);
 
               if (is_alliance_type) {
                 send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
@@ -135,6 +137,11 @@ void proposals::update_voice_table() {
         voice.modify(vitr, _self, [&](auto& item) {
           item.balance = csitr->rank;
         });
+      } else {
+        voice.modify(vitr, _self, [&](auto& item) {
+          item.balance = 0;
+        });
+
       }
       vitr++;
   }
@@ -451,6 +458,18 @@ void proposals::deposit(asset quantity)
 
 void proposals::refund_staked(name beneficiary, asset quantity) {
   withdraw(beneficiary, quantity, contracts::bank, "");
+}
+void proposals::change_rep(name beneficiary, bool passed) {
+  if (passed) {
+    auto reward_points = config.get(name("proppass.rep").value, "The proppass.rep parameter has not been initialized yet.");
+    action(
+      permission_level{contracts::accounts, "active"_n},
+      contracts::accounts, "addrep"_n,
+      std::make_tuple(beneficiary, reward_points.value)
+    ).send();
+
+  }
+
 }
 
 void proposals::send_to_escrow(name fromfund, name recipient, asset quantity, string memo) {
