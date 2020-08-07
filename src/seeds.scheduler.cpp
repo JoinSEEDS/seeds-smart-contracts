@@ -118,17 +118,17 @@ ACTION scheduler::reset() {
     uint64_t now = current_time_point().sec_since_epoch()+1;
 
     std::vector<uint64_t> timestamp_v = {
-        now, 
-        now,
-
         now,
         now,
 
-        now,
-        now,
+        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour * 2, 
 
-        now + 120, // kicks off 2 minutes later
-        now + 240, // kicks off 4 minutes later
+        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour * 2, 
+
+        now + 120 - utils::seconds_per_hour, // kicks off 2 minutes later
+        now + 240 - utils::seconds_per_hour, // kicks off 4 minutes later
         now,
     };
 
