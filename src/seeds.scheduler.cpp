@@ -53,37 +53,81 @@ ACTION scheduler::reset() {
         titr = test.erase(titr);
     }
 
+    
+
     std::vector<name> id_v = { 
         name("exch.period"),
-        name("tokn.resetw")
-        // name("acct.rankrep"),
-        // name("acct.rankcbs"),
-        // name("hrvst.txpt"),
-        // name("hrvst.txsc"),
-        // name("hrvst.plant"),
-        // name("hrvst.cspt"),
-        // name("hrvst.cs"),
+        name("tokn.resetw"),
+
+        name("acct.rankrep"),
+        name("acct.rankcbs"),
+
+        name("hrvst.ranktx"),
+        name("hrvst.rankpl"),
+
+        name("hrvst.calccs"), // after the above 4
+        name("hrvst.calctx"), // 24h
     };
     
     std::vector<name> operations_v = {
         name("onperiod"),
-        name("resetweekly")
-        //name("rankreps"),
-        //name("rankcbss"),
+        name("resetweekly"),
+
+        name("rankreps"),
+        name("rankcbss"),
+        
+        name("ranktxs"),
+        name("rankcbss"),
+
+        name("calccss"),
+        name("calctrxpts"),
     };
 
     std::vector<name> contracts_v = {
         contracts::exchange,
-        contracts::token
+        contracts::token,
+
+        contracts::accounts,
+        contracts::accounts,
+
+        contracts::harvest,
+        contracts::harvest,
+
+        contracts::harvest,
+        contracts::harvest,
     };
 
     std::vector<uint64_t> delay_v = {
         utils::seconds_per_day * 7,
-        utils::seconds_per_day * 7
+        utils::seconds_per_day * 7,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_day,
+    };
+
+    uint64_t now = current_time_point().sec_since_epoch()+1;
+
+    std::vector<uint64_t> timestamp_v = {
+        now, 
+        now,
+
+        now,
+        now,
+
+        now,
+        now,
+
+        now + 120, // kicks off 2 minutes later
+        now,
     };
 
     int i = 0;
-    uint64_t now = current_time_point().sec_since_epoch()+1;
 
     while(i < operations_v.size()){
         operations.emplace(_self, [&](auto & noperation){
@@ -202,32 +246,12 @@ ACTION scheduler::execute() {
     cancel_deferred(contracts::scheduler.value);
 
     // =======================
-    // schedule next execution
-    // =======================
-
-    auto it_s = config.find(seconds_to_execute.value);
-    check(it_s != config.end(), contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string());
-
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "execute"_n,
-        std::make_tuple()
-    );
-
-    print("Creating the diferred transaction...");
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = it_s -> value;
-    tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
-    
-    // =======================
     // execute operations
     // =======================
 
     auto ops_by_last_executed = operations.get_index<"bytimestamp"_n>();
     auto itr = ops_by_last_executed.begin();
+    bool has_executed = false;
 
     while(itr != ops_by_last_executed.end()) {
         if(is_ready_to_execute(itr -> id)){
@@ -236,10 +260,33 @@ ACTION scheduler::execute() {
 
             exec_op(itr->id, itr->contract, itr->operation);
 
+            has_executed = true;
+            
             break;
         }
         itr++;
     }
+
+    // =======================
+    // schedule next execution
+    // =======================
+
+    auto it_s = has_executed ? 1 : config.get(seconds_to_execute.value, contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string()).value;
+
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "execute"_n,
+        std::make_tuple()
+    );
+
+    print("Creating the deferred transaction...");
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = it_s -> value;
+    tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
+    
 
 }
 
