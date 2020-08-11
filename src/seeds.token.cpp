@@ -289,6 +289,7 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
         user.account = from;
         user.transactions_volume = quantity;
         user.total_transactions = 1;
+        user.all_time_total_transactions = 1;
         user.incoming_transactions = 0;
         user.outgoing_transactions = 1;
       });
@@ -297,6 +298,7 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
           user.transactions_volume += quantity;
           user.outgoing_transactions += 1;
           user.total_transactions += 1;
+          user.all_time_total_transactions += 1;
       });
     }
 
@@ -305,6 +307,7 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
         user.account = to;
         user.transactions_volume = quantity;
         user.total_transactions = 1;
+        user.all_time_total_transactions = 1;
         user.incoming_transactions = 1;
         user.outgoing_transactions = 0;
       });
@@ -312,6 +315,7 @@ void token::update_stats( const name& from, const name& to, const asset& quantit
       transactions.modify(toitr, get_self(), [&](auto& user) {
         user.transactions_volume += quantity;
         user.total_transactions += 1;
+        user.all_time_total_transactions += 1;
         user.incoming_transactions += 1;
       });
     }

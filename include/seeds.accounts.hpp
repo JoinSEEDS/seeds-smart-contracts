@@ -206,6 +206,8 @@ CONTRACT accounts : public contract {
       name account;
       asset transactions_volume;
       uint64_t total_transactions;
+      uint64_t all_time_total_transactions;
+
       uint64_t incoming_transactions;
       uint64_t outgoing_transactions;
 

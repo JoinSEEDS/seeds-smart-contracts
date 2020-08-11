@@ -476,7 +476,7 @@ void accounts::makeresident(name user)
     uint64_t reputation_points = rep.get(user.value,  "user has less than required reputation. Actual: 0").rep;
 
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
-    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(titr->all_time_total_transactions >= min_tx, "user has less than required transactions number.");
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(reputation_points >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(reputation_points));
 
@@ -541,7 +541,7 @@ void accounts::makecitizen(name user)
     uint64_t _rep_score = rep_score(user);
 
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
-    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(titr->all_time_total_transactions >= min_tx, "user has less than required transactions number.");
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
     check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");

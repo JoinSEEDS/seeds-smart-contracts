@@ -85,6 +85,14 @@ describe('token.transfer.history', async assert => {
   })
 
   //console.log("stats: "+JSON.stringify(stats, null, 2))
+  contract.resetweekly({ authorization: `${token}@active` })
+
+  const statsAfter = await getTableRows({
+    code: token,
+    scope: "SEEDS",
+    table: 'trxstat',
+    json: true
+  })
 
   assert({
     given: 'transactions',
@@ -95,6 +103,7 @@ describe('token.transfer.history', async assert => {
         "account": "seedsuseraaa",
         "transactions_volume": "20.0000 SEEDS",
         "total_transactions": 2,
+        "all_time_total_transactions": 2,
         "incoming_transactions": 0,
         "outgoing_transactions": 2
       },
@@ -102,9 +111,26 @@ describe('token.transfer.history', async assert => {
         "account": "seedsuserbbb",
         "transactions_volume": "20.0000 SEEDS",
         "total_transactions": 2,
+        "all_time_total_transactions": 2,
         "incoming_transactions": 2,
         "outgoing_transactions": 0
       }
+    ]
+  })
+
+  assert({
+    given: 'transactions',
+    should: 'have total',
+    actual: statsAfter.rows.filter( (item) => item.account == firstuser),
+    expected: [
+      {
+        "account": "seedsuseraaa",
+        "transactions_volume": "0.0000 SEEDS",
+        "total_transactions": 0,
+        "all_time_total_transactions": 2,
+        "incoming_transactions": 0,
+        "outgoing_transactions": 0
+      },
     ]
   })
 
