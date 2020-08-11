@@ -314,6 +314,9 @@ var permissions = [{
   target: `${accounts.history.account}@active`,
   actor: `${accounts.harvest.account}@active`
 }, {
+  target: `${accounts.harvest.account}@active`,
+  actor: `${accounts.history.account}@eosio.code`
+}, {
   target: `${accounts.token.account}@active`,
   actor: `${accounts.token.account}@eosio.code`
 }, {
@@ -412,6 +415,17 @@ var permissions = [{
   target: `${accounts.proposals.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.accounts.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankreps'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankcbss'
+}, {
+  target: `${accounts.accounts.account}@execute`,
   target: `${accounts.token.account}@execute`,
   key: activePublicKey,
   parent: 'active'
@@ -436,6 +450,9 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
+  target: `${accounts.accounts.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
+}, {
   target: `${accounts.bdc.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
@@ -449,22 +466,19 @@ var permissions = [{
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`, 
-  action: 'calcplanted'
+  action: 'ranktxs'
 }, {
   target: `${accounts.harvest.account}@execute`, 
-  action: 'calccbs'
-}, {
-  target: `${accounts.harvest.account}@execute`, 
-  action: 'calccs'
+  action: 'rankplanteds'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'calctrx'
+  action: 'calccss'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'calctrxpt'
+  action: 'rankcss'
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'calcrep'
+  action: 'calctrxpts'
 }, {
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'

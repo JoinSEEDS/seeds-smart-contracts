@@ -120,20 +120,6 @@ const updatePermissionAction = async () => {
   await updatePermissions()
 }
 
-const startHarvestCalculations = async () => {
-  console.log("Starting harvest calculations...")
-  const contracts = await initContractsHelper({ harvest })
-
-  console.log("start calcplanted")
-  await contracts.harvest.calcplanted({ authorization: `${harvest}@active` })
-  console.log("start calcrep")
-  await contracts.harvest.calcrep({ authorization: `${harvest}@active` })
-  console.log("start calctrx")
-  await contracts.harvest.calctrx({ authorization: `${harvest}@active` })
-  console.log("done.")
-
-}
-
 program
   .command('compile <contract> [moreContracts...]')
   .description('Compile custom contract')

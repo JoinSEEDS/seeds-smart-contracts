@@ -8,6 +8,13 @@
 #include <harvest_table.hpp>
 #include <cycle_table.hpp>
 #include <utils.hpp>
+#include <tables/rep_table.hpp>
+#include <tables/size_table.hpp>
+#include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
+#include <tables/cbs_table.hpp>
+#include <tables/cspoints_table.hpp>
+#include <eosio/singleton.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -20,12 +27,15 @@ CONTRACT harvest : public contract {
     harvest(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
-        harveststat(receiver, receiver.value),
+        planted(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
-        cycle(receiver, receiver.value),
+        sizes(receiver, receiver.value),
+        total(receiver, receiver.value),
+        harveststat(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
+        rep(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value)
         {}
         
@@ -39,55 +49,68 @@ CONTRACT harvest : public contract {
 
     ACTION cancelrefund(name from, uint64_t request_id);
 
-    ACTION claimreward(name from);
-
     ACTION sow(name from, name to, asset quantity);
 
     ACTION runharvest();
 
-    ACTION calcplanted(); // caluclate planted score
+    ACTION rankplanteds();
+    ACTION rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calctrxpt(); // calculate transaction points
+    ACTION calctrxpts(); // calculate transaction points // 24h interval
+    ACTION calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calctrx(); // calculate transaction score
+    ACTION ranktxs(); // rank transaction score // 1h interval
+    ACTION ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calcrep(); // calculate reputation score
+    ACTION calccss(); // calculate contribution points // 1h inteval
+    ACTION updatecs(name account); 
+    ACTION calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calccbs(); // calculate community building score
+    ACTION rankcss(); // rank contribution score //
+    ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
-    ACTION calccs(); // calculate contribution score
+    ACTION updatetxpt(name account);
+    ACTION calctotal(uint64_t startval);
 
     ACTION payforcpu(name account);
 
-    ACTION testreward(name from);
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
-    ACTION testsetrs(name account, uint64_t value);
-
+    
+    ACTION updtotal(); // MIGRATION ACTION
+    
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
 
-    name rep_rank_name = "rep.rnk"_n;
-    name tx_rank_name = "tx.rnk"_n;
-    name planted_rank_name = "planted.rnk"_n;
-    name cbs_rank_name = "cbs.rnk"_n;
-    name cs_rank_name = "cs.rnk"_n;
+    name planted_size = "planted.sz"_n;
+    name tx_points_size = "txpt.sz"_n;
+    name cs_size = "cs.sz"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
     void check_user(name account);
     void check_asset(asset quantity);
-    void deposit(asset quantity);
-    void withdraw(name account, asset quantity);
-    void calc_tx_points(name account, uint64_t cycle);
+    void _deposit(asset quantity);
+    void _withdraw(name account, asset quantity);
+    uint32_t calc_transaction_points(name account);
+    double get_rep_multiplier(name account);
+    void add_planted(name account, asset quantity);
+    void sub_planted(name account, asset quantity);
+    void change_total(bool add, asset quantity);
+    void calc_contribution_score(name account);
+
+    void size_change(name id, int delta);
+    void size_set(name id, uint64_t newsize);
+    uint64_t get_size(name id);
 
     // Contract Tables
 
+    // Migration plan - leave this data in there, but start using the planted table
     TABLE balance_table {
       name account;
       asset planted;
-      asset reward;
+      asset reward; // harvest reward - unused
 
       uint64_t primary_key()const { return account.value; }
       uint64_t by_planted()const { return planted.amount; }
@@ -104,65 +127,78 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return refund_id; }
     };
 
+    TABLE planted_table {
+      name account;
+      asset planted;
+      uint64_t rank;  
+
+      uint64_t primary_key()const { return account.value; }
+      uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
+      uint64_t by_rank() const { return rank; } 
+
+    };
+
+    typedef eosio::multi_index<"planted"_n, planted_table,
+      indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
+      indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
+    > planted_tables;
+
     TABLE tx_points_table {
       name account;
-      uint64_t points;  // transaction points
-      uint64_t cycle;   // calculation cycle - we will use this when we have too many users to do them all
+      uint32_t points;
+      uint64_t rank;  
 
-      uint64_t primary_key() const { return account.value; }
-      uint64_t by_points() const { return points; }
-      uint64_t by_cycle() const { return cycle; }
+      uint64_t primary_key() const { return account.value; } 
+      uint64_t by_points() const { return (uint64_t(points) << 32) +  ( (account.value <<32) >> 32) ; } 
+      uint64_t by_rank() const { return rank; } 
 
     };
 
     typedef eosio::multi_index<"txpoints"_n, tx_points_table,
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
-      indexed_by<"bycycle"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_cycle>>
+      indexed_by<"byrank"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_rank>>
     > tx_points_tables;
 
-    TABLE cs_points_table {
-        name account;
-        uint64_t contribution_points;
-        uint64_t cycle;
+    DEFINE_CS_POINTS_TABLE
 
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cs_points()const { return contribution_points; }
-        uint64_t by_cycle()const { return cycle; }
-    };
+    DEFINE_CS_POINTS_TABLE_MULTI_INDEX
 
-    typedef eosio::multi_index<"cspoints"_n, cs_points_table,
-      indexed_by<"bycspoints"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cs_points>>,
-      indexed_by<"bycycle"_n,const_mem_fun<cs_points_table, uint64_t, &cs_points_table::by_cycle>>
-    > cs_points_tables;
+    DEFINE_SIZE_TABLE
 
+    DEFINE_SIZE_TABLE_MULTI_INDEX
 
+    // DEPRECATED - REMOVE ONCE APPS ARE UPDATED // 
+    DEFINE_HARVEST_TABLE
+    
     // External Tables
 
-    TABLE config_table {
-      name param;
-      uint64_t value;
-      uint64_t primary_key()const { return param.value; }
+    DEFINE_REP_TABLE
+
+    DEFINE_REP_TABLE_MULTI_INDEX
+
+    DEFINE_USER_TABLE
+
+    DEFINE_USER_TABLE_MULTI_INDEX
+
+    DEFINE_CONFIG_TABLE
+
+    DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+    DEFINE_CBS_TABLE
+
+    DEFINE_CBS_TABLE_MULTI_INDEX
+
+
+    TABLE total_table {
+      uint64_t id;
+      asset total_planted;
+      uint64_t primary_key()const { return id; }
     };
+    
+    typedef singleton<"total"_n, total_table> total_tables;
+    typedef eosio::multi_index<"total"_n, total_table> dump_for_total;
 
-    TABLE user_table {
-      name account;
-      name status;
-      name type;
-      string nickname;
-      string image;
-      string story;
-      string roles;
-      string skills;
-      string interests;
-      uint64_t reputation;
-      uint64_t timestamp;
-
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_reputation()const { return reputation; }
-    };
-
-    // from History contract - scoped by 'from'
-    TABLE transaction_table {
+    TABLE transaction_table { // from History contract - scoped by 'from'
        uint64_t id;
        name to;
        asset quantity;
@@ -174,36 +210,12 @@ CONTRACT harvest : public contract {
        uint64_t by_quantity() const { return quantity.amount; }
     };
 
-    // from accounts contract
-    TABLE cbs_table {
-        name account;
-        uint64_t community_building_score;
-
-        uint64_t primary_key() const { return account.value; }
-        uint64_t by_cbs()const { return community_building_score; }
-    };
-
-    DEFINE_HARVEST_TABLE
-
-    DEFINE_CYCLE_TABLE
-
-    DEFINE_CYCLE_TABLE_MULTI_INDEX
-
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
-
-    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
         indexed_by<"byplanted"_n,
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
-
-    typedef eosio::multi_index<"users"_n, user_table,
-        indexed_by<"byreputation"_n,
-        const_mem_fun<user_table, uint64_t, &user_table::by_reputation>>
-    > user_tables;
-
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
 
     typedef eosio::multi_index<"transactions"_n, transaction_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
@@ -211,22 +223,24 @@ CONTRACT harvest : public contract {
       indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
 
-    typedef eosio::multi_index<"cbs"_n, cbs_table,
-      indexed_by<"bycbs"_n,
-      const_mem_fun<cbs_table, uint64_t, &cbs_table::by_cbs>>
-    > cbs_tables;
-
     // Contract Tables
     balance_tables balances;
+    planted_tables planted;
     tx_points_tables txpoints;
-    harvest_tables harveststat;
     cs_points_tables cspoints;
-    cycle_tables cycle;
+    size_tables sizes;
+    total_tables total;
+
+    // DEPRECATED - remove
+    typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
+    harvest_tables harveststat;
+
 
     // External Tables
     config_tables config;
     user_tables users;
     cbs_tables cbs;
+    rep_tables rep;
 
 };
 
@@ -237,9 +251,10 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
-          (unplant)(claimreward)(claimrefund)(cancelrefund)(sow)
-          (calcrep)(calctrx)(calctrxpt)(calcplanted)(calccbs)(calccs)
-          (testreward)(testsetrs)(testclaim)(testupdatecs))
+          (unplant)(claimrefund)(cancelrefund)(sow)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(updatecs)
+          (updatetxpt)(updtotal)(calctotal)
+          (testclaim)(testupdatecs))
       }
   }
 }

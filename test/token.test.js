@@ -137,7 +137,7 @@ describe('token.transfer', async assert => {
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
-    await transfer(limit)
+    await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
   }
 
   let limitFailWithPlantedBalance = false
@@ -238,8 +238,6 @@ describe('token calculate circulating supply', async assert => {
 
   const contract = await eos.contract(token)
   
-  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
-
   console.log('reset token stats')
   await contract.resetweekly({ authorization: `${token}@active` })
   
@@ -247,7 +245,7 @@ describe('token calculate circulating supply', async assert => {
   await contract.updatecirc({ authorization: `${token}@active` })
   
   console.log('transfer token')
-  await transfer()
+  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `cc1`, { authorization: `${firstuser}@active` })
   
   const { rows } = await getTableRows({
     code: token,

@@ -5,6 +5,8 @@ void settings::reset() {
 
   // config
   configure(name("propminstake"), 500 * 10000); // 500 Seeds
+  configure(name("proppass.rep"), 10); // rep points for passed proposal
+  
   configure(name("refsnewprice"), 25 * 10000);
   configure(name("refsmajority"), 80);
   configure(name("refsquorum"), 80);

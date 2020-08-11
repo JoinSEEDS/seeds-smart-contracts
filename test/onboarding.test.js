@@ -368,7 +368,7 @@ describe('Use application permission to accept', async assert => {
     await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })     
     
     await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
-    await contracts.harvest.testsetrs(firstuser, 22, { authorization: `${harvest}@active` })
+    await contracts.accounts.testsetrs(firstuser, 22, { authorization: `${accounts}@active` })
 
     console.log(`${token}.transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
     await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    

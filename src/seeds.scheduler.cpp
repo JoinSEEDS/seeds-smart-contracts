@@ -55,30 +55,92 @@ ACTION scheduler::reset() {
 
     std::vector<name> id_v = { 
         name("exch.period"),
-        name("org.clndaus")
-        name("tokn.resetw")
+        name("tokn.resetw"),
+
+        name("acct.rankrep"),
+        name("acct.rankcbs"),
+
+        name("hrvst.ranktx"),
+        name("hrvst.rankpl"),
+
+        name("hrvst.calccs"), // after the above 4
+        name("hrvst.rankcs"), 
+        name("hrvst.calctx"), // 24h
+
+        name("org.clndaus"),
     };
     
     std::vector<name> operations_v = {
         name("onperiod"),
-        name("cleandaus")
-        name("resetweekly")
+        name("resetweekly"),
+
+        name("rankreps"),
+        name("rankcbss"),
+        
+        name("ranktxs"),
+        name("rankplanteds"),
+
+        name("calccss"),
+        name("rankcss"),
+        name("calctrxpts"),
+
+        name("cleandaus"),
     };
 
     std::vector<name> contracts_v = {
         contracts::exchange,
-        contracts::organization
-        contracts::token
+        contracts::token,
+
+        contracts::accounts,
+        contracts::accounts,
+
+        contracts::harvest,
+        contracts::harvest,
+
+        contracts::harvest,
+        contracts::harvest,
+        contracts::harvest,
+
+        contracts::organization,
     };
 
     std::vector<uint64_t> delay_v = {
         utils::seconds_per_day * 7,
-        utils::seconds_per_day / 2
-        utils::seconds_per_day * 7
+        utils::seconds_per_day * 7,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
+
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
+        utils::seconds_per_day,
+
+        utils::seconds_per_day / 2,
+    };
+
+    uint64_t now = current_time_point().sec_since_epoch()+1;
+
+    std::vector<uint64_t> timestamp_v = {
+        now,
+        now,
+
+        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour * 2, 
+
+        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour * 2, 
+
+        now + 120 - utils::seconds_per_hour, // kicks off 2 minutes later
+        now + 240 - utils::seconds_per_hour, // kicks off 4 minutes later
+        now,
+
+        now,
     };
 
     int i = 0;
-    uint64_t now = current_time_point().sec_since_epoch()+1;
 
     while(i < operations_v.size()){
         operations.emplace(_self, [&](auto & noperation){
@@ -163,7 +225,7 @@ ACTION scheduler::confirm(name operation) {
 ACTION scheduler::execute() {
    // require_auth(_self);
 
-   print("Executing...");
+   // print("Executing...");
 
     /*
         Just as quick reminder.
@@ -197,32 +259,12 @@ ACTION scheduler::execute() {
     cancel_deferred(contracts::scheduler.value);
 
     // =======================
-    // schedule next execution
-    // =======================
-
-    auto it_s = config.find(seconds_to_execute.value);
-    check(it_s != config.end(), contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string());
-
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "execute"_n,
-        std::make_tuple()
-    );
-
-    print("Creating the diferred transaction...");
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = it_s -> value;
-    tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
-    
-    // =======================
     // execute operations
     // =======================
 
     auto ops_by_last_executed = operations.get_index<"bytimestamp"_n>();
     auto itr = ops_by_last_executed.begin();
+    bool has_executed = false;
 
     while(itr != ops_by_last_executed.end()) {
         if(is_ready_to_execute(itr -> id)){
@@ -231,10 +273,33 @@ ACTION scheduler::execute() {
 
             exec_op(itr->id, itr->contract, itr->operation);
 
+            has_executed = true;
+            
             break;
         }
         itr++;
     }
+
+    // =======================
+    // schedule next execution
+    // =======================
+
+    auto it_s = has_executed ? 1 : config.get(seconds_to_execute.value, (contracts::scheduler.to_string() + ": the parameter " + seconds_to_execute.to_string() + " is not configured in " + contracts::settings.to_string()).c_str()).value;
+
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "execute"_n,
+        std::make_tuple()
+    );
+
+    print("Creating the deferred transaction...");
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = it_s;
+    tx.send(contracts::scheduler.value /*eosio::current_time_point().sec_since_epoch() + 30*/, _self);
+    
 
 }
 
