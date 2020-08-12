@@ -28,18 +28,36 @@ void proposals::reset() {
   }
 }
 
+bool proposals::is_enough_stake(asset staked, asset quantity) {
+  auto prop_percentage = config.get(name("prop.costper").value, "The prop.costper parameter has not been initialized yet.");
+  auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
+  auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
+
+  asset quantity_prop_percentage = prop_percentage.value * quantity / 100;
+
+  if (staked.amount < prop_min.value || staked.amount > prop_max.value) {
+    return false;
+  }
+
+  if (quantity_prop_percentage.amount >= prop_min.value && 
+      quantity_prop_percentage.amount <= prop_max.value) {
+    if (staked < quantity_prop_percentage) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
 
-    auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
-    
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
     uint64_t quorum = config.find(name("propquorum").value)->value;
 
     uint64_t number_active_proposals = 0;
-    uint64_t min_stake = min_stake_param.value;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
 
     while (pitr != props.end()) {
@@ -56,7 +74,7 @@ void proposals::onperiod() {
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
-            if (pitr->staked >= asset(min_stake, seeds_symbol)) {
+            if (is_enough_stake(pitr->staked, pitr->quantity)) {
 
               refund_staked(pitr->creator, pitr->staked);
 
@@ -279,6 +297,10 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check(pitr != props.end(), "no proposal");
       check(from == pitr->creator, "only the creator can stake into a proposal");
 
+      auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
+      check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
+        "The staked value can not be greater than " + std::to_string(prop_max.value / 10000) + " Seeds");
+
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;
       });
@@ -327,8 +349,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  uint64_t min_stake = config.find(name("propminstake").value)->value;
-  check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
+  check(is_enough_stake(pitr->staked, pitr->quantity), "not enough stake");
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);

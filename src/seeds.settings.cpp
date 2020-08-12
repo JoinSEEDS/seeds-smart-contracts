@@ -4,7 +4,8 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  configure(name("propminstake"), 500 * 10000); // 500 Seeds
+  configure(name("propminstake"), 555 * 10000); // 555 Seeds
+  configure(name("propmaxstake"), 11111 * 10000); // 11,111 Seeds
   configure(name("proppass.rep"), 10); // rep points for passed proposal
   
   configure(name("refsnewprice"), 25 * 10000);
@@ -21,6 +22,8 @@ void settings::reset() {
   configure(name("bio.fee"), uint64_t(1000) * uint64_t(10000));
   configure(name("txlimit.mul"), 10);
   configure(name("txlimit.min"), 7);
+  configure(name("prop.costper"), 5);
+
   // Scheduler cycle
   configure(name("secndstoexec"), 60);
 

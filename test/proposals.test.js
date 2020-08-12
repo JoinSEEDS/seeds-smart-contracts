@@ -22,6 +22,9 @@ describe('Proposals', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('change min stake')
+  await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
+
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
@@ -119,6 +122,14 @@ describe('Proposals', async assert => {
     voteBeforePropIsActiveHasError = false
   } catch (err) {
     console.log('against second proposal (failed)')
+  }
+
+  let stakeMoreThanMax = false
+  try {
+    await contracts.token.transfer(firstuser, proposals, '50000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+    stakeMoreThanMax = true
+  } catch (err) {
+    console.log('can not stake more than max value (expected)')
   }
 
   console.log('update contribution score of citizens')
@@ -259,6 +270,13 @@ describe('Proposals', async assert => {
   delete rows[0].creation_date
   delete rows[1].creation_date
   delete rows[2].creation_date
+
+  assert({
+    given: 'max stake exceeded',
+    should: 'fail',
+    actual: stakeMoreThanMax,
+    expected: false
+  })
 
   assert({
     given: 'try to vote before proposal is active',
@@ -464,6 +482,9 @@ describe('Participants', async assert => {
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change min stake')
+  await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -844,3 +865,106 @@ describe('Recepient invalid', async assert => {
 
 })
 
+
+describe('Stake limits', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal '+campaignbank)
+  await contracts.proposals.create(firstuser, firstuser, '15000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '15000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(thirduser, thirduser, '300000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
+
+  console.log('stake the minimum')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  console.log('stake 5%')
+  await contracts.token.transfer(seconduser, proposals, '750.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('stake max')
+  await contracts.token.transfer(thirduser, proposals, '11111.0000 SEEDS', '', { authorization: `${thirduser}@active` })
+
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  console.log('favour first proposal')
+  let votedWithoutEnoughStake = false
+  try {
+    await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+    votedWithoutEnoughStake = true
+  } catch (err) {
+    console.log('not enough stake (expected)')
+  }
+
+  console.log('favour second proposal')
+  let votedWithEnoughStake = true
+  try {
+    await contracts.proposals.against(firstuser, 2, 2, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    votedWithEnoughStake = false
+    console.log('not enough stake (not expected)')
+  }
+
+  try {
+    await contracts.proposals.against(firstuser, 3, 2, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    votedWithEnoughStake = false
+    console.log('not enough stake (not expected)')
+    console.log(err)
+  }
+
+  assert({
+    given: 'proposal not having enough stake',
+    should: 'fail',
+    actual: votedWithoutEnoughStake,
+    expected: false
+  })
+
+  assert({
+    given: 'proposal having enough stake',
+    should: 'not fail',
+    actual: votedWithEnoughStake,
+    expected: true
+  })
+
+})
