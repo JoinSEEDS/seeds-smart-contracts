@@ -29,7 +29,7 @@ void proposals::reset() {
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity) {
-  auto prop_percentage = config.get(name("prop.costper").value, "The prop.costper parameter has not been initialized yet.");
+  auto prop_percentage = config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.");
   auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
   auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
 
