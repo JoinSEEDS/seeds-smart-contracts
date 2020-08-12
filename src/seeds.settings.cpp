@@ -100,6 +100,15 @@ void settings::reset() {
   setcontract(name("acctcreator"), "free.seeds"_n);
 }
 
+void settings::migrate () {
+  require_auth(get_self());
+
+  auto citr = config.begin();
+  while (citr != config.end()) {
+    citr = config.erase(citr);
+  }
+}
+
 void settings::configure(name param, uint64_t value) {
   require_auth(get_self());
 

@@ -21,6 +21,8 @@ CONTRACT settings : public contract {
 
       ACTION setcontract(name contract, name account);
 
+      ACTION migrate();
+
   private:
       TABLE config_table {
         name param;
@@ -54,4 +56,4 @@ CONTRACT settings : public contract {
 
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure)(setcontract));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(migrate));
