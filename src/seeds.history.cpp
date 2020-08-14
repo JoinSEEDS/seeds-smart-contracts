@@ -80,14 +80,14 @@ void history::trxentry(name from, name to, asset quantity) {
   }
     
   transaction_tables transactions(get_self(), from.value);
-  uint64_t key = 0;
   transactions.emplace(_self, [&](auto& item) {
     item.id = transactions.available_primary_key();
     item.to = to;
     item.quantity = quantity;
     item.timestamp = eosio::current_time_point().sec_since_epoch();
-    key = item.id;
   });
+  
+  cancel_deferred(from.value);
 
   // delayed update
   action a(
@@ -100,7 +100,7 @@ void history::trxentry(name from, name to, asset quantity) {
     transaction tx;
     tx.actions.emplace_back(a);
     tx.delay_sec = 1; // DEBUG no delay
-    tx.send(key, _self);
+    tx.send(from.value, _self);
 
 }
 

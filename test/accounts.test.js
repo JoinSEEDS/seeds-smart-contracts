@@ -689,12 +689,28 @@ describe('make resident', async assert => {
     //console.log('expected error' + err)
   }
 
+  console.log('can resident - fail')
+  let canresident = true
+  try {
+    await contracts.accounts.canresident(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    canresident = false
+    //console.log('expected error' + err)
+  }
+
   // 1 CHECK STATUS - fail
   assert({
     given: 'does not fulfill criteria for resident',
     should: 'be visitor',
     actual: await userStatus(firstuser),
     expected: 'visitor'
+  })
+
+  assert({
+    given: 'does not fulfill criteria for resident - canresident is false',
+    should: 'be visitor',
+    actual: canresident,
+    expected: false
   })
 
   // 2 DO SHIT
@@ -710,6 +726,9 @@ describe('make resident', async assert => {
   await contracts.accounts.addrep(firstuser, 50, { authorization: `${accounts}@api` })
 
   // 3 CHECK STATUS - succeed
+  console.log('can resident')
+  await contracts.accounts.canresident(firstuser, { authorization: `${firstuser}@active` })
+  
   console.log('make resident')
   await contracts.accounts.makeresident(firstuser, { authorization: `${firstuser}@active` })
 
@@ -756,11 +775,27 @@ describe('make citizen', async assert => {
     //console.log('expected error' + err)
   }
 
+  console.log('can citizen - fail')
+  var cancitizen = true
+  try {
+    await contracts.accounts.cancitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    cancitizen = false
+    //console.log('expected error' + err)
+  }
+
   assert({
     given: 'does not fulfill criteria for citizen',
     should: 'be visitor',
     actual: await userStatus(firstuser),
     expected: 'visitor'
+  })
+
+  assert({
+    given: 'does not fulfill criteria for citizen - cancitizen false ',
+    should: 'be false',
+    actual: cancitizen,
+    expected: false
   })
 
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
@@ -832,6 +867,10 @@ describe('make citizen', async assert => {
   })
   console.log("balances: "+JSON.stringify(bal, null, 2))
 
+  console.log("can citizen - should succeed")
+  await contracts.accounts.cancitizen(firstuser, { authorization: `${firstuser}@active` })
+
+  console.log("make citizen")
   await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
 
 
