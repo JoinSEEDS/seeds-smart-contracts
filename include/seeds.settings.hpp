@@ -17,11 +17,11 @@ CONTRACT settings : public contract {
 
       ACTION reset();
 
+      ACTION confwithdesc(name param, uint64_t value, string description);
+
       ACTION configure(name param, uint64_t value);
 
       ACTION setcontract(name contract, name account);
-
-      ACTION adddescriptn(name param, string description);
 
   private:
       TABLE config_table {
@@ -58,4 +58,4 @@ CONTRACT settings : public contract {
 
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(adddescriptn));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(confwithdesc));
