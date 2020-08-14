@@ -233,7 +233,8 @@ describe('Referendums', async assert => {
     actual: table('settings:reset').find(row => row.param === settingName),
     expected: {
       param: settingName,
-      value: settingInitialValue
+      value: settingInitialValue,
+      description: ''
     }
   })
 
@@ -318,7 +319,8 @@ describe('Referendums', async assert => {
     actual: table('settings:executeReferendumsTesting').find(row => row.param === settingName),
     expected: {
       param: settingName,
-      value: settingInitialValue
+      value: settingInitialValue,
+      description: ''
     }
   })
 
@@ -328,7 +330,8 @@ describe('Referendums', async assert => {
     actual: table('settings:executeReferendumsFinal').find(row => row.param === settingName),
     expected: {
       param: settingName,
-      value: settingValue
+      value: settingValue,
+      description: ''
     }
   })
 
