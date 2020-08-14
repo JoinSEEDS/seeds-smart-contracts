@@ -21,10 +21,14 @@ CONTRACT settings : public contract {
 
       ACTION setcontract(name contract, name account);
 
+      ACTION adddescriptn(name param, string description);
+
   private:
       TABLE config_table {
         name param;
         uint64_t value;
+        string description;
+
         uint64_t primary_key()const { return param.value; }
       };
 
@@ -54,4 +58,4 @@ CONTRACT settings : public contract {
 
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure)(setcontract));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(adddescriptn));
