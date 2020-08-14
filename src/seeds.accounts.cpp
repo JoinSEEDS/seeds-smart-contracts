@@ -456,8 +456,24 @@ void accounts::testreward() {
 
 }
 
+void accounts::canresident(name user) {
+    check_can_make_resident(user);
+}
+
 void accounts::makeresident(name user)
 {
+    check_can_make_resident(user);
+
+    auto new_status = name("resident");
+
+    updatestatus(user, new_status);
+
+    rewards(user, new_status);
+    
+    history_add_resident(user);
+}
+
+bool accounts::check_can_make_resident(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
     check(uitr->status == name("visitor"), "user is not a visitor");
@@ -480,12 +496,7 @@ void accounts::makeresident(name user)
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(reputation_points >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(reputation_points));
 
-    auto new_status = name("resident");
-    updatestatus(user, new_status);
-
-    rewards(user, new_status);
-    
-    history_add_resident(user);
+    return true;
 }
 
 void accounts::updatestatus(name user, name status)
@@ -518,8 +529,24 @@ uint64_t accounts::config_get(name key) {
   return citr->value;
 }
 
+void accounts::cancitizen(name user) {
+  check_can_make_citizen(user);
+}
+
 void accounts::makecitizen(name user)
 {
+    check_can_make_citizen(user);
+    
+    auto new_status = name("citizen");
+
+    updatestatus(user, new_status);
+
+    rewards(user, new_status);
+    
+    history_add_citizen(user);
+}
+
+bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
     check(uitr->status == name("resident"), "user is not a resident");
@@ -546,12 +573,7 @@ void accounts::makecitizen(name user)
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
     check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
-    auto new_status = name("citizen");
-    updatestatus(user, new_status);
-
-    rewards(user, new_status);
-    
-    history_add_citizen(user);
+    return true;
 }
 
 void accounts::testresident(name user)

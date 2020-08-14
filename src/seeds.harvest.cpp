@@ -417,7 +417,7 @@ uint32_t harvest::calc_transaction_points(name account) {
     count++;
   }
 
-  //print("set result "+std::to_string(result));
+  print("set result "+std::to_string(result));
 
   // use ceil function so each schore is counted if it is > 0
     
