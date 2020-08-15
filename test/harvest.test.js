@@ -4,6 +4,10 @@ const { equals } = require("ramda")
 
 const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe("Harvest General", async assert => {
 
   if (!isLocal()) {
@@ -47,10 +51,14 @@ describe("Harvest General", async assert => {
   
   console.log('plant seeds x')
   await contracts.token.transfer(firstuser, harvest, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
 
-  console.log('transfer seeds')
+  await contracts.token.transfer(seconduser, harvest, '200.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  // await sleep(5000)
+
+  // console.log('transfer seeds')
   await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  // await sleep(5000)
   await contracts.token.transfer(seconduser, firstuser, '0.1000 SEEDS', '', { authorization: `${seconduser}@active` })
 
   const balanceBeforeUnplanted = await getBalanceFloat(seconduser)
@@ -457,6 +465,9 @@ describe("harvest transaction score", async assert => {
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
+  console.log('change max limit transactions')
+  await contracts.settings.configure('txlimit.min', 100, { authorization: `${settings}@active` })
+
   console.log('join users')
   let users = [firstuser, seconduser, thirduser, fourthuser]
   users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
@@ -517,6 +528,7 @@ describe("harvest transaction score", async assert => {
     // only 26 tx count
     // score from before was 15
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
+    await sleep(400)
   }
   await checkScores([26, 16], [50, 0], "2 reputation, 2 tx", "75, 100 score")
 
@@ -562,7 +574,6 @@ describe("harvest transaction score", async assert => {
 })
 
 
-
 describe("harvest community building score", async assert => {
 
   if (!isLocal()) {
@@ -580,11 +591,16 @@ describe("harvest community building score", async assert => {
 
   console.log('join users')
   let users = [firstuser, seconduser, thirduser, fourthuser]
-  users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
+
+  for (let i = 0; i < users.length; i++) {
+    await contracts.accounts.adduser(users[i], i+' user', 'individual', { authorization: `${accounts}@active` })
+    await sleep(400)
+  }
 
   const checkScores = async (points, scores, given, should) => {
 
     console.log("checking points "+points + " scores: "+scores)
+    await sleep(300)
     await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
     
     const cbs = await eos.getTableRows({
@@ -620,10 +636,13 @@ describe("harvest community building score", async assert => {
 
   console.log('calculate cbs scores')
   await contracts.accounts.testsetcbs(firstuser, 1, { authorization: `${accounts}@active` })
+  await sleep(200)
   await checkScores([1], [0], "1 cbs", "0 score")
 
   await contracts.accounts.testsetcbs(seconduser, 2, { authorization: `${accounts}@active` })
+  await sleep(200)
   await contracts.accounts.testsetcbs(thirduser, 3, { authorization: `${accounts}@active` })
+  await sleep(200)
   await contracts.accounts.testsetcbs(fourthuser, 0, { authorization: `${accounts}@active` })
 
   await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
