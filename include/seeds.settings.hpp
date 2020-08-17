@@ -17,17 +17,22 @@ CONTRACT settings : public contract {
 
       ACTION reset();
 
-      ACTION confwithdesc(name param, uint64_t value, string description);
+      ACTION confwithdesc(name param, uint64_t value, string description, name impact);
 
       ACTION configure(name param, uint64_t value);
 
       ACTION setcontract(name contract, name account);
 
   private:
+      const name high_impact = "high"_n;
+      const name medium_impact = "med"_n;
+      const name low_impact = "low"_n;
+
       TABLE config_table {
         name param;
         uint64_t value;
         string description;
+        name impact;
 
         uint64_t primary_key()const { return param.value; }
       };

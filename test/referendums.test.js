@@ -234,7 +234,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingInitialValue,
-      description: ''
+      description: '',
+      impact: ''
     }
   })
 
@@ -320,7 +321,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingInitialValue,
-      description: ''
+      description: '',
+      impact: ''
     }
   })
 
@@ -331,7 +333,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingValue,
-      description: ''
+      description: '',
+      impact: ''
     }
   })
 
