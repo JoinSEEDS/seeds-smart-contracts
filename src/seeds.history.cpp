@@ -104,6 +104,23 @@ void history::trxentry(name from, name to, asset quantity) {
 
 }
 
+void history::numtrx(name account) {
+  uint32_t num = num_transactions(account, 200);
+  check(false, "{ numtrx: " + std::to_string(num) + " }");
+}
+
+// return number of transactions outgoing, until a limit
+uint32_t history::num_transactions(name account, uint32_t limit) {
+  transaction_tables transactions(contracts::history, account.value);
+  auto titr = transactions.begin();
+  uint32_t count = 0;
+  while(titr != transactions.end() && count < limit) {
+    titr++;
+    count++;
+  }
+  return count;
+}
+
 void history::check_user(name account)
 {
   auto uitr = users.find(account.value);
