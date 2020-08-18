@@ -22,6 +22,9 @@ describe('Proposals', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('change batch size')
+  // await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
@@ -128,6 +131,7 @@ describe('Proposals', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
 
   const activeProposals = await eos.getTableRows({
     code: proposals,
@@ -206,8 +210,11 @@ describe('Proposals', async assert => {
     json: true,
   })
 
+  console.log('reps before:', repsBefore)
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
 
   const voiceAfter = await eos.getTableRows({
     code: proposals,
@@ -498,7 +505,7 @@ describe('Participants', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
+  await sleep(10000)
 
   const participantsBefore = await eos.getTableRows({
     code: proposals,

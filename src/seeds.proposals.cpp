@@ -96,7 +96,7 @@ void proposals::onperiod() {
       pitr++;
     }
 
-    update_voice_table();
+    updatevoices();
     
     transaction trx_erase_participants{};
     trx_erase_participants.actions.emplace_back(
@@ -122,7 +122,13 @@ void proposals::onperiod() {
     update_cycle();
 }
 
-void proposals::update_voice_table() {
+void proposals::updatevoices() {
+  require_auth(get_self());
+  updatevoice((uint64_t)0);
+}
+
+void proposals::updatevoice(uint64_t start) {
+  require_auth(get_self());
   
   DEFINE_CS_POINTS_TABLE
   DEFINE_CS_POINTS_TABLE_MULTI_INDEX
@@ -130,8 +136,11 @@ void proposals::update_voice_table() {
   
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
 
-  auto vitr = voice.begin();
-  while (vitr != voice.end()) {
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  uint64_t count = 0;
+  while (vitr != voice.end() && count < batch_size.value) {
+      print(vitr->account);
       auto csitr = cspoints.find(vitr->account.value);
       if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
@@ -141,9 +150,23 @@ void proposals::update_voice_table() {
         voice.modify(vitr, _self, [&](auto& item) {
           item.balance = 0;
         });
-
       }
       vitr++;
+      count++;
+  }
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updatevoice"_n,
+        std::make_tuple(next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
   }
 }
 
@@ -295,6 +318,7 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   auto pitr = participants.begin();
   while (pitr != participants.end() && counter < batch_size.value) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
+      print("ADD REP TO:", pitr->account);
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
