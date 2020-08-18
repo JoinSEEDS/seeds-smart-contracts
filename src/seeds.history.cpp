@@ -80,14 +80,14 @@ void history::trxentry(name from, name to, asset quantity) {
   }
     
   transaction_tables transactions(get_self(), from.value);
-  uint64_t key = 0;
   transactions.emplace(_self, [&](auto& item) {
     item.id = transactions.available_primary_key();
     item.to = to;
     item.quantity = quantity;
     item.timestamp = eosio::current_time_point().sec_since_epoch();
-    key = item.id;
   });
+  
+  cancel_deferred(from.value);
 
   // delayed update
   action a(
@@ -100,8 +100,25 @@ void history::trxentry(name from, name to, asset quantity) {
     transaction tx;
     tx.actions.emplace_back(a);
     tx.delay_sec = 1; // DEBUG no delay
-    tx.send(key, _self);
+    tx.send(from.value, _self);
 
+}
+
+void history::numtrx(name account) {
+  uint32_t num = num_transactions(account, 200);
+  check(false, "{ numtrx: " + std::to_string(num) + " }");
+}
+
+// return number of transactions outgoing, until a limit
+uint32_t history::num_transactions(name account, uint32_t limit) {
+  transaction_tables transactions(contracts::history, account.value);
+  auto titr = transactions.begin();
+  uint32_t count = 0;
+  while(titr != transactions.end() && count < limit) {
+    titr++;
+    count++;
+  }
+  return count;
 }
 
 void history::check_user(name account)

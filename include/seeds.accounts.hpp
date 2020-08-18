@@ -31,8 +31,10 @@ CONTRACT accounts : public contract {
       ACTION adduser(name account, string nickname, name type);
 
       ACTION makeresident(name user);
+      ACTION canresident(name user);
 
       ACTION makecitizen(name user);
+      ACTION cancitizen(name user);
 
       ACTION testcitizen(name user);
 
@@ -117,6 +119,8 @@ CONTRACT accounts : public contract {
       void size_change(name id, int delta);
       void size_set(name id, uint64_t newsize);
       uint64_t get_size(name id);
+      bool check_can_make_resident(name user);
+      bool check_can_make_citizen(name user);
 
       DEFINE_USER_TABLE
 
@@ -220,7 +224,7 @@ CONTRACT accounts : public contract {
 
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(makeresident)(makecitizen)(update)(addref)(invitevouch)(addrep)
+EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
