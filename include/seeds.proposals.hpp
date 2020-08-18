@@ -53,6 +53,8 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice();
 
+      ACTION checkstake(uint64_t prop_id);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -64,6 +66,7 @@ CONTRACT proposals : public contract {
       uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
       bool is_enough_stake(asset staked, asset quantity);
+      uint64_t min_stake(asset quantity);
 
       void check_user(name account);
       void check_citizen(name account);
@@ -162,7 +165,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(erasepartpts)(onperiod)(decayvoice)(cancel))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(erasepartpts)(onperiod)(decayvoice)(cancel)(checkstake))
       }
   }
 }

@@ -146,6 +146,7 @@ describe('Proposals', async assert => {
     table: 'props',
     json: true,
   })
+
   const theAllianceProp = activeProposals.rows.filter( item => item.fund == "allies.seeds")[0]
 
   let activeProps = activeProposals.rows.filter( item => item.stage == "active")
@@ -866,7 +867,7 @@ describe('Recepient invalid', async assert => {
 })
 
 
-describe('Stake limits', async assert => {
+describe.only('Stake limits', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -897,74 +898,85 @@ describe('Stake limits', async assert => {
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
-  await contracts.proposals.create(firstuser, firstuser, '15000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
-  await contracts.proposals.create(seconduser, seconduser, '15000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
-  await contracts.proposals.create(thirduser, thirduser, '300000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(seconduser, seconduser, '100000.0000 SEEDS', '100,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(thirduser, thirduser, '1000000.0000 SEEDS', '1,000,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
 
   console.log('stake the minimum')
-  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '554.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  let expectNotEnough = true
+  try {
+    await contracts.proposals.checkstake(1, { authorization: `${firstuser}@active` })
+    expectNotEnough = false
+  } catch (err) {
 
-  console.log('stake 5%')
-  await contracts.token.transfer(seconduser, proposals, '750.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  }
+  await contracts.token.transfer(firstuser, proposals, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.proposals.checkstake(1, { authorization: `${firstuser}@active` })
 
-  console.log('stake max')
+  console.log('stake 5% = 5000')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  let expectNotEnough2 = true
+  try {
+    await contracts.proposals.checkstake(2, { authorization: `${firstuser}@active` })
+    expectNotEnough2 = false
+  } catch (error) {
+    //console.log("expected: "+error)
+  }
+  await contracts.token.transfer(seconduser, proposals, (5000-555) + '.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.proposals.checkstake(2, { authorization: `${firstuser}@active` })
+
+  console.log('stake max - not more than 11,111 needed')
   await contracts.token.transfer(thirduser, proposals, '11111.0000 SEEDS', '', { authorization: `${thirduser}@active` })
+  await contracts.proposals.checkstake(3, { authorization: `${firstuser}@active` })
 
-  console.log('add voice')
-  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
-  await contracts.proposals.addvoice(thirduser, 44, { authorization: `${proposals}@active` })
-
-  console.log('force status')
-  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
-  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
-
-  console.log('update contribution score of citizens')
-  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
-  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
-
-  console.log('move proposals to active')
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-
-  console.log('favour first proposal')
-  let votedWithoutEnoughStake = false
+  await contracts.proposals.create(fourthuser, fourthuser, '2.0000 SEEDS', '2 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${fourthuser}@active` })
+  await contracts.token.transfer(fourthuser, proposals, '2.0000 SEEDS', '', { authorization: `${fourthuser}@active` })
+  let expectNotEnough3 = true
   try {
-    await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
-    votedWithoutEnoughStake = true
-  } catch (err) {
-    console.log('not enough stake (expected)')
+    await contracts.proposals.checkstake(4, { authorization: `${firstuser}@active` })
+    expectNotEnough3 = false
+  } catch (error) {
+    //console.log("expected: "+error)
   }
 
-  console.log('favour second proposal')
-  let votedWithEnoughStake = true
-  try {
-    await contracts.proposals.against(firstuser, 2, 2, { authorization: `${firstuser}@active` })
-  } catch (err) {
-    votedWithEnoughStake = false
-    console.log('not enough stake (not expected)')
-  }
+  await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
 
-  try {
-    await contracts.proposals.against(firstuser, 3, 2, { authorization: `${firstuser}@active` })
-  } catch (err) {
-    votedWithEnoughStake = false
-    console.log('not enough stake (not expected)')
-    console.log(err)
-  }
+  const activeProposals = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
 
   assert({
     given: 'proposal not having enough stake',
     should: 'fail',
-    actual: votedWithoutEnoughStake,
-    expected: false
+    actual: expectNotEnough,
+    expected: true
+  })
+  
+  assert({
+    given: 'proposal 2 not having enough stake',
+    should: 'fail',
+    actual: expectNotEnough2,
+    expected: true
   })
 
   assert({
-    given: 'proposal having enough stake',
-    should: 'not fail',
-    actual: votedWithEnoughStake,
+    given: 'proposal 4 not having enough stake',
+    should: 'fail',
+    actual: expectNotEnough3,
     expected: true
   })
+
+  assert({
+    given: '3 proposals with enough stake, one without',
+    should: '3 active, one staged',
+    actual: activeProposals.rows.map( ({stage}) => stage ),
+    expected: ['active', 'active', 'active', 'staged']
+  })
+
 
 })
