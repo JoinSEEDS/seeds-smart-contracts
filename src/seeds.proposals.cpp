@@ -140,7 +140,6 @@ void proposals::updatevoice(uint64_t start) {
   auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
   uint64_t count = 0;
   while (vitr != voice.end() && count < batch_size.value) {
-      print(vitr->account);
       auto csitr = cspoints.find(vitr->account.value);
       if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
@@ -318,7 +317,6 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   auto pitr = participants.begin();
   while (pitr != participants.end() && counter < batch_size.value) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
-      print("ADD REP TO:", pitr->account);
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,

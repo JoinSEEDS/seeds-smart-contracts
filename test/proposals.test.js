@@ -23,7 +23,7 @@ describe('Proposals', async assert => {
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('change batch size')
-  // await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -210,12 +210,21 @@ describe('Proposals', async assert => {
     json: true,
   })
 
-  console.log('reps before:', repsBefore)
-
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
 
+  const repsAfter = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower: firstuser,
+    upper: firstuser,
+    json: true,
+  })
+  console.log("reps: "+JSON.stringify(repsAfter))
+
+  await sleep(2000)
+  
   const voiceAfter = await eos.getTableRows({
     code: proposals,
     scope: proposals,
@@ -234,17 +243,6 @@ describe('Proposals', async assert => {
     await getBalance(seconduser),
     await getBalance(campaignbank),
   ]
-
-  const repsAfter = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'rep',
-    lower: firstuser,
-    upper: firstuser,
-    json: true,
-  })
-  console.log("reps: "+JSON.stringify(repsAfter))
-
 
 
   const escrowLocks = await eos.getTableRows({
