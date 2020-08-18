@@ -2,8 +2,10 @@
 #include <eosio/system.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
+using std::string;
 
 
 CONTRACT scheduler : public contract {
@@ -62,18 +64,14 @@ CONTRACT scheduler : public contract {
             uint64_t primary_key() const { return param.value; }
         };
 
-        TABLE config_table {
-            name param;
-            uint64_t value;
-            uint64_t primary_key() const { return param.value; }
-        };
-
+        DEFINE_CONFIG_TABLE
+        
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
 
         typedef eosio::multi_index < "operations"_n, operations_table,
             indexed_by<"bytimestamp"_n, const_mem_fun<operations_table, uint64_t, &operations_table::by_timestamp>>
         > operations_tables;
 
-        typedef eosio::multi_index <"config"_n, config_table> config_tables;
         typedef eosio::multi_index <"test"_n, test_table> test_tables;
 
         name seconds_to_execute = "secndstoexec"_n;

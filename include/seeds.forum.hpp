@@ -3,6 +3,7 @@
 #include <contracts.hpp>
 #include <string>
 #include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -85,11 +86,9 @@ CONTRACT forum : public contract {
             uint64_t primary_key() const { return account.value; }
         };
 
-        TABLE config_table {
-            name param;
-            uint64_t value;
-            uint64_t primary_key() const { return param.value; }
-        };
+        DEFINE_CONFIG_TABLE
+        
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
 
         TABLE operations_table {
             name operation;
@@ -110,8 +109,6 @@ CONTRACT forum : public contract {
         typedef eosio::multi_index <"forumrep"_n, forum_rep_table> forum_rep_tables;
 
         typedef eosio::multi_index <"votepower"_n, vote_power_table> vote_power_tables;
-
-        typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
         typedef eosio::multi_index < "operations"_n, operations_table> operations_tables;
 

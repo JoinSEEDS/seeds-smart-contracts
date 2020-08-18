@@ -7,6 +7,7 @@
 #include <utils.hpp>
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using namespace utils;
@@ -75,11 +76,9 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
       void change_rep(name beneficiary, bool passed);
 
-      TABLE config_table {
-          name param;
-          uint64_t value;
-          uint64_t primary_key()const { return param.value; }
-      };
+      DEFINE_CONFIG_TABLE
+        
+      DEFINE_CONFIG_TABLE_MULTI_INDEX
 
       TABLE proposal_table {
           uint64_t id;
@@ -142,7 +141,6 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
     typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
     typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
