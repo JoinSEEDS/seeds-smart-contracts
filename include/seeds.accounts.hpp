@@ -5,7 +5,8 @@
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/cbs_table.hpp>
-#include<tables/user_table.hpp>
+#include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -166,12 +167,10 @@ CONTRACT accounts : public contract {
         uint64_t by_sponsor()const { return sponsor.value; }
       };
 
-      TABLE config_table {
-        name param;
-        uint64_t value;
-        uint64_t primary_key() const { return param.value; }
-      };
-    
+    DEFINE_CONFIG_TABLE
+
+    DEFINE_CONFIG_TABLE_MULTI_INDEX
+
     typedef eosio::multi_index<"refs"_n, ref_table,
       indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
     > ref_tables;
@@ -193,8 +192,6 @@ CONTRACT accounts : public contract {
         const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
     > balance_tables;
     balance_tables balances;
-
-    typedef eosio::multi_index <"config"_n, config_table> config_tables;
 
     cbs_tables cbs;
     ref_tables refs;

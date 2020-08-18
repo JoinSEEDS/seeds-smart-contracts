@@ -2,6 +2,7 @@
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -28,16 +29,9 @@ CONTRACT settings : public contract {
       const name medium_impact = "med"_n;
       const name low_impact = "low"_n;
 
-      TABLE config_table {
-        name param;
-        uint64_t value;
-        string description;
-        name impact;
-
-        uint64_t primary_key()const { return param.value; }
-      };
-
-      typedef eosio::multi_index<"config"_n, config_table> config_tables;
+      DEFINE_CONFIG_TABLE
+        
+      DEFINE_CONFIG_TABLE_MULTI_INDEX
 
       config_tables config;
 
