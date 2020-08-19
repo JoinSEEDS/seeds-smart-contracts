@@ -23,6 +23,7 @@ CONTRACT proposals : public contract {
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
           participants(receiver, receiver.value),
+          minstake(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
@@ -67,6 +68,7 @@ CONTRACT proposals : public contract {
       uint64_t get_voice_decay_period_sec();
       bool is_enough_stake(asset staked, asset quantity);
       uint64_t min_stake(asset quantity);
+      void update_min_stake(uint64_t prop_id);
 
       void check_user(name account);
       void check_citizen(name account);
@@ -103,6 +105,12 @@ CONTRACT proposals : public contract {
           name fund;
           uint64_t creation_date;
           uint64_t primary_key()const { return id; }
+      };
+
+      TABLE min_stake_table {
+          uint64_t prop_id;
+          uint64_t min_stake;
+          uint64_t primary_key()const { return prop_id; }
       };
 
       DEFINE_USER_TABLE
@@ -149,6 +157,7 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
+    typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
 
     config_tables config;
     proposal_tables props;
@@ -157,6 +166,7 @@ CONTRACT proposals : public contract {
     voice_tables voice;
     last_proposal_tables lastprops;
     cycle_tables cycle;
+    min_stake_tables minstake;
 
 };
 

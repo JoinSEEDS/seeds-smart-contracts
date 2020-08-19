@@ -26,6 +26,11 @@ void proposals::reset() {
   while (paitr != participants.end()) {
     paitr = participants.erase(paitr);
   }
+
+  auto mitr = minstake.begin();
+  while (mitr != minstake.end()) {
+    mitr = minstake.erase(mitr);
+  }
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity) {
@@ -49,6 +54,27 @@ ACTION proposals::checkstake(uint64_t prop_id) {
   check(pitr != props.end(), "proposal not found");
   check(is_enough_stake(pitr->staked, pitr->quantity), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity)) + "' }");
 }
+
+void proposals::update_min_stake(uint64_t prop_id) {
+
+  auto pitr = props.find(prop_id);
+  check(pitr != props.end(), "proposal not found");
+
+  uint64_t min = min_stake(pitr->quantity);
+
+  auto mitr = minstake.find(prop_id);
+  if (mitr == minstake.end()) {
+    minstake.emplace(_self, [&](auto& item) {
+      item.prop_id = prop_id;
+      item.min_stake = min;
+    });
+  } else {
+    minstake.modify(mitr, _self, [&](auto& item) {
+      item.min_stake = min;
+    });
+  }
+}
+
 
 void proposals::onperiod() {
     require_auth(_self);
@@ -75,25 +101,22 @@ void proposals::onperiod() {
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
-            if (is_enough_stake(pitr->staked, pitr->quantity)) {
+          refund_staked(pitr->creator, pitr->staked);
 
-              refund_staked(pitr->creator, pitr->staked);
+          change_rep(pitr->creator, true);
 
-              change_rep(pitr->creator, true);
+          if (is_alliance_type) {
+            send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
+          } else {
+            withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
+          }
 
-              if (is_alliance_type) {
-                send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
-              } else {
-                withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
-              }
-
-              props.modify(pitr, _self, [&](auto& proposal) {
-                  proposal.executed = true;
-                  proposal.staked = asset(0, seeds_symbol);
-                  proposal.status = name("passed");
-                  proposal.stage = name("done");
-              });
-            }
+          props.modify(pitr, _self, [&](auto& proposal) {
+              proposal.executed = true;
+              proposal.staked = asset(0, seeds_symbol);
+              proposal.status = name("passed");
+              proposal.stage = name("done");
+          });
         } else {
           burn(pitr->staked);
 
@@ -212,9 +235,11 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     pitr--;
     lastId = pitr->id;
   }
+  
+  uint64_t propKey = lastId + 1;
 
   props.emplace(_self, [&](auto& proposal) {
-      proposal.id = lastId + 1;
+      proposal.id = propKey;
       proposal.creator = creator;
       proposal.recipient = recipient;
       proposal.quantity = quantity;
@@ -246,6 +271,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.proposal_id = lastId+1;
     });
   }
+  update_min_stake(propKey);
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {

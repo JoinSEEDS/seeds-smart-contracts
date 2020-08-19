@@ -950,6 +950,15 @@ describe.only('Stake limits', async assert => {
     json: true,
   })
 
+  const minStakes = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'minstake',
+    json: true,
+  })
+
+  console.log("min stake "+JSON.stringify(minStakes, null, 2))
+
   assert({
     given: 'proposal not having enough stake',
     should: 'fail',
@@ -976,6 +985,30 @@ describe.only('Stake limits', async assert => {
     should: '3 active, one staged',
     actual: activeProposals.rows.map( ({stage}) => stage ),
     expected: ['active', 'active', 'active', 'staged']
+  })
+
+  assert({
+    given: 'min stakes filled in',
+    should: 'have the right values',
+    actual: minStakes.rows,
+    expected: [
+      {
+        "prop_id": 1,
+        "min_stake": 5550000
+      },
+      {
+        "prop_id": 2,
+        "min_stake": 50000000
+      },
+      {
+        "prop_id": 3,
+        "min_stake": 111110000
+      },
+      {
+        "prop_id": 4,
+        "min_stake": 5550000
+      }
+    ]
   })
 
 
