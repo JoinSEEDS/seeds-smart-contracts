@@ -22,6 +22,8 @@ describe('Proposals', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
   console.log('change min stake')
   await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
 
@@ -139,6 +141,7 @@ describe('Proposals', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
 
   const activeProposals = await eos.getTableRows({
     code: proposals,
@@ -221,6 +224,18 @@ describe('Proposals', async assert => {
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
+  const repsAfter = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower: firstuser,
+    upper: firstuser,
+    json: true,
+  })
+  console.log("reps: "+JSON.stringify(repsAfter))
+
+  await sleep(2000)
+  
   const voiceAfter = await eos.getTableRows({
     code: proposals,
     scope: proposals,
@@ -239,17 +254,6 @@ describe('Proposals', async assert => {
     await getBalance(seconduser),
     await getBalance(campaignbank),
   ]
-
-  const repsAfter = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'rep',
-    lower: firstuser,
-    upper: firstuser,
-    json: true,
-  })
-  console.log("reps: "+JSON.stringify(repsAfter))
-
 
 
   const escrowLocks = await eos.getTableRows({
@@ -520,7 +524,7 @@ describe('Participants', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
+  await sleep(10000)
 
   const participantsBefore = await eos.getTableRows({
     code: proposals,

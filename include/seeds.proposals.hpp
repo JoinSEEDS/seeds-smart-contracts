@@ -54,6 +54,10 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice();
 
+      ACTION updatevoices();
+
+      ACTION updatevoice(uint64_t start);
+
       ACTION checkstake(uint64_t prop_id);
 
   private:
@@ -175,7 +179,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(erasepartpts)(onperiod)(decayvoice)(cancel)(checkstake))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice))
       }
   }
 }
