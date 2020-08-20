@@ -26,20 +26,65 @@ void proposals::reset() {
   while (paitr != participants.end()) {
     paitr = participants.erase(paitr);
   }
+
+  auto mitr = minstake.begin();
+  while (mitr != minstake.end()) {
+    mitr = minstake.erase(mitr);
+  }
 }
+
+bool proposals::is_enough_stake(asset staked, asset quantity) {
+  uint64_t min = min_stake(quantity);
+  return staked.amount >= min;
+}
+
+uint64_t proposals::min_stake(asset quantity) {
+  auto prop_percentage = config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.");
+  auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
+  auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
+  asset quantity_prop_percentage = prop_percentage.value * quantity / 100;
+
+  uint64_t min_stake = std::max(uint64_t(prop_min.value), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max.value, min_stake);
+  return min_stake;
+}
+
+ACTION proposals::checkstake(uint64_t prop_id) {
+  auto pitr = props.find(prop_id);
+  check(pitr != props.end(), "proposal not found");
+  check(is_enough_stake(pitr->staked, pitr->quantity), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity)) + "' }");
+}
+
+void proposals::update_min_stake(uint64_t prop_id) {
+
+  auto pitr = props.find(prop_id);
+  check(pitr != props.end(), "proposal not found");
+
+  uint64_t min = min_stake(pitr->quantity);
+
+  auto mitr = minstake.find(prop_id);
+  if (mitr == minstake.end()) {
+    minstake.emplace(_self, [&](auto& item) {
+      item.prop_id = prop_id;
+      item.min_stake = min;
+    });
+  } else {
+    minstake.modify(mitr, _self, [&](auto& item) {
+      item.min_stake = min;
+    });
+  }
+}
+
 
 void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
 
-    auto min_stake_param = config.get(name("propminstake").value, "The propminstake parameter has not been initialized yet.");
-    
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
     uint64_t quorum = config.find(name("propquorum").value)->value;
 
     uint64_t number_active_proposals = 0;
-    uint64_t min_stake = min_stake_param.value;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
 
     while (pitr != props.end()) {
@@ -56,25 +101,22 @@ void proposals::onperiod() {
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
-            if (pitr->staked >= asset(min_stake, seeds_symbol)) {
+          refund_staked(pitr->creator, pitr->staked);
 
-              refund_staked(pitr->creator, pitr->staked);
+          change_rep(pitr->creator, true);
 
-              change_rep(pitr->creator, true);
+          if (is_alliance_type) {
+            send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
+          } else {
+            withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
+          }
 
-              if (is_alliance_type) {
-                send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
-              } else {
-                withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
-              }
-
-              props.modify(pitr, _self, [&](auto& proposal) {
-                  proposal.executed = true;
-                  proposal.staked = asset(0, seeds_symbol);
-                  proposal.status = name("passed");
-                  proposal.stage = name("done");
-              });
-            }
+          props.modify(pitr, _self, [&](auto& proposal) {
+              proposal.executed = true;
+              proposal.staked = asset(0, seeds_symbol);
+              proposal.status = name("passed");
+              proposal.stage = name("done");
+          });
         } else {
           burn(pitr->staked);
 
@@ -87,7 +129,7 @@ void proposals::onperiod() {
         }
       }
 
-      if (pitr->stage == name("staged")) {
+      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
         });
@@ -96,7 +138,7 @@ void proposals::onperiod() {
       pitr++;
     }
 
-    update_voice_table();
+    updatevoices();
     
     transaction trx_erase_participants{};
     trx_erase_participants.actions.emplace_back(
@@ -122,7 +164,13 @@ void proposals::onperiod() {
     update_cycle();
 }
 
-void proposals::update_voice_table() {
+void proposals::updatevoices() {
+  require_auth(get_self());
+  updatevoice((uint64_t)0);
+}
+
+void proposals::updatevoice(uint64_t start) {
+  require_auth(get_self());
   
   DEFINE_CS_POINTS_TABLE
   DEFINE_CS_POINTS_TABLE_MULTI_INDEX
@@ -130,8 +178,10 @@ void proposals::update_voice_table() {
   
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
 
-  auto vitr = voice.begin();
-  while (vitr != voice.end()) {
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  uint64_t count = 0;
+  while (vitr != voice.end() && count < batch_size.value) {
       auto csitr = cspoints.find(vitr->account.value);
       if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
@@ -141,9 +191,23 @@ void proposals::update_voice_table() {
         voice.modify(vitr, _self, [&](auto& item) {
           item.balance = 0;
         });
-
       }
       vitr++;
+      count++;
+  }
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updatevoice"_n,
+        std::make_tuple(next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
   }
 }
 
@@ -193,9 +257,11 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     pitr--;
     lastId = pitr->id;
   }
+  
+  uint64_t propKey = lastId + 1;
 
   props.emplace(_self, [&](auto& proposal) {
-      proposal.id = lastId + 1;
+      proposal.id = propKey;
       proposal.creator = creator;
       proposal.recipient = recipient;
       proposal.quantity = quantity;
@@ -227,6 +293,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.proposal_id = lastId+1;
     });
   }
+  update_min_stake(propKey);
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
@@ -279,6 +346,10 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check(pitr != props.end(), "no proposal");
       check(from == pitr->creator, "only the creator can stake into a proposal");
 
+      auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
+      check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
+        "The staked value can not be greater than " + std::to_string(prop_max.value / 10000) + " Seeds");
+
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;
       });
@@ -327,8 +398,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  uint64_t min_stake = config.find(name("propminstake").value)->value;
-  check(pitr->staked >= asset(min_stake, seeds_symbol), "not enough stake");
+  check(is_enough_stake(pitr->staked, pitr->quantity), "not enough stake");
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);

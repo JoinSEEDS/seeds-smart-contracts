@@ -29,9 +29,13 @@ CONTRACT history : public contract {
         ACTION addcitizen(name account);
         
         ACTION addresident(name account);
+
+        ACTION numtrx(name account);
+
     private:
       void check_user(name account);
-    
+      uint32_t num_transactions(name account, uint32_t limit);
+
       TABLE citizen_table {
         uint64_t id;
         name account;
@@ -99,4 +103,4 @@ CONTRACT history : public contract {
     citizen_tables citizens;
 };
 
-EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident));
+EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident)(numtrx));

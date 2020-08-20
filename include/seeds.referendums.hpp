@@ -5,6 +5,7 @@
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -120,11 +121,9 @@ CONTRACT referendums : public contract {
       uint64_t by_name()const { return setting_name.value; }
     };
 
-    TABLE config_table {
-        name param;
-        uint64_t value;
-        uint64_t primary_key()const { return param.value; }
-    };
+    DEFINE_CONFIG_TABLE
+        
+    DEFINE_CONFIG_TABLE_MULTI_INDEX
 
     typedef multi_index<"balances"_n, balance_table> balance_tables;
     typedef multi_index<"referendums"_n, referendum_table,
@@ -132,7 +131,6 @@ CONTRACT referendums : public contract {
       const_mem_fun<referendum_table, uint64_t, &referendum_table::by_name>>
     > referendum_tables;
     typedef multi_index<"voters"_n, voter_table> voter_tables;
-    typedef multi_index<"config"_n, config_table> config_tables;
 
     balance_tables balances;
     config_tables config;

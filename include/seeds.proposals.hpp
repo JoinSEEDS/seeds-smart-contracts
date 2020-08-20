@@ -7,6 +7,7 @@
 #include <utils.hpp>
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using namespace utils;
@@ -22,6 +23,7 @@ CONTRACT proposals : public contract {
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
           participants(receiver, receiver.value),
+          minstake(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
@@ -52,6 +54,12 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice();
 
+      ACTION updatevoices();
+
+      ACTION updatevoice(uint64_t start);
+
+      ACTION checkstake(uint64_t prop_id);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -62,6 +70,9 @@ CONTRACT proposals : public contract {
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
+      bool is_enough_stake(asset staked, asset quantity);
+      uint64_t min_stake(asset quantity);
+      void update_min_stake(uint64_t prop_id);
 
       void check_user(name account);
       void check_citizen(name account);
@@ -74,11 +85,9 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
       void change_rep(name beneficiary, bool passed);
 
-      TABLE config_table {
-          name param;
-          uint64_t value;
-          uint64_t primary_key()const { return param.value; }
-      };
+      DEFINE_CONFIG_TABLE
+        
+      DEFINE_CONFIG_TABLE_MULTI_INDEX
 
       TABLE proposal_table {
           uint64_t id;
@@ -100,6 +109,12 @@ CONTRACT proposals : public contract {
           name fund;
           uint64_t creation_date;
           uint64_t primary_key()const { return id; }
+      };
+
+      TABLE min_stake_table {
+          uint64_t prop_id;
+          uint64_t min_stake;
+          uint64_t primary_key()const { return prop_id; }
       };
 
       DEFINE_USER_TABLE
@@ -141,12 +156,12 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
-    typedef eosio::multi_index<"config"_n, config_table> config_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
     typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
     typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
+    typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
 
     config_tables config;
     proposal_tables props;
@@ -155,6 +170,7 @@ CONTRACT proposals : public contract {
     voice_tables voice;
     last_proposal_tables lastprops;
     cycle_tables cycle;
+    min_stake_tables minstake;
 
 };
 
@@ -163,7 +179,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)(neutral)(erasepartpts)(onperiod)(decayvoice)(cancel))
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice))
       }
   }
 }
