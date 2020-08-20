@@ -53,8 +53,6 @@ ACTION scheduler::reset() {
         titr = test.erase(titr);
     }
 
-    
-
     std::vector<name> id_v = { 
         name("exch.period"),
         name("tokn.resetw"),
@@ -68,6 +66,8 @@ ACTION scheduler::reset() {
         name("hrvst.calccs"), // after the above 4
         name("hrvst.rankcs"), 
         name("hrvst.calctx"), // 24h
+
+        name("org.clndaus"),
     };
     
     std::vector<name> operations_v = {
@@ -83,6 +83,8 @@ ACTION scheduler::reset() {
         name("calccss"),
         name("rankcss"),
         name("calctrxpts"),
+
+        name("cleandaus"),
     };
 
     std::vector<name> contracts_v = {
@@ -98,6 +100,8 @@ ACTION scheduler::reset() {
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
+
+        contracts::organization,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -113,6 +117,8 @@ ACTION scheduler::reset() {
         utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_day,
+
+        utils::seconds_per_day / 2,
     };
 
     uint64_t now = current_time_point().sec_since_epoch()+1;
@@ -129,6 +135,8 @@ ACTION scheduler::reset() {
 
         now + 120 - utils::seconds_per_hour, // kicks off 2 minutes later
         now + 240 - utils::seconds_per_hour, // kicks off 4 minutes later
+        now,
+
         now,
     };
 

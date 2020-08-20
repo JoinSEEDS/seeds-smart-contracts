@@ -30,6 +30,12 @@ int64_t organization::getregenp(name account) {
     return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
+uint64_t organization::get_beginning_of_day_in_seconds() {
+    auto sec = eosio::current_time_point().sec_since_epoch();
+    auto date = eosio::time_point_sec(sec / 86400 * 86400);
+    return date.utc_seconds;
+}
+
 void organization::deposit(name from, name to, asset quantity, string memo) {
     if(to == _self){
         utils::check_asset(quantity);
@@ -85,6 +91,21 @@ ACTION organization::reset() {
         itr = organizations.erase(itr);
     }
 
+    auto aitr = apps.begin();
+    while(aitr != apps.end()) {
+        dau_tables daus(get_self(), aitr->app_name.value);
+        dau_history_tables dau_history(get_self(), aitr->app_name.value);
+        auto dauitr = daus.begin();
+        while (dauitr != daus.end()) {
+            dauitr = daus.erase(dauitr);
+        }
+        auto dau_history_itr = dau_history.begin();
+        while (dau_history_itr != dau_history.end()) {
+            dau_history_itr = dau_history.erase(dau_history_itr);
+        }
+        aitr = apps.erase(aitr);
+    }
+
     auto bitr = sponsors.begin();
     while(bitr != sponsors.end()){
         bitr = sponsors.erase(bitr);
@@ -94,7 +115,7 @@ ACTION organization::reset() {
 
 ACTION organization::create(name sponsor, name orgaccount, string orgfullname, string publicKey) 
 {
-    require_auth(sponsor); // should the sponsor give the authorization? or it should be the contract itself?
+    require_auth(sponsor);
 
     auto bitr = sponsors.find(sponsor.value);
     check(bitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
@@ -307,4 +328,152 @@ ACTION organization::subregen(name organization, name account) {
     vote(organization, account, -1 * getregenp(account));
 }
 
+ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
+    require_auth(owner);
+    check_owner(organization, owner);
+
+    auto orgitr = organizations.find(organization.value);
+    check(orgitr != organizations.end(), "This organization does not exist.");
+
+    auto appitr = apps.find(appname.value);
+    check(appitr == apps.end(), "This application already exists.");
+
+    apps.emplace(_self, [&](auto & app){
+        app.app_name = appname;
+        app.org_name = organization;
+        app.app_long_name = applongname;
+        app.is_banned = false;
+        app.number_of_uses = 0;
+    });
+}
+
+ACTION organization::banapp(name appname) {
+    require_auth(get_self());
+
+    auto appitr = apps.find(appname.value);
+    check(appitr != apps.end(), "This application does not exists.");
+    
+    apps.modify(appitr, _self, [&](auto & app){
+        app.is_banned = true;
+    });
+}
+
+ACTION organization::appuse(name appname, name account) {
+    require_auth(account);
+    check_user(account);
+
+    auto appitr = apps.find(appname.value);
+    check(appitr != apps.end(), "This application does not exists.");
+    check(!(appitr -> is_banned), "Can not use a banned app.");
+    
+    dau_tables daus(get_self(), appname.value);
+
+    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+    
+    auto dauitr = daus.find(account.value);
+    if (dauitr != daus.end()) {
+        if (dauitr -> date == today_timestamp) {
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.number_app_uses += 1;
+            });
+        } else {
+            if (dauitr -> number_app_uses != 0) {
+                dau_history_tables dau_history(get_self(), appname.value); 
+                dau_history.emplace(_self, [&](auto & dau_h){
+                    dau_h.dau_history_id = dau_history.available_primary_key();
+                    dau_h.account = dauitr -> account;
+                    dau_h.date = dauitr -> date;
+                    dau_h.number_app_uses = dauitr -> number_app_uses;
+                });
+            }
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.date = today_timestamp;
+                dau.number_app_uses = 1;
+            }); 
+        }
+    } else {
+        daus.emplace(_self, [&](auto & dau){
+            dau.account = account;
+            dau.date = today_timestamp;
+            dau.number_app_uses = 1;
+        });
+    }
+
+    apps.modify(appitr, _self, [&](auto & app){
+        app.number_of_uses += 1;
+    });
+}
+
+ACTION organization::cleandaus () {
+    require_auth(get_self());
+
+    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+
+    auto appitr = apps.begin();
+    while (appitr != apps.end()) {
+        if (appitr -> is_banned) {
+            appitr++;
+            continue; 
+        }
+        action clean_dau_action(
+            permission_level{get_self(), "active"_n},
+            get_self(),
+            "cleandau"_n,
+            std::make_tuple(appitr -> app_name, today_timestamp, (uint64_t)0)
+        );
+
+        transaction tx;
+        tx.actions.emplace_back(clean_dau_action);
+        tx.delay_sec = 1;
+        tx.send((appitr -> app_name).value + 1, _self);
+
+        appitr++;
+    }
+}
+
+ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t start) {
+    require_auth(get_self());
+
+    auto appitr = apps.get(appname.value, "This application does not exist.");
+    if (appitr.is_banned) { return; }
+
+    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.").value;
+
+    dau_tables daus(get_self(), appname.value);
+    dau_history_tables dau_history(get_self(), appname.value); 
+
+    auto dauitr = start == 0 ? daus.begin() : daus.lower_bound(start);
+    uint64_t count = 0;
+
+    while (dauitr != daus.end() && count < batch_size) {
+        if (dauitr -> date != todaytimestamp) {
+            dau_history.emplace(_self, [&](auto & dau_h){
+                dau_h.dau_history_id = dau_history.available_primary_key();
+                dau_h.account = dauitr -> account;
+                dau_h.date = dauitr -> date;
+                dau_h.number_app_uses = dauitr -> number_app_uses;
+            });
+            daus.modify(dauitr, _self, [&](auto & dau){
+                dau.date = todaytimestamp;
+                dau.number_app_uses = 0;
+            });
+        }
+        count++;
+        dauitr++;
+    }
+
+    if (dauitr != daus.end()) {
+        action clean_dau_action(
+            permission_level{get_self(), "active"_n},
+            get_self(),
+            "cleandau"_n,
+            std::make_tuple(appname, todaytimestamp, (dauitr -> account).value)
+        );
+
+        transaction tx;
+        tx.actions.emplace_back(clean_dau_action);
+        tx.delay_sec = 1;
+        tx.send((appitr.app_name).value + 1, _self);
+    }
+}
 

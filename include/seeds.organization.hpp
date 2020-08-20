@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables.hpp>
@@ -16,6 +17,7 @@ CONTRACT organization : public contract {
             : contract(receiver, code, ds),
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
+              apps(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value)
@@ -43,6 +45,16 @@ CONTRACT organization : public contract {
         ACTION destroy(name orgname, name sponsor);
 
         ACTION refund(name beneficiary, asset quantity);
+
+        ACTION registerapp(name owner, name organization, name appname, string applongname);
+
+        ACTION banapp(name appname);
+
+        ACTION appuse(name appname, name account);
+
+        ACTION cleandaus();
+
+        ACTION cleandau(name appname, uint64_t timestamp, uint64_t start);
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
@@ -77,7 +89,7 @@ CONTRACT organization : public contract {
 
         TABLE vote_table {
             name account;
-            uint64_t timestamp; // is it relevant?
+            uint64_t timestamp;
             int64_t regen_points;
 
             uint64_t primary_key() const { return account.value; }
@@ -86,6 +98,36 @@ CONTRACT organization : public contract {
         DEFINE_CONFIG_TABLE
         
         DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+        TABLE app_table {
+            name app_name;
+            name org_name;
+            string app_long_name;
+            bool is_banned;
+            uint64_t number_of_uses;
+
+            uint64_t primary_key() const { return app_name.value; }
+            uint64_t by_org() const { return org_name.value; }
+        };
+
+        TABLE dau_table {
+            name account;
+            uint64_t date;
+            uint64_t number_app_uses;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+
+        TABLE dau_history_table {
+            uint64_t dau_history_id;
+            name account;
+            uint64_t date;
+            uint64_t number_app_uses;
+
+            uint64_t primary_key() const { return dau_history_id; }
+            uint64_t by_account() const { return account.value; }
+            uint64_t by_date() const { return date; }
+        };
 
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
             indexed_by<"byplanted"_n,
@@ -107,11 +149,25 @@ CONTRACT organization : public contract {
             const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
         > user_tables;
 
+        typedef eosio::multi_index<"apps"_n, app_table,
+            indexed_by<"byorg"_n,
+            const_mem_fun<app_table, uint64_t, &app_table::by_org>>
+        > app_tables;
+
+        typedef eosio::multi_index<"daus"_n, dau_table> dau_tables;
+
+        typedef eosio::multi_index<"dauhistory"_n, dau_history_table,
+            indexed_by<"byaccount"_n,
+            const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_account>>,
+            indexed_by<"bydate"_n,
+            const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_date>>
+        > dau_history_tables;
 
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
         config_tables config;
+        app_tables apps;
 
         const name min_planted = "org.minplant"_n;
 
@@ -122,6 +178,7 @@ CONTRACT organization : public contract {
         void check_user(name account);
         void vote(name organization, name account, int64_t regen);
         void check_asset(asset quantity);
+        uint64_t get_beginning_of_day_in_seconds();
 };
 
 
@@ -130,7 +187,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<organization>(name(receiver), name(code), &organization::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)(subregen)(create)(destroy)(refund))
+          EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
+            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau))
       }
   }
 }

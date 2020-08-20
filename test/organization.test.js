@@ -1,10 +1,15 @@
 const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
 const { equals } = require("ramda")
+const { asset } = require("eosjs/lib/schema")
 
 const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history } = names
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}  
 
 describe('organization', async assert => {
 
@@ -361,7 +366,252 @@ describe('organization', async assert => {
 })
 
 
+describe('app', async assert => {
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+    const contracts = await Promise.all([
+        eos.contract(organization),
+        eos.contract(token),
+        eos.contract(accounts),
+        eos.contract(settings),
+        eos.contract(harvest),
+    ]).then(([organization, token, accounts, settings, harvest]) => ({
+        organization, token, accounts, settings, harvest
+    }))
+
+    console.log('changing batch size')
+    await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+    console.log('reset organization')
+    await contracts.organization.reset({ authorization: `${organization}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+    
+    console.log('create organization')
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(seconduser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+    await contracts.organization.create(firstuser, 'testorg1', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.create(seconduser, 'testorg2', "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
+
+    console.log('register app')
+    await contracts.organization.registerapp(firstuser, 'testorg1', 'app1', 'app long name', { authorization: `${firstuser}@active` })
+    await contracts.organization.registerapp(seconduser, 'testorg2', 'app2', 'app long name 2', { authorization: `${seconduser}@active` })
+
+    let createOrgNotBeingOwner = true
+    try {
+        await contracts.organization.registerapp(seconduser, 'testorg1', 'app3', 'app3 long name', { authorization: `${seconduser}@active` })
+        console.log('app3 registered (not expected)')
+    } catch (err) {
+        createOrgNotBeingOwner = false
+        console.log('only the owner can register an app (expected)')
+    }
+
+    console.log('use app')
+    await contracts.organization.appuse('app1', firstuser, { authorization: `${firstuser}@active` })
+    await sleep(300)
+    
+    for (let i = 0; i < 10; i++) {
+        await contracts.organization.appuse('app1', seconduser, { authorization: `${seconduser}@active` })
+        await sleep(400)
+    }
+
+    await contracts.organization.appuse('app2', seconduser, { authorization: `${seconduser}@active` })
+
+    const daus1Table = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const daus2Table = await getTableRows({
+        code: organization,
+        scope: 'app2',
+        table: 'daus',
+        json: true
+    })
+
+    const appsTable = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'apps',
+        json: true
+    })
+    const apps = appsTable.rows
+
+    console.log('clean daus today')
+    await contracts.organization.cleandaus({ authorization: `${organization}@active` })
+    await sleep(3000)
+
+    const daus1TableAfterClean1 = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const daus2TableAfterClean1 = await getTableRows({
+        code: organization,
+        scope: 'app2',
+        table: 'daus',
+        json: true
+    })
+
+    let today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    today = today.getTime() / 1000
+
+    let tomorrow = new Date()
+    tomorrow.setUTCHours(0, 0, 0, 0)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow = tomorrow.getTime() / 1000
+
+    console.log('clean app1 dau')
+    await contracts.organization.cleandau('app1', tomorrow, 0, { authorization: `${organization}@active` })
+    await sleep(2000)
+
+    const daus1TableAfterClean2 = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daus',
+        json: true
+    })
+
+    const daus1History1 = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'dauhistory',
+        json: true
+    })
+
+    console.log('ban app')
+    await contracts.organization.banapp('app1', { authorization: `${organization}@active` })
+
+    const appsTableAfterBan = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'apps',
+        json: true
+    })
+
+    console.log('reset settings')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    assert({
+        given: 'registered an app',
+        should: 'have an entry in the apps table',
+        actual: apps,
+        expected: [
+            { 
+                app_name: 'app1',
+                org_name: 'testorg1',
+                app_long_name: 'app long name',
+                is_banned: 0,
+                number_of_uses: 11
+            },
+            { 
+                app_name: 'app2',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 2',
+                is_banned: 0,
+                number_of_uses: 1
+            }
+        ]
+    })
+
+    assert({
+        given: 'appuse called',
+        should: 'increment the app use counter',
+        actual: [
+            daus1Table.rows.map(values => values.number_app_uses),
+            daus2Table.rows.map(values => values.number_app_uses)
+        ],
+        expected: [[1, 10], [1]]
+    })
+
+    assert({
+        given: 'register app by not the owner',
+        should: 'not register the app',
+        actual: createOrgNotBeingOwner,
+        expected: false
+    })
+
+    assert({
+        given: 'call cleandaus on the same day',
+        should: 'not clean daus app1 table',
+        actual: daus1TableAfterClean1.rows,
+        expected: daus1Table.rows
+    })
+
+    assert({
+        given: 'call cleandaus on the same day',
+        should: 'not clean daus app2 table',
+        actual: daus2TableAfterClean1.rows,
+        expected: daus2Table.rows
+    })
+
+    assert({
+        given: 'call cleandau for app1 on a different day',
+        should: 'clean daus app1 table',
+        actual: daus1TableAfterClean2.rows,
+        expected: [ 
+            { account: 'seedsuseraaa', date: tomorrow, number_app_uses: 0 },
+            { account: 'seedsuserbbb', date: tomorrow, number_app_uses: 0 } 
+        ]
+    })
+
+    assert({
+        given: 'call cleandau for app1 on a different day',
+        should: 'have entries in the dau history table',
+        actual: daus1History1.rows,
+        expected: [ 
+            { 
+                dau_history_id: 0,
+                account: 'seedsuseraaa',
+                date: today,
+                number_app_uses: 1 
+            },
+            { 
+                dau_history_id: 1,
+                account: 'seedsuserbbb',
+                date: today,
+                number_app_uses: 10 
+            } 
+        ]
+    })
+
+    assert({
+        given: 'ban app called',
+        should: 'ban the app',
+        actual: appsTableAfterBan.rows,
+        expected: [
+            { 
+                app_name: 'app1',
+                org_name: 'testorg1',
+                app_long_name: 'app long name',
+                is_banned: 1,
+                number_of_uses: 11
+            },
+            { 
+                app_name: 'app2',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 2',
+                is_banned: 0,
+                number_of_uses: 1
+            }
+        ]
+    })
+
+})
 
 
 

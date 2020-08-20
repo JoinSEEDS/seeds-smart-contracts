@@ -524,6 +524,16 @@ var permissions = [{
 }, {
   target: `${accounts.escrow.account}@active`,
   actor: `${accounts.escrow.account}@eosio.code`
+}, {
+  target: `${accounts.organization.account}@execute`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'cleandaus'
+}, { 
+  target: `${accounts.organization.account}@execute`,
+  actor: `${accounts.scheduler.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
