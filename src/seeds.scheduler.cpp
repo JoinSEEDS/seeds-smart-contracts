@@ -121,20 +121,20 @@ ACTION scheduler::reset() {
         utils::seconds_per_day / 2,
     };
 
-    uint64_t now = current_time_point().sec_since_epoch()+1;
+    uint64_t now = current_time_point().sec_since_epoch();
 
     std::vector<uint64_t> timestamp_v = {
         now,
         now,
 
-        now - utils::seconds_per_hour * 2, 
-        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour, 
+        now - utils::seconds_per_hour, 
 
-        now - utils::seconds_per_hour * 2, 
-        now - utils::seconds_per_hour * 2, 
+        now - utils::seconds_per_hour, 
+        now - utils::seconds_per_hour, 
 
-        now + 120 - utils::seconds_per_hour, // kicks off 2 minutes later
-        now + 240 - utils::seconds_per_hour, // kicks off 4 minutes later
+        now + 300 - utils::seconds_per_hour, // kicks off 5 minutes later
+        now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
 
         now,
@@ -149,7 +149,7 @@ ACTION scheduler::reset() {
             noperation.contract = contracts_v[i];
             noperation.pause = 0;
             noperation.period = delay_v[i];
-            noperation.timestamp = now + i;
+            noperation.timestamp = timestamp_v[i];
         });
         i++;
     }
