@@ -89,7 +89,7 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
   return asset(seeds_amount, seeds_symbol);
 }
 
-void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
+void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo) {
 
   eosio::multi_index<"users"_n, tables::user_table> users(contracts::accounts, contracts::accounts.value);
 
@@ -126,7 +126,13 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
     seeds_purchased = sitr->seeds_purchased;
   }
 
-  check(seeds_limit.amount >= seeds_purchased + seeds_amount, "purchase limit overdrawn, tried to buy " + seeds_quantity.to_string() + " limit: " + seeds_limit.to_string() + " new total would be: " + std::to_string( (seeds_purchased + seeds_amount) / 10000.0));
+  check(seeds_limit.amount >= seeds_purchased + seeds_amount, 
+   "account: " + buyer.to_string() + 
+   " symbol: " + paymentSymbol + 
+   " tx_id: " + memo + 
+   " purchase limit overdrawn, tried to buy " + seeds_quantity.to_string() + 
+   " limit: " + seeds_limit.to_string() + 
+   " new total would be: " + std::to_string( (seeds_purchased + seeds_amount) / 10000.0));
 
   if (sitr == dailystats.end()) {
     dailystats.emplace(get_self(), [&](auto& s) {
@@ -165,7 +171,7 @@ void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string me
 
     asset usd_asset = asset(usd_amount, usd_symbol);
 
-    purchase_usd(buyer, usd_asset, memo);
+    purchase_usd(buyer, usd_asset, "TLOS", memo);
   }
 }
 
@@ -184,7 +190,7 @@ void exchange::newpayment(name recipientAccount, string paymentSymbol, string pa
 
     string memo = (paymentSymbol + ": " + paymentId).substr(0, 255);
 
-    purchase_usd(recipientAccount, usd_asset, paymentId);
+    purchase_usd(recipientAccount, usd_asset, paymentSymbol, paymentId);
 
     payhistory.emplace(_self, [&](auto& item) {
       item.id = payhistory.available_primary_key();
