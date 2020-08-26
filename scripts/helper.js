@@ -370,6 +370,9 @@ var permissions = [{
   parent: 'active'
 }, {
   target: `${accounts.onboarding.account}@application`,
+  action: 'numtrx'
+}, {
+  target: `${accounts.onboarding.account}@application`,
   action: 'accept'
 }, {
   target: `${accounts.history.account}@active`,

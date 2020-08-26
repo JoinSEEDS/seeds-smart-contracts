@@ -7,7 +7,7 @@ const { isLocal, initContracts: initContractsHelper, names, allContractNames, al
 const { harvest } = names
 
 const deploy = require('./deploy.command')
-const { initContracts, updatePermissions, resetByName } = require('./deploy')
+const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission } = require('./deploy')
 
 const allContracts = [
   "accounts", 
@@ -177,6 +177,22 @@ program
     allBankAccountNames.forEach(item=>console.print(item))
     console.print("\nSeeds Contracts\n")
     allContractNames.forEach(item=>console.print(item))
+  })
+
+  program
+  .command('changekey <contract> <key>')
+  .description('Change owner and active key')
+  .action(async function(contract, key) {
+    console.print(`Change key of ${contract} to `+key + "\n")
+    await changeOwnerAndActivePermission(contract, key)
+  })
+
+  program
+  .command('change_key_permission <contract> <role> <parentrole> <key>')
+  .description('Change owner and active key')
+  .action(async function(contract, role, parentrole, key) {
+    console.print(`Change key of ${contract} to `+key + "\n")
+    await changeExistingKeyPermission(contract, role, parentrole, key)
   })
 
 

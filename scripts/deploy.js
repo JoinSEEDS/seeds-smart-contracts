@@ -116,33 +116,6 @@ const deploy = async ({ name, account }) => {
   }
 }
 
-const changeKeyPermission = async (account, permission, key) => {
-  try {
-    const { permissions } = await eos.getAccount(account)
-
-    const { parent, required_auth } = permissions.find(p => p.perm_name === permission)
-
-    const { threshold, waits, keys, accounts } = required_auth
-
-    const newPermissions = {
-      account,
-      permission,
-      parent,
-      auth: {
-        threshold,
-        waits,
-        accounts,
-        keys: [{ key, weight: 1 }]
-      }
-    }
-
-    await eos.updateauth(newPermissions, { authorization: `${account}@owner` })
-    console.log(`private keys updated for ${account}@${permission}`)
-  } catch (err) {
-    console.error(`failed keys update for ${account}@${permission}\n* error: ` + err + `\n`)
-  }
-}
-
 const createKeyPermission = async (account, role, parentRole = 'active', key) => {
   try {
     const { permissions } = await eos.getAccount(account)
@@ -238,6 +211,56 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
     console.log(`+ permission created on ${target}@${targetRole} for ${actor}@${actorRole}`)
   } catch (err) {
     console.error(`failed permission update on ${target} for ${actor}\n* error: ` + err + `\n`)
+  }
+}
+
+const changeOwnerAndActivePermission = async (account, key) => {
+  await changeExistingKeyPermission(account, "active", "owner", key)
+  await changeExistingKeyPermission(account, "execute", "active", key)
+  await changeExistingKeyPermission(account, "owner", "", key)
+}
+
+const changeExistingKeyPermission = async (account, role, parentRole = 'active', key) => {
+  try {
+    const { permissions } = await eos.getAccount(account)
+
+    //console.log(account + " permissions: "+ JSON.stringify(permissions, null, 2))
+
+    const perm = permissions.find(p => p.perm_name === role)
+
+    if (!perm) {
+      console.error(`permission not found : ` + role + `\n`)
+      return
+    }
+    const { required_auth } = perm
+    const { keys, accounts, waits } = required_auth
+  
+    if (keys.find(item => item.key === key)) {
+      console.log("- createKeyPermission key already exists "+key)
+      return;
+    }  
+    
+    await eos.updateauth({
+      account,
+      permission: role,
+      parent: parentRole,
+      auth: {
+        threshold: 1,
+        waits: waits,
+        accounts: accounts,
+        keys: [{
+          key,
+          weight: 1
+        }]
+      }
+    }, { authorization: `${account}@owner` })
+
+    //const afterAcct = await eos.getAccount(account)
+    //console.log(account + "=== AFTER permissions: "+ JSON.stringify(afterAcct.permissions, null, 2))
+
+    console.log(`permission setup on ${account}@${role}(/${parentRole}) for ${key}`)
+  } catch (err) {
+    console.error(`failed permission setup\n* error: ` + err + `\n`)
   }
 }
 
@@ -390,4 +413,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, updatePermissions, resetByName }
+module.exports = { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission }
