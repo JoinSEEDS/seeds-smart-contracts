@@ -46,7 +46,7 @@ CONTRACT exchange : public contract {
 
   private:
 
-    void purchase_usd(name buyer, asset usd_quantity, string memo); 
+    void purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo); 
     asset seeds_for_usd(asset usd_quantity);
     void update_price(); // updates price table
     void price_update_aux(); // updates price table
