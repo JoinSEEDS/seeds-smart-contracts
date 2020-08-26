@@ -48,7 +48,8 @@ CONTRACT exchange : public contract {
 
     void purchase_usd(name buyer, asset usd_quantity, string memo); 
     asset seeds_for_usd(asset usd_quantity);
-    void updateprice(); // updates price table
+    void update_price(); // updates price table
+    void price_update_aux(); // updates price table
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);

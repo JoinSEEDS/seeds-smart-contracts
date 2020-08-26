@@ -43,7 +43,7 @@ void exchange::reset() {
 }
 
 asset exchange::seeds_for_usd(asset usd_quantity) {
-  updateprice();
+  update_price();
 
   soldtable s = sold.get_or_create(get_self(), soldtable());
 
@@ -143,7 +143,7 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string memo) {
   stb.total_sold = stb.total_sold + seeds_amount;
   sold.set(stb, get_self());
 
-  updateprice();
+  update_price();
 
   action(
     permission_level{get_self(), "active"_n},
@@ -243,7 +243,7 @@ void exchange::updatetlos(asset tlos_per_usd) {
   config.set(c, get_self());
 }
 
-void exchange::updateprice() {
+void exchange::update_price() {
 
   soldtable stb = sold.get_or_create(get_self(), soldtable());
   uint64_t total_sold = stb.total_sold;
@@ -276,7 +276,7 @@ void exchange::updateprice() {
     ritr++;
   }
 
-  priceupdate();
+  price_update_aux();
 
 }
 
@@ -332,12 +332,16 @@ ACTION exchange::initrounds(uint64_t volume_per_round, asset initial_seeds_per_u
     seeds_per_usd = uint64_t(round( 10000.0 / usd_per_seeds));
   }
 
-  updateprice();
+  update_price();
 
 }
 
 ACTION exchange::priceupdate() {
   require_auth(get_self());
+  price_update_aux();
+}
+
+void exchange::price_update_aux() {
 
   price_table p = price.get();
 
