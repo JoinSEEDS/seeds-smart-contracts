@@ -150,7 +150,6 @@ const accountsMetadata = (network) => {
       harvest: contract('harvst.seeds', 'harvest'),
       settings: contract('settgs.seeds', 'settings'),
       proposals: contract('funds.seeds', 'proposals'),
-      invites: contract('invite.seeds', 'invites'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
       policy: contract('policy.seeds', 'policy'),
@@ -179,7 +178,6 @@ const accountsMetadata = (network) => {
       harvest: contract('harvst.seeds', 'harvest'),
       settings: contract('settgs.seeds', 'settings'),
       proposals: contract('funds.seeds', 'proposals'),
-      invites: contract('invite.seeds', 'invites'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
       policy: contract('policy.seeds', 'policy'),
@@ -217,7 +215,6 @@ const accountsMetadata = (network) => {
       harvest: contract('harvst.seeds', 'harvest'),
       settings: contract('settgs.seeds', 'settings'),
       proposals: contract('funds.seeds', 'proposals'),
-      invites: contract('invite.seeds', 'invites'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
       policy: contract('policy.seeds', 'policy'),
@@ -239,18 +236,24 @@ const accountsMetadata = (network) => {
 
 const accounts = accountsMetadata(chainId)
 const names = R.mapObjIndexed((item) => item.account, accounts)
+const allContracts = []
 const allContractNames = []
+const allAccounts = []
 const allBankAccountNames = []
 for (let [key, value] of Object.entries(names)) {
   if (accounts[key].type=="contract" || accounts[key].type=="token") {
+    allContracts.push(key)
     allContractNames.push(value)
   } else {
     if (value.indexOf(".seeds") != -1) {
+      allAccounts.push(key)
       allBankAccountNames.push(value)
     }
   }
 }
+allContracts.sort()
 allContractNames.sort()
+allAccounts.sort()
 allBankAccountNames.sort()
 
 var permissions = [{
@@ -296,15 +299,6 @@ var permissions = [{
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.proposals.account}@active`
 }, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.invites.account}@active`
-}, {
-  target: `${accounts.invites.account}@owner`,
-  actor: `${accounts.invites.account}@eosio.code`
-}, {
-  target: `${accounts.invites.account}@active`,
-  actor: `${accounts.invites.account}@eosio.code`
-}, {
   target: `${accounts.referendums.account}@active`,
   actor: `${accounts.referendums.account}@eosio.code`
 }, {
@@ -331,10 +325,6 @@ var permissions = [{
   key: exchangePublicKey,
   parent: 'active'
 }, {
-  target: `${accounts.invites.account}@api`,
-  key: apiPublicKey,
-  parent: 'active'
-}, {
   target: `${accounts.accounts.account}@api`,
   action: 'addrep'
 }, {
@@ -343,9 +333,6 @@ var permissions = [{
 }, {
   target: `${accounts.accounts.account}@api`,
   action: 'addref'
-}, {
-  target: `${accounts.invites.account}@api`,
-  action: 'accept'
 }, {
   target: `${accounts.exchange.account}@purchase`,
   action: 'newpayment'
@@ -642,6 +629,6 @@ const createKeypair = async () => {
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allBankAccountNames
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames
 }
 

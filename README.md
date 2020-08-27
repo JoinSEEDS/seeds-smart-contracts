@@ -66,7 +66,7 @@ have been added or have been changed.
 Contract is a varadic parameter
 
 ```
-./scripts/seeds.js run accounts onboarding invites organization
+./scripts/seeds.js run accounts onboarding organization
 ```
 
 ### Deploy on testnet
