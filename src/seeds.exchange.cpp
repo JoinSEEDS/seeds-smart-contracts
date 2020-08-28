@@ -38,7 +38,7 @@ void exchange::reset() {
     phitr = pricehistory.erase(phitr);
   }
 
-*/
+/**/
 
 }
 
@@ -115,8 +115,15 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
     case "inactive"_n:
       seeds_limit = c.visitor_limit;
       break;
+    default: 
+      seeds_limit = asset(0, seeds_symbol);
+      break;
   }
-  
+
+  // Add 4% to the limit in order to deal with exchange rate fluctuations
+  uint64_t fudge_factor_percent = 4;
+  seeds_limit = seeds_limit + (seeds_limit / 100) * fudge_factor_percent;
+
   // uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
   uint64_t seeds_amount = seeds_for_usd(usd_quantity).amount;
   asset seeds_quantity = asset(seeds_amount, seeds_symbol);
