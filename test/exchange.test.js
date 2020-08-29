@@ -612,3 +612,119 @@ describe('Token Sale 50 Rounds', async assert => {
 
 
 })
+
+describe.only('Increase Price', async assert => {
+
+  const contracts = await initContracts({ accounts, token, exchange })
+  
+  console.log(`reset exchange`)
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })  
+
+  console.log("test init rounds - 10 seeds per round")
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+
+  console.log(`reset accounts`)
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log(`add user`)
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+
+  console.log(`transfer seeds to ${exchange}`)
+  await contracts.token.transfer(firstuser, exchange, "20.0000 SEEDS", 'unit test', { authorization: `${firstuser}@active` })
+
+  await contracts.exchange.newpayment(firstuser, "BTC", "TEST", parseInt(1 * 10000), { authorization: `${exchange}@active` })
+
+  let rounds = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'rounds',
+    json: true,
+    limit: 100,
+  })
+  let price = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'price',
+    json: true,
+    limit: 10,
+  })
+
+  let priceHistory = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'pricehistory',
+    json: true,
+    limit: 10,
+  })
+
+  console.log("price "+JSON.stringify(price, null, 2))
+
+  console.log(`increase price`)
+  await contracts.exchange.incprice({ authorization: `${exchange}@active` })
+
+  let roundsAfter = await eos.getTableRows({
+      code: exchange,
+      scope: exchange,
+      table: 'rounds',
+      json: true,
+      limit: 100,
+  })
+  let priceAfter = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'price',
+    json: true,
+    limit: 10,
+  })
+
+  let priceHistoryAfter = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'pricehistory',
+    json: true,
+    limit: 10,
+  })
+
+  // console.log("priceAfter "+JSON.stringify(priceAfter, null, 2))
+  // console.log("priceHistory "+JSON.stringify(priceHistory, null, 2))
+
+  let oldPrice = parseFloat(price.rows[0].current_seeds_per_usd)
+
+  // console.log("rounds "+JSON.stringify(rounds, null, 2))
+  // console.log("rounds after "+JSON.stringify(roundsAfter, null, 2))
+
+  for (let i = priceAfter.rows[0].current_round_id + 1; i<50; i++) {
+    let r1 = parseFloat(rounds.rows[i].seeds_per_usd)
+    let r2 = parseFloat(roundsAfter.rows[i-1].seeds_per_usd)
+    assert({
+      given: 'price increase ' + r1 + " => "+r2 + " diff "+ (r1 - r2),
+      should: "new price is the same just one row up",
+      actual: Math.abs(r1 - r2) <= 0.00019,
+      expected: true
+    })
+  }
+
+  assert({
+    given: 'increase price price table',
+    should: "new price",
+    actual: parseFloat(priceAfter.rows[0].current_seeds_per_usd),
+    expected: Math.round(oldPrice / 1.033 * 10000) / 10000
+  })
+
+  assert({
+    given: 'increase price history table',
+    should: "price history entry added",
+    actual: priceHistoryAfter.rows.length,
+    expected: priceHistory.rows.length + 1
+  })
+
+  assert({
+    given: 'increase price history table',
+    should: "new price is correct",
+    actual: parseFloat(priceHistoryAfter.rows[priceHistoryAfter.rows.length-1].seeds_usd),
+    expected: Math.round(oldPrice / 1.033 * 10000) / 10000
+  })
+
+
+
+})
