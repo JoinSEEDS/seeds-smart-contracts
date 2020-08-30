@@ -8,6 +8,10 @@ const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHe
 
 const { onboarding, token, accounts, organization, harvest, firstuser } = names
 
+const cancel = async (sponsor, hash) => {
+  await bulk_cancel(sponsor, [hash])
+  console.log("canceled "+hash)
+}
 
 const bulk_cancel = async (sponsor, hashList) => {
     const contracts = await initContracts({ onboarding })
@@ -29,7 +33,7 @@ const bulk_cancel = async (sponsor, hashList) => {
             continue
         }
         
-        console.log(i+ "/" +hashList.length + " cancel invite with hash "+hash)
+        console.log((i+1)+ "/" +hashList.length + " cancel invite with hash "+hash)
 
         let action = createCancelAction(sponsor, hash)
 
@@ -292,7 +296,7 @@ const invite = async (sponsor, totalAmount, debug = false, depositFunds = false)
             table: 'sponsors',
             json: true
         })
-        console.log("sponsors after deposit "+JSON.stringify(sponsorsBefore.rows, null, 2))    
+        //console.log("sponsors after deposit "+JSON.stringify(sponsorsBefore.rows, null, 2))    
     }
 
     await invite()
@@ -304,7 +308,7 @@ const invite = async (sponsor, totalAmount, debug = false, depositFunds = false)
             table: 'sponsors',
             json: true
         })
-        console.log("sponsors after invite "+JSON.stringify(sponsorsAfter.rows, null, 2))
+        //console.log("sponsors after invite "+JSON.stringify(sponsorsAfter.rows, null, 2))
     }   
 
     return result
@@ -404,7 +408,16 @@ program
   .description('invite new user')
   .action(async function (sponsor) {
       console.log("invite with " + sponsor)
-    await invite(sponsor, 20, true) // always 20 seeds
+      let result = await invite(sponsor, 5, true, true) // always 5 seeds
+      console.log("create invite: " + JSON.stringify(result, null, 2))
+  })
+
+  program
+  .command('cancel <sponsor> <hash>')
+  .description('cancel an invite')
+  .action(async function (sponsor, hash) {
+    console.log("cancel from " + sponsor)
+    await cancel(sponsor, hash)
   })
 
   // join.seeds before
@@ -447,10 +460,22 @@ program
   .action(async function (sponsor, newAccount) {
       
     console.log("invite from " + sponsor)
-    let result = await invite(sponsor, 20, true, true) // always 20 seeds
+    let result = await invite(sponsor, 5, true, true) // always 20 seeds
 
     console.log("accept invite with " + newAccount + " secret: " + result.secret)
     await accept(newAccount, result.secret)
+  })
+
+  program
+  .command('invite_cancel <sponsor>')
+  .description('test invite process')
+  .action(async function (sponsor) {
+      
+    console.log("invite from " + sponsor)
+    let result = await invite(sponsor, 5, true, true) // always 5 seeds
+
+    console.log("cancel invite with  result: " + JSON.stringify(result, null, 2))
+    await cancel(sponsor, result.hashedSecret)
   })
 
   program
