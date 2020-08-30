@@ -1,10 +1,21 @@
 #!/usr/bin/env node
 
+// NOTE: For any of these to work, add the sponsor private key to the helper.js file  here
+
+// ...
+// const keyProviders = {
+// ...
+//   [networks.telosMainnet]: ["ADD YOUR SPONSOR PRIVATE KEY HERE", process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY,process.env.PAY_FOR_CPU_MAINNET_KEY,process.env.SCRIPT_KEY],
+// ...
+// }
+// ...
+
 const program = require('commander')
 const fs = require('fs')
 
-
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
+const { worker } = require('cluster')
+const helper = require('../scripts/helper')
 
 const { onboarding, token, accounts, organization, harvest, firstuser } = names
 
