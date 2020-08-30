@@ -29,6 +29,16 @@ const randomAccountName = () => {
 const fromHexString = hexString =>
   new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
+const getNumInvites = async () => {
+    invites = await getTableRows({
+        code: onboarding,
+        scope: onboarding,
+        table: 'invites',
+        json: true,
+    })
+    return invites.rows.length
+}
+
 describe('Onboarding', async assert => {
 
     if (!isLocal()) {
@@ -195,16 +205,6 @@ describe('Onboarding', async assert => {
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
     console.log("cancel invite")
-    let getNumInvites = async () => {
-        invites = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'invites',
-            json: true,
-        })
-        return invites.rows.length
-
-    }
     let getNumReferrers = async () => {
         referrers = await getTableRows({
             code: onboarding,
@@ -538,6 +538,9 @@ describe('Campaign reward for existing user', async assert => {
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
+    const inviteSecret2 = await ramdom64ByteHexString()
+    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
     console.log(`reset ${accounts}`)
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
@@ -601,6 +604,20 @@ describe('Campaign reward for existing user', async assert => {
         json: true
     })
 
+    let invites3_before = await getNumInvites()
+
+    await contracts.onboarding.cleanup(0, 100, { authorization: `${onboarding}@active` })
+    
+    let invites3_after = await getNumInvites()
+
+    console.log(`${onboarding}.invite from ${firstuser}`)
+    await deposit(firstuser)
+    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
+
+    await contracts.onboarding.cleanup(0, 100, { authorization: `${onboarding}@active` })
+
+    let invites4_after = await getNumInvites()
+
     // console.log("before "+JSON.stringify(before, null, 2))
     // console.log("after "+JSON.stringify(rows, null, 2))
 
@@ -621,6 +638,19 @@ describe('Campaign reward for existing user', async assert => {
             planted: "505.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
+    })
+
+    assert({
+        given: 'called cleanup',
+        should: 'same number of invites',
+        actual: invites3_after,
+        expected: invites3_before
+    })
+    assert({
+        given: 'called cleanup',
+        should: 'one less number of invites',
+        actual: invites4_after,
+        expected: invites3_after
     })
 })
 

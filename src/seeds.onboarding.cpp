@@ -1,4 +1,5 @@
 #include <seeds.onboarding.hpp>
+#include <eosio/transaction.hpp>
 
 void onboarding::create_account(name account, string publicKey, name domain) {
   if (is_account(account)) return;
@@ -307,4 +308,53 @@ void onboarding::acceptexist(name account, checksum256 invite_secret, string pub
 // accept invite using already existing account or creating new account
 void onboarding::accept(name account, checksum256 invite_secret, string publicKey) {
   accept_invite(account, invite_secret, publicKey, string(""));
+}
+
+void onboarding::cleanup(uint64_t start_id, uint64_t max_id) {
+  require_auth(get_self());
+
+  invite_tables invites(get_self(), get_self().value);
+
+  auto iitr = invites.find(start_id);
+
+  uint64_t count = 0;
+
+  uint64_t empty_name_value = name("").value;
+
+  while(iitr != invites.end() && count < 400 && iitr->invite_id <= max_id) {
+    if (iitr->account.value == empty_name_value) {
+      asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
+      transfer_seeds(iitr->sponsor, total_quantity);
+      iitr = invites.erase(iitr);
+      auto refitr = referrers.find(iitr->invite_id);
+      if (refitr != referrers.end()) {
+        referrers.erase(refitr);
+      }
+      count += 4;
+    } else {
+      iitr++;
+      count++;
+    }
+  }
+  if (iitr == invites.end() || iitr->invite_id > max_id) {
+    // Done.
+  } else {
+    // recursive call
+    uint64_t next_value = iitr->invite_id;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "cleanup"_n,
+        std::make_tuple(next_value, max_id)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+    
+  }
+
+
+
 }

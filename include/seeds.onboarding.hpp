@@ -34,6 +34,9 @@ CONTRACT onboarding : public contract {
     ACTION createbio(name sponsor, name bioregion, string publicKey);
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
+
+    ACTION cleanup(uint64_t start_id, uint64_t max_id);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol network_symbol = symbol("TLOS", 4);
@@ -104,7 +107,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup))
       }
   }
 }
