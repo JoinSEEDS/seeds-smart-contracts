@@ -85,6 +85,9 @@ describe('Onboarding', async assert => {
         console.log(`reset ${accounts}`)
         await contracts.accounts.reset({ authorization: `${accounts}@active` })
     
+        console.log(`reset ${token}`)
+        await contracts.token.resetweekly({ authorization: `${token}@active` })
+
         console.log(`reset ${onboarding}`)
         await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
     
@@ -544,6 +547,9 @@ describe('Campaign reward for existing user', async assert => {
     console.log(`reset ${accounts}`)
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+    console.log(`reset ${token}`)
+    await contracts.token.resetweekly({ authorization: `${token}@active` })
+
     console.log(`reset ${onboarding}`)
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
@@ -606,7 +612,8 @@ describe('Campaign reward for existing user', async assert => {
 
     let invites3_before = await getNumInvites()
 
-    await contracts.onboarding.cleanup(0, 100, { authorization: `${onboarding}@active` })
+    console.log("cleanup")
+    await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
     
     let invites3_after = await getNumInvites()
 
@@ -614,18 +621,10 @@ describe('Campaign reward for existing user', async assert => {
     await deposit(firstuser)
     await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
 
-    await contracts.onboarding.cleanup(0, 100, { authorization: `${onboarding}@active` })
+    console.log("cleanup 2")
+    await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
 
     let invites4_after = await getNumInvites()
-
-    // console.log("before "+JSON.stringify(before, null, 2))
-    // console.log("after "+JSON.stringify(rows, null, 2))
-
-
-    //const afterBalance = await getBalance(seconduser)
-
-    // console.log("before "+JSON.stringify(beforeBalance, null, 2))
-    // console.log("after "+JSON.stringify(afterBalance, null, 2))
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
 

@@ -35,7 +35,7 @@ CONTRACT onboarding : public contract {
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
-    ACTION cleanup(uint64_t start_id, uint64_t max_id);
+    ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -45,7 +45,7 @@ CONTRACT onboarding : public contract {
     void create_account(name account, string publicKey, name domain);
     bool is_seeds_user(name account);
     void add_user(name account, string fullname, name type);
-    void transfer_seeds(name account, asset quantity);
+    void transfer_seeds(name account, asset quantity, string memo);
     void plant_seeds(asset quantity);
     void sow_seeds(name account, asset quantity);
     void add_referral(name sponsor, name account);
