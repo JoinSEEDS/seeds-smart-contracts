@@ -122,6 +122,7 @@ CONTRACT accounts : public contract {
       uint64_t get_size(name id);
       bool check_can_make_resident(name user);
       bool check_can_make_citizen(name user);
+      uint32_t num_transactions(name account, uint32_t limit);
 
       DEFINE_USER_TABLE
 
@@ -202,21 +203,23 @@ CONTRACT accounts : public contract {
 
     config_tables config;
 
-    // From token contract
-    struct [[eosio::table]] transaction_stats {
-      name account;
-      asset transactions_volume;
-      uint64_t total_transactions;
-      uint64_t incoming_transactions;
-      uint64_t outgoing_transactions;
+    // From history contract
+    TABLE transaction_table {
+       uint64_t id;
+       name to;
+       asset quantity;
+       uint64_t timestamp;
 
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_transaction_volume()const { return transactions_volume.amount; }
+       uint64_t primary_key() const { return id; }
+       uint64_t by_timestamp() const { return timestamp; }
+       uint64_t by_to() const { return to.value; }
+       uint64_t by_quantity() const { return quantity.amount; }
     };
-    
-    typedef eosio::multi_index< "trxstat"_n, transaction_stats,
-      indexed_by<"bytrxvolume"_n,
-      const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
+
+    typedef eosio::multi_index<"transactions"_n, transaction_table,
+      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
 
 };

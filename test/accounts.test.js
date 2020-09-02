@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, proposals, harvest, token, settings, history, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -670,10 +670,13 @@ describe('make resident', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, token })
+  const contracts = await initContracts({ accounts, token, history })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset history')
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
 
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -695,7 +698,7 @@ describe('make resident', async assert => {
     await contracts.accounts.canresident(firstuser, { authorization: `${firstuser}@active` })
   } catch (err) {
     canresident = false
-    //console.log('expected error' + err)
+    console.log('expected error' + err)
   }
 
   // 1 CHECK STATUS - fail
@@ -720,6 +723,17 @@ describe('make resident', async assert => {
   for (var i=0; i<10; i++) {
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
   }
+
+  const hist = await eos.getTableRows({
+    code: history,
+    scope: history,
+    table: 'transactions',
+    json: true,
+  })
+
+
+  console.log('history '+JSON.stringify(hist, null, 2))
+
   console.log('add referral')
   await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
   console.log('update reputation')
@@ -781,7 +795,7 @@ describe('make citizen', async assert => {
     await contracts.accounts.cancitizen(firstuser, { authorization: `${firstuser}@active` })
   } catch (err) {
     cancitizen = false
-    //console.log('expected error' + err)
+    console.log('expected error' + err)
   }
 
   assert({
