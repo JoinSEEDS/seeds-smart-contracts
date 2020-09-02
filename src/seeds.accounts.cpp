@@ -480,19 +480,20 @@ bool accounts::check_can_make_resident(name user) {
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
-    auto titr = transactions.find(user.value);
     uint64_t invited_users_number = countrefs(user, 0);
-
     uint64_t min_planted = config_get("res.plant"_n);
     uint64_t min_tx = config_get("res.tx"_n);
     uint64_t min_invited = config_get("res.referred"_n);
     uint64_t min_rep = config_get("res.rep.pt"_n);
 
+    uint64_t total_transactions = num_transactions(user, min_tx);
+
     uint64_t reputation_points = rep.get(user.value,  "user has less than required reputation. Actual: 0").rep;
 
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
-    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(total_transactions >= min_tx, "resident: user has less than required transactions number has: "+
+      std::to_string(total_transactions) + " needed: "+
+      std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(reputation_points >= min_rep, "user has less than required reputation. Required: " + std::to_string(min_rep) + " Actual: " + std::to_string(reputation_points));
 
@@ -553,10 +554,6 @@ bool accounts::check_can_make_citizen(name user) {
 
     auto bitr = balances.find(user.value);
 
-    transaction_tables transactions(contracts::token, seeds_symbol.code().raw());
-    auto titr = transactions.find(user.value);
-
-
     uint64_t min_planted = config_get("cit.plant"_n);
     uint64_t min_tx = config_get("cit.tx"_n);
     uint64_t min_invited = config_get("cit.referred"_n);
@@ -567,8 +564,12 @@ bool accounts::check_can_make_citizen(name user) {
     uint64_t invited_users_number = countrefs(user, min_residents_invited);
     uint64_t _rep_score = rep_score(user);
 
+    uint64_t total_transactions = num_transactions(user, min_tx);
+
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
-    check(titr->total_transactions >= min_tx, "user has less than required transactions number.");
+    check(total_transactions >= min_tx, "user has less than required transactions number has: "+
+      std::to_string(total_transactions) + " needed: "+
+      std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
     check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
@@ -618,6 +619,18 @@ void accounts::genesis(name user) // Remove this after Golive
   
   testcitizen(user);
 
+}
+
+// return number of transactions outgoing, until a limit
+uint32_t accounts::num_transactions(name account, uint32_t limit) {
+  transaction_tables transactions(contracts::history, account.value);
+  auto titr = transactions.begin();
+  uint32_t count = 0;
+  while(titr != transactions.end() && count < limit) {
+    titr++;
+    count++;
+  }
+  return count;
 }
 
 // void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
