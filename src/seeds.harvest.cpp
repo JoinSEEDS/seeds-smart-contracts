@@ -741,7 +741,7 @@ void harvest::init_balance(name account)
 
 void harvest::check_user(name account)
 {
-  if (account == contracts::invites || account == contracts::onboarding) {
+  if (account == contracts::onboarding) {
     return;
   }
   auto uitr = users.find(account.value);

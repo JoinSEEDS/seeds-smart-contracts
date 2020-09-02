@@ -3,32 +3,11 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal, initContracts: initContractsHelper, names, allContractNames, allBankAccountNames } = require('./helper')
+const { isLocal, names, allContracts, allContractNames, allBankAccountNames } = require('./helper')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
 const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission } = require('./deploy')
-
-const allContracts = [
-  "accounts", 
-  "policy", 
-  "settings", 
-  "token", 
-  "harvest", 
-  "proposals",
-  "invites",
-  "referendums",
-  "history",
-  "forum",
-  "scheduler",
-  "acctcreator",
-  "exchange",
-  "organization",
-  "onboarding",
-  "escrow",
-  "bioregion",
-].sort()
-
 
 const compileAction = async (contract) => {
     try {

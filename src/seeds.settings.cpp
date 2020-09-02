@@ -110,7 +110,6 @@ void settings::reset() {
   setcontract(name("harvest"), "harvst.seeds"_n);
   setcontract(name("settings"), "settgs.seeds"_n);
   setcontract(name("proposals"), "funds.seeds"_n);
-  setcontract(name("invites"), "invite.seeds"_n); // old invite contract
   setcontract(name("onboarding"), "join.seeds"_n); // new invite contract
   setcontract(name("referendums"), "rules.seeds"_n);
   setcontract(name("history"), "histry.seeds"_n);

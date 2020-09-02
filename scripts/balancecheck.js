@@ -15,11 +15,12 @@ const allContracts = [
   "token", 
   "harvest", 
   "proposals",
-  "invites",
   "referendums",
   "history",
   "acctcreator",
   "exchange",
+  "organization",
+  
 ].sort()
 
 

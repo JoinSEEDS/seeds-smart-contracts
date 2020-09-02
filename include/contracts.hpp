@@ -9,7 +9,6 @@ namespace contracts {
   name harvest = "harvst.seeds"_n;
   name settings = "settgs.seeds"_n;
   name proposals = "funds.seeds"_n;
-  name invites = "invite.seeds"_n;
   name referendums = "rules.seeds"_n;
   name history = "histry.seeds"_n;
   name token = "token.seeds"_n;
