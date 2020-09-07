@@ -871,7 +871,7 @@ describe('Recepient invalid', async assert => {
 })
 
 
-describe.only('Stake limits', async assert => {
+describe('Stake limits', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -882,6 +882,9 @@ describe.only('Stake limits', async assert => {
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
