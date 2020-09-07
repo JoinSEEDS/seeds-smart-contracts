@@ -60,6 +60,7 @@ CONTRACT organization : public contract {
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
+        uint64_t config_get(name key);
 
         TABLE organization_table {
             name org_name;

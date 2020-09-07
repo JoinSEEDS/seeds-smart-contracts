@@ -392,6 +392,16 @@ var permissions = [{
   key: activePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.organization.account}@cbp`,
+  key: activePublicKey,
+  parent: 'active'
+}, { 
+  target: `${accounts.organization.account}@cbp`,
+  actor: `${accounts.accounts.account}@eosio.code`
+}, {
+  target: `${accounts.organization.account}@cbp`,
+  action: 'cbpreward'
+}, {
   target: `${accounts.forum.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {

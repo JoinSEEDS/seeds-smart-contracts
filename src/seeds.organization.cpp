@@ -477,3 +477,34 @@ ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t s
     }
 }
 
+ACTION organization::cbpreward(bool is_citizen) {
+    require_auth(get_self());
+    
+    name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
+
+    auto community_building_points = config_get(cbp_param);
+
+    auto citr = cbs.find(referrer.value);
+    if (citr != cbs.end()) {
+      cbs.modify(citr, _self, [&](auto& item) {
+        item.community_building_score += community_building_points;
+      });
+    } else {
+      cbs.emplace(_self, [&](auto& item) {
+        item.account = referrer;
+        item.community_building_score = community_building_points;
+        item.rank = 0;
+      });
+      size_change("cbs.sz"_n, 1);
+    }
+
+}
+
+uint64_t accounts::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}

@@ -239,6 +239,35 @@ name accounts::find_referrer(name account) {
   return not_found;
 }
 
+void accounts::add_community_building_points(name referrer, bool is_citizen, bool is_org) {
+  if (!is_org) {
+    name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
+
+    auto community_building_points = config_get(cbp_param);
+
+    auto citr = cbs.find(referrer.value);
+    if (citr != cbs.end()) {
+      cbs.modify(citr, _self, [&](auto& item) {
+        item.community_building_score += community_building_points;
+      });
+    } else {
+      cbs.emplace(_self, [&](auto& item) {
+        item.account = referrer;
+        item.community_building_score = community_building_points;
+        item.rank = 0;
+      });
+      size_change("cbs.sz"_n, 1);
+    }
+  } else {
+    action(
+      permission_level{contracts::organization, "active"_n},
+      contracts::organization,
+       "cbpreward"_n,
+      std::make_tuple(referrer, is_citizen))
+    .send();
+  }
+}
+
 void accounts::refreward(name account, name new_status) {
   check_user(account);
 
@@ -247,26 +276,6 @@ void accounts::refreward(name account, name new_status) {
   name referrer = find_referrer(account);
   if (referrer == not_found) {
     return;
-  }
-
-  // Add community building point +1
-
-  name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
-
-  auto community_building_points = config_get(cbp_param);
-
-  auto citr = cbs.find(referrer.value);
-  if (citr != cbs.end()) {
-    cbs.modify(citr, _self, [&](auto& item) {
-      item.community_building_score += community_building_points;
-    });
-  } else {
-    cbs.emplace(_self, [&](auto& item) {
-      item.account = referrer;
-      item.community_building_score = community_building_points;
-      item.rank = 0;
-    });
-    size_change("cbs.sz"_n, 1);
   }
 
   // see if referrer is org or individual (or nobody)
