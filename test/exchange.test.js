@@ -381,13 +381,16 @@ describe('Token Sale Price', async assert => {
     json: true,
   })
 
+  delete priceHistoryAfter.rows[0].date
+  delete priceHistoryAfter.rows[1].date
+  
   assert({
     given: 'price changed',
     should: 'insert new entry in price history',
     actual: priceHistoryAfter.rows,
     expected: [ 
-      { id: 0, price: '1.0000 SEEDS', date: parseInt(Date.now() / 1000) },
-      { id: 1, price: '2.0000 SEEDS', date: parseInt(Date.now() / 1000) }
+      { id: 0, seeds_usd: '1.0000 SEEDS' },
+      { id: 1, seeds_usd: '2.0000 SEEDS' }
     ]
   })
 
@@ -474,7 +477,6 @@ describe('Token Sale 50 Rounds', async assert => {
     //console.log("round "+i+" = "+seeds_per_usd.toFixed(4)+" SEEDS")
 
     await contracts.exchange.addround( 10 * 10000, seeds_per_usd.toFixed(4)+" SEEDS", { authorization: `${exchange}@active` })
-    await sleep(300)  
 
     usd_per_seeds = usd_per_seeds * 1.033
 
