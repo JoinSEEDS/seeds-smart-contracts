@@ -38,7 +38,7 @@ void exchange::reset() {
     phitr = pricehistory.erase(phitr);
   }
 
-*/
+/**/
 
 }
 
@@ -46,7 +46,7 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
   update_price();
 
   soldtable s = sold.get_or_create(get_self(), soldtable());
-
+ 
   double usd_total = double(usd_quantity.amount);
   double usd_remaining = usd_total;
   double seeds_amount = 0.0;
@@ -117,7 +117,6 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
       break;
   }
   
-  // uint64_t seeds_amount = (usd_quantity.amount * seeds_per_usd.amount) / 10000;
   uint64_t seeds_amount = seeds_for_usd(usd_quantity).amount;
   asset seeds_quantity = asset(seeds_amount, seeds_symbol);
   
@@ -130,6 +129,7 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
    "account: " + buyer.to_string() + 
    " symbol: " + paymentSymbol + 
    " tx_id: " + memo + 
+   " usd_quantity: " + usd_quantity.to_string() + 
    " purchase limit overdrawn, tried to buy " + seeds_quantity.to_string() + 
    " limit: " + seeds_limit.to_string() + 
    " new total would be: " + std::to_string( (seeds_purchased + seeds_amount) / 10000.0));
