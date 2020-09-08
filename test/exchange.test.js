@@ -75,10 +75,15 @@ describe('Exchange', async assert => {
   usd = 99
 
   let canExceedBalance = false
+  let hasErrorMessage = false
+  let expectedErrorMessage = "account: seedsuseraaa symbol: BTC tx_id: 0x3affgf999 usd_quantity: 99.0000 USD purchase limit overdrawn, tried to buy 9900.0000 SEEDS limit: 3.0000 SEEDS new total would be: 9900.990000"
   try {
-    await contracts.exchange.newpayment(firstuser, "BTC", "0x3affgf", usd * 10000, { authorization: `${exchange}@active` })
+    await contracts.exchange.newpayment(firstuser, "BTC", "0x3affgf999", usd * 10000, { authorization: `${exchange}@active` })
     canExceedBalance = true
   } catch (err) {
+    console.log("exceed balance expected error: "+err)
+    hasErrorMessage = (err + "").includes(expectedErrorMessage)
+
   }
 
   let allowDuplicateTransaction = false
@@ -121,6 +126,14 @@ describe('Exchange', async assert => {
     expected: false
   })
 
+  assert({
+    given: `exceeded balance`,
+    should: `have error with expected error message: `+expectedErrorMessage,
+    actual: hasErrorMessage,
+    expected: true
+    
+  })
+
   // TLOS test not quite working
   // assert({
   //   given: `sent ${tlosQuantity} to exchange`,
@@ -134,11 +147,11 @@ describe('Token Sale Rounds', async assert => {
 
   const contracts = await initContracts({ accounts, token, exchange })
   
-  console.log(`reset exchange`)
-  await contracts.exchange.reset({ authorization: `${exchange}@active` })  
-
   console.log(`reset accounts`)
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log(`reset exchange`)
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })  
 
   console.log(`add user`)
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -280,6 +293,9 @@ describe('Token Sale Price', async assert => {
   const contracts = await initContracts({ accounts, token, exchange })
   
   console.log(`reset exchange`)
+  await contracts.exchange.updatelimit("99.0000 SEEDS", "9.0000 SEEDS", "290000.0000 SEEDS", { authorization: `${exchange}@active` })
+  await contracts.exchange.updatelimit("100.0000 SEEDS", "10.0000 SEEDS", "3000000.0000 SEEDS", { authorization: `${exchange}@active` })
+
   await contracts.exchange.reset({ authorization: `${exchange}@active` })  
 
   console.log(`reset accounts`)
