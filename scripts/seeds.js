@@ -9,11 +9,28 @@ const { harvest } = names
 const deploy = require('./deploy.command')
 const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission } = require('./deploy')
 
+
+const getContractLocation = (contract) => {
+  if (contract == "msig") {
+    return {
+      source: `../msig/src/${contract}.cpp`,
+      include: `../msig/include`
+    }
+  } else {
+    return {
+      source: `./src/seeds.${contract}.cpp`,
+      include: ""
+    }
+  }
+}
+
 const compileAction = async (contract) => {
     try {
+      var { source, include } = getContractLocation(contract)
       await compile({
         contract: contract,
-        source: `./src/seeds.${contract}.cpp`
+        source,
+        include
       })
       console.log(`${contract} compiled`)
     } catch (err) {
