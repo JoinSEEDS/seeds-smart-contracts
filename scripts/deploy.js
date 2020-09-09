@@ -96,14 +96,14 @@ const deploy = async ({ name, account }) => {
       vmtype: 0,
       vmversion: 0
     }, {
-      authorization: `${account}@owner`
+      authorization: `${account}@active`
     })
 
     await eos.setabi({
       account,
       abi: JSON.parse(abi)
     }, {
-      authorization: `${account}@owner`
+      authorization: `${account}@active`
     })
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
