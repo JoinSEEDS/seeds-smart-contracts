@@ -345,6 +345,7 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       auto pitr = props.find(id);
       check(pitr != props.end(), "no proposal");
       check(from == pitr->creator, "only the creator can stake into a proposal");
+      check(pitr->stage == name("staged"), "can only stake on stages proposals");
 
       auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
       check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
@@ -398,7 +399,9 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  check(is_enough_stake(pitr->staked, pitr->quantity), "not enough stake");
+  // New Rules
+  //check(is_enough_stake(pitr->staked, pitr->quantity), "not enough stake");
+
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);
