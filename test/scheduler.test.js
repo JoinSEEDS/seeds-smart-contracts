@@ -197,3 +197,61 @@ describe('scheduler, token.resetweekly', async assert => {
     await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
 
 })
+
+describe('scheduler, organization scores', async assert => {
+
+    contracts = await Promise.all([
+        eos.contract(scheduler),
+        eos.contract(settings)
+    ]).then(([scheduler, settings]) => ({
+        scheduler, settings
+    }))
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    const operations = {
+        'org.mrgen': 'calcmregens',
+        'org.txpts': 'calctrxpts',
+        'org.rankrgen': 'rankregens',
+        'org.rankcbs': 'rankcbsorgs',
+        'org.ranktxs': 'ranktxs'
+    }
+    const ids = Object.keys(operations)
+
+    console.log('add operations')
+    for (const id of ids) {
+        await contracts.scheduler.configop(id, operations[id], organization, 1, 0, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+    
+    console.log('scheduler execute')
+    let canExecute = false
+    try {
+        for(let i = 0; i < ids.length + 10; i++) {
+            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
+            await sleep(200)
+            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+            await sleep(300)
+        }
+        canExecute = true
+    } catch (error) {
+        console.log(error)
+        console.log('can not execute calcmregens (unexpected, permission may be needed)')
+        
+    }
+    assert({
+        given: 'called execute',
+        should: 'be able to execute organization scores actions',
+        actual: canExecute,
+        expected: true
+    })
+
+    await sleep(1 * 1000)
+
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
+})

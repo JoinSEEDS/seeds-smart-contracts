@@ -5,6 +5,7 @@
 #include <utils.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
+#include <cmath> 
 
 using namespace eosio;
 using std::string;
@@ -18,6 +19,11 @@ CONTRACT organization : public contract {
               organizations(receiver, receiver.value),
               sponsors(receiver, receiver.value),
               apps(receiver, receiver.value),
+              regenscores(receiver, receiver.value),
+              cbsorgs(receiver, receiver.value),
+              txporgs(receiver, receiver.value),
+              sizes(receiver, receiver.value),
+              refs(contracts::accounts, contracts::accounts.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value)
@@ -36,9 +42,9 @@ CONTRACT organization : public contract {
         
         ACTION changeowner(name organization, name owner, name account); // (owner permission)
 
-        ACTION addregen(name organization, name account); // adds a fixed number of regen points, possibly modified by the account reputation. account - account adding the regen (account auth)
+        ACTION addregen(name organization, name account, uint64_t amount); // adds a fixed number of regen points, possibly modified by the account reputation. account - account adding the regen (account auth)
         
-        ACTION subregen(name organization, name account); // same as add, just negative (account auth)
+        ACTION subregen(name organization, name account, uint64_t amount); // same as add, just negative (account auth)
 
         ACTION create(name sponsor, name orgaccount, string orgfullname, string publicKey);
 
@@ -56,6 +62,32 @@ CONTRACT organization : public contract {
 
         ACTION cleandau(name appname, uint64_t timestamp, uint64_t start);
 
+        ACTION calcmregens();
+
+        ACTION calcmregen(uint64_t start, uint64_t chunksize);
+
+        ACTION rankregens();
+
+        ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
+
+        ACTION rankcbsorgs();
+
+        ACTION rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize);
+
+        ACTION addcbpoints(name organization, uint32_t cbscore);
+
+        ACTION subcbpoints(name organization, uint32_t cbscore);
+
+        ACTION calctrxpts();
+
+        ACTION calctrxpt(uint64_t start, uint64_t chunk, uint64_t chunksize);
+
+        ACTION ranktxs();
+
+        ACTION ranktx(uint64_t start, uint64_t chunk, uint64_t chunksize);
+
+        ACTION makeregen(name organization);
+
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
@@ -64,7 +96,7 @@ CONTRACT organization : public contract {
         TABLE organization_table {
             name org_name;
             name owner;
-            uint64_t status;
+            name status;
             int64_t regen;
             uint64_t reputation;
             uint64_t voice;
@@ -93,11 +125,92 @@ CONTRACT organization : public contract {
             int64_t regen_points;
 
             uint64_t primary_key() const { return account.value; }
+            uint64_t by_regen_points() const {
+                uint64_t regen_id = 1;
+                regen_id <<= 63;
+                return regen_id + regen_points + ((regen_points < 0) ? -1 : 0);
+            }
         };
+
+        // ================================================================== //
+        // ================================================================== //
+        // ================================================================== //
+        TABLE regen_score_table {
+            name org_name;
+            int64_t regen_median;
+            uint64_t rank;
+
+            uint64_t primary_key() const { return org_name.value; }
+            uint64_t by_regen_median() const {
+                uint64_t regen_id = 1;
+                regen_id <<= 63;
+                return regen_id + regen_median + ((regen_median < 0) ? -1 : 0);
+            }
+            uint64_t by_rank() const { return rank; }
+        };
+
+        TABLE cbs_organization_table {
+            name org_name;
+            uint32_t community_building_score;
+            uint64_t rank;
+
+            uint64_t primary_key() const { return org_name.value; }
+            uint64_t by_cbs() const { return (uint64_t(community_building_score) << 32) +  ( (org_name.value <<32) >> 32) ; }
+            uint64_t by_rank() const { return rank; }
+        };
+
+        TABLE txs_organization_table {
+            name org_name;
+            uint32_t points;
+            uint64_t rank;
+
+            uint64_t primary_key() const { return org_name.value; } 
+            uint64_t by_points() const { return (uint64_t(points) << 32) +  ( (org_name.value <<32) >> 32) ; } 
+            uint64_t by_rank() const { return rank; }            
+        };
+
+        TABLE transaction_table { // from history contract
+            uint64_t id;
+            name to;
+            asset quantity;
+            uint64_t timestamp;
+
+            uint64_t primary_key() const { return id; }
+            uint64_t by_timestamp() const { return timestamp; }
+            uint64_t by_to() const { return to.value; }
+            uint64_t by_quantity() const { return quantity.amount; }
+        };
+
+        typedef eosio::multi_index<"transactions"_n, transaction_table,
+            indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+            indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+            indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
+        > transaction_tables;
+
+        TABLE ref_table { // from accounts contract
+            name referrer;
+            name invited;
+
+            uint64_t primary_key() const { return invited.value; }
+            uint64_t by_referrer()const { return referrer.value; }
+        };
+
+        typedef eosio::multi_index<"refs"_n, ref_table,
+            indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
+        > ref_tables;
+
+        // ================================================================== //
+        // ================================================================== //
+        // ================================================================== //
 
         DEFINE_CONFIG_TABLE
         
         DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+        DEFINE_SIZE_TABLE
+
+        DEFINE_SIZE_TABLE_MULTI_INDEX
+
 
         TABLE app_table {
             name app_name;
@@ -134,15 +247,16 @@ CONTRACT organization : public contract {
             const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
         > balance_tables;
     
-        balance_tables balances;
-
         typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
 
         typedef eosio::multi_index <"members"_n, members_table> members_tables;
 
         typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;
 
-        typedef eosio::multi_index <"votes"_n, vote_table> vote_tables;
+        typedef eosio::multi_index <"votes"_n, vote_table,
+            indexed_by<"byregen"_n,
+            const_mem_fun<vote_table, uint64_t, &vote_table::by_regen_points>>
+        > vote_tables;
 
         typedef eosio::multi_index<"users"_n, tables::user_table,
             indexed_by<"byreputation"_n,
@@ -163,22 +277,67 @@ CONTRACT organization : public contract {
             const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_date>>
         > dau_history_tables;
 
+        typedef eosio::multi_index<"regenscores"_n, regen_score_table,
+            indexed_by<"byregenmdian"_n,
+            const_mem_fun<regen_score_table, uint64_t, &regen_score_table::by_regen_median>>,
+            indexed_by<"byrank"_n,
+            const_mem_fun<regen_score_table, uint64_t, &regen_score_table::by_rank>>
+        > regen_score_tables;
+
+        typedef eosio::multi_index<"cbsorgs"_n, cbs_organization_table,
+            indexed_by<"bycbs"_n,
+            const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_cbs>>,
+            indexed_by<"byrank"_n,
+            const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_rank>>
+        > cbs_organization_tables;
+
+        typedef eosio::multi_index<"txorgpoints"_n, txs_organization_table,
+            indexed_by<"bypoints"_n,
+            const_mem_fun<txs_organization_table, uint64_t, &txs_organization_table::by_points>>,
+            indexed_by<"byrank"_n,
+            const_mem_fun<txs_organization_table, uint64_t, &txs_organization_table::by_rank>>
+        > txs_organization_tables;
+
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
         config_tables config;
         app_tables apps;
+        regen_score_tables regenscores;
+        cbs_organization_tables cbsorgs;
+        txs_organization_tables txporgs;
+        size_tables sizes;
+        balance_tables balances;
+        ref_tables refs;
 
         const name min_planted = "org.minplant"_n;
+        const name regen_score_size = "rs.sz"_n;
+        const name cb_score_size = "cbs.sz"_n;
+        const name tx_score_size = "txs.sz"_n;
+        const name regen_median = "org.rgnmcalc"_n;
+        const name regular_org = "org.regular"_n;
+        const name reputable_org = "org.reptble"_n;
+        const name regenerative_org = "org.regen"_n;
 
+        uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
         void init_balance(name account);
         int64_t getregenp(name account);
         void check_user(name account);
+        void revert_previous_vote(name organization, name account);
         void vote(name organization, name account, int64_t regen);
         void check_asset(asset quantity);
         uint64_t get_beginning_of_day_in_seconds();
+        int64_t calculate_median_regen_points(name orgname);
+        uint64_t get_size(name id);
+        void increase_size_by_one(name id);
+        void decrease_size_by_one(name id);
+        uint32_t calc_transaction_points(name organization);
+        void check_can_make_regen(name organization);
+        uint64_t count_refs(name user, uint32_t check_num_residents);
+        void update_status(name organization, name status);
+        uint64_t get_regen_score(name organization);
 };
 
 
@@ -188,7 +347,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
-            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau))
+            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)(calcmregens)(calcmregen)
+            (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(calctrxpts)(calctrxpt)(ranktxs)
+            (ranktx)(makeregen))
       }
   }
 }

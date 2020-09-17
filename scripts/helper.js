@@ -527,7 +527,26 @@ var permissions = [{
 }, { 
   target: `${accounts.organization.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
-}]
+}, {
+  target: `${accounts.organization.account}@active`,
+  actor: `${accounts.accounts.account}@active`
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'calcmregens'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'calctrxpts'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankregens'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankcbsorgs'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'ranktxs'
+}
+]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
