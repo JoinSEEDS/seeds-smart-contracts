@@ -129,7 +129,10 @@ void proposals::onperiod() {
         }
       }
 
-      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
+      uint64_t old_min_stake = 500 * 10000; // compatibility - for this cycle, some proposals were submitted under old rules, 500.0000 SEEDS min stake.
+
+      if (pitr->stage == name("staged") && 
+          (pitr->staked.amount >= old_min_stake || is_enough_stake(pitr->staked, pitr->quantity) ) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
         });
