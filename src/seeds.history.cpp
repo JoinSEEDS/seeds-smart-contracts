@@ -72,13 +72,14 @@ void history::historyentry(name account, string action, uint64_t amount, string 
 void history::trxentry(name from, name to, asset quantity) {
   require_auth(get_self());
   
-  auto uitr1 = users.find(from.value);
-  auto uitr2 = users.find(to.value);
+  auto from_user = users.find(from.value);
+  auto to_user = users.find(to.value);
   
-  if (uitr1 == users.end() || uitr2 == users.end()) {
+  if (from_user == users.end() || to_user == users.end()) {
     return;
   }
-    
+  
+  // make entry for from no matter what
   transaction_tables transactions(get_self(), from.value);
   transactions.emplace(_self, [&](auto& item) {
     item.id = transactions.available_primary_key();
@@ -86,10 +87,21 @@ void history::trxentry(name from, name to, asset quantity) {
     item.quantity = quantity;
     item.timestamp = eosio::current_time_point().sec_since_epoch();
   });
-  
-  cancel_deferred(from.value);
+
+  // Orgs get entry for "to"
+  if (to_user->type == "organisation"_n) {
+      org_tx_tables orgtx(get_self(), to.value);
+      orgtx.emplace(_self, [&](auto& item) {
+        item.id = orgtx.available_primary_key();
+        item.from = from;
+        item.quantity = quantity;
+        item.timestamp = eosio::current_time_point().sec_since_epoch();
+      });
+  }
 
   // delayed update
+  cancel_deferred(from.value);
+
   action a(
       permission_level{contracts::harvest, "active"_n},
       contracts::harvest,

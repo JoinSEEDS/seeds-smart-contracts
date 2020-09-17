@@ -76,6 +76,25 @@ CONTRACT history : public contract {
        uint64_t by_to() const { return to.value; }
        uint64_t by_quantity() const { return quantity.amount; }
     };
+
+    TABLE org_tx_table {
+       uint64_t id;
+       name from;
+       asset quantity;
+       uint64_t timestamp;
+
+       uint64_t primary_key() const { return id; }
+       uint64_t by_timestamp() const { return timestamp; }
+       uint64_t by_from() const { return from.value; }
+       uint64_t by_quantity() const { return quantity.amount; }
+    };
+
+    typedef eosio::multi_index<"orgtx"_n, org_tx_table,
+      indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
+      indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
+      indexed_by<"byfrom"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_from>>
+    > org_tx_tables;
+
     typedef eosio::multi_index<"transactions"_n, transaction_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
       indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
