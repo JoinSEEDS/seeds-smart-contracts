@@ -358,10 +358,7 @@ ACTION exchange::incprice() {
     uint64_t seeds_per_usd = uint64_t(round( 10000.0 / usd_per_seeds));
     asset val = asset(seeds_per_usd, seeds_symbol);
 
-    print(std::to_string(ritr->id) + ": " + ritr->seeds_per_usd.to_string() + "---> " + val.to_string() + "\n ");
-
-    //check(false, std::to_string(ritr->id) + ": " + ritr->seeds_per_usd.to_string() + "---> " + val.to_string() + "\n ");
-
+    //print(std::to_string(ritr->id) + ": " + ritr->seeds_per_usd.to_string() + "---> " + val.to_string() + "\n ");
     rounds.modify(ritr, _self, [&](auto& item) {
       item.seeds_per_usd = val;
     });
