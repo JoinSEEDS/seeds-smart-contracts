@@ -40,6 +40,8 @@ CONTRACT exchange : public contract {
 
     ACTION initsale();
 
+    ACTION incprice();
+
     ACTION priceupdate();
 
     ACTION reset();
@@ -49,7 +51,7 @@ CONTRACT exchange : public contract {
     void purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo); 
     asset seeds_for_usd(asset usd_quantity);
     void update_price(); // updates price table
-    void price_update_aux(); // updates price table
+    void price_history_update(); // updates price table
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -153,7 +155,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds)(priceupdate))
+          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds)(priceupdate)(incprice))
       }
   }
 }
