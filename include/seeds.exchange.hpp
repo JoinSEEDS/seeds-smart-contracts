@@ -41,6 +41,8 @@ CONTRACT exchange : public contract {
 
     ACTION initsale();
 
+    ACTION incprice();
+
     ACTION priceupdate();
 
     ACTION pause();
@@ -58,6 +60,7 @@ CONTRACT exchange : public contract {
     void update_price(); 
     void price_update_aux();
     bool is_paused();
+    void price_history_update(); 
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -176,6 +179,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)
           (addround)(initsale)(initrounds)(priceupdate)
           (migrate)(pause)(unpause)
+          (incprice)
           )
       }
   }

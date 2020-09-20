@@ -15,10 +15,10 @@ void exchange::reset() {
   updatelimit(citizen_limit, resident_limit, visitor_limit);
   updatetlos(tlos_per_usd);
 
-
-/**
  
-  // NEVER CHECK THESE IN
+  // COMMENT OUT For testing
+  check(false, "comment this out for testing, never check in commented out");
+
   // we never want to erase rounds or sold table or history except for unit testing
   
   sold.remove();
@@ -38,7 +38,6 @@ void exchange::reset() {
     phitr = pricehistory.erase(phitr);
   }
 
-/**/
 
 }
 
@@ -290,7 +289,7 @@ void exchange::update_price() {
     ritr++;
   }
 
-  price_update_aux();
+  price_history_update();
 
 }
 
@@ -349,12 +348,39 @@ ACTION exchange::initrounds(uint64_t volume_per_round, asset initial_seeds_per_u
 
 }
 
-ACTION exchange::priceupdate() {
+ACTION exchange::incprice() {
   require_auth(get_self());
-  price_update_aux();
+
+  double increment_factor = 1.033; // 3.3% increase
+
+  price_table p = price.get();
+  auto ritr = rounds.find(p.current_round_id);
+  check(ritr != rounds.end(), "price table has invalid round id or sale has ended");
+
+  print(std::to_string(p.current_round_id)+ " XX" );
+
+  while(ritr != rounds.end()) {
+    double usd_per_seeds = 1.0 / (ritr->seeds_per_usd.amount / 10000.0);
+    usd_per_seeds *= increment_factor;
+    uint64_t seeds_per_usd = uint64_t(round( 10000.0 / usd_per_seeds));
+    asset val = asset(seeds_per_usd, seeds_symbol);
+
+    //print(std::to_string(ritr->id) + ": " + ritr->seeds_per_usd.to_string() + "---> " + val.to_string() + "\n ");
+    rounds.modify(ritr, _self, [&](auto& item) {
+      item.seeds_per_usd = val;
+    });
+    ritr++;
+  }
+
+  update_price();
 }
 
-void exchange::price_update_aux() {
+ACTION exchange::priceupdate() {
+  require_auth(get_self());
+  price_history_update();
+}
+
+void exchange::price_history_update() {
 
   price_table p = price.get();
 
