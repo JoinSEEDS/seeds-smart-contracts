@@ -90,6 +90,7 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
 }
 
 void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo) {
+  check(!is_paused(), "Contract is paused - no purchase possible.");
 
   eosio::multi_index<"users"_n, tables::user_table> users(contracts::accounts, contracts::accounts.value);
 
@@ -161,6 +162,12 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
 void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
 
+    check(false, "TLOS purchase is disabled for the time being.");
+
+    // To re-enable we need to access delphioracle to get tlos rates
+    // Disabled because we saw nobody buy with TLOS, other than our own internal test purchases
+
+    /**
     check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
     configtable c = config.get();
@@ -172,6 +179,7 @@ void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string me
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, "TLOS", memo);
+    **/
   }
 }
 
@@ -319,7 +327,6 @@ ACTION exchange::initsale() {
 }
 
 ACTION exchange::initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd) {
-
   require_auth(get_self());
 
   auto ritr = rounds.begin();
@@ -365,4 +372,36 @@ void exchange::price_update_aux() {
   }
 }
 
+ACTION exchange::pause() {
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr == flags.end()) {
+    flags.emplace(get_self(), [&](auto& item) {
+      item.value = 1;
+    });
+  } else {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.value = 1;
+    });
+  } 
+}
 
+ACTION exchange::unpause() {
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr != flags.end()) {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.value = 0;
+    });
+  }
+}
+
+bool exchange::is_paused() {
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr != flags.end()) {
+    return fitr->value > 0;
+  }
+  return false;
+}
+
+ACTION exchange::migrate() {
+  check(false, "not implemented");
+}

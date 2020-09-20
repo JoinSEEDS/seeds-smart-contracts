@@ -19,7 +19,8 @@ CONTRACT exchange : public contract {
         pricehistory(receiver, receiver.value),
         rounds(receiver, receiver.value),
         dailystats(receiver, receiver.value),
-        payhistory(receiver, receiver.value)
+        payhistory(receiver, receiver.value),
+        flags(receiver, receiver.value)
         {}
       
     ACTION onperiod();
@@ -42,18 +43,26 @@ CONTRACT exchange : public contract {
 
     ACTION priceupdate();
 
+    ACTION pause();
+
+    ACTION unpause();
+
+    ACTION migrate();
+
     ACTION reset();
 
   private:
 
     void purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo); 
     asset seeds_for_usd(asset usd_quantity);
-    void update_price(); // updates price table
-    void price_update_aux(); // updates price table
+    void update_price(); 
+    void price_update_aux();
+    bool is_paused();
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol usd_symbol = symbol("USD", 4);
+    name paused_flag = "paused"_n;
 
     TABLE configtable {
       asset seeds_per_usd;
@@ -113,6 +122,14 @@ CONTRACT exchange : public contract {
       uint64_t primary_key()const { return id; }
     };
 
+    TABLE flags_table { 
+        name param; 
+        uint64_t value; 
+        uint64_t primary_key()const { return param.value; } 
+      }; 
+
+    typedef eosio::multi_index<"flags"_n, flags_table> flags_tables; 
+
     typedef singleton<"config"_n, configtable> configtables;
     typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
 
@@ -146,6 +163,8 @@ CONTRACT exchange : public contract {
 
     payhistory_tables payhistory;
 
+    flags_tables flags;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
@@ -153,7 +172,11 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(exchange, (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)(addround)(initsale)(initrounds)(priceupdate))
+          EOSIO_DISPATCH_HELPER(exchange, 
+          (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)
+          (addround)(initsale)(initrounds)(priceupdate)
+          (migrate)(pause)(unpause)
+          )
       }
   }
 }
