@@ -631,7 +631,7 @@ describe('Token Sale 50 Rounds', async assert => {
 
 })
 
-describe.only('Increase Price', async assert => {
+describe('Increase Price', async assert => {
 
   const contracts = await initContracts({ accounts, token, exchange })
   
