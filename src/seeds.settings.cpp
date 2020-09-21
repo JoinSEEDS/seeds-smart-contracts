@@ -36,13 +36,23 @@ void settings::reset() {
 
   // Organizations
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
-  confwithdesc(name("regen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
-  confwithdesc(name("rgen.minsub"), 7, "Minimum amount of points a user can take from an org", high_impact);
-  confwithdesc(name("rgen.maxadd"), 7, "Maximum amount of points a user can give to an org", high_impact);
+  confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
+  confwithdesc(name("org.minsub"), 7, "Minimum amount of points a user can take from an org", high_impact);
+  confwithdesc(name("org.maxadd"), 7, "Maximum amount of points a user can give to an org", high_impact);
+
+  // Resident orgs
+  confwithdesc(name("rep.minplnt"), 400 * 10000, "Minimum amount planted to become a Reputable Organization (in Seeds)", high_impact);
+  confwithdesc(name("rep.minrank"), 50, "Minimum rank an organization must have to become a Reputable Organization", high_impact);
+  confwithdesc(name("rep.refrred"), 10, "Minimum number of referrals to become a Reputable Organization", high_impact);
+  confwithdesc(name("rep.resref"), 5, "Minimum number of residents or citizens referred to become a Reputable Organization", high_impact);
+  confwithdesc(name("rep.mintrx"), 5, "Minimum number of exchanged transactions with Reputable/Regenerative organizations or Citizens to become a Reputable Organization", high_impact);
+
+  // Regenerative orgs
   confwithdesc(name("rgen.minplnt"), 400 * 10000, "Minimum amount planted to become a Regenerative Organization (in Seeds)", high_impact);
   confwithdesc(name("rgen.minrank"), 50, "Minimum rank an organization must have to become a Regenerative Organization", high_impact);
   confwithdesc(name("rgen.refrred"), 10, "Minimum number of referrals to become a Regenerative Organization", high_impact);
   confwithdesc(name("rgen.resref"), 5, "Minimum number of residents or citizens referred to become a Regenerative Organization", high_impact);
+  confwithdesc(name("rgen.mintrx"), 5, "Minimum number of exchanged transactions with Reputable/Regenerative organizations or Citizens to become a Regenerative Organization", high_impact);
 
   // Scheduler cycle
   confwithdesc(name("secndstoexec"), 60, "Seconds to execute", high_impact);

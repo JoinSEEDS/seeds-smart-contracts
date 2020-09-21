@@ -88,6 +88,12 @@ CONTRACT organization : public contract {
 
         ACTION makeregen(name organization);
 
+        ACTION makereptable(name organization);
+
+        ACTION testregen(name organization);
+
+        ACTION testreptable(name organization);
+
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
@@ -315,9 +321,9 @@ CONTRACT organization : public contract {
         const name cb_score_size = "cbs.sz"_n;
         const name tx_score_size = "txs.sz"_n;
         const name regen_median = "org.rgnmcalc"_n;
-        const name regular_org = "org.regular"_n;
-        const name reputable_org = "org.reptble"_n;
-        const name regenerative_org = "org.regen"_n;
+        const name regular_org = "regular"_n;
+        const name reputable_org = "reputable"_n;
+        const name regenerative_org = "regenerative"_n;
 
         uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
@@ -335,9 +341,13 @@ CONTRACT organization : public contract {
         void decrease_size_by_one(name id);
         uint32_t calc_transaction_points(name organization);
         void check_can_make_regen(name organization);
+        void check_can_make_reputable(name organization);
         uint64_t count_refs(name user, uint32_t check_num_residents);
         void update_status(name organization, name status);
         uint64_t get_regen_score(name organization);
+        void history_add_regenerative(name organization);
+        void history_add_reputable(name organization);
+        uint64_t count_transactions(name organization, uint64_t limit);
 };
 
 
@@ -349,7 +359,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)(calcmregens)(calcmregen)
             (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(calctrxpts)(calctrxpt)(ranktxs)
-            (ranktx)(makeregen))
+            (ranktx)(makeregen)(makereptable)(testregen)(testreptable))
       }
   }
 }

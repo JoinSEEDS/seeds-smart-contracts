@@ -17,7 +17,9 @@ CONTRACT history : public contract {
         : contract(receiver, code, ds),
           users(contracts::accounts, contracts::accounts.value),
           residents(receiver, receiver.value),
-          citizens(receiver, receiver.value)
+          citizens(receiver, receiver.value),
+          reputables(receiver, receiver.value),
+          regens(receiver, receiver.value)
         {}
 
         ACTION reset(name account);
@@ -31,6 +33,10 @@ CONTRACT history : public contract {
         ACTION addresident(name account);
 
         ACTION numtrx(name account);
+
+        ACTION addreputable(name organization);
+
+        ACTION addregen(name organization);
 
     private:
       void check_user(name account);
@@ -65,42 +71,73 @@ CONTRACT history : public contract {
         uint64_t primary_key()const { return history_id; }
       };
       
-    TABLE transaction_table {
-       uint64_t id;
-       name to;
-       asset quantity;
-       uint64_t timestamp;
+      TABLE transaction_table {
+        uint64_t id;
+        name to;
+        asset quantity;
+        uint64_t timestamp;
 
-       uint64_t primary_key() const { return id; }
-       uint64_t by_timestamp() const { return timestamp; }
-       uint64_t by_to() const { return to.value; }
-       uint64_t by_quantity() const { return quantity.amount; }
-    };
-    typedef eosio::multi_index<"transactions"_n, transaction_table,
-      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-    > transaction_tables;
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_to() const { return to.value; }
+        uint64_t by_quantity() const { return quantity.amount; }
+      };
 
-    typedef eosio::multi_index<"citizens"_n, citizen_table,
-      indexed_by<"byaccount"_n,
-      const_mem_fun<citizen_table, uint64_t, &citizen_table::by_account>>
-    > citizen_tables;
-    
-    typedef eosio::multi_index<"residents"_n, resident_table, 
-      indexed_by<"byaccount"_n,
-      const_mem_fun<resident_table, uint64_t, &resident_table::by_account>>
-    > resident_tables;
-    
-    typedef eosio::multi_index<"history"_n, history_table> history_tables;
-    
-    DEFINE_USER_TABLE
-    
-    DEFINE_USER_TABLE_MULTI_INDEX
+      TABLE reputable_table {
+        uint64_t id;
+        name organization;
+        uint64_t timestamp;
 
-    user_tables users;
-    resident_tables residents;
-    citizen_tables citizens;
+        uint64_t primary_key()const { return id; }
+        uint64_t by_org()const { return organization.value; }
+      };
+
+      TABLE regenerative_table {
+        uint64_t id;
+        name organization;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return id; }
+        uint64_t by_org()const { return organization.value; }
+      };
+
+      typedef eosio::multi_index<"transactions"_n, transaction_table,
+        indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+        indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
+      > transaction_tables;
+
+      typedef eosio::multi_index<"citizens"_n, citizen_table,
+        indexed_by<"byaccount"_n,
+        const_mem_fun<citizen_table, uint64_t, &citizen_table::by_account>>
+      > citizen_tables;
+      
+      typedef eosio::multi_index<"residents"_n, resident_table, 
+        indexed_by<"byaccount"_n,
+        const_mem_fun<resident_table, uint64_t, &resident_table::by_account>>
+      > resident_tables;
+    
+      typedef eosio::multi_index<"history"_n, history_table> history_tables;
+
+      typedef eosio::multi_index<"reputables"_n, reputable_table,
+        indexed_by<"byorg"_n,
+        const_mem_fun<reputable_table, uint64_t, &reputable_table::by_org>>
+      > reputable_tables;
+
+      typedef eosio::multi_index<"regens"_n, regenerative_table,
+        indexed_by<"byorg"_n,
+        const_mem_fun<regenerative_table, uint64_t, &regenerative_table::by_org>>
+      > regenerative_tables;
+      
+      DEFINE_USER_TABLE
+      
+      DEFINE_USER_TABLE_MULTI_INDEX
+
+      user_tables users;
+      resident_tables residents;
+      citizen_tables citizens;
+      reputable_tables reputables;
+      regenerative_tables regens;
 };
 
-EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident)(numtrx));
+EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident)(numtrx)(addreputable)(addregen));

@@ -54,6 +54,34 @@ void history::addcitizen(name account) {
   });
 }
 
+void history::addreputable(name organization) {
+  require_auth(get_self());
+
+  auto uitr = users.find(organization.value);
+  check(uitr != users.end(), "no user found");
+  check(uitr -> type == name("organisation"), "the user type must be organization");
+
+  reputables.emplace(_self, [&](auto & org){
+    org.id = reputables.available_primary_key();
+    org.organization = organization;
+    org.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+}
+
+void history::addregen(name organization) {
+  require_auth(get_self());
+
+  auto uitr = users.find(organization.value);
+  check(uitr != users.end(), "no user found");
+  check(uitr -> type == name("organisation"), "the user type must be organization");
+
+  regens.emplace(_self, [&](auto & org){
+    org.id = regens.available_primary_key();
+    org.organization = organization;
+    org.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+}
+
 void history::historyentry(name account, string action, uint64_t amount, string meta) {
   require_auth(get_self());
 
