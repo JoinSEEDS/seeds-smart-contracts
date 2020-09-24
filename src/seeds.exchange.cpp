@@ -15,7 +15,7 @@ void exchange::reset() {
   updatelimit(citizen_limit, resident_limit, visitor_limit);
   updatetlos(tlos_per_usd);
 
- 
+  unpause();
   // COMMENT in for testing, never check in commented in
 /**
   // we never want to erase rounds or sold table or history except for unit testing
@@ -406,10 +406,12 @@ ACTION exchange::pause() {
   auto fitr = flags.find(paused_flag.value);
   if (fitr == flags.end()) {
     flags.emplace(get_self(), [&](auto& item) {
+      item.param = paused_flag;
       item.value = 1;
     });
   } else {
     flags.modify(fitr, get_self(), [&](auto& item) {
+      item.param = paused_flag;
       item.value = 1;
     });
   } 

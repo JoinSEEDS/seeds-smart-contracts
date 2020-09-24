@@ -96,7 +96,42 @@ describe('Exchange', async assert => {
   console.log(`reset daily stats`)
   await contracts.exchange.onperiod({ authorization: `${exchange}@active` })  
 
+  
+  // test pause / unpause
+  await contracts.exchange.newpayment(firstuser, "BTC", "1000", 1, { authorization: `${exchange}@active` })
+  await contracts.exchange.pause({ authorization: `${exchange}@active` })
+
+  let allowPaused = false
+  try {
+    await contracts.exchange.newpayment(firstuser, "BTC", "1001", 2, { authorization: `${exchange}@active` })
+    allowPaused = true
+  } catch (err) {
+    console.log("expected error: "+err);
+  }
+
+  let balance1 = await getBalanceFloat(firstuser)
+  await contracts.exchange.unpause({ authorization: `${exchange}@active` })
+  await contracts.exchange.newpayment(firstuser, "BTC", "1002", 3, { authorization: `${exchange}@active` })
+  let balance2 = await getBalanceFloat(firstuser)
+
+  console.log(`reset daily stats again`)
+  await contracts.exchange.onperiod({ authorization: `${exchange}@active` })  
+
   expectedSeeds = parseFloat(expectedSeeds.toFixed(4))
+
+  assert({
+    given: `contract paused`,
+    should: "can't make transactions",
+    actual: allowPaused,
+    expected: false
+  })
+
+  assert({
+    given: `contract unpaused`,
+    should: "can make transactions " + balance1 + " -> "+balance2,
+    actual: balance1 < balance2,
+    expected: true
+  })
 
   assert({
     given: `sent ${usd} USD to exchange`,
@@ -305,7 +340,7 @@ describe('Token Sale Price', async assert => {
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
 
   console.log(`transfer seeds to ${exchange}`)
-  //await contracts.token.transfer(firstuser, exchange, "2000000.0000 SEEDS", 'unit test', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, exchange, "20000.0000 SEEDS", 'unit test', { authorization: `${firstuser}@active` })
 
   console.log(`update daily limits`)
   await contracts.exchange.updatelimit("100.0000 SEEDS", "10.0000 SEEDS", "3000000.0000 SEEDS", { authorization: `${exchange}@active` })
