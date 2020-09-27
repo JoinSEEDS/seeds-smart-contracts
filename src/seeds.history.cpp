@@ -13,10 +13,15 @@ void history::reset(name account) {
   }
   
   transaction_tables transactions(get_self(), account.value);
-  auto titr = transactions.begin();
-  
+  auto titr = transactions.begin();  
   while (titr != transactions.end()) {
     titr = transactions.erase(titr);
+  }
+  
+  org_tx_tables orgtx(get_self(), account.value);
+  auto oitr = orgtx.begin();
+  while (oitr != orgtx.end()) {
+    oitr = orgtx.erase(oitr);
   }
   
   auto citr = citizens.begin();
