@@ -16,6 +16,8 @@ void exchange::reset() {
   updatetlos(tlos_per_usd);
 
   unpause();
+  setflag(tlos_paused_flag, 1);
+
   // COMMENT in for testing, never check in commented in
 /**
   // we never want to erase rounds or sold table or history except for unit testing
@@ -165,12 +167,8 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
 void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
 
-    check(false, "TLOS purchase is disabled for the time being.");
+    check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
-    // To re-enable we need to access delphioracle to get tlos rates
-    // Disabled because we saw nobody buy with TLOS, other than our own internal test purchases
-
-    /**
     check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
     configtable c = config.get();
@@ -182,7 +180,6 @@ void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string me
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, "TLOS", memo);
-    **/
   }
 }
 
@@ -402,6 +399,21 @@ void exchange::price_history_update() {
   }
 }
 
+ACTION exchange::setflag(name flagname, uint64_t value) {
+  auto fitr = flags.find(flagname.value);
+  if (fitr == flags.end()) {
+    flags.emplace(get_self(), [&](auto& item) {
+      item.param = flagname;
+      item.value = value;
+    });
+  } else {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.param = flagname;
+      item.value = value;
+    });
+  } 
+}
+
 ACTION exchange::pause() {
   auto fitr = flags.find(paused_flag.value);
   if (fitr == flags.end()) {
@@ -428,6 +440,14 @@ ACTION exchange::unpause() {
 
 bool exchange::is_paused() {
   auto fitr = flags.find(paused_flag.value);
+  if (fitr != flags.end()) {
+    return fitr->value > 0;
+  }
+  return false;
+}
+
+bool exchange::is_set(name flag) {
+  auto fitr = flags.find(flag.value);
   if (fitr != flags.end()) {
     return fitr->value > 0;
   }

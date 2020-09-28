@@ -49,6 +49,8 @@ CONTRACT exchange : public contract {
 
     ACTION unpause();
 
+    ACTION setflag(name flagname, uint64_t value);
+
     ACTION migrate();
 
     ACTION reset();
@@ -60,12 +62,15 @@ CONTRACT exchange : public contract {
     void update_price(); 
     void price_update_aux();
     bool is_paused();
+    bool is_set(name flag);
+
     void price_history_update(); 
 
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol usd_symbol = symbol("USD", 4);
     name paused_flag = "paused"_n;
+    name tlos_paused_flag = "tlos.paused"_n;
 
     TABLE configtable {
       asset seeds_per_usd;
@@ -178,7 +183,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(exchange, 
           (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)
           (addround)(initsale)(initrounds)(priceupdate)
-          (migrate)(pause)(unpause)
+          (migrate)(pause)(unpause)(setflag)
           (incprice)
           )
       }
