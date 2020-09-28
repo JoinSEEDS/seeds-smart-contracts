@@ -398,7 +398,6 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  check(is_enough_stake(pitr->staked, pitr->quantity), "not enough stake");
   check(pitr->stage == name("active"), "not active stage");
 
   auto vitr = voice.find(voter.value);

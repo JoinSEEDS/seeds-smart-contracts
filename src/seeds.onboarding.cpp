@@ -273,10 +273,13 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
 void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   require_auth(sponsor);
 
+  checksum256 empty_checksum;
+
   invite_tables invites(get_self(), get_self().value);
   auto invites_byhash = invites.get_index<"byhash"_n>();
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
+  check(iitr->invite_secret == empty_checksum, "invite already accepted");
 
   auto refitr = referrers.find(iitr->invite_id);
   if (refitr != referrers.end()) {
