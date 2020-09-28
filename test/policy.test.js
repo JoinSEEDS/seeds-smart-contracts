@@ -1,7 +1,7 @@
 const { describe } = require('riteway')
-const { eos, names, isLocal } = require('../scripts/helper')
+const { eos, names, isLocal, initContracts } = require('../scripts/helper')
 
-const { policy, firstuser, seconduser } = names
+const { policy, firstuser, seconduser, accounts } = names
 
 describe('policy', async assert => {
 
@@ -9,8 +9,7 @@ describe('policy', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-
-  const contract = await eos.contract(policy)
+  const contracts = await initContracts({ policy, accounts })
 
   let accountField = firstuser
   let uuidField = '123'
@@ -18,9 +17,12 @@ describe('policy', async assert => {
   let signatureField = 'signature-string'
   let policyField = 'policy-string'
 
-  await contract.reset({ authorization: `${policy}@active` })
+  await contracts.policy.reset({ authorization: `${policy}@active` })
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-  await contract.create(
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.policy.create(
     accountField,
     uuidField,
     deviceField,
@@ -31,7 +33,7 @@ describe('policy', async assert => {
   
   policyField = 'updated-policy-string'
 
-  await contract.update(
+  await contracts.policy.update(
     0,
     accountField,
     uuidField,
@@ -51,7 +53,7 @@ describe('policy', async assert => {
   let secondDeviceUUID = '777-999'
   let secondDeviceField = '13:33'
 
-  await contract.create(
+  await contracts.policy.create(
     accountField,
     secondDeviceUUID,
     secondDeviceField,
@@ -67,7 +69,7 @@ describe('policy', async assert => {
     json: true
   })
 
-  await contract.remove(
+  await contracts.policy.remove(
     1,
     { authorization: `${firstuser}@active` }
   )
@@ -81,7 +83,7 @@ describe('policy', async assert => {
 
   var onlyAuthorizedCanRemove = true
   try {
-    await contract.remove(
+    await contracts.policy.remove(
       0,
       { authorization: `${seconduser}@active` }
     )
@@ -90,6 +92,25 @@ describe('policy', async assert => {
   } catch (err) {
     console.log(err)
 
+  }
+
+  console.log("user who is not a seeds user tries to create");
+
+  var nonSeedsUser = false
+  var notSeedsErrorMessage = false
+  try {
+    await contracts.policy.create(
+      seconduser,
+      secondDeviceUUID,
+      secondDeviceField,
+      signatureField,
+      policyField,
+      { authorization: `${seconduser}@active` }
+    )
+      nonSeedsUser = true;
+  } catch(e) {
+    notSeedsErrorMessage = (""+e).toLowerCase().includes("not a seeds user")
+    console.log(notSeedsErrorMessage +" expected error: "+e);
   }
 
 
@@ -126,6 +147,20 @@ describe('policy', async assert => {
     should: 'row deleted',
     actual: afterRemove.rows.length,
     expected: 1
+  })
+
+  assert({
+    given: 'non seeds user',
+    should: 'cannot create policy',
+    actual: nonSeedsUser,
+    expected: false
+  })
+
+  assert({
+    given: 'non seeds user',
+    should: 'error message',
+    actual: notSeedsErrorMessage,
+    expected: true
   })
 
 })

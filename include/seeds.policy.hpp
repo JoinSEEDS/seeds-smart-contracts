@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
+#include <tables/user_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -21,6 +22,7 @@ CONTRACT policy : public contract {
     ACTION remove(uint64_t id);
 
   private:
+    void check_user(name account);
 
     TABLE device_policy_table {
       uint64_t id;
@@ -40,7 +42,7 @@ CONTRACT policy : public contract {
 
     device_policy_tables devicepolicy;
 
-
+    
 };
 
 EOSIO_DISPATCH(policy, (create)(update)(reset)(remove));
