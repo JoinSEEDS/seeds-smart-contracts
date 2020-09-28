@@ -1020,3 +1020,91 @@ describe('Stake limits', async assert => {
 
 
 })
+
+describe('Voice decay', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+  console.log('change decaytime')
+  await contracts.settings.configure('decaytime', 30, { authorization: `${settings}@active` })
+
+  console.log('propdecaysec')
+  await contracts.settings.configure('propdecaysec', 5, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('rank css')
+  await contracts.harvest.testupdatecs(firstuser, 40, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 89, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 0, { authorization: `${harvest}@active` })
+  await sleep(2000)
+
+  const testVoiceDecay = async (expectedValues, n) => {
+    console.log('voice decay')
+    await contracts.proposals.decayvoices({ authorization: `${proposals}@active` })
+    await sleep(2000)
+
+    const voice = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'voice',
+      json: true,
+    })
+
+    assert({
+      given: 'ran voice decay for the ' + n + ' time',
+      should: 'decay voices if required',
+      actual: voice.rows.map(r => r.balance),
+      expected: expectedValues
+    })
+  }
+
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(4000)
+
+  await testVoiceDecay([40, 89, 0], 1)
+  await sleep(10000)
+  await testVoiceDecay([40, 89, 0], 2)
+  await sleep(15000)
+  await testVoiceDecay([34, 75, 0], 3)
+  await sleep(1000)
+  await testVoiceDecay([34, 75, 0], 4)
+  await sleep(4000)
+  await testVoiceDecay([28, 63, 0], 5)
+  await sleep(2000)
+
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(4000)
+
+  await testVoiceDecay([40, 89, 0], 6)
+
+})

@@ -27,9 +27,11 @@ void settings::reset() {
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
-  confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Number of seconds per day", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
   confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
+  confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
+  confwithdesc(name("decaytime"), utils::moon_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
+  confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
 
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 

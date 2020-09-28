@@ -527,6 +527,9 @@ var permissions = [{
 }, { 
   target: `${accounts.organization.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.proposals.account}@execute`,
+  action: 'decayvoices'
 }]
 
 const isTestnet = chainId == networks.telosTestnet
