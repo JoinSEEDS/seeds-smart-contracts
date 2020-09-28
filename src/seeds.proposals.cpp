@@ -230,24 +230,15 @@ void proposals::decayvoices() {
   uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
   uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
 
-  print("\n---------------------------------\n");
-  print("t_onperiod:", c.t_onperiod, "\n");
-  print("t_voicedecay:", c.t_voicedecay, "\n");
-  print("now:", now, "\n");
-  print("t_onperiod - now = ", now - c.t_onperiod, "\n");
-  print("now - c.t_voicedecay = ", now - c.t_voicedecay, "\n");
-
   if ((c.t_onperiod < now)
       && (now - c.t_onperiod >= decay_time)
       && (now - c.t_voicedecay >= decay_sec)
   ) {
-    print("executing...\n");
     c.t_voicedecay = now;
     cycle.set(c, get_self());
     auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
     decayvoice(0, batch_size.value);
   }
-  print("\n---------------------------------\n");
 }
 
 void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
@@ -275,8 +266,6 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
         "decayvoice"_n,
         std::make_tuple(next_value, chunksize)
     );
-
-    print("\n\n\nCALLED NEW BATCH\n\n\n");
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
