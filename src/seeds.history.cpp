@@ -1,6 +1,7 @@
 #include <seeds.history.hpp>
 #include <eosio/system.hpp>
 #include <eosio/transaction.hpp>
+#include <utils.hpp>
 
 void history::reset(name account) {
   require_auth(get_self());
@@ -84,25 +85,39 @@ void history::trxentry(name from, name to, asset quantity) {
     return;
   }
   
-  // make entry for from no matter what
-  transaction_tables transactions(get_self(), from.value);
-  transactions.emplace(_self, [&](auto& item) {
-    item.id = transactions.available_primary_key();
-    item.to = to;
-    item.quantity = quantity;
-    item.timestamp = eosio::current_time_point().sec_since_epoch();
-  });
+  if (from_user->type == "organisation"_n) {
+    org_tx_tables orgtx(get_self(), from.value);
+    orgtx.emplace(_self, [&](auto& item) {
+      item.id = orgtx.available_primary_key();
+      item.other = to;
+      item.in = false;
+      item.quantity = quantity;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    transaction_tables transactions(get_self(), from.value);
+    transactions.emplace(_self, [&](auto& item) {
+      item.id = transactions.available_primary_key();
+      item.to = to;
+      item.quantity = quantity;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
 
   // Orgs get entry for "to"
   if (to_user->type == "organisation"_n) {
       org_tx_tables orgtx(get_self(), to.value);
       orgtx.emplace(_self, [&](auto& item) {
         item.id = orgtx.available_primary_key();
-        item.from = from;
+        item.other = from;
+        item.in = true;
         item.quantity = quantity;
         item.timestamp = eosio::current_time_point().sec_since_epoch();
       });
   }
+
+  // delayed update
+  cancel_deferred(from.value);
 
   // delayed update
   cancel_deferred(from.value);
@@ -121,6 +136,35 @@ void history::trxentry(name from, name to, asset quantity) {
 
 }
 
+void history::calcorgtxpts(name organization) {
+  
+}
+
+void history::calcorgtxpt(name organization, uint64_t id, uint64_t chunksize, uint64_t total) {
+  auto three_moon_cycles = moon_cycle * 3;
+  auto now = eosio::current_time_point().sec_since_epoch();
+  auto cutoffdate = now - three_moon_cycles;
+  uint64_t count = 0;
+  
+  org_tx_tables orgtx(get_self(), organization.value);
+
+  if (id == 0) {
+    // Step 0 - remove all old transactions
+    auto transactions_by_time = orgtx.get_index<"bytimestamp"_n>();
+    auto tx_time_itr = transactions_by_time.begin();
+    while(tx_time_itr != transactions_by_time.end() && tx_time_itr -> timestamp < cutoffdate && count < chunksize) {
+      tx_time_itr = transactions_by_time.erase(tx_time_itr);
+      count++;
+    }
+  }
+
+  if (count < chunksize) {
+    // Step 1 - add up values
+    
+  }
+
+
+}
 void history::numtrx(name account) {
   uint32_t num = num_transactions(account, 200);
   check(false, "{ numtrx: " + std::to_string(num) + " }");

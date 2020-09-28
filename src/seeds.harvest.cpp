@@ -378,7 +378,6 @@ uint32_t harvest::calc_transaction_points(name account) {
       //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
       //tx_to_itr = std::reverse_iterator(it);            
     } else {
-      //print("update to ");
 
       // update "to"
       if (current_to != tx_to_itr->to) {
@@ -389,12 +388,8 @@ uint32_t harvest::calc_transaction_points(name account) {
         current_num++;
       }
 
-      //print("iterating over "+std::to_string(tx_to_itr->id));
-
       if (current_num < max_number_of_transactions) {
         uint64_t volume = tx_to_itr->quantity.amount;
-
-      //print("volume "+std::to_string(volume));
 
         // limit max volume
         if (volume > max_quantity * 10000) {
@@ -402,12 +397,9 @@ uint32_t harvest::calc_transaction_points(name account) {
           volume = max_quantity * 10000;
         }
 
-
         // multiply by receiver reputation
         double points = (double(volume) / 10000.0) * current_rep_multiplier;
         
-        //print("tx points "+std::to_string(points));
-
         result += points;
 
       } 
@@ -417,14 +409,6 @@ uint32_t harvest::calc_transaction_points(name account) {
     count++;
   }
 
-  //print("set result "+std::to_string(result));
-
-  // use ceil function so each schore is counted if it is > 0
-    
-  // DEBUG
-  // if (result == 0) {
-  //   result = 33.0;
-  // }
   // enter into transaction points table
   auto titr = txpoints.find(account.value);
   uint64_t points = ceil(result);
