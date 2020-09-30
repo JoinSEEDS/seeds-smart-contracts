@@ -225,11 +225,6 @@ if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
   }
 }
 
-// TBD
-// void onboarding::sponsoredinv(name orgsponsor, uint64_t grant_id, checksum256 invite_hash) {
-
-// }
-
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
   _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash);
 }
