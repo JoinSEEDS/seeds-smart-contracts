@@ -191,7 +191,7 @@ void onboarding::reset() {
 
 // memo = "sponsor acctname" makes accountname the sponsor for this transfer
 void onboarding::deposit(name from, name to, asset quantity, string memo) {
-if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+  if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
 

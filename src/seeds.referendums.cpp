@@ -223,10 +223,10 @@ void referendums::addvoice(name account, uint64_t amount) {
 }
 
 void referendums::stake(name from, name to, asset quantity, string memo) {
-if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+  if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
-        
+
     utils::check_asset(quantity);
 
     auto bitr = balances.find(from.value);
