@@ -166,20 +166,20 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
 
 void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
+// disabled for now
+    // check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
-    check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
+    // check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
-    check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
-
-    configtable c = config.get();
+    // configtable c = config.get();
   
-    asset tlos_per_usd = c.tlos_per_usd;
+    // asset tlos_per_usd = c.tlos_per_usd;
 
-    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
+    // uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
 
-    asset usd_asset = asset(usd_amount, usd_symbol);
+    // asset usd_asset = asset(usd_amount, usd_symbol);
 
-    purchase_usd(buyer, usd_asset, "TLOS", memo);
+    // purchase_usd(buyer, usd_asset, "TLOS", memo);
   }
 }
 
@@ -400,6 +400,8 @@ void exchange::price_history_update() {
 }
 
 ACTION exchange::setflag(name flagname, uint64_t value) {
+  require_auth(get_self());
+
   auto fitr = flags.find(flagname.value);
   if (fitr == flags.end()) {
     flags.emplace(get_self(), [&](auto& item) {
@@ -415,6 +417,8 @@ ACTION exchange::setflag(name flagname, uint64_t value) {
 }
 
 ACTION exchange::pause() {
+  require_auth(get_self());
+
   auto fitr = flags.find(paused_flag.value);
   if (fitr == flags.end()) {
     flags.emplace(get_self(), [&](auto& item) {
@@ -430,6 +434,8 @@ ACTION exchange::pause() {
 }
 
 ACTION exchange::unpause() {
+  require_auth(get_self());
+
   auto fitr = flags.find(paused_flag.value);
   if (fitr != flags.end()) {
     flags.modify(fitr, get_self(), [&](auto& item) {
