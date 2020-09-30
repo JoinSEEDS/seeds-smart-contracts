@@ -25,11 +25,9 @@ CONTRACT exchange : public contract {
       
     ACTION onperiod();
     
-    ACTION buytlos(name buyer, name contract, asset tlos_quantity, string memo);
+    ACTION ontransfer(name buyer, name contract, asset tlos_quantity, string memo);
     
     ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue);
-
-    //ACTION updateusd(asset seeds_per_usd); // we are now in sales rounds
 
     ACTION updatetlos(asset tlos_per_usd);
     
@@ -177,7 +175,7 @@ CONTRACT exchange : public contract {
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::tlostoken.value) {
-      execute_action<exchange>(name(receiver), name(code), &exchange::buytlos);
+      execute_action<exchange>(name(receiver), name(code), &exchange::ontransfer);
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(exchange, 

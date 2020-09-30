@@ -164,22 +164,24 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
   ).send();    
 }
 
-void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
-  if (contract == get_self()) {
-// disabled for now
-    // check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
+void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string memo) {
+  if (
+    get_first_receiver() == contracts::tlostoken  &&    // from eosio token account
+    contract == get_self() &&                           // received
+    tlos_quantity.symbol == tlos_symbol                 // TLOS symbol
+  ) {
 
-    // check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
+    check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
-    // configtable c = config.get();
+    configtable c = config.get();
   
-    // asset tlos_per_usd = c.tlos_per_usd;
+    asset tlos_per_usd = c.tlos_per_usd;
 
-    // uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
+    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
 
-    // asset usd_asset = asset(usd_amount, usd_symbol);
+    asset usd_asset = asset(usd_amount, usd_symbol);
 
-    // purchase_usd(buyer, usd_asset, "TLOS", memo);
+    purchase_usd(buyer, usd_asset, "TLOS", memo);
   }
 }
 

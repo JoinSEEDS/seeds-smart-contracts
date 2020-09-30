@@ -33,6 +33,8 @@ CONTRACT onboarding : public contract {
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION createbio(name sponsor, name bioregion, string publicKey);
 
+    // ACTION sponsoredinv(name orgsponsor, uint64_t grant_id, checksum256 invite_hash); // TBF
+
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
@@ -51,6 +53,9 @@ CONTRACT onboarding : public contract {
     void add_referral(name sponsor, name account);
     void invitevouch(name sponsor, name account);
     void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
+
+    void grant_proposal_entry(name beneficiary, uint64_t number_of_invites, asset transfer_quantity, asset sow_quantity);
+
     void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
 
     TABLE invite_table {

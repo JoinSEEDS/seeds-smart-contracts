@@ -191,7 +191,10 @@ void onboarding::reset() {
 
 // memo = "sponsor acctname" makes accountname the sponsor for this transfer
 void onboarding::deposit(name from, name to, asset quantity, string memo) {
-  if (to == get_self()) {
+if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+        to  ==  get_self() &&                     // to here
+        quantity.symbol == seeds_symbol) {        // SEEDS symbol
+
     utils::check_asset(quantity);
 
     name sponsor = from;
@@ -221,6 +224,11 @@ void onboarding::deposit(name from, name to, asset quantity, string memo) {
     }
   }
 }
+
+// TBD
+// void onboarding::sponsoredinv(name orgsponsor, uint64_t grant_id, checksum256 invite_hash) {
+
+// }
 
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
   _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash);
