@@ -15,10 +15,11 @@ void exchange::reset() {
   updatelimit(citizen_limit, resident_limit, visitor_limit);
   updatetlos(tlos_per_usd);
 
- 
-  // COMMENT OUT For testing
-  check(false, "comment this out for testing, never check in commented out");
+  unpause();
+  setflag(tlos_paused_flag, 1);
 
+  // COMMENT in for testing, never check in commented in
+/**
   // we never want to erase rounds or sold table or history except for unit testing
   
   sold.remove();
@@ -38,6 +39,11 @@ void exchange::reset() {
     phitr = pricehistory.erase(phitr);
   }
 
+  auto fitr = flags.begin();
+  while(fitr != flags.end()) {
+    fitr = flags.erase(fitr);
+  }
+/**/
 
 }
 
@@ -89,6 +95,7 @@ asset exchange::seeds_for_usd(asset usd_quantity) {
 }
 
 void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo) {
+  check(!is_paused(), "Contract is paused - no purchase possible.");
 
   eosio::multi_index<"users"_n, tables::user_table> users(contracts::accounts, contracts::accounts.value);
 
@@ -159,18 +166,20 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
 
 void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
   if (contract == get_self()) {
+// disabled for now
+    // check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
-    check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
+    // check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
-    configtable c = config.get();
+    // configtable c = config.get();
   
-    asset tlos_per_usd = c.tlos_per_usd;
+    // asset tlos_per_usd = c.tlos_per_usd;
 
-    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
+    // uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
 
-    asset usd_asset = asset(usd_amount, usd_symbol);
+    // asset usd_asset = asset(usd_amount, usd_symbol);
 
-    purchase_usd(buyer, usd_asset, "TLOS", memo);
+    // purchase_usd(buyer, usd_asset, "TLOS", memo);
   }
 }
 
@@ -318,7 +327,6 @@ ACTION exchange::initsale() {
 }
 
 ACTION exchange::initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd) {
-
   require_auth(get_self());
 
   auto ritr = rounds.begin();
@@ -391,4 +399,164 @@ void exchange::price_history_update() {
   }
 }
 
+ACTION exchange::setflag(name flagname, uint64_t value) {
+  require_auth(get_self());
 
+  auto fitr = flags.find(flagname.value);
+  if (fitr == flags.end()) {
+    flags.emplace(get_self(), [&](auto& item) {
+      item.param = flagname;
+      item.value = value;
+    });
+  } else {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.param = flagname;
+      item.value = value;
+    });
+  } 
+}
+
+ACTION exchange::pause() {
+  require_auth(get_self());
+
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr == flags.end()) {
+    flags.emplace(get_self(), [&](auto& item) {
+      item.param = paused_flag;
+      item.value = 1;
+    });
+  } else {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.param = paused_flag;
+      item.value = 1;
+    });
+  } 
+}
+
+ACTION exchange::unpause() {
+  require_auth(get_self());
+
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr != flags.end()) {
+    flags.modify(fitr, get_self(), [&](auto& item) {
+      item.value = 0;
+    });
+  }
+}
+
+bool exchange::is_paused() {
+  auto fitr = flags.find(paused_flag.value);
+  if (fitr != flags.end()) {
+    return fitr->value > 0;
+  }
+  return false;
+}
+
+bool exchange::is_set(name flag) {
+  auto fitr = flags.find(flag.value);
+  if (fitr != flags.end()) {
+    return fitr->value > 0;
+  }
+  return false;
+}
+
+ACTION exchange::migrate() {
+  require_auth(get_self());
+
+  name old = "tlosto.seeds"_n;
+
+  // typedef eosio::multi_index<"flags"_n, flags_table> flags_tables; 
+  flags_tables other_flags(old, old.value);
+  auto fitr = other_flags.begin();
+  while(fitr != other_flags.end()) {
+    flags.emplace(get_self(), [&](auto& item) {
+      item.param = fitr->param;
+      item.value = fitr->value;
+    }); 
+    fitr++;
+  }
+
+  // typedef singleton<"config"_n, configtable> configtables;
+  configtables other_config(old, old.value);
+  configtable c_other = other_config.get();
+  configtable c = config.get_or_create(get_self(), configtable());
+  c.seeds_per_usd = c_other.seeds_per_usd;
+  c.tlos_per_usd = c_other.tlos_per_usd;
+  c.citizen_limit = c_other.citizen_limit;
+  c.resident_limit = c_other.resident_limit;
+  c.visitor_limit = c_other.visitor_limit;
+  c.timestamp = c_other.timestamp;
+  config.set(c, get_self());
+
+  // typedef singleton<"sold"_n, soldtable> soldtables;
+  soldtables other_sold(old, old.value);
+  soldtable s_other = other_sold.get();
+  soldtable s = sold.get_or_create(get_self(), soldtable());
+  s.id = s_other.id;
+  s.total_sold = s_other.total_sold;
+  sold.set(s, get_self());
+
+  // typedef singleton<"price"_n, price_table> price_tables;
+  price_tables other_price(old, old.value);
+  price_table p_other = other_price.get();
+  price_table p = price.get_or_create(get_self(), price_table());
+  p.id = p_other.id;
+  p.current_round_id = p_other.current_round_id;
+  p.current_seeds_per_usd = p_other.current_seeds_per_usd;
+  p.remaining = p_other.remaining;
+  price.set(p, get_self());
+
+  // typedef eosio::multi_index<"pricehistory"_n, price_history_table> price_history_tables;
+  price_history_tables other_price_history(old, old.value);
+  auto phiter = other_price_history.begin();
+  while (phiter != other_price_history.end()) {
+    pricehistory.emplace(get_self(), [&](auto& item) {
+      item.id = phiter->id;
+      item.seeds_usd = phiter->seeds_usd;
+      item.date = phiter->date;
+    });
+    phiter++;
+  }
+
+  // typedef multi_index<"dailystats"_n, stattable> stattables;
+  stattables other_dailystats(old, old.value);
+  auto siter = other_dailystats.begin();
+  while (siter != other_dailystats.end()) {
+    dailystats.emplace(get_self(), [&](auto& item) {
+      item.buyer_account = siter->buyer_account;
+      item.seeds_purchased = siter->seeds_purchased;
+    });
+    siter++;
+  }
+
+  // typedef multi_index<"rounds"_n, round_table> round_tables;
+  round_tables other_rounds(old, old.value);
+  auto riter = other_rounds.begin();
+  while (riter != other_rounds.end()) {
+    rounds.emplace(get_self(), [&](auto& item) {
+      item.id = riter->id;
+      item.max_sold = riter->max_sold;
+      item.seeds_per_usd = riter->seeds_per_usd;
+    });
+    riter++;
+  }
+
+  // typedef eosio::multi_index<"payhistory"_n, payhistory_table,
+  //   indexed_by<"bypaymentid"_n,const_mem_fun<payhistory_table, uint64_t, &payhistory_table::by_payment_id>>
+  // > payhistory_tables;
+  payhistory_tables other_pay_history(old, old.value);
+  auto piter = other_pay_history.begin();
+  while (piter != other_pay_history.end()) {
+    payhistory.emplace(get_self(), [&](auto& item) {
+      item.id = piter->id;
+      item.recipientAccount = piter->recipientAccount;
+      item.paymentSymbol = piter->paymentSymbol;
+      item.paymentId = piter->paymentId;
+      item.multipliedUsdValue = piter->multipliedUsdValue;
+    });
+    piter++;
+  }
+
+
+  
+}
