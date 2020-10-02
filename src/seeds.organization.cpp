@@ -75,7 +75,10 @@ void organization::decrease_size_by_one(name id) {
 }
 
 void organization::deposit(name from, name to, asset quantity, string memo) {
-    if(to == _self){
+    if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+        to  ==  get_self() &&                     // to here
+        quantity.symbol == seeds_symbol) {        // SEEDS symbol
+        
         utils::check_asset(quantity);
         check_user(from);
 
