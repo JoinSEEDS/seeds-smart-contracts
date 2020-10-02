@@ -23,6 +23,7 @@ CONTRACT organization : public contract {
               cbsorgs(receiver, receiver.value),
               txporgs(receiver, receiver.value),
               sizes(receiver, receiver.value),
+              avgvotes(receiver, receiver.value),
               refs(contracts::accounts, contracts::accounts.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
@@ -62,9 +63,9 @@ CONTRACT organization : public contract {
 
         ACTION cleandau(name appname, uint64_t timestamp, uint64_t start);
 
-        ACTION calcmregens();
+        // ACTION calcmregens();
 
-        ACTION calcmregen(uint64_t start, uint64_t chunksize);
+        // ACTION calcmregen(uint64_t start, uint64_t chunksize);
 
         ACTION rankregens();
 
@@ -138,19 +139,25 @@ CONTRACT organization : public contract {
             }
         };
 
-        // ================================================================== //
-        // ================================================================== //
-        // ================================================================== //
+        TABLE avg_vote_table {
+            name org_name;
+            int64_t total_sum;
+            uint64_t num_votes;
+            int64_t average;
+
+            uint64_t primary_key() const { return org_name.value; }
+        };
+
         TABLE regen_score_table {
             name org_name;
-            int64_t regen_median;
+            int64_t regen_avg;
             uint64_t rank;
 
             uint64_t primary_key() const { return org_name.value; }
-            uint64_t by_regen_median() const {
+            uint64_t by_regen_avg() const {
                 uint64_t regen_id = 1;
                 regen_id <<= 63;
-                return regen_id + regen_median + ((regen_median < 0) ? -1 : 0);
+                return regen_id + regen_avg + ((regen_avg < 0) ? -1 : 0);
             }
             uint64_t by_rank() const { return rank; }
         };
@@ -204,10 +211,6 @@ CONTRACT organization : public contract {
         typedef eosio::multi_index<"refs"_n, ref_table,
             indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
         > ref_tables;
-
-        // ================================================================== //
-        // ================================================================== //
-        // ================================================================== //
 
         DEFINE_CONFIG_TABLE
         
@@ -264,6 +267,8 @@ CONTRACT organization : public contract {
             const_mem_fun<vote_table, uint64_t, &vote_table::by_regen_points>>
         > vote_tables;
 
+        typedef eosio::multi_index <"avgvotes"_n, avg_vote_table> avg_vote_tables;
+
         typedef eosio::multi_index<"users"_n, tables::user_table,
             indexed_by<"byreputation"_n,
             const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
@@ -284,8 +289,8 @@ CONTRACT organization : public contract {
         > dau_history_tables;
 
         typedef eosio::multi_index<"regenscores"_n, regen_score_table,
-            indexed_by<"byregenmdian"_n,
-            const_mem_fun<regen_score_table, uint64_t, &regen_score_table::by_regen_median>>,
+            indexed_by<"byregenavg"_n,
+            const_mem_fun<regen_score_table, uint64_t, &regen_score_table::by_regen_avg>>,
             indexed_by<"byrank"_n,
             const_mem_fun<regen_score_table, uint64_t, &regen_score_table::by_rank>>
         > regen_score_tables;
@@ -315,12 +320,13 @@ CONTRACT organization : public contract {
         size_tables sizes;
         balance_tables balances;
         ref_tables refs;
+        avg_vote_tables avgvotes;
 
         const name min_planted = "org.minplant"_n;
         const name regen_score_size = "rs.sz"_n;
         const name cb_score_size = "cbs.sz"_n;
         const name tx_score_size = "txs.sz"_n;
-        const name regen_median = "org.rgnmcalc"_n;
+        const name regen_avg = "org.rgnavg"_n;
         const name regular_org = "regular"_n;
         const name reputable_org = "reputable"_n;
         const name regenerative_org = "regenerative"_n;
@@ -335,7 +341,6 @@ CONTRACT organization : public contract {
         void vote(name organization, name account, int64_t regen);
         void check_asset(asset quantity);
         uint64_t get_beginning_of_day_in_seconds();
-        int64_t calculate_median_regen_points(name orgname);
         uint64_t get_size(name id);
         void increase_size_by_one(name id);
         void decrease_size_by_one(name id);
@@ -357,7 +362,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
-            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)(calcmregens)(calcmregen)
+            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
             (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(calctrxpts)(calctrxpt)(ranktxs)
             (ranktx)(makeregen)(makereptable)(testregen)(testreptable))
       }

@@ -690,9 +690,6 @@ describe('organization scores', async assert => {
     await contracts.organization.addregen(org5, firstuser, 7, { authorization: `${firstuser}@active` })
     await contracts.organization.addregen(org5, seconduser, 7, { authorization: `${seconduser}@active` })
     
-    await contracts.organization.calcmregens({ authorization: `${organization}@active` })
-    await sleep(200)
-
     await contracts.accounts.testsetcbs(org1, 100, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org2, 75, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org3, 50, { authorization: `${accounts}@active` })
@@ -765,16 +762,32 @@ describe('organization scores', async assert => {
         table: 'txorgpoints',
         json: true
     })
+
+    const avgsBefore = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'avgvotes',
+        json: true
+    })
+
+    await contracts.organization.addregen(org1, firstuser, 10, { authorization: `${firstuser}@active` })
     
+    const avgsAfter = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'avgvotes',
+        json: true
+    })
+
     assert({
         given: 'regen scores calculated',
         should: 'rank the orgs properly',
         actual: regenScores.rows,
         expected: [
-            { org_name: org2, regen_median: 66000, rank: 50 },
-            { org_name: org3, regen_median: -1000, rank: 0 },
-            { org_name: org4, regen_median: 33000, rank: 25 },
-            { org_name: org5, regen_median: 115500, rank: 75 }
+            { org_name: org2, regen_avg: 66000, rank: 50 },
+            { org_name: org3, regen_avg: 2000, rank: 0 },
+            { org_name: org4, regen_avg: 33000, rank: 25 },
+            { org_name: org5, regen_avg: 115500, rank: 75 }
         ]
     })
 
@@ -801,6 +814,82 @@ describe('organization scores', async assert => {
             { org_name: org3, points: 400, rank: 40 },
             { org_name: org4, points: 467, rank: 60 },
             { org_name: org5, points: 934, rank: 80 }
+        ]
+    })
+
+    assert({
+        given: 'users voted',
+        should: 'have the correct average',
+        actual: avgsBefore.rows,
+        expected: [
+            {
+                org_name: 'testorg1',
+                total_sum: -79000,
+                num_votes: 2,
+                average: -39500
+            },
+            {
+                org_name: 'testorg2',
+                total_sum: 132000,
+                num_votes: 2,
+                average: 66000
+            },
+            {
+                org_name: 'testorg3',
+                total_sum: 6000,
+                num_votes: 3,
+                average: 2000
+            },
+            {
+                org_name: 'testorg4',
+                total_sum: 66000,
+                num_votes: 2,
+                average: 33000
+            },
+            {
+                org_name: 'testorg5',
+                total_sum: 231000,
+                num_votes: 2,
+                average: 115500
+            }
+        ]
+    })
+
+    assert({
+        given: 'users voted',
+        should: 'have the correct average',
+        actual: avgsAfter.rows,
+        expected: [
+            {
+                org_name: 'testorg1',
+                total_sum: 101000,
+                num_votes: 2,
+                average: 50500
+            },
+            {
+                org_name: 'testorg2',
+                total_sum: 132000,
+                num_votes: 2,
+                average: 66000
+            },
+            {
+                org_name: 'testorg3',
+                total_sum: 6000,
+                num_votes: 3,
+                average: 2000
+            },
+            {
+                org_name: 'testorg4',
+                total_sum: 66000,
+                num_votes: 2,
+                average: 33000
+            },
+            {
+                org_name: 'testorg5',
+                total_sum: 231000,
+                num_votes: 2,
+                average: 115500
+            }
         ]
     })
 

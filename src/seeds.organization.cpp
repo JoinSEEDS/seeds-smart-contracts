@@ -154,6 +154,11 @@ ACTION organization::reset() {
         sitr = sizes.erase(sitr);
     }
 
+    auto avgitr = avgvotes.begin();
+    while (avgitr != avgvotes.end()) {
+        avgitr = avgvotes.erase(avgitr);
+    }
+
     auto regenitr = regenscores.begin();
     while (regenitr != regenscores.end()) {
         regenitr = regenscores.erase(regenitr);
@@ -340,8 +345,15 @@ void organization::revert_previous_vote(name organization, name account) {
         organizations.modify(itr, _self, [&](auto & morg) {
             morg.regen -= vitr -> regen_points;
         });
+        
+        auto avgitr = avgvotes.find(organization.value);
+        check(avgitr != avgvotes.end(), "the organisation does not have an average entry");
+        avgvotes.modify(avgitr, _self, [&](auto & avg){
+            avg.total_sum -= vitr -> regen_points;
+            avg.num_votes -= 1;
+        });
+
         votes.erase(vitr);
-        decrease_size_by_one(organization);
     }
 }
 
@@ -351,8 +363,10 @@ void organization::vote(name organization, name account, int64_t regen) {
     auto itr = organizations.find(organization.value);
     check(itr != organizations.end(), "organisation does not exist.");
     
+    int64_t org_regen = itr -> regen + regen;
+
     organizations.modify(itr, _self, [&](auto & morg) {
-        morg.regen += regen;
+        morg.regen = org_regen;
     });
 
     votes.emplace(_self, [&](auto & nvote) {
@@ -361,9 +375,47 @@ void organization::vote(name organization, name account, int64_t regen) {
         nvote.regen_points = regen;
     });
 
-    increase_size_by_one(organization);
-}
+    auto avgitr = avgvotes.find(organization.value);
+    int64_t average;
 
+    if (avgitr != avgvotes.end()) {
+        int64_t total_sum = avgitr -> total_sum + regen;
+        int64_t num_votes = (int64_t)(avgitr -> num_votes) + 1;
+        average = total_sum / num_votes;
+
+        avgvotes.modify(avgitr, _self, [&](auto & avg){
+            avg.total_sum = total_sum;
+            avg.num_votes = num_votes;
+            avg.average = average;
+        });
+    } else {
+        average = regen;
+        avgvotes.emplace(_self, [&](auto & avg){
+            avg.org_name = organization;
+            avg.total_sum = regen;
+            avg.num_votes = 1;
+            avg.average = average;
+        });
+    }
+
+    int64_t min_regen = (int64_t)config.get(name("org.rgen.min").value, "The org.rgen.min parameter has not been initialized yet").value;
+    if (org_regen >= min_regen) {
+        auto itr_regen = regenscores.find(organization.value);
+        if (itr_regen != regenscores.end()) {
+            regenscores.modify(itr_regen, _self, [&](auto & rs){
+                rs.regen_avg = average;
+            });
+        } else {
+            regenscores.emplace(_self, [&](auto & rs){
+                rs.org_name = organization;
+                rs.regen_avg = average;
+                rs.rank = 0;
+            });
+            increase_size_by_one(regen_score_size);
+        }
+    }
+
+}
 
 ACTION organization::addregen(name organization, name account, uint64_t amount) {
     require_auth(account);
@@ -388,90 +440,6 @@ ACTION organization::subregen(name organization, name account, uint64_t amount) 
     vote(organization, account, -1 * amount * getregenp(account));
 }
 
-int64_t organization::calculate_median_regen_points(name orgname) {
-    int64_t median_regen = 0;
-    uint64_t num_votes = get_size(orgname);
-    uint64_t position = num_votes / 2;
-
-    vote_tables votes(get_self(), orgname.value);
-    auto votes_by_regen = votes.get_index<"byregen"_n>();
-
-    auto sanity_check = votes_by_regen.begin();
-    while (sanity_check != votes_by_regen.end()) {
-        sanity_check++;
-    }
-
-    if (num_votes % 2 == 0) {
-        auto value1 = votes_by_regen.begin();
-        std::advance(value1, position - 1);
-        auto value2 = votes_by_regen.begin();
-        std::advance(value2, position);
-        median_regen = (value1 -> regen_points + value2 -> regen_points) / 2;
-    } else {
-        auto value1 = votes_by_regen.begin();
-        std::advance(value1, position);
-        median_regen = value1 -> regen_points;
-    }
-
-    return median_regen;
-}
-
-ACTION organization::calcmregens() {
-    require_auth(get_self());
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
-    calcmregen((uint64_t)0, batch_size.value);
-}
-
-ACTION organization::calcmregen(uint64_t start, uint64_t chunksize) {
-    require_auth(get_self());
-
-    check(chunksize > 0, "chunk size must be > 0");
-    
-    auto itr_org = start == 0 ? organizations.begin() : organizations.lower_bound(start);
-    int64_t min_regen = (int64_t)config.get(name("org.rgen.min").value, "The org.rgen.min parameter has not been initialized yet").value;
-    uint64_t count = 0;
-
-    while (itr_org != organizations.end() && count < chunksize) {
-        auto itr_regen = regenscores.find((itr_org -> org_name).value);
-        if (itr_org -> regen >= min_regen) {
-            int64_t median_regen_points = calculate_median_regen_points(itr_org -> org_name);
-            if (itr_regen != regenscores.end()) {
-                regenscores.modify(itr_regen, _self, [&](auto & rs){
-                    rs.regen_median = median_regen_points;
-                });
-            } else {
-                regenscores.emplace(_self, [&](auto & rs){
-                    rs.org_name = itr_org -> org_name;
-                    rs.regen_median = median_regen_points;
-                    rs.rank = 0;
-                });
-                increase_size_by_one(regen_score_size);
-            }
-        } else {
-            // here it could lose the regen status if the org had it
-            if (itr_regen != regenscores.end()) {
-                regenscores.erase(itr_regen);
-                decrease_size_by_one(regen_score_size);
-            }
-        }
-        itr_org++;
-        count++;
-    }
-
-    if (itr_org != organizations.end()) {
-        action next_execution(
-            permission_level("active"_n, get_self()),
-            get_self(),
-            "calcmregen"_n,
-            std::make_tuple((itr_org -> org_name).value, chunksize)
-        );
-        transaction tx;
-        tx.actions.emplace_back(next_execution);
-        tx.delay_sec = 1;
-        tx.send(regen_median.value, _self);
-    }
-}
-
 ACTION organization::rankregens() {
     auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
     rankregen((uint64_t)0, (uint64_t)0, batch_size.value);
@@ -486,15 +454,15 @@ ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksiz
     if (total == 0) return;
 
     uint64_t current = chunk * chunksize;
-    auto regen_score_by_median_regen = regenscores.get_index<"byregenmdian"_n>();
-    auto rsitr = start == 0 ? regen_score_by_median_regen.begin() : regen_score_by_median_regen.lower_bound(start);
+    auto regen_score_by_avg_regen = regenscores.get_index<"byregenavg"_n>();
+    auto rsitr = start == 0 ? regen_score_by_avg_regen.begin() : regen_score_by_avg_regen.lower_bound(start);
     uint64_t count = 0;
 
-    while (rsitr != regen_score_by_median_regen.end() && count < chunksize) {
+    while (rsitr != regen_score_by_avg_regen.end() && count < chunksize) {
 
         uint64_t rank = (current * 100) / total;
 
-        regen_score_by_median_regen.modify(rsitr, _self, [&](auto & item) {
+        regen_score_by_avg_regen.modify(rsitr, _self, [&](auto & item) {
             item.rank = rank;
         });
 
@@ -503,7 +471,7 @@ ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksiz
         rsitr++;
     }
 
-    if (rsitr != regen_score_by_median_regen.end()) {
+    if (rsitr != regen_score_by_avg_regen.end()) {
         action next_execution(
             permission_level("active"_n, get_self()),
             get_self(),

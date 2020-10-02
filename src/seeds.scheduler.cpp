@@ -68,7 +68,6 @@ ACTION scheduler::reset() {
         name("hrvst.calctx"), // 24h
 
         name("org.clndaus"),
-        name("org.clcmedin"),
         name("org.clcregen"),
         name("org.rankcbs"),
         name("org.clctrpts"),
@@ -90,7 +89,6 @@ ACTION scheduler::reset() {
         name("calctrxpts"),
 
         name("cleandaus"),
-        name("calcmregens"),
         name("rankregens"),
         name("rankcbsorgs"),
         name("calctrxpts"),
@@ -115,7 +113,6 @@ ACTION scheduler::reset() {
         contracts::organization,
         contracts::organization,
         contracts::organization,
-        contracts::organization,
         contracts::organization
     };
 
@@ -134,7 +131,6 @@ ACTION scheduler::reset() {
         utils::seconds_per_day,
 
         utils::seconds_per_day / 2,
-        utils::seconds_per_day / 4,
         utils::seconds_per_day,
         utils::seconds_per_day,
         utils::seconds_per_day / 3,
@@ -157,7 +153,6 @@ ACTION scheduler::reset() {
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
 
-        now,
         now,
         now,
         now,
