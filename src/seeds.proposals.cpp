@@ -211,11 +211,6 @@ void proposals::updatevoice(uint64_t start) {
   }
 }
 
-uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
-  return moon_cycle.value / 2; // Using half moon cycles for now
-}
-
 uint64_t proposals::get_voice_decay_period_sec() {
   auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
   return voice_decay_period.value;

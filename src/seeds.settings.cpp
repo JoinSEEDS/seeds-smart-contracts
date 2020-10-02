@@ -30,7 +30,7 @@ void settings::reset() {
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
   confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
-  confwithdesc(name("decaytime"), utils::moon_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
+  confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
 
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
