@@ -32,6 +32,11 @@ CONTRACT history : public contract {
 
         ACTION numtrx(name account);
 
+        ACTION orgtxpoints(name organization);
+
+        ACTION orgtxpt(name organization, uint64_t id, uint64_t chunksize, uint64_t running_total);
+
+
     private:
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
@@ -87,15 +92,15 @@ CONTRACT history : public contract {
        uint64_t primary_key() const { return id; }
        uint64_t by_timestamp() const { return timestamp; }
        uint64_t by_quantity() const { return quantity.amount; }
-       uint64_t by_other() const { return from.value; }
-       bool by_in() const { return in; }
+       uint64_t by_other() const { return other.value; }
+       uint64_t by_in() const { return in ? 1 : 0; }
     };
 
     typedef eosio::multi_index<"orgtx"_n, org_tx_table,
       indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
       indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
-      indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_other>>
-      indexed_by<"byin"_n,const_mem_fun<org_tx_table, bool, &org_tx_table::by_in>>
+      indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_other>>,
+      indexed_by<"byin"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_in>>
     > org_tx_tables;
 
     typedef eosio::multi_index<"transactions"_n, transaction_table,

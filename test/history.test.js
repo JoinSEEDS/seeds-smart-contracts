@@ -34,6 +34,8 @@ describe('make a transaction entry', async assert => {
     json: true
   })
   
+console.log("transactions result "+JSON.stringify(rows, null, 2))
+
   let txresult = rows[0]
   delete txresult.timestamp
 
@@ -140,7 +142,8 @@ describe('org transaction entry', async assert => {
     return
   }
 
-  const firstorg = 'testorg1'
+  const firstorg = 'testorg111'
+  const secondorg = 'testorg222'
 
   const contracts = await initContracts({ history, accounts, organization, token })
   
@@ -163,11 +166,14 @@ describe('org transaction entry', async assert => {
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
   await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
   
   console.log('create organization')
   const amount1 = '12.0000 SEEDS'
+  const amount2 = '11.1111 SEEDS'
 
   await contracts.organization.create(firstuser, firstorg, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+  await contracts.organization.create(seconduser, secondorg, "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
 
   console.log('add transaction entry from user to org')
   await contracts.history.trxentry(firstuser, firstorg, amount1, { authorization: `${history}@active` })
@@ -185,11 +191,48 @@ describe('org transaction entry', async assert => {
     json: true
   })
 
-  console.log("transactions: "+JSON.stringify(transactions, null, 2))
-  console.log("irg tx: "+JSON.stringify(orgtx, null, 2))
-  
+  await contracts.history.trxentry(firstorg, secondorg, amount2, { authorization: `${history}@active` })
+
+  const transactions2 = await getTableRows({
+    code: history,
+    scope: firstuser,
+    table: 'transactions',
+    json: true
+  })
+
+  const orgtx2 = await getTableRows({
+    code: history,
+    scope: firstorg,
+    table: 'orgtx',
+    json: true
+  })
+
+  const orgtx3 = await getTableRows({
+    code: history,
+    scope: secondorg,
+    table: 'orgtx',
+    json: true
+  })
+
+  assert({
+    given: 'transactions table',
+    should: 'no change when org transact',
+    actual: transactions2.rows.length,
+    expected: transactions.rows.length
+  })
+
+  assert({
+    given: 'org tx table',
+    should: 'have 2 tx entry',
+    actual: orgtx2.rows.length,
+    expected: 2
+  })
+
   delete transactions.rows[0].timestamp
   delete orgtx.rows[0].timestamp
+  delete orgtx2.rows[0].timestamp
+  delete orgtx2.rows[1].timestamp
+  delete orgtx3.rows[0].timestamp
 
   assert({
     given: 'transactions table',
@@ -208,8 +251,29 @@ describe('org transaction entry', async assert => {
     actual: orgtx.rows[0],
     expected: {
       id: 0,
-      from: firstuser,
+      other: firstuser,
       quantity: amount1,
+      in: 1
     }
+  })
+
+  assert({
+    given: 'org transactions table 2',
+    should: 'have transaction entries for both in and out',
+    actual: orgtx2.rows,
+    expected: [
+      {
+        "id": 0,
+        "other": "seedsuseraaa",
+        "in": 1,
+        "quantity": "12.0000 SEEDS"
+      },
+      {
+        "id": 1,
+        "other": "testorg222",
+        "in": 0,
+        "quantity": "11.1111 SEEDS"
+      }
+    ]
   })
 })

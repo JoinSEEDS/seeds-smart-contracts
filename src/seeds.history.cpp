@@ -84,8 +84,10 @@ void history::trxentry(name from, name to, asset quantity) {
   if (from_user == users.end() || to_user == users.end()) {
     return;
   }
+
+  bool from_is_organization = from_user->type == "organisation"_n;
   
-  if (from_user->type == "organisation"_n) {
+  if (from_is_organization) {
     org_tx_tables orgtx(get_self(), from.value);
     orgtx.emplace(_self, [&](auto& item) {
       item.id = orgtx.available_primary_key();
@@ -116,32 +118,34 @@ void history::trxentry(name from, name to, asset quantity) {
       });
   }
 
-  // delayed update
-  cancel_deferred(from.value);
+  if (!from_is_organization) {
+    // delayed update
+    cancel_deferred(from.value);
 
-  // delayed update
-  cancel_deferred(from.value);
+    // delayed update
+    cancel_deferred(from.value);
 
-  action a(
-      permission_level{contracts::harvest, "active"_n},
-      contracts::harvest,
-      "updatetxpt"_n,
-      std::make_tuple(from)
+    action a(
+        permission_level{contracts::harvest, "active"_n},
+        contracts::harvest,
+        "updatetxpt"_n,
+        std::make_tuple(from)
     );
 
     transaction tx;
     tx.actions.emplace_back(a);
-    tx.delay_sec = 1; // DEBUG no delay
+    tx.delay_sec = 1; 
     tx.send(from.value, _self);
+  }
 
 }
 
-void history::calcorgtxpts(name organization) {
-  
+void history::orgtxpoints(name organization) {
+  orgtxpt(organization, 0, 200, 0);
 }
 
-void history::calcorgtxpt(name organization, uint64_t id, uint64_t chunksize, uint64_t total) {
-  auto three_moon_cycles = moon_cycle * 3;
+void history::orgtxpt(name organization, uint64_t id, uint64_t chunksize, uint64_t running_total) {
+  auto three_moon_cycles = utils::moon_cycle * 3;
   auto now = eosio::current_time_point().sec_since_epoch();
   auto cutoffdate = now - three_moon_cycles;
   uint64_t count = 0;
@@ -165,6 +169,7 @@ void history::calcorgtxpt(name organization, uint64_t id, uint64_t chunksize, ui
 
 
 }
+
 void history::numtrx(name account) {
   uint32_t num = num_transactions(account, 200);
   check(false, "{ numtrx: " + std::to_string(num) + " }");
