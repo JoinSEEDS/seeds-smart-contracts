@@ -633,45 +633,6 @@ uint32_t accounts::num_transactions(name account, uint32_t limit) {
   return count;
 }
 
-// void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
-//   require_auth(_self);
-//   auto uitr = account == 0 ? users.begin() : users.find(account);
-//   uint64_t count = 0;
-//   while (uitr != users.end() && count < chunksize) {
-//     if (uitr->reputation > 0) {
-//       auto ritr = rep.find(uitr->account.value);
-//       if (ritr != rep.end()) {
-//         rep.modify(ritr, _self, [&](auto& item) {
-//           item.rep = uitr->reputation;
-//         });
-//       } else {
-//         add_rep_item(uitr->account, uitr->reputation);
-//       }
-//     }
-//     uitr++;
-//     count++;
-//   }
-//   if (uitr == users.end()) {
-//     // done
-//     size_set("users.sz"_n, chunksize * cycle + count);
-//   } else {
-//     // recursive call
-//     uint64_t nextaccount = uitr->account.value;
-//     action next_execution(
-//         permission_level{get_self(), "active"_n},
-//         get_self(),
-//         "migraterep"_n,
-//         std::make_tuple(nextaccount, cycle+1, chunksize)
-//     );
-
-//     transaction tx;
-//     tx.actions.emplace_back(next_execution);
-//     tx.delay_sec = 1;
-//     tx.send(nextaccount + 1, _self);
-    
-//   }
-// }
-
 void accounts::rankreps() {
   rankrep(0, 0, 200);
 }
