@@ -145,7 +145,7 @@ describe('org transaction entry', async assert => {
   const firstorg = 'testorg111'
   const secondorg = 'testorg222'
 
-  const contracts = await initContracts({ history, accounts, organization, token })
+  const contracts = await initContracts({ settings, history, accounts, organization, token })
   
   console.log('history reset')
   await contracts.history.reset(firstuser, { authorization: `${history}@active` })
@@ -153,6 +153,9 @@ describe('org transaction entry', async assert => {
   
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('org reset')
   await contracts.organization.reset({ authorization: `${organization}@active` })

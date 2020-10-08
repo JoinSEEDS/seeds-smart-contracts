@@ -477,3 +477,28 @@ ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t s
     }
 }
 
+ACTION organization::scoreorgs(name next) {
+    require_auth(get_self());
+
+    auto itr = next == ""_n ? organizations.begin() : organizations.lower_bound(next.value);
+    if(itr != organizations.end()) {
+        action(
+            permission_level{contracts::history, "active"_n},
+            contracts::history, "orgtxpoints"_n,
+            std::make_tuple(itr -> org_name)
+        ).send();
+        itr++;
+        if (itr != organizations.end()) {
+            action next_execution(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "scoreorgs"_n,
+                std::make_tuple(itr->org_name)
+            );
+            transaction tx;
+            tx.actions.emplace_back(next_execution);
+            tx.delay_sec = 30;
+            tx.send(next.value+2, _self);
+        }
+    }
+}

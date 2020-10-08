@@ -58,6 +58,8 @@ CONTRACT organization : public contract {
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
+        ACTION scoreorgs(name next);
+
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -188,7 +190,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
-            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau))
+            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)(scoreorgs))
       }
   }
 }

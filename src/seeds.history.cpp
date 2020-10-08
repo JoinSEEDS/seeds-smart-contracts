@@ -140,34 +140,128 @@ void history::trxentry(name from, name to, asset quantity) {
 
 }
 
-void history::orgtxpoints(name organization) {
-  orgtxpt(organization, 0, 200, 0);
+// return true if anything was cleaned up, false otherwise
+bool history::clean_old_tx(name org, uint64_t chunksize) {
+  
+  auto now = eosio::current_time_point().sec_since_epoch();
+  auto cutoffdate = now - utils::moon_cycle * 3;
+
+  org_tx_tables orgtx(get_self(), org.value);
+  uint64_t count = 0;
+  auto transactions_by_time = orgtx.get_index<"bytimestamp"_n>();
+  auto tx_time_itr = transactions_by_time.begin();
+  bool result = false;
+  while(tx_time_itr != transactions_by_time.end() && tx_time_itr->timestamp < cutoffdate && count < chunksize) {
+    tx_time_itr = transactions_by_time.erase(tx_time_itr);
+    result = true;
+    count++;
+  }  
+  return result;
+  
 }
 
-void history::orgtxpt(name organization, uint64_t id, uint64_t chunksize, uint64_t running_total) {
-  auto three_moon_cycles = utils::moon_cycle * 3;
-  auto now = eosio::current_time_point().sec_since_epoch();
-  auto cutoffdate = now - three_moon_cycles;
+void history::orgtxpoints(name org) {
+  require_auth(get_self());
+  orgtxpt(org, 0, 200, 0);
+}
+
+void history::orgtxpt(name org, uint128_t start_val, uint64_t chunksize, uint64_t running_total) {
+  require_auth(get_self());
+
+  org_tx_tables orgtx(get_self(), org.value);
   uint64_t count = 0;
-  
-  org_tx_tables orgtx(get_self(), organization.value);
 
-  if (id == 0) {
-    // Step 0 - remove all old transactions
-    auto transactions_by_time = orgtx.get_index<"bytimestamp"_n>();
-    auto tx_time_itr = transactions_by_time.begin();
-    while(tx_time_itr != transactions_by_time.end() && tx_time_itr -> timestamp < cutoffdate && count < chunksize) {
-      tx_time_itr = transactions_by_time.erase(tx_time_itr);
-      count++;
+  if (start_val == 0 && clean_old_tx(org, chunksize)) {    // Step 0 - remove all old transactions
+    fire_orgtx_calc(org, 0, chunksize, running_total);
+    return;
+  }
+
+  // Step 1 - add up values
+  uint64_t max_quantity = config_get("org.trx.max"_n);
+  uint64_t max_number_of_transactions = config_get("org.trx.div"_n);;
+
+  auto transactions_by_other = orgtx.get_index<"byother"_n>();
+  auto tx_other_itr = start_val == 0 ? transactions_by_other.begin() : transactions_by_other.lower_bound(start_val);
+
+  name      current_other = name("");
+  uint64_t  current_num = 0;
+  double    current_rep_multiplier = 0.0;
+
+  //print("orgtxpt for "+org.to_string());
+
+  while(tx_other_itr != transactions_by_other.end() && count < chunksize) {
+
+    if (current_other != tx_other_itr->other) {
+      current_other = tx_other_itr->other;
+      current_num = 0;
+      current_rep_multiplier = utils::get_rep_multiplier(current_other);
+      //print("new other "+current_other.to_string());
+      //print("rep mul "+std::to_string(current_rep_multiplier));
+    } else {
+      //print("same iter other "+current_other.to_string());
+      current_num++;
     }
+
+    if (current_num < max_number_of_transactions) {
+      uint64_t volume = tx_other_itr->quantity.amount;
+      
+      //print("; vol: "+std::to_string(volume));
+
+      // limit max volume
+      if (volume > max_quantity) {
+        volume = max_quantity;
+        //print("; vol exceed max - limited to: "+std::to_string(volume));
+      }
+
+      // multiply by receiver reputation
+      double points = (double(volume) / 10000.0) * current_rep_multiplier;
+      //print("; rep mul "+std::to_string(current_rep_multiplier));
+      //print("; points "+std::to_string(points));
+
+      running_total += points;
+      
+      //print("; total "+std::to_string(running_total));
+      tx_other_itr++;
+    } else {
+      tx_other_itr++;
+      // TODO skip ahead to next account!
+      // rather than increasing account by 1, increase name by 1 and look for a new 
+      // iterator starting with that name as lower limit
+      // name next_name = name(tx_other_itr->other.value + 1);
+      // uunt128_t next_val = uunt128_t(next_name.value) << 64;
+      // tx_other_itr = transactions_by_other.lower_bound(next_val);
+      // print("; skip to "+std::to_string(next_val));
+
+    }
+  
+    count++;
+  }
+  if (tx_other_itr == transactions_by_other.end()) {
+    action(
+      permission_level{contracts::harvest, "active"_n},
+      contracts::harvest, "setorgtxpt"_n,
+      std::make_tuple(org, running_total)
+    ).send();
+  } else {
+    uint128_t next_value = tx_other_itr->by_other();
+    fire_orgtx_calc(org, next_value, chunksize, running_total);
   }
 
-  if (count < chunksize) {
-    // Step 1 - add up values
-    
-  }
+  
 
+}
 
+void history::fire_orgtx_calc(name org, uint128_t next_value, uint64_t chunksize, uint64_t running_total) {
+  action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "orgtxpt"_n,
+      std::make_tuple(org, next_value, chunksize, running_total)
+  );
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(next_value + 1, _self);
 }
 
 void history::numtrx(name account) {
@@ -191,4 +285,16 @@ void history::check_user(name account)
 {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
+}
+
+uint64_t history::config_get(name key) {
+  DEFINE_CONFIG_TABLE
+  DEFINE_CONFIG_TABLE_MULTI_INDEX
+  config_tables config(contracts::settings, contracts::settings.value);
+
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
 }
