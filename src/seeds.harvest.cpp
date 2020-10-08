@@ -24,6 +24,13 @@ void harvest::reset() {
   }
   size_set(tx_points_size, 0);
 
+  tx_points_tables orgtxpt(get_self(), "org"_n.value);
+  auto otitr = orgtxpt.begin();
+  while (otitr != orgtxpt.end()) {
+    otitr = orgtxpt.erase(otitr);
+  }
+  size_set(org_tx_points_size, 0);
+
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
@@ -492,9 +499,6 @@ void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
     uint64_t rank = (current * 100) / total;
 
-    //print(" rank: "+std::to_string(rank) + " total: " +std::to_string(total));
-
-
     txpt_by_points.modify(titr, _self, [&](auto& item) {
       item.rank = rank;
     });
@@ -863,4 +867,31 @@ void harvest::change_total(bool add, asset quantity) {
     tt.total_planted = tt.total_planted - quantity;
   }
   total.set(tt, get_self());
+}
+
+ACTION harvest::setorgtxpt(name organization, uint64_t tx_points) {
+  require_auth(get_self());
+
+  tx_points_tables orgtxpoints(get_self(), "org"_n.value);
+  
+  auto oitr = orgtxpoints.find(organization.value);
+  if (oitr == orgtxpoints.end()) {
+    if (tx_points > 0) {
+      orgtxpoints.emplace(_self, [&](auto& item) {
+        item.account = organization;
+        item.points = tx_points;
+      });
+      size_change(org_tx_points_size, 1);
+    }
+  } else {
+    if (tx_points > 0) {
+      orgtxpoints.modify(oitr, _self, [&](auto& item) {
+        item.points = tx_points;
+      });
+    } else {
+      orgtxpoints.erase(oitr);
+      size_change(org_tx_points_size, -1);
+    }
+  } 
+
 }
