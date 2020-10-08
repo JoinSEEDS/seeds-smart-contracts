@@ -94,9 +94,9 @@ const batchCallFunc = async (contract, moreContracts, func) => {
     await func(contract)
   }
   if (moreContracts) {
-    moreContracts.forEach(async function (c) {
-      await func(c)
-    })
+    for (var i=0; i<moreContracts.length; i++) {
+      await func(moreContracts[i])
+    }
   }
 }
 
