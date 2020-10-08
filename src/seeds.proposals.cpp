@@ -211,20 +211,62 @@ void proposals::updatevoice(uint64_t start) {
   }
 }
 
-uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
-  return moon_cycle.value / 2; // Using half moon cycles for now
-}
-
 uint64_t proposals::get_voice_decay_period_sec() {
   auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
   return voice_decay_period.value;
 }
 
-void proposals::decayvoice() {
-  // Not yet implemented    
+void proposals::decayvoices() {
   require_auth(get_self());
 
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+
+  uint64_t now = current_time_point().sec_since_epoch();
+  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
+  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+
+  if ((c.t_onperiod < now)
+      && (now - c.t_onperiod >= decay_time)
+      && (now - c.t_voicedecay >= decay_sec)
+  ) {
+    c.t_voicedecay = now;
+    cycle.set(c, get_self());
+    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+    decayvoice(0, batch_size.value);
+  }
+}
+
+void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
+  require_auth(get_self());
+  auto percentage_decay = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.");
+  check(percentage_decay.value <= 100, "Voice decay parameter can not be more than 100%.");
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+  uint64_t count = 0;
+
+  double multiplier = (100.0 - (double)percentage_decay.value) / 100.0;
+
+  while (vitr != voice.end() && count < chunksize) {
+    voice.modify(vitr, _self, [&](auto & v){
+      v.balance *= multiplier;
+    });
+    vitr++;
+    count++;
+  }
+
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "decayvoice"_n,
+        std::make_tuple(next_value, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
 }
 
 void proposals::update_cycle() {
