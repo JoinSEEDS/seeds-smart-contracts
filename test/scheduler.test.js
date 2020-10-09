@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const { scheduler, settings, organization, firstuser } = names
+const { scheduler, settings, organization, harvest, accounts, firstuser, token } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -152,7 +152,7 @@ describe('scheduler, organization.cleandaus', async assert => {
         console.log('can not execute cleandaus (unexpected, permission may be needed)')
     }
 
-    await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
     assert({
         given: 'called execute',
@@ -194,7 +194,7 @@ describe('scheduler, token.resetweekly', async assert => {
 
     await sleep(1 * 1000)
 
-    await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
 })
 
@@ -202,10 +202,15 @@ describe('scheduler, organization scores', async assert => {
 
     contracts = await Promise.all([
         eos.contract(scheduler),
-        eos.contract(settings)
-    ]).then(([scheduler, settings]) => ({
-        scheduler, settings
+        eos.contract(settings),
+        eos.contract(accounts),
+        eos.contract(organization),
+        eos.contract(token)
+    ]).then(([scheduler, settings, accounts, organization, token]) => ({
+        scheduler, settings, accounts, organization, token
     }))
+
+    let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
     console.log('scheduler reset')
     await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
@@ -213,33 +218,77 @@ describe('scheduler, organization scores', async assert => {
     console.log('settings reset')
     await contracts.settings.reset({ authorization: `${settings}@active` })
 
-    const operations = {
-        'org.mrgen': 'calcmregens',
-        'org.txpts': 'calctrxpts',
-        'org.rankrgen': 'rankregens',
-        'org.rankcbs': 'rankcbsorgs'
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('orgs reset')
+    await contracts.organization.reset({ authorization: `${organization}@active` })
+
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+
+    console.log('create balance')
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    
+    console.log('create organization')
+    await contracts.organization.create(firstuser, 'firstorg', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        json: true
+    })
+
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+        await sleep(200)
     }
-    const ids = Object.keys(operations)
+
+    const operations = [
+        {
+            id: 'org.rankrgen',
+            operation: 'rankregens',
+            contract: organization
+        },
+        {
+            id: 'org.rankcbs',
+            operation: 'rankcbsorgs',
+            contract: organization
+        },
+        {
+            id: 'org.screorgs',
+            operation: 'scoretrxs',
+            contract: organization
+        },
+        {
+            id: 'hrvst.orgtx',
+            operation: 'rankorgtxs',
+            contract: harvest
+        }
+    ]
 
     console.log('add operations')
-    for (const id of ids) {
-        await contracts.scheduler.configop(id, operations[id], organization, 1, 0, { authorization: `${scheduler}@active` })
+    for (const op of operations) {
+        await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
         await sleep(200)
     }
     
     console.log('scheduler execute')
     let canExecute = false
     try {
-        for(let i = 0; i < ids.length + 10; i++) {
+        for(const op of operations) {
+            console.log('to execute:', op.operation)
             await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
-            await sleep(200)
+            await sleep(300)
             await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
             await sleep(300)
+            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
         }
         canExecute = true
     } catch (error) {
         console.log(error)
-        console.log('can not execute calcmregens (unexpected, permission may be needed)')
+        console.log('can not execute (unexpected, permission may be needed)')
         
     }
     assert({
@@ -252,5 +301,8 @@ describe('scheduler, organization scores', async assert => {
     await sleep(1 * 1000)
 
     await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
 })

@@ -62,10 +62,6 @@ CONTRACT organization : public contract {
 
         ACTION cleandau(name appname, uint64_t timestamp, uint64_t start);
 
-        // ACTION calcmregens();
-
-        // ACTION calcmregen(uint64_t start, uint64_t chunksize);
-
         ACTION rankregens();
 
         ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
@@ -87,6 +83,8 @@ CONTRACT organization : public contract {
         ACTION testreptable(name organization);
 
         void deposit(name from, name to, asset quantity, std::string memo);
+
+        ACTION scoretrxs();
 
         ACTION scoreorgs(name next);
 
@@ -340,7 +338,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
             (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(makeregen)
-            (makereptable)(testregen)(testreptable)(scoreorgs))
+            (makereptable)(testregen)(testreptable)(scoreorgs)(scoretrxs))
       }
   }
 }

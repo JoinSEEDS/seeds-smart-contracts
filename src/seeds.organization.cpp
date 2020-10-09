@@ -867,6 +867,10 @@ ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t s
     }
 }
 
+ACTION organization::scoretrxs() {
+    scoreorgs(""_n);
+}
+
 ACTION organization::scoreorgs(name next) {
     require_auth(get_self());
 
@@ -887,7 +891,7 @@ ACTION organization::scoreorgs(name next) {
             );
             transaction tx;
             tx.actions.emplace_back(next_execution);
-            tx.delay_sec = 1;
+            tx.delay_sec = 1; // change this to 1 to test
             tx.send(next.value+2, _self);
         }
     }

@@ -615,135 +615,6 @@ describe('app', async assert => {
 
 })
 
-
-describe('transaction points', async assert => {
-    const contracts = await initContracts({ settings, history, accounts, organization, token, harvest })
-    let firstorg = 'testorg1'
-    let secondorg = 'testorg2'
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    console.log('reset organization')
-    await contracts.organization.reset({ authorization: `${organization}@active` })
-
-    console.log('reset token stats')
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
-
-    console.log('accounts reset')
-    await contracts.accounts.reset({ authorization: `${accounts}@active` })
-    
-    console.log('harvest reset')
-    await contracts.harvest.reset({ authorization: `${harvest}@active` })
-
-    console.log('history reset')
-    await contracts.history.reset(firstuser, { authorization: `${history}@active` })
-    await contracts.history.reset(seconduser, { authorization: `${history}@active` })
-    await contracts.history.reset(firstorg, { authorization: `${history}@active` })
-    await contracts.history.reset(secondorg, { authorization: `${history}@active` })
-  
-    console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
-
-    console.log('add rep')
-    await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
-    await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
-
-    console.log('create balance')
-    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(seconduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
-    
-    console.log('create organization')
-
-    await contracts.organization.create(firstuser, firstorg, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
-    await contracts.organization.create(firstuser, secondorg, "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
-
-    console.log('add rep for these users then make some transactions')
-    await contracts.accounts.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(seconduser, 25, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(firstorg, 33, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(secondorg, 66, { authorization: `${accounts}@active` })
-
-    console.log('make transfers')
-    const transfer = async (a, b, amount) => {
-        await contracts.token.transfer(a, b, amount, Math.random().toString(36).substring(7), { authorization: `${a}@active` })
-    }
-    
-    await transfer(firstuser, firstorg, "10.0000 SEEDS")
-    await transfer(firstuser, secondorg, "19.0000 SEEDS")
-    await transfer(secondorg, firstorg, "19.0000 SEEDS")
-    await transfer(firstorg, seconduser, "13.0000 SEEDS")
-    await transfer(seconduser, firstorg, "7.0000 SEEDS")
-    
-    const orgTx1 = await getTableRows({
-        code: history,
-        scope: firstorg,
-        table: 'orgtx',
-        json: true
-    })
-
-    const orgTx2 = await getTableRows({
-        code: history,
-        scope: secondorg,
-        table: 'orgtx',
-        json: true
-    })
-
-    const userTx1 = await getTableRows({
-        code: history,
-        scope: firstuser,
-        table: 'transactions',
-        json: true
-    })
-    const userTx2 = await getTableRows({
-        code: history,
-        scope: seconduser,
-        table: 'transactions',
-        json: true
-    })
-
-    console.log("org1 tx "+JSON.stringify(orgTx1, null, 2))
-    console.log("org2 tx "+JSON.stringify(orgTx2, null, 2))
-    console.log("user1 tx "+JSON.stringify(userTx1, null, 2))
-    console.log("user2 tx "+JSON.stringify(userTx2, null, 2))
-
-    let t1 = await contracts.history.orgtxpt(firstorg, 0, 200, 0, { authorization: `${history}@active` })
-    printConsole(t1)
-
-    let txt = await contracts.organization.scoreorgs(firstorg, { authorization: `${organization}@active` })
-
-    let checkTxPoints = async () => {
-        const txpoints = await getTableRows({
-            code: harvest,
-            scope: 'org',
-            table: 'txpoints',
-            json: true
-        })    
-        
-        console.log("harvest txpoints "+JSON.stringify(txpoints, null, 2))
-    
-    }
-    await checkTxPoints()
-
-    await contracts.organization.scoreorgs(secondorg, { authorization: `${organization}@active` })
-
-    await checkTxPoints()
-
-})
-
-const printConsole = (objResult) => {
-    const str = ""+JSON.stringify(objResult, null, 2)
-    const lines = str.split("\n")
-    for (var i=0; i<lines.length; i++) {
-        const l = lines[i].trim()
-        if (l.startsWith('"console')) {
-            console.log(l)
-        }
-    }
-}
-
-
 describe('organization scores', async assert => {
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1205,3 +1076,130 @@ describe('organization status', async assert => {
     })
 
 })
+
+describe('transaction points', async assert => {
+    const contracts = await initContracts({ settings, history, accounts, organization, token, harvest })
+    let firstorg = 'testorg1'
+    let secondorg = 'testorg2'
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('reset organization')
+    await contracts.organization.reset({ authorization: `${organization}@active` })
+
+    console.log('reset token stats')
+    await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+    
+    console.log('harvest reset')
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+    console.log('history reset')
+    await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+    await contracts.history.reset(seconduser, { authorization: `${history}@active` })
+    await contracts.history.reset(firstorg, { authorization: `${history}@active` })
+    await contracts.history.reset(secondorg, { authorization: `${history}@active` })
+  
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+
+    console.log('add rep')
+    await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
+    await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
+
+    console.log('create balance')
+    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(seconduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+    
+    console.log('create organization')
+
+    await contracts.organization.create(firstuser, firstorg, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, secondorg, "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
+
+    console.log('add rep for these users then make some transactions')
+    await contracts.accounts.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(seconduser, 25, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(firstorg, 33, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(secondorg, 66, { authorization: `${accounts}@active` })
+
+    console.log('make transfers')
+    const transfer = async (a, b, amount) => {
+        await contracts.token.transfer(a, b, amount, Math.random().toString(36).substring(7), { authorization: `${a}@active` })
+    }
+    
+    await transfer(firstuser, firstorg, "10.0000 SEEDS")
+    await transfer(firstuser, secondorg, "19.0000 SEEDS")
+    await transfer(secondorg, firstorg, "19.0000 SEEDS")
+    await transfer(firstorg, seconduser, "13.0000 SEEDS")
+    await transfer(seconduser, firstorg, "7.0000 SEEDS")
+    
+    const orgTx1 = await getTableRows({
+        code: history,
+        scope: firstorg,
+        table: 'orgtx',
+        json: true
+    })
+
+    const orgTx2 = await getTableRows({
+        code: history,
+        scope: secondorg,
+        table: 'orgtx',
+        json: true
+    })
+
+    const userTx1 = await getTableRows({
+        code: history,
+        scope: firstuser,
+        table: 'transactions',
+        json: true
+    })
+    const userTx2 = await getTableRows({
+        code: history,
+        scope: seconduser,
+        table: 'transactions',
+        json: true
+    })
+
+    console.log("org1 tx "+JSON.stringify(orgTx1, null, 2))
+    console.log("org2 tx "+JSON.stringify(orgTx2, null, 2))
+    console.log("user1 tx "+JSON.stringify(userTx1, null, 2))
+    console.log("user2 tx "+JSON.stringify(userTx2, null, 2))
+
+    let t1 = await contracts.history.orgtxpt(firstorg, 0, 200, 0, { authorization: `${history}@active` })
+    printConsole(t1)
+
+    let txt = await contracts.organization.scoreorgs(firstorg, { authorization: `${organization}@active` })
+
+    let checkTxPoints = async () => {
+        const txpoints = await getTableRows({
+            code: harvest,
+            scope: 'org',
+            table: 'txpoints',
+            json: true
+        })    
+        
+        console.log("harvest txpoints "+JSON.stringify(txpoints, null, 2))
+    
+    }
+    await checkTxPoints()
+
+    await contracts.organization.scoreorgs(secondorg, { authorization: `${organization}@active` })
+
+    await checkTxPoints()
+
+})
+
+const printConsole = (objResult) => {
+    const str = ""+JSON.stringify(objResult, null, 2)
+    const lines = str.split("\n")
+    for (var i=0; i<lines.length; i++) {
+        const l = lines[i].trim()
+        if (l.startsWith('"console')) {
+            console.log(l)
+        }
+    }
+}

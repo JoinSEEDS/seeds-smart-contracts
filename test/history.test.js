@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, history, accounts, organization, token } = names
+const { firstuser, seconduser, history, accounts, organization, token, settings } = names
 
 describe('make a transaction entry', async assert => {
 
