@@ -217,8 +217,7 @@ describe('scheduler, organization scores', async assert => {
         'org.mrgen': 'calcmregens',
         'org.txpts': 'calctrxpts',
         'org.rankrgen': 'rankregens',
-        'org.rankcbs': 'rankcbsorgs',
-        'org.ranktxs': 'ranktxs'
+        'org.rankcbs': 'rankcbsorgs'
     }
     const ids = Object.keys(operations)
 

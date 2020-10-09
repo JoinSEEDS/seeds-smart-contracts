@@ -71,7 +71,6 @@ ACTION scheduler::reset() {
         name("org.clcregen"),
         name("org.rankcbs"),
         name("org.clctrpts"),
-        name("org.ranktxs")
     };
     
     std::vector<name> operations_v = {
@@ -92,7 +91,6 @@ ACTION scheduler::reset() {
         name("rankregens"),
         name("rankcbsorgs"),
         name("calctrxpts"),
-        name("ranktxs")
     };
 
     std::vector<name> contracts_v = {
@@ -113,7 +111,6 @@ ACTION scheduler::reset() {
         contracts::organization,
         contracts::organization,
         contracts::organization,
-        contracts::organization
     };
 
     std::vector<uint64_t> delay_v = {
@@ -134,7 +131,6 @@ ACTION scheduler::reset() {
         utils::seconds_per_day,
         utils::seconds_per_day,
         utils::seconds_per_day / 3,
-        utils::seconds_per_day
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -157,7 +153,6 @@ ACTION scheduler::reset() {
         now,
         now,
         now,
-        now
     };
 
     int i = 0;

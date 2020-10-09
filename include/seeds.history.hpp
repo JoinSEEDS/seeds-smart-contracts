@@ -2,6 +2,7 @@
 #include <contracts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
+#include <tables/config_table.hpp>
 
 #include <contracts.hpp>
 #include <tables/user_table.hpp>
@@ -38,9 +39,17 @@ CONTRACT history : public contract {
 
         ACTION addregen(name organization);
 
+        ACTION orgtxpoints(name organization);
+
+        ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
+
+
     private:
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
+      uint64_t config_get(name key);
+      void fire_orgtx_calc(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
+      bool clean_old_tx(name org, uint64_t chunksize);
 
       TABLE citizen_table {
         uint64_t id;
@@ -58,6 +67,24 @@ CONTRACT history : public contract {
         
         uint64_t primary_key()const { return id; }
         uint64_t by_account()const { return account.value; }
+      };
+
+      TABLE reputable_table {
+        uint64_t id;
+        name organization;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return id; }
+        uint64_t by_org()const { return organization.value; }
+      };
+
+      TABLE regenerative_table {
+        uint64_t id;
+        name organization;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return id; }
+        uint64_t by_org()const { return organization.value; }
       };
 
       TABLE history_table {
@@ -83,23 +110,24 @@ CONTRACT history : public contract {
         uint64_t by_quantity() const { return quantity.amount; }
       };
 
-      TABLE reputable_table {
+      TABLE org_tx_table {
         uint64_t id;
-        name organization;
+        name other;
+        bool in;
+        asset quantity;
         uint64_t timestamp;
 
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_quantity() const { return quantity.amount; }
+        uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
       };
 
-      TABLE regenerative_table {
-        uint64_t id;
-        name organization;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
-      };
+      typedef eosio::multi_index<"orgtx"_n, org_tx_table,
+        indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
+        indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint128_t, &org_tx_table::by_other>>
+      > org_tx_tables;
 
       typedef eosio::multi_index<"transactions"_n, transaction_table,
         indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
@@ -116,7 +144,7 @@ CONTRACT history : public contract {
         indexed_by<"byaccount"_n,
         const_mem_fun<resident_table, uint64_t, &resident_table::by_account>>
       > resident_tables;
-    
+      
       typedef eosio::multi_index<"history"_n, history_table> history_tables;
 
       typedef eosio::multi_index<"reputables"_n, reputable_table,
@@ -140,4 +168,11 @@ CONTRACT history : public contract {
       regenerative_tables regens;
 };
 
-EOSIO_DISPATCH(history, (reset)(historyentry)(trxentry)(addcitizen)(addresident)(numtrx)(addreputable)(addregen));
+EOSIO_DISPATCH(history, 
+  (reset)
+  (historyentry)(trxentry)
+  (addcitizen)(addresident)
+  (addreputable)(addregen)
+  (numtrx)
+  (orgtxpoints)(orgtxpt)
+  );

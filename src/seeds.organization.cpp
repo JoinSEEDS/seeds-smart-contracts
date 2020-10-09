@@ -171,11 +171,6 @@ ACTION organization::reset() {
     while (cbsitr != cbsorgs.end()) {
         cbsitr = cbsorgs.erase(cbsitr);
     }
-
-    auto txitr = txporgs.begin();
-    while (txitr != txporgs.end()) {
-        txitr = txporgs.erase(txitr);
-    }
 }
 
 
@@ -598,19 +593,19 @@ uint64_t organization::count_refs(name organization, uint32_t check_num_resident
 }
 
 uint64_t organization::count_transactions(name organization, uint64_t limit) {
-    transaction_tables transactions(contracts::history, organization.value);
+    org_tx_tables transactions(contracts::history, organization.value);
     auto transactions_by_date = transactions.get_index<"bytimestamp"_n>();
     auto titr = transactions_by_date.rbegin();
     uint64_t count = 0;
     uint64_t t_number = 0;
 
     while (titr != transactions_by_date.rend() && count < limit) {
-        auto to = titr -> to;
-        auto uitr = users.find(to.value);
+        auto other = titr -> other;
+        auto uitr = users.find(other.value);
         if (uitr -> status == name("citizen")) {
             t_number += 1;
         } else if (uitr -> type == name("organisation")) {
-            auto oitr = organizations.find(to.value);
+            auto oitr = organizations.find(other.value);
             if (oitr -> status == reputable_org || oitr -> status == regenerative_org) {
                 t_number += 1;
             }
@@ -676,7 +671,7 @@ void organization::update_status(name organization, name status) {
   auto oitr = organizations.find(organization.value);
 
   check(oitr != organizations.end(), "the organization does not exist");
-  check(status == regenerative_org || status == reputable_org, "organization invalid status");
+  check(status == regenerative_org || status == reputable_org, "invalid organization status");
 
   organizations.modify(oitr, _self, [&](auto& org) {
     org.status = status;
@@ -722,208 +717,6 @@ ACTION organization::testreptable(name organization) {
     update_status(organization, reputable_org);
     history_add_reputable(organization);
 }
-
-// ==================================================================================== //
-// ==================================================================================== //
-// ==================================================================================== //
-
-// Calculate Transaction Points for a single organization
-// Returns count of iterations
-uint32_t organization::calc_transaction_points(name organization) {
-  auto three_moon_cycles = utils::moon_cycle * 3;
-  auto now = eosio::current_time_point().sec_since_epoch();
-  auto cutoffdate = now - three_moon_cycles;
-
-  // get all transactions for this organization
-  transaction_tables transactions(contracts::history, organization.value);
-
-  auto transactions_by_to = transactions.get_index<"byto"_n>();
-  auto tx_to_itr = transactions_by_to.rbegin();
-
-  double result = 0;
-
-  uint64_t max_quantity = 1777; // get this from settings // TODO verify this number
-  uint64_t max_number_of_transactions = 26;
-
-  name      current_to = name("");
-  uint64_t  current_num = 0;
-  double    current_rep_multiplier = 0.0;
-
-  uint64_t  count = 0;
-  uint64_t  limit = 200;
-    
-  //print("start " + organization.to_string());
-
-  while(tx_to_itr != transactions_by_to.rend() && count < limit) {
-
-    if (tx_to_itr->timestamp < cutoffdate) {
-      //print("date trigger ");
-
-      // remove old transactions
-      //tx_to_itr = transactions_by_to.erase(tx_to_itr);
-      
-      //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
-      //tx_to_itr = std::reverse_iterator(it);            
-    } else {
-      //print("update to ");
-
-      // update "to"
-      if (current_to != tx_to_itr->to) {
-        current_to = tx_to_itr->to;
-        current_num = 0;
-        current_rep_multiplier = utils::get_rep_multiplier(current_to);
-      } else {
-        current_num++;
-      }
-
-      //print("iterating over "+std::to_string(tx_to_itr->id));
-
-      if (current_num < max_number_of_transactions) {
-        uint64_t volume = tx_to_itr->quantity.amount;
-
-      //print("volume "+std::to_string(volume));
-
-        // limit max volume
-        if (volume > max_quantity * 10000) {
-              //print("max limit "+std::to_string(max_quantity * 10000));
-          volume = max_quantity * 10000;
-        }
-
-
-        // multiply by receiver reputation
-        double points = (double(volume) / 10000.0) * current_rep_multiplier;
-        
-        //print("tx points "+std::to_string(points));
-
-        result += points;
-
-      } 
-
-    }
-    tx_to_itr++;
-    count++;
-  }
-
-  //print("set result "+std::to_string(result));
-
-  // use ceil function so each schore is counted if it is > 0
-    
-  // DEBUG
-  // if (result == 0) {
-  //   result = 33.0;
-  // }
-  // enter into transaction points table
-  auto titr = txporgs.find(organization.value);
-  uint64_t points = ceil(result);
-
-  if (titr == txporgs.end()) {
-    if (points > 0) {
-      txporgs.emplace(_self, [&](auto& entry) {
-        entry.org_name = organization;
-        entry.points = points;
-      });
-      increase_size_by_one(tx_score_size);
-    }
-  } else {
-    if (points > 0) {
-      txporgs.modify(titr, _self, [&](auto& entry) {
-        entry.points = points; 
-      });
-    } else {
-      txporgs.erase(titr);
-      decrease_size_by_one(tx_score_size);
-    }
-  }
-
-  return count;
-
-}
-
-ACTION organization::calctrxpts() {
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
-    calctrxpt(0, 0, batch_size.value);
-}
-
-ACTION organization::calctrxpt(uint64_t start, uint64_t chunk, uint64_t chunksize) {
-  require_auth(get_self());
-
-  check(chunksize > 0, "chunk size must be > 0");
-
-  uint64_t total = get_size(tx_score_size);
-  auto orgitr = start == 0 ? organizations.begin() : organizations.lower_bound(start);
-  uint64_t count = 0;
-
-  while (orgitr != organizations.end() && count < chunksize) {
-    uint32_t num = calc_transaction_points(orgitr -> org_name);
-    count += 1 + num;
-    orgitr++;
-  }
-
-  if (orgitr != organizations.end()) {
-    uint64_t next_value = (orgitr -> org_name).value;
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "calctrxpt"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(tx_score_size.value, _self);
-  }
-}
-
-ACTION organization::ranktxs() {
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
-    ranktx(0, 0, batch_size.value);
-}
-
-ACTION organization::ranktx(uint64_t start, uint64_t chunk, uint64_t chunksize) {
-    require_auth(get_self());
-
-    check(chunksize > 0, "chunk size must be > 0");
-
-    uint64_t total = get_size(tx_score_size);
-    if (total == 0) return;
-
-    uint64_t current = chunk * chunksize;
-    auto tx_by_points = txporgs.get_index<"bypoints"_n>();
-    auto txitr = start == 0 ? tx_by_points.begin() : tx_by_points.lower_bound(start);
-    uint64_t count = 0;
-
-    while (txitr != tx_by_points.end() && count < chunksize) {
-
-        uint64_t rank = (current * 100) / total;
-
-        tx_by_points.modify(txitr, _self, [&](auto & item) {
-            item.rank = rank;
-        });
-
-        current++;
-        count++;
-        txitr++;
-    }
-
-    if (txitr != tx_by_points.end()) {
-        uint64_t next_value = (txitr -> org_name).value;
-        action next_execution(
-            permission_level("active"_n, get_self()),
-            get_self(),
-            "rankcbsorg"_n,
-            std::make_tuple(next_value, chunk + 1, chunksize)
-        );
-        transaction tx;
-        tx.actions.emplace_back(next_execution);
-        tx.delay_sec = 1;
-        tx.send(cb_score_size.value, _self);
-    }
-}
-
-// ==================================================================================== //
-// ==================================================================================== //
-// ==================================================================================== //
 
 ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
     require_auth(owner);
@@ -1074,3 +867,28 @@ ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t s
     }
 }
 
+ACTION organization::scoreorgs(name next) {
+    require_auth(get_self());
+
+    auto itr = next == ""_n ? organizations.begin() : organizations.lower_bound(next.value);
+    if(itr != organizations.end()) {
+        action(
+            permission_level{contracts::history, "active"_n},
+            contracts::history, "orgtxpoints"_n,
+            std::make_tuple(itr -> org_name)
+        ).send();
+        itr++;
+        if (itr != organizations.end()) {
+            action next_execution(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "scoreorgs"_n,
+                std::make_tuple(itr->org_name)
+            );
+            transaction tx;
+            tx.actions.emplace_back(next_execution);
+            tx.delay_sec = 1;
+            tx.send(next.value+2, _self);
+        }
+    }
+}

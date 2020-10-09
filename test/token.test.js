@@ -26,30 +26,27 @@ describe('token.transfer.history', async assert => {
     return
   }
 
-  const contract = await eos.contract(token)
-  const historyContract = await eos.contract(history)
-  const accountsContract = await eos.contract(accounts)
-  const settingsContract = await eos.contract(settings)
+  const contracts = await initContracts({ token, history, accounts, settings })
   
-  const transfer = () => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  const transfer = () => contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   
   console.log('configure')
-  await settingsContract.reset({ authorization: `${settings}@active` })
+  await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('reset token')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('reset history')
-  await historyContract.reset(firstuser, { authorization: `${history}@active` })
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
 
   console.log('accounts reset')
-  await accountsContract.reset({ authorization: `${accounts}@active` })
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('update status')
-  await accountsContract.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
-  await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
-  await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
   console.log('transfer token')
   await transfer()
@@ -117,27 +114,25 @@ describe('token.transfer', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-
-  const contract = await eos.contract(token)
-  const harvestContract = await eos.contract(harvest)
+  const contracts = await initContracts({ token, harvest })
 
   console.log('harvest reset')
-  await harvestContract.reset({ authorization: `${harvest}@active` })
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
   let limit = 20
-  const transfer = (n) => contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `x${n}`, { authorization: `${firstuser}@active` })
+  const transfer = (n) => contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', `x${n}`, { authorization: `${firstuser}@active` })
 
   const balances = [await getBalance(firstuser)]
 
   console.log('reset token stats')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('plant SEEDS')
-  await contract.transfer(firstuser, harvest, '2.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, harvest, '2.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
-    await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
   }
 
   let limitFailWithPlantedBalance = false
@@ -152,10 +147,10 @@ describe('token.transfer', async assert => {
   balances.push(await getBalance(firstuser))
 
   console.log('harvest reset')
-  await harvestContract.reset({ authorization: `${harvest}@active` })
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
   console.log('reset token stats')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   limit = 7
   console.log(`call transfer x${limit} times`)
@@ -201,7 +196,7 @@ describe('token.burn', async assert => {
     return
   }
 
-  const contract = await eos.contract(token)
+  const contracts = await initContracts({ token })
 
   const balances = []
   const supply = []
@@ -209,7 +204,7 @@ describe('token.burn', async assert => {
   balances.push(await getBalance(firstuser))
   supply.push(await getSupply())
 
-  await contract.burn(firstuser, '10.0000 SEEDS', { authorization: `${firstuser}@active` })
+  await contracts.token.burn(firstuser, '10.0000 SEEDS', { authorization: `${firstuser}@active` })
 
   balances.push(await getBalance(firstuser))
   supply.push(await getSupply())
@@ -236,16 +231,16 @@ describe('token calculate circulating supply', async assert => {
     return
   }
 
-  const contract = await eos.contract(token)
+  const contracts = await initContracts({ token })
   
   console.log('reset token stats')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
   
   console.log('update circulating')
-  await contract.updatecirc({ authorization: `${token}@active` })
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
   
   console.log('transfer token')
-  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', `cc1`, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', `cc1`, { authorization: `${firstuser}@active` })
   
   const { rows } = await getTableRows({
     code: token,
@@ -271,32 +266,30 @@ describe('token.resetweekly', async assert => {
     return
   }
 
-  const contract = await eos.contract(token)
-  const settingsContract = await eos.contract(settings)
-  const accountsContract = await eos.contract(accounts)
+  const contracts = await initContracts({ token, settings, accounts })
   
   console.log('configure')
-  await settingsContract.configure("batchsize", 2, { authorization: `${settings}@active` })
+  await contracts.settings.configure("batchsize", 2, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
-  await accountsContract.reset({ authorization: `${accounts}@active` })
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('reset token')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   await sleep(10 * 1000)
 
   console.log('update status')
-  await accountsContract.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
-  await accountsContract.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
-  await accountsContract.testresident(firstuser, { authorization: `${accounts}@active` })
-  await accountsContract.testcitizen(seconduser, { authorization: `${accounts}@active` })
-  await accountsContract.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
-  await contract.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
-  await contract.transfer(seconduser, thirduser, '10.0000 SEEDS', ``, { authorization: `${seconduser}@active` })
-  await contract.transfer(thirduser, seconduser, '10.0000 SEEDS', ``, { authorization: `${thirduser}@active` })
+  await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', ``, { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, seconduser, '10.0000 SEEDS', ``, { authorization: `${thirduser}@active` })
   
 
   let balancesBefore = await getTableRows({
@@ -309,7 +302,7 @@ describe('token.resetweekly', async assert => {
   balancesBefore = balancesBefore.rows.map(row => row.outgoing_transactions)
  
   console.log('reset token')
-  await contract.resetweekly({ authorization: `${token}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   await sleep(10 * 1000)
 
@@ -322,7 +315,7 @@ describe('token.resetweekly', async assert => {
 
   balancesAfter = balancesAfter.rows.map(row => row.outgoing_transactions)
 
-  await settingsContract.reset({ authorization: `${settings}@active` })
+  await contracts.settings.reset({ authorization: `${settings}@active` })
 
   assert({
     given: 'called resetweekly',

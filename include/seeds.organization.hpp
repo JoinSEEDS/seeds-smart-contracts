@@ -21,7 +21,6 @@ CONTRACT organization : public contract {
               apps(receiver, receiver.value),
               regenscores(receiver, receiver.value),
               cbsorgs(receiver, receiver.value),
-              txporgs(receiver, receiver.value),
               sizes(receiver, receiver.value),
               avgvotes(receiver, receiver.value),
               refs(contracts::accounts, contracts::accounts.value),
@@ -79,14 +78,6 @@ CONTRACT organization : public contract {
 
         ACTION subcbpoints(name organization, uint32_t cbscore);
 
-        ACTION calctrxpts();
-
-        ACTION calctrxpt(uint64_t start, uint64_t chunk, uint64_t chunksize);
-
-        ACTION ranktxs();
-
-        ACTION ranktx(uint64_t start, uint64_t chunk, uint64_t chunksize);
-
         ACTION makeregen(name organization);
 
         ACTION makereptable(name organization);
@@ -96,6 +87,8 @@ CONTRACT organization : public contract {
         ACTION testreptable(name organization);
 
         void deposit(name from, name to, asset quantity, std::string memo);
+
+        ACTION scoreorgs(name next);
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
@@ -172,33 +165,24 @@ CONTRACT organization : public contract {
             uint64_t by_rank() const { return rank; }
         };
 
-        TABLE txs_organization_table {
-            name org_name;
-            uint32_t points;
-            uint64_t rank;
-
-            uint64_t primary_key() const { return org_name.value; } 
-            uint64_t by_points() const { return (uint64_t(points) << 32) +  ( (org_name.value <<32) >> 32) ; } 
-            uint64_t by_rank() const { return rank; }            
-        };
-
-        TABLE transaction_table { // from history contract
+        TABLE org_tx_table {
             uint64_t id;
-            name to;
+            name other;
+            bool in;
             asset quantity;
             uint64_t timestamp;
 
             uint64_t primary_key() const { return id; }
             uint64_t by_timestamp() const { return timestamp; }
-            uint64_t by_to() const { return to.value; }
             uint64_t by_quantity() const { return quantity.amount; }
+            uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
         };
 
-        typedef eosio::multi_index<"transactions"_n, transaction_table,
-            indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-            indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-            indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-        > transaction_tables;
+        typedef eosio::multi_index<"orgtx"_n, org_tx_table,
+            indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
+            indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
+            indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint128_t, &org_tx_table::by_other>>
+        > org_tx_tables;
 
         TABLE ref_table { // from accounts contract
             name referrer;
@@ -302,13 +286,6 @@ CONTRACT organization : public contract {
             const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_rank>>
         > cbs_organization_tables;
 
-        typedef eosio::multi_index<"txorgpoints"_n, txs_organization_table,
-            indexed_by<"bypoints"_n,
-            const_mem_fun<txs_organization_table, uint64_t, &txs_organization_table::by_points>>,
-            indexed_by<"byrank"_n,
-            const_mem_fun<txs_organization_table, uint64_t, &txs_organization_table::by_rank>>
-        > txs_organization_tables;
-
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
@@ -316,7 +293,6 @@ CONTRACT organization : public contract {
         app_tables apps;
         regen_score_tables regenscores;
         cbs_organization_tables cbsorgs;
-        txs_organization_tables txporgs;
         size_tables sizes;
         balance_tables balances;
         ref_tables refs;
@@ -363,8 +339,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
-            (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(calctrxpts)(calctrxpt)(ranktxs)
-            (ranktx)(makeregen)(makereptable)(testregen)(testreptable))
+            (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(makeregen)
+            (makereptable)(testregen)(testreptable)(scoreorgs))
       }
   }
 }
