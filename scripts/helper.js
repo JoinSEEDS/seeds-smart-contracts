@@ -82,8 +82,8 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const exchangeKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
-  [networks.telosMainnet]: 'EOS6Ls7tdHYfo49cUMoeVFe4e7NfPKBzhsFA4sJS8hvgH24UVFPiM', // normal testnet key
-  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' // special unique key
+  [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo', 
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' 
 }
 
 const exchangePublicKey = exchangeKeys[chainId]
