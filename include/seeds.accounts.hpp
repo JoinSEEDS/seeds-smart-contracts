@@ -37,8 +37,6 @@ CONTRACT accounts : public contract {
       ACTION makecitizen(name user);
       ACTION cancitizen(name user);
 
-      ACTION testcitizen(name user);
-
       ACTION genesis(name user);
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
@@ -64,6 +62,7 @@ CONTRACT accounts : public contract {
       ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
       ACTION testresident(name user);
+      ACTION testcitizen(name user);
       ACTION testvisitor(name user);
       ACTION testremove(name user);
       ACTION testsetrep(name user, uint64_t amount);
