@@ -39,13 +39,13 @@ bool proposals::is_enough_stake(asset staked, asset quantity) {
 }
 
 uint64_t proposals::min_stake(asset quantity) {
-  auto prop_percentage = config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.");
-  auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
-  auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
-  asset quantity_prop_percentage = prop_percentage.value * quantity / 100;
+  uint64_t prop_percentage = config_get(name("propstakeper"));
+  uint64_t prop_min = config_get(name("propminstake"));
+  uint64_t prop_max = config_get(name("propmaxstake"));
+  asset quantity_prop_percentage = prop_percentage * quantity / 100;
 
-  uint64_t min_stake = std::max(uint64_t(prop_min.value), uint64_t(quantity_prop_percentage.amount));
-  min_stake = std::min(prop_max.value, min_stake);
+  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max, min_stake);
   return min_stake;
 }
 
@@ -81,8 +81,8 @@ void proposals::onperiod() {
 
     auto pitr = props.begin();
 
-    auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
-    uint64_t quorum = config.find(name("propquorum").value)->value;
+    uint64_t prop_majority = config_get(name("propmajority"));
+    uint64_t quorum = config_get(name("propquorum"));
 
     uint64_t number_active_proposals = 0;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
@@ -93,17 +93,21 @@ void proposals::onperiod() {
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
 
-        double majority = double(prop_majority.value) / 100.0;
+        double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
         bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
         bool is_alliance_type = pitr->fund == bankaccts::alliances;
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
-        if (passed && valid_quorum) {
-          refund_staked(pitr->creator, pitr->staked);
+        bool passed_unity_and_quorum = passed && valid_quorum;
 
-          change_rep(pitr->creator, true);
+        change_rep(pitr->creator, passed_unity_and_quorum);
+
+        acct_history(pitr->creator, pitr->quantity.amount, passed_unity_and_quorum);
+
+        if (passed_unity_and_quorum) {
+          refund_staked(pitr->creator, pitr->staked);
 
           if (is_alliance_type) {
             send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
@@ -117,6 +121,7 @@ void proposals::onperiod() {
               proposal.status = name("passed");
               proposal.stage = name("done");
           });
+
         } else {
           burn(pitr->staked);
 
@@ -179,9 +184,9 @@ void proposals::updatevoice(uint64_t start) {
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
-  while (vitr != voice.end() && count < batch_size.value) {
+  while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
       if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
@@ -212,8 +217,8 @@ void proposals::updatevoice(uint64_t start) {
 }
 
 uint64_t proposals::get_voice_decay_period_sec() {
-  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
-  return voice_decay_period.value;
+  uint64_t voice_decay_period = config_get(name("propdecaysec"));
+  return voice_decay_period;
 }
 
 void proposals::decayvoices() {
@@ -222,8 +227,8 @@ void proposals::decayvoices() {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
   uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
-  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t decay_time = config_get(name("decaytime"));
+  uint64_t decay_sec = config_get(name("propdecaysec"));
 
   if ((c.t_onperiod < now)
       && (now - c.t_onperiod >= decay_time)
@@ -231,19 +236,19 @@ void proposals::decayvoices() {
   ) {
     c.t_voicedecay = now;
     cycle.set(c, get_self());
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-    decayvoice(0, batch_size.value);
+    uint64_t batch_size = config_get(name("batchsize"));
+    decayvoice(0, batch_size);
   }
 }
 
 void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
-  auto percentage_decay = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.");
-  check(percentage_decay.value <= 100, "Voice decay parameter can not be more than 100%.");
+  uint64_t percentage_decay = config_get(name("vdecayprntge"));
+  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
   uint64_t count = 0;
 
-  double multiplier = (100.0 - (double)percentage_decay.value) / 100.0;
+  double multiplier = (100.0 - (double)percentage_decay) / 100.0;
 
   while (vitr != voice.end() && count < chunksize) {
     voice.modify(vitr, _self, [&](auto & v){
@@ -292,6 +297,11 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
   utils::check_asset(quantity);
+
+  if (!is_trusted(creator)) {
+    uint64_t max_ask = config_get(max_initial_ask_prop);
+    check(quantity.amount <= max_ask, "Earn trust by making and winning proposals up to 50,000 Seeds before asking for more.");
+  }
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -391,9 +401,9 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check(pitr != props.end(), "no proposal");
       check(from == pitr->creator, "only the creator can stake into a proposal");
 
-      auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
-      check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
-        "The staked value can not be greater than " + std::to_string(prop_max.value / 10000) + " Seeds");
+      uint64_t prop_max = config_get(name("propmaxstake"));
+      check((pitr -> staked + quantity) <= asset(prop_max, seeds_symbol), 
+        "The staked value can not be greater than " + std::to_string(prop_max / 10000) + " Seeds");
 
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;
@@ -404,24 +414,24 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 }
 
 void proposals::erasepartpts(uint64_t active_proposals) {
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-  auto reward_points = config.get(name("voterep1.ind").value, "The voterep1.ind parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t reward_points = config_get(name("voterep1.ind"));
 
   uint64_t counter = 0;
   auto pitr = participants.begin();
-  while (pitr != participants.end() && counter < batch_size.value) {
+  while (pitr != participants.end() && counter < batch_size) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(pitr -> account, reward_points.value)
+        std::make_tuple(pitr -> account, reward_points)
       ).send();
     }
     counter += 1;
     pitr = participants.erase(pitr);
   }
 
-  if (counter == batch_size.value) {
+  if (counter == batch_size) {
     transaction trx_erase_participants{};
     trx_erase_participants.actions.emplace_back(
       permission_level(_self, "active"_n),
@@ -484,14 +494,14 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
     vote.proposal_id = id;
   });
 
-  auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+  uint64_t rep = config_get(name("voterep2.ind"));
   auto paitr = participants.find(voter.value);
   if (paitr == participants.end()) {
     // add reputation for entering in the table
     action(
       permission_level{contracts::accounts, "active"_n},
       contracts::accounts, "addrep"_n,
-      std::make_tuple(voter, rep.value)
+      std::make_tuple(voter, rep)
     ).send();
     // add the voter to the table
     participants.emplace(_self, [&](auto & participant){
@@ -575,11 +585,11 @@ void proposals::refund_staked(name beneficiary, asset quantity) {
 }
 void proposals::change_rep(name beneficiary, bool passed) {
   if (passed) {
-    auto reward_points = config.get(name("proppass.rep").value, "The proppass.rep parameter has not been initialized yet.");
+    uint64_t reward_points = config_get(name("proppass.rep"));
     action(
       permission_level{contracts::accounts, "active"_n},
       contracts::accounts, "addrep"_n,
-      std::make_tuple(beneficiary, reward_points.value)
+      std::make_tuple(beneficiary, reward_points)
     ).send();
 
   }
@@ -645,3 +655,45 @@ void proposals::check_citizen(name account)
   check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
+
+bool proposals::is_trusted(name account) {
+  proposer_history_tables prophist(contracts::proposals, account.value);
+  auto pitr = prophist.find(account.value);
+  if (pitr != prophist.end()) {
+    return pitr->props_succeeded > pitr->props_failed;
+  }
+  return false;
+}
+
+void proposals::acct_history(name account, uint64_t amount, bool passed) {
+  proposer_history_tables prophist(contracts::proposals, account.value);
+
+  auto pitr = prophist.find(account.value);
+  
+  if (pitr != prophist.end()) {
+    prophist.modify(pitr, _self, [&](auto& item) {
+      item.props_succeeded += passed ? 1 : 0;
+      item.props_failed += passed ? 0 : 1;
+      item.total_raised += passed ? amount : 0;
+      item.total_asked += amount;
+    });
+  } else {
+    prophist.emplace(_self, [&](auto& item) {
+      item.account = account;
+      item.props_succeeded += passed ? 1 : 0;
+      item.props_failed += passed ? 0 : 1;
+      item.total_raised += passed ? amount : 0;
+      item.total_asked += amount;
+    });
+  }
+}
+
+uint64_t proposals::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+

@@ -33,6 +33,9 @@ describe('Proposals', async assert => {
   console.log('harvest reset')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
@@ -44,6 +47,9 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('plant seeds')
+  //await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
   console.log('create proposal '+campaignbank)
 

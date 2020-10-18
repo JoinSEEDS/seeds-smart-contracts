@@ -67,6 +67,7 @@ CONTRACT proposals : public contract {
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
+      name max_initial_ask_prop = "prop.maxask"_n;
 
       void update_cycle();
       void update_voicedecay();
@@ -86,6 +87,9 @@ CONTRACT proposals : public contract {
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
       void change_rep(name beneficiary, bool passed);
+      bool is_trusted(name account);
+      void acct_history(name account, uint64_t amount, bool passed);
+      uint64_t config_get(name key);
 
       DEFINE_CONFIG_TABLE
         
@@ -154,6 +158,16 @@ CONTRACT proposals : public contract {
       uint64_t t_onperiod; // last time onperiod ran
       uint64_t t_voicedecay; // last time voice was decayed
     };
+
+    TABLE proposer_history_table {
+      name account;
+      uint64_t props_succeeded;
+      uint64_t props_failed;
+      uint64_t total_raised;
+      uint64_t total_asked;
+      uint64_t primary_key()const { return account.value; }
+    };
+
     
     typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
@@ -164,6 +178,7 @@ CONTRACT proposals : public contract {
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
+    typedef eosio::multi_index<"prophist"_n, proposer_history_table> proposer_history_tables;
 
     config_tables config;
     proposal_tables props;

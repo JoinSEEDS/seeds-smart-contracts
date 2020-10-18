@@ -7,8 +7,9 @@ void settings::reset() {
   confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "Minimum proposals stake threshold (in Seeds)", high_impact); 
   confwithdesc(name("propmaxstake"), uint64_t(11111) * uint64_t(10000), "Max proposals stake 11,111 threshold (in Seeds)", high_impact);
   confwithdesc(name("propstakeper"), 5, "Proposal funding fee in % - 5%", high_impact); 
+  confwithdesc(name("prop.maxask"), uint64_t(50000) * uint64_t(10000), "Max first ask 50,000 Seeds", high_impact);
 
-  confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
+  confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); 
   
   confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
@@ -23,7 +24,8 @@ void settings::reset() {
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact);
-  confwithdesc(name("propvoice"), 77, "Voice base per period", high_impact); // voice base per period
+  confwithdesc(name("propvoice"), 77, "(No longer used)", high_impact); // No longer used - remove
+
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
