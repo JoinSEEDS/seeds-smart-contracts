@@ -287,8 +287,20 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
   check_user(creator);
 
-  check(fund == bankaccts::milestone || fund == bankaccts::alliances || fund == bankaccts::campaigns, 
-  "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
+  name proposal_type;
+
+  if (fund == bankaccts::milestone) {
+    proposal_type = type_hypha;
+  } else if (fund == bankaccts::alliances) {
+    proposal_type = type_alliance;
+  } else if (fund == bankaccts::campaigns) {
+    proposal_type = type_campaign;
+  } else {
+    check(false, "Invalid fund - fund must be one of "+
+      bankaccts::milestone.to_string() + ", "+ 
+      bankaccts::alliances.to_string() + ", " + 
+      bankaccts::campaigns.to_string() );
+  }
 
   if (fund == bankaccts::milestone) { // Milestone Seeds
     check(recipient == bankaccts::hyphabank, "Hypha proposals must go to " + bankaccts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
@@ -296,6 +308,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
+
   utils::check_asset(quantity);
 
   if (!is_trusted(creator)) {

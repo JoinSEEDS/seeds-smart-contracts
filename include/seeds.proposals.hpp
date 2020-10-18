@@ -69,6 +69,10 @@ CONTRACT proposals : public contract {
       name abstain = "abstain"_n;
       name max_initial_ask_prop = "prop.maxask"_n;
 
+      name type_alliance = "alliance"_n;
+      name type_campaign = "campaign"_n;
+      name type_hypha = "hypha"_n;
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
