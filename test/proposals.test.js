@@ -1188,13 +1188,21 @@ describe('Demote inactive citizens', async assert => {
   users[2] = 'resident'
   await testUserStatus(users)
 
+  console.log("set decay to 2 seconds")
   await contracts.settings.configure('decaytime', 2, { authorization: `${settings}@active` })
+  
+  console.log("give contribution score and voice to users")
   await contracts.harvest.testupdatecs(firstuser, 50, { authorization: `${harvest}@active` })
   await contracts.harvest.testupdatecs(thirduser, 80, { authorization: `${harvest}@active` })
 
+  console.log("user 1 comes back to citizen from being demoted")
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  console.log("manually set voice decay time to now")
   await contracts.proposals.testvdecay(parseInt(Date.now() / 1000), { authorization: `${proposals}@active` })
   await contracts.settings.configure('propdecaysec', 1, { authorization: `${settings}@active` })
+
+  console.log("user 3 comes back to citizen from being demoted")
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
   const voiceFirstUser = await eos.getTableRows({
     code: proposals,
