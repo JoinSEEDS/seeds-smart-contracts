@@ -30,7 +30,7 @@ void settings::reset() {
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
   confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
-  confwithdesc(name("decaytime"), utils::moon_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
+  confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
 
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
@@ -81,22 +81,22 @@ void settings::reset() {
   confwithdesc(name("voterep2.ind"), 1, "Reputation points for entering in the participants table", high_impact);
 
   // reward for individual referrer when user becomes resident  
-  confwithdesc(name("refrwd1.ind"), 1000 * 10000, "Reward for individual referrer when user becomes resident", high_impact); // 1000 SEEDS
+  confwithdesc(name("refrwd1.ind"), 750 * 10000, "Reward for individual referrer when user becomes resident", high_impact); // 1000 SEEDS
 
   // reward for individual referrer when user becomes citizen  
-  confwithdesc(name("refrwd2.ind"), 1500 * 10000, "Reward for individual referrer when user becomes citizen", high_impact); // 1500 SEEDS
+  confwithdesc(name("refrwd2.ind"), 1250 * 10000, "Reward for individual referrer when user becomes citizen", high_impact); // 1500 SEEDS
 
   // reward for org when user becomes resident
-  confwithdesc(name("refrwd1.org"), 800 * 10000, "Reward for org when user becomes resident", high_impact);  // 800 SEEDS
+  confwithdesc(name("refrwd1.org"), 640 * 10000, "Reward for org when user becomes resident", high_impact);  // 800 SEEDS
 
   // reward for org when user becomes citizen
-  confwithdesc(name("refrwd2.org"), 1200 * 10000, "Reward for org when user becomes citizen", high_impact); // 1200 SEEDS
+  confwithdesc(name("refrwd2.org"), 960 * 10000, "Reward for org when user becomes citizen", high_impact); // 1200 SEEDS
 
   // reward for ambassador of referring org when user becomes resident
-  confwithdesc(name("refrwd1.amb"), 200 * 10000, "Reward for ambassador of referring org when user becomes resident", high_impact);  // 200 SEEDS
+  confwithdesc(name("refrwd1.amb"), 150 * 10000, "Reward for ambassador of referring org when user becomes resident", high_impact);  // 200 SEEDS
 
   // reward for abmassador of referring org when user becomes citizen
-  confwithdesc(name("refrwd2.amb"), 300 * 10000, "Reward for abmassador of referring org when user becomes citizen", high_impact);  // 300 SEEDS
+  confwithdesc(name("refrwd2.amb"), 250 * 10000, "Reward for abmassador of referring org when user becomes citizen", high_impact);  // 300 SEEDS
 
   // Maximum number of points a user can gain from others vouching for them
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);

@@ -164,12 +164,14 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
   ).send();    
 }
 
-void exchange::buytlos(name buyer, name contract, asset tlos_quantity, string memo) {
-  if (contract == get_self()) {
+void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string memo) {
+  if (
+    get_first_receiver() == contracts::tlostoken  &&    // from eosio token account
+    contract == get_self() &&                           // received
+    tlos_quantity.symbol == tlos_symbol                 // TLOS symbol
+  ) {
 
     check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
-
-    check(tlos_quantity.symbol == tlos_symbol, "invalid asset, expected tlos token");
 
     configtable c = config.get();
   
@@ -400,6 +402,8 @@ void exchange::price_history_update() {
 }
 
 ACTION exchange::setflag(name flagname, uint64_t value) {
+  require_auth(get_self());
+
   auto fitr = flags.find(flagname.value);
   if (fitr == flags.end()) {
     flags.emplace(get_self(), [&](auto& item) {
@@ -415,6 +419,8 @@ ACTION exchange::setflag(name flagname, uint64_t value) {
 }
 
 ACTION exchange::pause() {
+  require_auth(get_self());
+
   auto fitr = flags.find(paused_flag.value);
   if (fitr == flags.end()) {
     flags.emplace(get_self(), [&](auto& item) {
@@ -430,6 +436,8 @@ ACTION exchange::pause() {
 }
 
 ACTION exchange::unpause() {
+  require_auth(get_self());
+
   auto fitr = flags.find(paused_flag.value);
   if (fitr != flags.end()) {
     flags.modify(fitr, get_self(), [&](auto& item) {

@@ -55,8 +55,6 @@ CONTRACT proposals : public contract {
 
       ACTION onperiod();
 
-      ACTION decayvoice();
-
       ACTION updatevoices();
 
       ACTION updatevoice(uint64_t start);
@@ -70,6 +68,10 @@ CONTRACT proposals : public contract {
       ACTION updateactivs();
 
       ACTION updateactive(uint64_t start);
+      
+      ACTION decayvoices();
+
+      ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
       ACTION testvdecay(uint64_t timestamp);
 
@@ -213,7 +215,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay))
       }
   }

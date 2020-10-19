@@ -702,11 +702,6 @@ void accounts::rankreps() {
 void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
 
-  // DEBUG REMOVE THIS - THIS IS SO THE FUNCTION DOESN"T RUN AMOK
-  //if (chunk > 10) { 
-  //  return;
-  //}
-
   uint64_t total = get_size("rep.sz"_n);
   if (total == 0) return;
 
