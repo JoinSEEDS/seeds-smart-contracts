@@ -107,6 +107,18 @@ void settings::reset() {
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
 
+
+  // =====================================
+  // forum 
+  // =====================================
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
+  confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
+  confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
+  confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
+  confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", high_impact);
+
+
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
   setcontract(name("harvest"), "harvst.seeds"_n);

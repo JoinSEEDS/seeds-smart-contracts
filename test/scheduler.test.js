@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
 const { equals } = require('ramda')
 
-const { scheduler, settings, organization, firstuser } = names
+const { scheduler, settings, organization, firstuser, forum } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -195,5 +195,85 @@ describe('scheduler, token.resetweekly', async assert => {
     await sleep(1 * 1000)
 
     await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+
+})
+
+
+describe('scheduler, organization scores', async assert => {
+
+    contracts = await Promise.all([
+        eos.contract(scheduler),
+        eos.contract(settings)
+    ]).then(([scheduler, settings]) => ({
+        scheduler, settings
+    }))
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        json: true
+    })
+
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+
+    const operations = [
+        {
+            id: 'forum.rank',
+            operation: 'rankforums',
+            contract: forum
+        },
+        {
+            id: 'forum.give',
+            operation: 'givereps',
+            contract: forum
+        }
+    ]
+
+    console.log('add operations')
+    for (const op of operations) {
+        await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+    
+    console.log('scheduler execute')
+    let canExecute = false
+    try {
+        for(const op of operations) {
+            console.log('to execute:', op.operation)
+            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
+            await sleep(300)
+            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+            await sleep(300)
+            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
+        }
+        canExecute = true
+    } catch (error) {
+        console.log(error)
+        console.log('can not execute (unexpected, permission may be needed)')
+        
+    }
+    assert({
+        given: 'called execute',
+        should: 'be able to execute organization scores actions',
+        actual: canExecute,
+        expected: true
+    })
+
+    await sleep(1 * 1000)
+
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
 })

@@ -1,8 +1,9 @@
 const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
-const { equals } = require('ramda')
+const { equals } = require('ramda');
+const { expect, use } = require('chai');
 
-const { forum, scheduler, accounts, settings, application, firstuser, seconduser } = names
+const { forum, scheduler, accounts, settings, application, firstuser, seconduser, thirduser } = names
 
 
 function sleep(ms) {
@@ -255,7 +256,141 @@ describe('forum', async assert => {
 })
 
 
+describe('forum reputation', async assert => {
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+     const contracts = await Promise.all([
+        eos.contract(forum),
+        eos.contract(scheduler),
+        eos.contract(accounts),
+        eos.contract(settings)
+    ]).then(([forum, scheduler, accounts, settings]) => ({
+        forum, scheduler, accounts, settings
+    }))
+    
+    console.log('forum reset')
+    await contracts.forum.reset({ authorization: `${forum}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(thirduser, 'third user', 'individual', { authorization: `${accounts}@active` })
+
+    console.log('add reputation')
+    await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
+    await contracts.accounts.addrep(seconduser, 5000, { authorization: `${accounts}@active` })
+    await contracts.accounts.addrep(thirduser, 10000, { authorization: `${accounts}@active` })
+
+    console.log('creating posts')
+    await contracts.forum.createpost(firstuser, 1, 'url1', 'body1', { authorization: `${firstuser}@active` })
+    await contracts.forum.createpost(seconduser, 2, 'url2', 'body2', { authorization: `${seconduser}@active` })
+    await contracts.forum.createpost(thirduser, 3, 'url3', 'body3', { authorization: `${thirduser}@active` })
+    
+    console.log('creating comments')
+    await contracts.forum.createcomt(firstuser, 2, 5, 'url3', 'body3', { authorization: `${firstuser}@active` })
+    await contracts.forum.createcomt(seconduser, 1, 6, 'url4', 'body4', { authorization: `${seconduser}@active` })
+
+    console.log('voting')
+    await contracts.forum.upvotepost(firstuser, 2, { authorization: `${firstuser}@active` })
+    await contracts.forum.upvotepost(seconduser, 3, { authorization: `${seconduser}@active` })
+    await contracts.forum.downvotecomt(thirduser, 2, 4, { authorization: `${thirduser}@active` })
+
+    const testGetPoints = async (expectedValue, size = null) => {
+        size = parseInt(size)
+        if (!isNaN(size)) {
+            await contracts.forum.testsize('active.sz', size, { authorization: `${forum}@active` })
+            await sleep(300)
+        }
+        try {
+            await contracts.forum.testapoints({ authorization: `${forum}@active` })
+        } catch (e) {
+            const error = JSON.parse(e)
+            assert({
+                given: 'test points called',
+                should: 'return the correct amount of points',
+                expected: `assertion failure with message: ${parseInt(expectedValue)}`,
+                actual: error.error.details[0].message
+            })
+        }
+    }
+
+    await contracts.forum.rankforums({ authorization: `${forum}@active` })
+    await sleep(300)
+
+    const forumReputation = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'forumrep',
+        json: true
+    })
+
+    const sizes = await getTableRows({
+        code: forum,
+        scope: forum,
+        table: 'sizes',
+        json: true
+    })
+
+    await contracts.forum.rankforums({ authorization: `${forum}@active` })
+    await sleep(300)
+
+    await contracts.forum.testsize('active.sz', 500, { authorization: `${forum}@active` })
+    await sleep(300)
+
+    await contracts.forum.givereps({ authorization: `${forum}@active` })
+    await sleep(300)
+
+    const users = await getTableRows({
+        code: accounts,
+        scope: accounts,
+        table: 'users',
+        json: true
+    })
+
+    await testGetPoints(497)
+
+    console.log('testing correct available points')
+    await testGetPoints(999, 999)
+    await testGetPoints(parseInt(0.5 * 1000), 1000)
+    await testGetPoints(parseInt(0.2 * 20000), 20000)
+    await testGetPoints(parseInt(0.1 * 100001), 100001)
+    
+
+    assert({
+        given: 'rankforums called',
+        should: 'rank all the users in the forum correctly',
+        expected: [
+            { account: firstuser, reputation: -70000, rank: 0 },
+            { account: seconduser, reputation: 70000, rank: 66 },
+            { account: thirduser, reputation: 35000, rank: 33 }
+        ],
+        actual: forumReputation.rows
+    })
+
+    assert({
+        given: 'rep given in the forum',
+        should: 'have correct rep size',
+        expected: [ { id: 'active.sz', size: 3 }, { id: 'rep.sz', size: 3 } ],
+        actual: sizes.rows
+    })
+
+    assert({
+        given: 'reputation distributed',
+        should: 'give users correct reputation',
+        expected: [10000, 5006, 10003],
+        actual: users.rows.map(u => u.reputation)
+    })
+})
 
 
 
