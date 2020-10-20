@@ -152,7 +152,7 @@ describe('scheduler, organization.cleandaus', async assert => {
         console.log('can not execute cleandaus (unexpected, permission may be needed)')
     }
 
-    await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
     assert({
         given: 'called execute',
@@ -194,7 +194,7 @@ describe('scheduler, token.resetweekly', async assert => {
 
     await sleep(1 * 1000)
 
-    await contracts.scheduler.cancelexec( { authorization: `${scheduler}@active` } )
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
 })
 
