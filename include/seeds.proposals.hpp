@@ -24,6 +24,7 @@ CONTRACT proposals : public contract {
           cycle(receiver, receiver.value),
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
+          sizes(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
@@ -67,6 +68,7 @@ CONTRACT proposals : public contract {
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
+      name activesize = "active.sz"_n;
 
       void update_cycle();
       void update_voicedecay();
@@ -86,10 +88,18 @@ CONTRACT proposals : public contract {
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
       void change_rep(name beneficiary, bool passed);
+      void size_change(name id, int delta);
+      void size_set(name id, uint64_t newsize);
+      uint64_t get_size(name id);
+      uint64_t get_quorum(uint64_t total_proposals);
 
       DEFINE_CONFIG_TABLE
         
       DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+      DEFINE_SIZE_TABLE
+
+      DEFINE_SIZE_TABLE_MULTI_INDEX
 
       TABLE proposal_table {
           uint64_t id;
@@ -173,6 +183,7 @@ CONTRACT proposals : public contract {
     last_proposal_tables lastprops;
     cycle_tables cycle;
     min_stake_tables minstake;
+    size_tables sizes;
 
 };
 

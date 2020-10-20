@@ -31,6 +31,54 @@ void proposals::reset() {
   while (mitr != minstake.end()) {
     mitr = minstake.erase(mitr);
   }
+
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
+  }
+}
+
+void proposals::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+void proposals::size_set(name id, uint64_t newsize) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = newsize;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+uint64_t proposals::get_size(name id) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    return 0;
+  } else {
+    return sitr->size;
+  }
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity) {
@@ -75,6 +123,12 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
+uint64_t proposals::get_quorum(uint64_t total_proposals) {
+  print("\nquorum:", total_proposals, "\n");
+  uint64_t quorum = total_proposals ? 90 / total_proposals : 0;
+  quorum = std::max((uint64_t)7, quorum);
+  return std::min((uint64_t)20, quorum);
+}
 
 void proposals::onperiod() {
     require_auth(_self);
@@ -82,10 +136,10 @@ void proposals::onperiod() {
     auto pitr = props.begin();
 
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
-    uint64_t quorum = config.find(name("propquorum").value)->value;
 
     uint64_t number_active_proposals = 0;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
+    uint64_t quorum =  get_quorum(get_size(activesize)); // config.find(name("propquorum").value)->value;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -127,11 +181,13 @@ void proposals::onperiod() {
               proposal.stage = name("done");
           });
         }
+        size_change(activesize, -1);
       }
 
       if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
+          size_change(activesize, 1);
         });
       }
 
