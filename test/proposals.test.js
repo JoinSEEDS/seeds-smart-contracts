@@ -907,7 +907,7 @@ describe('Stake limits', async assert => {
   console.log('create proposal '+campaignbank)
   await contracts.proposals.create(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(seconduser, seconduser, '100000.0000 SEEDS', '100,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
-  await contracts.proposals.create(thirduser, thirduser, '1000000.0000 SEEDS', '1,000,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
+  await contracts.proposals.create(thirduser, thirduser, '100000000.0000 SEEDS', '1,000,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
 
   console.log('stake the minimum')
   await contracts.token.transfer(firstuser, proposals, '554.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -934,8 +934,8 @@ describe('Stake limits', async assert => {
   await contracts.token.transfer(seconduser, proposals, (5000-555) + '.0000 SEEDS', '', { authorization: `${seconduser}@active` })
   await contracts.proposals.checkstake(2, { authorization: `${firstuser}@active` })
 
-  console.log('stake max - not more than 11,111 needed')
-  await contracts.token.transfer(thirduser, proposals, '11111.0000 SEEDS', '', { authorization: `${thirduser}@active` })
+  console.log('stake max - not more than 75,000 needed')
+  await contracts.token.transfer(thirduser, proposals, '75000.0000 SEEDS', '', { authorization: `${thirduser}@active` })
   await contracts.proposals.checkstake(3, { authorization: `${firstuser}@active` })
 
   await contracts.proposals.create(fourthuser, fourthuser, '2.0000 SEEDS', '2 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${fourthuser}@active` })
@@ -956,6 +956,35 @@ describe('Stake limits', async assert => {
     table: 'props',
     json: true,
   })
+
+  console.log('create proposal '+alliancesbank)
+  await contracts.proposals.create(seconduser, seconduser, '100000.0000 SEEDS', '100,0000 seeds please', 'summary', 'description', 'image', 'url', alliancesbank, { authorization: `${seconduser}@active` })
+  await contracts.proposals.create(thirduser, thirduser, '100000000.0000 SEEDS', '100,000,000 seeds please', 'summary', 'description', 'image', 'url', alliancesbank, { authorization: `${thirduser}@active` })
+
+  await contracts.token.transfer(seconduser, proposals, '999.0000 SEEDS', '5', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, proposals, '14999.0000 SEEDS', '6', { authorization: `${thirduser}@active` })
+
+  let expectNotEnough4 = true
+  try {
+    await contracts.proposals.checkstake(5, { authorization: `${seconduser}@active` })
+    expectNotEnough4 = false
+  } catch (error) {
+    //console.log("expected: "+error)
+  }
+
+  let expectNotEnough5 = true
+  try {
+    await contracts.proposals.checkstake(6, { authorization: `${thirduser}@active` })
+    expectNotEnough5 = false
+  } catch (error) {
+    //console.log("expected: "+error)
+  }
+
+  await contracts.token.transfer(seconduser, proposals, '1.0000 SEEDS', '5', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, proposals, '1.0000 SEEDS', '6', { authorization: `${thirduser}@active` })
+
+  await contracts.proposals.checkstake(5, { authorization: `${seconduser}@active` })
+  await contracts.proposals.checkstake(6, { authorization: `${seconduser}@active` })
 
   const minStakes = await eos.getTableRows({
     code: proposals,
@@ -988,6 +1017,20 @@ describe('Stake limits', async assert => {
   })
 
   assert({
+    given: 'proposal 5 not having enough stake',
+    should: 'fail',
+    actual: expectNotEnough4,
+    expected: true
+  })
+
+  assert({
+    given: 'proposal 6 not having enough stake',
+    should: 'fail',
+    actual: expectNotEnough5,
+    expected: true
+  })
+
+  assert({
     given: '3 proposals with enough stake, one without',
     should: '3 active, one staged',
     actual: activeProposals.rows.map( ({stage}) => stage ),
@@ -1005,15 +1048,23 @@ describe('Stake limits', async assert => {
       },
       {
         "prop_id": 2,
-        "min_stake": 50000000
+        "min_stake": 25000000
       },
       {
         "prop_id": 3,
-        "min_stake": 111110000
+        "min_stake": 750000000
       },
       {
         "prop_id": 4,
         "min_stake": 5550000
+      },
+      {
+        "prop_id": 5,
+        "min_stake": 10000000
+      },
+      {
+        "prop_id": 6,
+        "min_stake": 150000000
       }
     ]
   })
