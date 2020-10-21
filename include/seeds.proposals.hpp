@@ -30,7 +30,7 @@ CONTRACT proposals : public contract {
 
       ACTION reset();
 
-      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund);
+      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, uint32_t initial_payout, uint32_t num_cycles, uint32_t age, name payout_mode);
 
       ACTION cancel(uint64_t id);
 
@@ -86,8 +86,10 @@ CONTRACT proposals : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
-      void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
+      void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
+      bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
+      asset get_payout_amount(uint64_t cycle, uint32_t total_num_cycles, uint64_t cycle_proposal_passed, asset requested_amount, uint32_t initial_payout, name payout_mode);
 
       DEFINE_CONFIG_TABLE
         
@@ -116,7 +118,7 @@ CONTRACT proposals : public contract {
           uint32_t initial_payout;
           uint32_t num_cycles;
           uint32_t age;
-          nanme payout_mode;
+          name payout_mode;
 
           uint64_t primary_key()const { return id; }
       };

@@ -93,14 +93,14 @@ asset proposals::get_payout_amount(
   uint64_t initial_payout_amount = initial_payout_percentage * requested_amount.amount;
   
   if (current_proposal_cycle == 0) {
-    return asset(amount, seeds_symbol);
+    return asset(initial_payout_amount, seeds_symbol);
   }
 
   double percentage_remained = 1.0 - initial_payout_percentage;
   uint64_t cycle_amount = 0;
 
   if (payout_mode == linear_payout) {
-    cycle_amount = (percentage_remained / total_num_cycles) * requested_amount;
+    cycle_amount = (percentage_remained / total_num_cycles) * requested_amount.amount;
   } else if (payout_mode == stepped_payout) {
     // to be implemented
   }
@@ -119,6 +119,9 @@ void proposals::onperiod() {
     uint64_t number_active_proposals = 0;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
 
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    uint64_t current_cycle = c.propcycle;
+
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
         number_active_proposals += 1;
@@ -133,24 +136,52 @@ void proposals::onperiod() {
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
-          refund_staked(pitr->creator, pitr->staked);
 
-          change_rep(pitr->creator, true);
+          if (pitr -> status != name("evaluate")) {
+            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, current_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode);
 
-          if (is_alliance_type) {
-            send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
+            refund_staked(pitr->creator, pitr->staked);
+            change_rep(pitr->creator, true);
+
+            if (is_alliance_type) {
+              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+            } else {
+              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+            }
+
+            props.modify(pitr, _self, [&](auto & proposal){
+              proposal.passed_cycle = current_cycle;
+              proposal.age = 0;
+              proposal.staked = asset(0, seeds_symbol);
+              proposal.status = name("evaluate");
+            });
+
           } else {
-            withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
+            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, pitr->passed_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode);
+
+            if (is_alliance_type) {
+              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+            } else {
+              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+            }
+
+            uint64_t age = pitr -> age + 1;
+            uint64_t num_cycles = pitr -> num_cycles;
+
+            props.modify(pitr, _self, [&](auto & proposal){
+              proposal.age = age;
+              if (age == num_cycles) {
+                proposal.executed = true;
+                proposal.status = name("passed");
+                proposal.stage = name("done");
+              }
+            });
           }
 
-          props.modify(pitr, _self, [&](auto& proposal) {
-              proposal.executed = true;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("passed");
-              proposal.stage = name("done");
-          });
         } else {
-          burn(pitr->staked);
+          if (pitr->status != name("evaluate")) {
+            burn(pitr->staked);
+          }
 
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
@@ -490,7 +521,31 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option) {
+bool proposals::revert_vote (name voter, uint64_t id) {
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    check(pitr->status == name("evaluate"), "Proposal is not in evaluate state");
+    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
+
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total -= voteitr->amount;
+      proposal.favour -= voteitr->amount;
+    });
+
+    votes.erase(voteitr);
+    return true;
+  }
+
+  return false;
+}
+
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new) {
   require_auth(voter);
   check_citizen(voter);
 
@@ -506,8 +561,9 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
   
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
-  check(voteitr == votes.end(), "only one vote");
 
+  check(voteitr == votes.end(), "only one vote");
+  
   check(option == trust || option == distrust || option == abstain, "Invalid option");
 
   if (option == trust) {
@@ -539,45 +595,48 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
     vote.proposal_id = id;
   });
 
-  auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
-  auto paitr = participants.find(voter.value);
-  if (paitr == participants.end()) {
-    // add reputation for entering in the table
-    action(
-      permission_level{contracts::accounts, "active"_n},
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(voter, rep.value)
-    ).send();
-    // add the voter to the table
-    participants.emplace(_self, [&](auto & participant){
-      participant.account = voter;
-      if (option == abstain) {
-        participant.nonneutral = false;
-      } else {
-        participant.nonneutral = true;
-      }
-      participant.count = 1;
-    });
-  } else {
-    participants.modify(paitr, _self, [&](auto & participant){
-      participant.count += 1;
-      if (option != abstain) {
-        participant.nonneutral = true;
-      }
-    });
+  if (is_new) {
+    auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+    auto paitr = participants.find(voter.value);
+    if (paitr == participants.end()) {
+      // add reputation for entering in the table
+      action(
+        permission_level{contracts::accounts, "active"_n},
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(voter, rep.value)
+      ).send();
+      // add the voter to the table
+      participants.emplace(_self, [&](auto & participant){
+        participant.account = voter;
+        if (option == abstain) {
+          participant.nonneutral = false;
+        } else {
+          participant.nonneutral = true;
+        }
+        participant.count = 1;
+      });
+    } else {
+      participants.modify(paitr, _self, [&](auto & participant){
+        participant.count += 1;
+        if (option != abstain) {
+          participant.nonneutral = true;
+        }
+      });
+    }
   }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, trust);
+  vote_aux(voter, id, amount, trust, true);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, distrust);
+  bool vote_reverted = revert_vote(voter, id);
+  vote_aux(voter, id, amount, distrust, !vote_reverted);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
-  vote_aux(voter, id, (uint64_t)0, abstain);
+  vote_aux(voter, id, (uint64_t)0, abstain, true);
 }
 
 void proposals::addvoice(name user, uint64_t amount)
