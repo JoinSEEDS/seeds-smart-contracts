@@ -667,7 +667,7 @@ void organization::check_can_make_regen(name organization) {
         "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
 }
 
-void organization::update_status(name organization, name status) {
+void organization::update_status(name organization, uint64_t status) {
   auto oitr = organizations.find(organization.value);
 
   check(oitr != organizations.end(), "the organization does not exist");

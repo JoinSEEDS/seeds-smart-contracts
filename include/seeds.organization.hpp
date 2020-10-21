@@ -94,7 +94,7 @@ CONTRACT organization : public contract {
         TABLE organization_table {
             name org_name;
             name owner;
-            name status;
+            uint64_t status;
             int64_t regen;
             uint64_t reputation;
             uint64_t voice;
@@ -301,9 +301,9 @@ CONTRACT organization : public contract {
         const name cb_score_size = "cbs.sz"_n;
         const name tx_score_size = "txs.sz"_n;
         const name regen_avg = "org.rgnavg"_n;
-        const name regular_org = "regular"_n;
-        const name reputable_org = "reputable"_n;
-        const name regenerative_org = "regenerative"_n;
+        const uint64_t regular_org = 0;
+        const uint64_t reputable_org = 1;
+        const uint64_t regenerative_org = 2;
 
         uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
@@ -322,7 +322,7 @@ CONTRACT organization : public contract {
         void check_can_make_regen(name organization);
         void check_can_make_reputable(name organization);
         uint64_t count_refs(name user, uint32_t check_num_residents);
-        void update_status(name organization, name status);
+        void update_status(name organization, uint64_t status);
         uint64_t get_regen_score(name organization);
         void history_add_regenerative(name organization);
         void history_add_reputable(name organization);

@@ -207,7 +207,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -216,7 +216,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg2',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -225,7 +225,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg3',
                 owner: 'seedsuserbbb',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -280,7 +280,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -289,7 +289,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg3',
                 owner: 'seedsuserbbb',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -306,7 +306,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -315,7 +315,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg3',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 0,
                 reputation: 0,
                 voice: 0,
@@ -348,7 +348,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: 10000,
                 reputation: 0,
                 voice: 0,
@@ -357,7 +357,7 @@ describe('organization', async assert => {
             {
                 org_name: 'testorg3',
                 owner: 'seedsuseraaa',
-                status: 'regular',
+                status: 0,
                 regen: -13000,
                 reputation: 0,
                 voice: 0,
@@ -1054,11 +1054,11 @@ describe('organization status', async assert => {
         should: 'give reputable status',
         actual: organizationsReputable.rows.map(org => org.status),
         expected: [
-            'regenerative',
-            'reputable',
-            'reputable',
-            'regular',
-            'regular'
+            2,
+            1,
+            1,
+            0,
+            0
         ]
     })
 
@@ -1067,11 +1067,11 @@ describe('organization status', async assert => {
         should: 'give regenerative status',
         actual: organizationsRegen.rows.map(org => org.status),
         expected: [
-            'regenerative',
-            'regenerative',
-            'reputable',
-            'regular',
-            'regular'
+            2,
+            2,
+            1,
+            0,
+            0
         ]
     })
 
