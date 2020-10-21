@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 
-const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
+const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -741,6 +741,8 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fifthuser, 'fifthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(sixthuser, 'sixthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.create(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
@@ -756,7 +758,7 @@ describe('Proposals Quorum', async assert => {
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
-  let users = [firstuser, seconduser, thirduser, fourthuser]
+  let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser]
   for (i = 0; i<users.length; i++ ) {
     let user = users[i]
     console.log('add voice '+user)
@@ -764,12 +766,8 @@ describe('Proposals Quorum', async assert => {
     await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
   }
 
-  // total_valid = 4
-  // total_voters = 1
-  // valid_prop = 3
-
   console.log('vote on first proposal')
-  // await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
 
   console.log('vote on second proposal')
   await contracts.proposals.favour(seconduser, 2, 3, { authorization: `${seconduser}@active` })
@@ -785,7 +783,30 @@ describe('Proposals Quorum', async assert => {
     json: true
   })
 
+  const testQuorum = async (numberProposals, expectedValue) => {
+    try {
+      await contracts.proposals.testquorum(numberProposals, { authorization: `${proposals}@active` })
+    } catch (err) {
+      const e = JSON.parse(err)
+      assert({
+        given: 'get quorum called',
+        should: 'give the correct quorum threshold',
+        expected: `assertion failure with message: ${expectedValue}`,
+        actual: e.error.details[0].message
+      })
+    }
+  }
+
   //console.log("props "+JSON.stringify(props, null, 2))
+
+  const min = 7
+  const max = 20
+  await testQuorum(0, 7)
+  await testQuorum(1, 20)
+  await testQuorum(2, 20)
+  await testQuorum(5, 18)
+  await testQuorum(10, 9)
+  await testQuorum(20, 7)
 
   assert({
     given: 'failed proposal quorum',

@@ -63,6 +63,9 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
+
+      ACTION testquorum(uint64_t total_proposals);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -193,7 +196,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices))
+        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
+        (testquorum))
       }
   }
 }

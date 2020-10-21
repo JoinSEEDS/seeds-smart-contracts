@@ -130,6 +130,11 @@ uint64_t proposals::get_quorum(uint64_t total_proposals) {
   return std::min((uint64_t)20, quorum);
 }
 
+void proposals::testquorum(uint64_t total_proposals) {
+  require_auth(get_self());
+  check(false, std::to_string(get_quorum(total_proposals)));
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
@@ -139,7 +144,7 @@ void proposals::onperiod() {
 
     uint64_t number_active_proposals = 0;
     uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
-    uint64_t quorum =  get_quorum(get_size(activesize)); // config.find(name("propquorum").value)->value;
+    uint64_t quorum =  get_quorum(get_size(activesize));
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
