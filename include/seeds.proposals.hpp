@@ -67,6 +67,8 @@ CONTRACT proposals : public contract {
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
+      name linear_payout = "linear"_n;
+      name stepped_payout = "step"_n;
 
       void update_cycle();
       void update_voicedecay();
@@ -110,6 +112,12 @@ CONTRACT proposals : public contract {
           name stage;
           name fund;
           uint64_t creation_date;
+          uint64_t passed_cycle;
+          uint32_t initial_payout;
+          uint32_t num_cycles;
+          uint32_t age;
+          nanme payout_mode;
+
           uint64_t primary_key()const { return id; }
       };
 

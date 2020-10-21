@@ -75,6 +75,38 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
+// total cycle, cycle proposal was passed, total number of seeds requested
+
+
+asset proposals::get_payout_amount(
+  uint64_t cycle, 
+  uint32_t total_num_cycles,
+  uint64_t cycle_proposal_passed, 
+  asset requested_amount, 
+  uint32_t initial_payout, 
+  name payout_mode
+) {
+  uint64_t current_proposal_cycle = cycle - cycle_proposal_passed;
+  if (current_proposal_cycle < 0 || current_proposal_cycle > total_num_cycles) { return asset(0, seeds_symbol); }
+
+  double initial_payout_percentage = initial_payout / 100.0;
+  uint64_t initial_payout_amount = initial_payout_percentage * requested_amount.amount;
+  
+  if (current_proposal_cycle == 0) {
+    return asset(amount, seeds_symbol);
+  }
+
+  double percentage_remained = 1.0 - initial_payout_percentage;
+  uint64_t cycle_amount = 0;
+
+  if (payout_mode == linear_payout) {
+    cycle_amount = (percentage_remained / total_num_cycles) * requested_amount;
+  } else if (payout_mode == stepped_payout) {
+    // to be implemented
+  }
+
+  return asset(cycle_amount, seeds_symbol);
+}
 
 void proposals::onperiod() {
     require_auth(_self);
@@ -276,7 +308,21 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
-void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
+void proposals::create(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  uint32_t initial_payout,
+  uint32_t num_cycles,
+  uint32_t age,
+  name payout_mode
+) {
   
   require_auth(creator);
 
@@ -292,6 +338,10 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
   utils::check_asset(quantity);
+
+  check(initial_payout >= 10 && initial_payout <= 20, "the initial payout must be between 10% and 20%, given:" + std::to_string(initial_payout));
+  check(num_cycles >= 3, "the number of cycles is to small, it must be minumum 3, given:" + std::to_string(num_cycles));
+  check(payout_mode == linear_payout || payout_mode == stepped_payout, "invalid payout mode - payout mode must be one of " + linear_payout.to_string() + ", " + stepped_payout.to_string());
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -321,6 +371,11 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.status = name("open");
       proposal.stage = name("staged");
       proposal.fund = fund;
+      proposal.passed_cycle = 0;
+      proposal.initial_payout = initial_payout;
+      proposal.num_cycles = num_cycles;
+      proposal.age = 0;
+      proposal.payout_mode = payout_mode;
   });
 
   auto litr = lastprops.find(creator.value);
