@@ -75,6 +75,9 @@ ACTION scheduler::reset() {
         name("hrvst.orgtxs"),
 
         name("prop.dvoices"),
+
+        name("forum.rank"),
+        name("forum.giverp"),
     };
     
     std::vector<name> operations_v = {
@@ -99,6 +102,9 @@ ACTION scheduler::reset() {
         name("rankorgtxs"),
 
         name("decayvoices"),
+
+        name("rankforums"),
+        name("givereps"),
     };
 
     std::vector<name> contracts_v = {
@@ -123,6 +129,9 @@ ACTION scheduler::reset() {
         contracts::harvest,
 
         contracts::proposals,
+
+        contracts::forum,
+        contracts::forum,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -147,6 +156,9 @@ ACTION scheduler::reset() {
         utils::seconds_per_day,
 
         utils::seconds_per_day,
+        
+        utils::moon_cycle / 4,
+        utils::moon_cycle / 4,
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -173,6 +185,9 @@ ACTION scheduler::reset() {
         now,
 
         now,
+
+        now,
+        now - utils::seconds_per_hour,
     };
 
     int i = 0;

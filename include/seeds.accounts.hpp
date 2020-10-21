@@ -24,7 +24,8 @@ CONTRACT accounts : public contract {
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
-          config(contracts::settings, contracts::settings.value)
+          config(contracts::settings, contracts::settings.value),
+          actives(contracts::proposals, contracts::proposals.value)
           {}
 
       ACTION reset();
@@ -36,8 +37,6 @@ CONTRACT accounts : public contract {
 
       ACTION makecitizen(name user);
       ACTION cancitizen(name user);
-
-      ACTION testcitizen(name user);
 
       ACTION genesis(name user);
 
@@ -63,7 +62,12 @@ CONTRACT accounts : public contract {
       ACTION rankcbss();
       ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
+      ACTION changesize(name id, int64_t delta);
+
+      ACTION demotecitizn(name user);
+
       ACTION testresident(name user);
+      ACTION testcitizen(name user);
       ACTION testvisitor(name user);
       ACTION testremove(name user);
       ACTION testsetrep(name user, uint64_t amount);
@@ -123,6 +127,7 @@ CONTRACT accounts : public contract {
       bool check_can_make_resident(name user);
       bool check_can_make_citizen(name user);
       uint32_t num_transactions(name account, uint32_t limit);
+      void add_active (name user);
 
       DEFINE_USER_TABLE
 
@@ -222,10 +227,21 @@ CONTRACT accounts : public contract {
       indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
 
+    // From proposals contract
+    TABLE active_table {
+      name account;
+      uint64_t timestamp;
+      bool active;
+
+      uint64_t primary_key()const { return account.value; }
+    };
+    typedef eosio::multi_index<"actives"_n, active_table> active_tables;
+    active_tables actives;
 };
 
-EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)
+EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
+(demotecitizn)
 );

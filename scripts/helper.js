@@ -51,7 +51,7 @@ console.log(""+netName)
 
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
-  [networks.telosMainnet]: ['EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj', 'EOS6H8Xd2iKMa3KEF4JAQLbHAxkQcyrYgWXjrRJMsY5yEr2Ws7DCj'],
+  [networks.telosMainnet]: ['EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR', 'EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR'],
   [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
   // NOTE: Testnet seems to use EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm for onwer and active - verify
 }
@@ -82,8 +82,8 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const exchangeKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
-  [networks.telosMainnet]: 'EOS6Ls7tdHYfo49cUMoeVFe4e7NfPKBzhsFA4sJS8hvgH24UVFPiM', // normal testnet key
-  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' // special unique key
+  [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo', 
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' 
 }
 
 const exchangePublicKey = exchangeKeys[chainId]
@@ -561,6 +561,15 @@ var permissions = [{
 }, {
   target: `${accounts.proposals.account}@execute`,
   action: 'decayvoices'
+}, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.forum.account}@active`
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'rankforums'
+}, {
+  target: `${accounts.forum.account}@execute`,
+  action: 'givereps'
 }]
 
 const isTestnet = chainId == networks.telosTestnet

@@ -550,9 +550,13 @@ void accounts::makecitizen(name user)
 
     updatestatus(user, new_status);
 
-    rewards(user, new_status);
-    
-    history_add_citizen(user);
+    auto aitr = actives.find(user.value);
+    if (aitr == actives.end()) {
+      rewards(user, new_status);
+      history_add_citizen(user);
+    }
+
+    add_active(user);
 }
 
 bool accounts::check_can_make_citizen(name user) {
@@ -583,6 +587,23 @@ bool accounts::check_can_make_citizen(name user) {
     check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
+}
+
+void accounts::demotecitizn (name user) {
+  require_auth(get_self());
+  auto uitr = users.find(user.value);
+  check(uitr != users.end(), "User not found");
+  check(uitr -> status == "citizen"_n, "The user must be a citizen");
+  updatestatus(user, "resident"_n);
+}
+
+void accounts::add_active (name user) {
+  action(
+    permission_level(contracts::proposals, "active"_n),
+    contracts::proposals,
+    "addactive"_n,
+    std::make_tuple(user)
+  ).send();
 }
 
 void accounts::testresident(name user)
@@ -617,6 +638,8 @@ void accounts::testcitizen(name user)
   rewards(user, new_status);
   
   history_add_citizen(user);
+
+  add_active(user);
 }
 
 void accounts::genesis(name user) // Remove this after Golive
@@ -647,11 +670,6 @@ void accounts::rankreps() {
 
 void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   require_auth(_self);
-
-  // DEBUG REMOVE THIS - THIS IS SO THE FUNCTION DOESN"T RUN AMOK
-  //if (chunk > 10) { 
-  //  return;
-  //}
 
   uint64_t total = get_size("rep.sz"_n);
   if (total == 0) return;
@@ -751,6 +769,11 @@ void accounts::add_rep_item(name account, uint64_t reputation) {
     item.rep = reputation;
   });
   size_change("rep.sz"_n, 1);
+}
+
+void accounts::changesize(name id, int64_t delta) {
+  require_auth(get_self());
+  size_change(id, delta);
 }
 
 void accounts::size_change(name id, int delta) {
