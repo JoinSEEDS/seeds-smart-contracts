@@ -30,7 +30,7 @@ CONTRACT proposals : public contract {
 
       ACTION reset();
 
-      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, uint32_t initial_payout, uint32_t num_cycles, uint32_t age, name payout_mode);
+      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, uint32_t initial_payout, uint32_t num_cycles, name payout_mode);
 
       ACTION cancel(uint64_t id);
 

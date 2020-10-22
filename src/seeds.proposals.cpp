@@ -351,7 +351,6 @@ void proposals::create(
   name fund,
   uint32_t initial_payout,
   uint32_t num_cycles,
-  uint32_t age,
   name payout_mode
 ) {
   
@@ -702,10 +701,10 @@ void proposals::change_rep(name beneficiary, bool passed) {
 
 void proposals::send_to_escrow(name fromfund, name recipient, asset quantity, string memo) {
 
-    action(
-      permission_level{fromfund, "active"_n},
-      contracts::token, "transfer"_n,
-      std::make_tuple(fromfund, contracts::escrow, quantity, memo))
+  action(
+    permission_level{fromfund, "active"_n},
+    contracts::token, "transfer"_n,
+    std::make_tuple(fromfund, contracts::escrow, quantity, memo))
   .send();
 
   action(
