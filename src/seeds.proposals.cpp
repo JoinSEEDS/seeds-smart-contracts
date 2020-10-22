@@ -32,52 +32,15 @@ void proposals::reset() {
     mitr = minstake.erase(mitr);
   }
 
+  size_tables sizes(get_self(), get_self().value);
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
   }
-}
 
-void proposals::size_change(name id, int delta) {
-  auto sitr = sizes.find(id.value);
-  if (sitr == sizes.end()) {
-    sizes.emplace(_self, [&](auto& item) {
-      item.id = id;
-      item.size = delta;
-    });
-  } else {
-    uint64_t newsize = sitr->size + delta; 
-    if (delta < 0) {
-      if (sitr->size < -delta) {
-        newsize = 0;
-      }
-    }
-    sizes.modify(sitr, _self, [&](auto& item) {
-      item.size = newsize;
-    });
-  }
-}
-
-void proposals::size_set(name id, uint64_t newsize) {
-  auto sitr = sizes.find(id.value);
-  if (sitr == sizes.end()) {
-    sizes.emplace(_self, [&](auto& item) {
-      item.id = id;
-      item.size = newsize;
-    });
-  } else {
-    sizes.modify(sitr, _self, [&](auto& item) {
-      item.size = newsize;
-    });
-  }
-}
-
-uint64_t proposals::get_size(name id) {
-  auto sitr = sizes.find(id.value);
-  if (sitr == sizes.end()) {
-    return 0;
-  } else {
-    return sitr->size;
+  auto aitr = actives.begin();
+  while (aitr != actives.end()) {
+    aitr = actives.erase(aitr);
   }
 }
 
@@ -134,6 +97,37 @@ void proposals::testquorum(uint64_t total_proposals) {
   check(false, std::to_string(get_quorum(total_proposals)));
 }
 
+uint64_t proposals::get_size(name id, name contract) {
+  size_tables sizes(contract, contract.value);
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    return 0;
+  } else {
+    return sitr->size;
+  }
+}
+
+void proposals::prop_size_change(name id, int64_t delta) {
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
@@ -142,8 +136,8 @@ void proposals::onperiod() {
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
 
     uint64_t number_active_proposals = 0;
-    uint64_t total_eligible_voters = distance(voice.begin(), voice.end());
-    uint64_t quorum =  get_quorum(get_size(activesize));
+    uint64_t total_eligible_voters = get_size("active.sz"_n, contracts::accounts);
+    uint64_t quorum =  get_quorum(get_size(prop_active_size, get_self()));
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -185,13 +179,13 @@ void proposals::onperiod() {
               proposal.stage = name("done");
           });
         }
-        size_change(activesize, -1);
+        prop_size_change(prop_active_size, -1);
       }
 
       if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
-          size_change(activesize, 1);
+          prop_size_change(prop_active_size, 1);
         });
       }
 
@@ -220,6 +214,16 @@ void proposals::onperiod() {
     // );
     // trx.delay_sec = get_cycle_period_sec(); 
     // trx.send(eosio::current_time_point().sec_since_epoch(), _self);
+
+    transaction trx_demote_inactives{};
+    trx_demote_inactives.actions.emplace_back(
+      permission_level(_self, "active"_n),
+      _self,
+      "updateactivs"_n,
+      std::make_tuple()
+    );
+    // trx_demote_inactives.delay_sec = 5;
+    trx_demote_inactives.send(name("active.sz").value, _self);
 
     update_cycle();
 }
@@ -269,6 +273,50 @@ void proposals::updatevoice(uint64_t start) {
     tx.delay_sec = 1;
     tx.send(next_value, _self);
   }
+}
+
+void proposals::updateactivs() {
+  require_auth(get_self());
+  updateactive(0);
+}
+
+void proposals::updateactive(uint64_t start) {
+  require_auth(get_self());
+
+  auto aitr = start == 0 ? actives.begin() : actives.find(start);
+  uint64_t batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.").value;
+  uint64_t moon_cycle_sec = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.").value;
+  uint64_t count = 0;
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  uint64_t three_moon_cycles = c.t_onperiod - (3 * moon_cycle_sec);
+
+  while (aitr != actives.end() && count < batch_size) {
+    if (aitr -> timestamp < three_moon_cycles) {
+      removeactive(aitr -> account);
+    }
+    aitr++;
+    count++;
+  }
+  if (aitr != actives.end()) {
+    uint64_t next_value = aitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updateactive"_n,
+        std::make_tuple(next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(name("active.sz").value, _self);
+  }
+}
+
+uint64_t proposals::get_cycle_period_sec() {
+  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
+  return moon_cycle.value / 2; // Using half moon cycles for now
 }
 
 uint64_t proposals::get_voice_decay_period_sec() {
@@ -571,6 +619,12 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
       }
     });
   }
+
+  auto aitr = actives.find(voter.value);
+  check(aitr != actives.end(), "the user does not have an entry in the actives table");
+  actives.modify(aitr, _self, [&](auto & a){
+    a.timestamp = current_time_point().sec_since_epoch();
+  });
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -704,4 +758,109 @@ void proposals::check_citizen(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+void proposals::addactive(name account) {
+  require_auth(get_self());
+
+  auto aitr = actives.find(account.value);
+  if (aitr != actives.end()) {
+    if (!(aitr -> active)) {
+      actives.modify(aitr, _self, [&](auto & a){
+        a.active = true;
+      });
+      recover_voice(account);
+      size_change("active.sz"_n, 1);
+    }
+  } else {
+    actives.emplace(_self, [&](auto & a){
+      a.account = account;
+      a.active = true;
+      a.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+    size_change("active.sz"_n, 1);
+  }
+}
+
+uint64_t proposals::calculate_decay(uint64_t voice) {
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  
+  uint64_t decay_percentage = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.").value;
+  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
+  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t temp = c.t_onperiod + decay_time;
+
+  check(decay_percentage <= 100, "The decay percentage could not be grater than 100%");
+
+  if (temp >= c.t_voicedecay) { return voice; }
+  uint64_t n = ((c.t_voicedecay - temp) / decay_sec) + 1;
+  
+  double multiplier = 1.0 - (decay_percentage / 100.0);
+  return voice * pow(multiplier, n);
+}
+
+void proposals::recover_voice(name account) {
+  DEFINE_CS_POINTS_TABLE
+  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
+  
+  cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
+
+  auto csitr = cspoints.find(account.value);
+  uint64_t voice_amount = 0;
+
+  if (csitr != cspoints.end()) {
+    voice_amount = calculate_decay(csitr -> rank);
+  }
+
+  auto vitr = voice.find(account.value);
+  if (vitr == voice.end()) {
+    voice.emplace(_self, [&](auto & v){
+      v.account = account;
+      v.balance = voice_amount;
+    });
+  } else {
+    voice.modify(vitr, _self, [&](auto & v){
+      v.balance = voice_amount;
+    });
+  }
+}
+
+void proposals::removeactive(name account) {
+  require_auth(get_self());
+
+  auto aitr = actives.find(account.value);
+  if (aitr != actives.end()) {
+    if (aitr -> active) {
+      actives.modify(aitr, _self, [&](auto & a){
+        a.active = false;
+      });
+      demote_citizen(account);
+      size_change("active.sz"_n, -1);
+    }
+  }
+}
+
+void proposals::demote_citizen(name account) {
+  action(
+    permission_level(contracts::accounts, "active"_n),
+    contracts::accounts,
+    "demotecitizn"_n,
+    std::make_tuple(account)
+  ).send();  
+}
+
+void proposals::size_change(name id, int64_t delta) {
+  action(
+    permission_level(contracts::accounts, "active"_n),
+    contracts::accounts,
+    "changesize"_n,
+    std::make_tuple(id, delta)
+  ).send();
+}
+
+void proposals::testvdecay(uint64_t timestamp) {
+  require_auth(get_self());
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  c.t_voicedecay = timestamp;
+  cycle.set(c, get_self());
 }
