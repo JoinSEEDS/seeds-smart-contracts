@@ -124,7 +124,6 @@ void proposals::update_min_stake(uint64_t prop_id) {
 }
 
 uint64_t proposals::get_quorum(uint64_t total_proposals) {
-  print("\nquorum:", total_proposals, "\n");
   uint64_t quorum = total_proposals ? 90 / total_proposals : 0;
   quorum = std::max((uint64_t)7, quorum);
   return std::min((uint64_t)20, quorum);
