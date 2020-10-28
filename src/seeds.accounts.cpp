@@ -296,6 +296,14 @@ void accounts::refreward(name account, name new_status) {
         }
       }
 
+      // register cbs in the cbsorg table to rank orgs
+      action(
+        permission_level(contracts::organization, "active"_n),
+        contracts::organization,
+        "addcbpoints"_n,
+        std::make_tuple(referrer, community_building_points)
+      ).send();
+
     } 
     else 
     {
@@ -542,9 +550,13 @@ void accounts::makecitizen(name user)
 
     updatestatus(user, new_status);
 
-    rewards(user, new_status);
-    
-    history_add_citizen(user);
+    auto aitr = actives.find(user.value);
+    if (aitr == actives.end()) {
+      rewards(user, new_status);
+      history_add_citizen(user);
+    }
+
+    add_active(user);
 }
 
 bool accounts::check_can_make_citizen(name user) {
@@ -575,6 +587,23 @@ bool accounts::check_can_make_citizen(name user) {
     check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
+}
+
+void accounts::demotecitizn (name user) {
+  require_auth(get_self());
+  auto uitr = users.find(user.value);
+  check(uitr != users.end(), "User not found");
+  check(uitr -> status == "citizen"_n, "The user must be a citizen");
+  updatestatus(user, "resident"_n);
+}
+
+void accounts::add_active (name user) {
+  action(
+    permission_level(contracts::proposals, "active"_n),
+    contracts::proposals,
+    "addactive"_n,
+    std::make_tuple(user)
+  ).send();
 }
 
 void accounts::testresident(name user)
@@ -609,6 +638,8 @@ void accounts::testcitizen(name user)
   rewards(user, new_status);
   
   history_add_citizen(user);
+
+  add_active(user);
 }
 
 void accounts::genesis(name user) // Remove this after Golive
@@ -632,45 +663,6 @@ uint32_t accounts::num_transactions(name account, uint32_t limit) {
   }
   return count;
 }
-
-// void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
-//   require_auth(_self);
-//   auto uitr = account == 0 ? users.begin() : users.find(account);
-//   uint64_t count = 0;
-//   while (uitr != users.end() && count < chunksize) {
-//     if (uitr->reputation > 0) {
-//       auto ritr = rep.find(uitr->account.value);
-//       if (ritr != rep.end()) {
-//         rep.modify(ritr, _self, [&](auto& item) {
-//           item.rep = uitr->reputation;
-//         });
-//       } else {
-//         add_rep_item(uitr->account, uitr->reputation);
-//       }
-//     }
-//     uitr++;
-//     count++;
-//   }
-//   if (uitr == users.end()) {
-//     // done
-//     size_set("users.sz"_n, chunksize * cycle + count);
-//   } else {
-//     // recursive call
-//     uint64_t nextaccount = uitr->account.value;
-//     action next_execution(
-//         permission_level{get_self(), "active"_n},
-//         get_self(),
-//         "migraterep"_n,
-//         std::make_tuple(nextaccount, cycle+1, chunksize)
-//     );
-
-//     transaction tx;
-//     tx.actions.emplace_back(next_execution);
-//     tx.delay_sec = 1;
-//     tx.send(nextaccount + 1, _self);
-    
-//   }
-// }
 
 void accounts::rankreps() {
   rankrep(0, 0, 200);
@@ -777,6 +769,11 @@ void accounts::add_rep_item(name account, uint64_t reputation) {
     item.rep = reputation;
   });
   size_change("rep.sz"_n, 1);
+}
+
+void accounts::changesize(name id, int64_t delta) {
+  require_auth(get_self());
+  size_change(id, delta);
 }
 
 void accounts::size_change(name id, int delta) {
@@ -896,6 +893,8 @@ void accounts::testsetcbs(name user, uint64_t amount) {
 
   check(is_account(user), "non existing user");
 
+  auto usritr = users.find(user.value);
+
   auto citr = cbs.find(user.value);
   if (citr == cbs.end()) {
     cbs.emplace(_self, [&](auto& item) {
@@ -908,6 +907,16 @@ void accounts::testsetcbs(name user, uint64_t amount) {
     cbs.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
     });
+  }
+
+  if (usritr -> type == organization) {
+    // register cbs in the cbsorg table to rank orgs
+    action(
+      permission_level(contracts::organization, "active"_n),
+      contracts::organization,
+      "addcbpoints"_n,
+      std::make_tuple(user, amount)
+    ).send();
   }
 }
 

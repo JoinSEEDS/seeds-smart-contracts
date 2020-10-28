@@ -152,6 +152,49 @@ const createKeyPermission = async (account, role, parentRole = 'active', key) =>
   }
 }
 
+const createActorPermission = async (account, role, parentRole = 'active', actor, actorRole='eosio.code') => {
+  try {
+    const { permissions } = await eos.getAccount(account)
+
+    const perm = permissions.find(p => p.perm_name === role)
+
+    if (perm) {
+      const { parent, required_auth } = perm
+      const { accounts } = required_auth
+  
+      if (accounts.find(item => item.actor === actor && item.permission == actorRole)) {
+        console.log("- createActorPermission already exists "+actor+"@"+actorRole)
+        return;
+      }  
+    }
+
+    await eos.updateauth({
+      account,
+      permission: role,
+      parent: parentRole,
+      auth: {
+        threshold: 1,
+        waits: [],
+        accounts: [
+          {
+            permission: {
+              actor,
+              permission: actorRole
+            },
+            weight: 1
+          }
+        ],
+        keys: []
+      }
+    }, { authorization: `${account}@owner` })
+    console.log(`permission setup on ${account}@${role}(/${parentRole}) for ${actor+"@"+actorRole}`)
+  } catch (err) {
+    console.error(`failed permission setup\n* error: ` + err + `\n`)
+  }
+}
+
+
+
 const allowAction = async (account, role, action) => {
   try {
     await eos.linkauth({
@@ -349,6 +392,7 @@ const isExistingAccount = async (account) => {
 
 const isActionPermission = permission => permission.action
 const isActorPermission = permission => permission.actor && !permission.key
+const isCreateActorPermission = permission => permission.type == "createActorPermission"
 const isKeyPermission = permission => permission.key && !permission.actor
 
 const updatePermissions = async () => {
@@ -361,19 +405,25 @@ const updatePermissions = async () => {
     if (isActionPermission(permission)) {
       const { target, action } = permission
       const [ targetAccount, targetRole ] = target.split('@')
-
       await allowAction(targetAccount, targetRole, action)
+
+    } else if (isCreateActorPermission(permission)) {
+      const { target, actor, parent } = permission
+      const [ targetAccount, targetRole ] = target.split('@')
+      const [ actorAccount, actorRole ] = actor.split('@')
+      await createActorPermission(targetAccount, targetRole, parent, actorAccount, actorRole)
+
     } else if (isActorPermission(permission)) {
       const { target, actor } = permission
       const [ targetAccount, targetRole ] = target.split('@')
       const [ actorAccount, actorRole ] = actor.split('@')
-
       await addActorPermission(targetAccount, targetRole, actorAccount, actorRole)
+
     } else if (isKeyPermission(permission)) {
       const { target, parent, key } = permission
       const [ targetAccount, targetRole ] = target.split('@')
-
       await createKeyPermission(targetAccount, targetRole, parent, key)
+
     } else {
       console.log(`invalid permission #${current}`)
     }

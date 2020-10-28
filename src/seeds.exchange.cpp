@@ -189,7 +189,7 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
 void exchange::newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue) {
 
     require_auth(get_self());
-
+ 
     asset usd_asset = asset(multipliedUsdValue, usd_symbol);
 
     auto history_by_payment_id = payhistory.get_index<"bypaymentid"_n>();
