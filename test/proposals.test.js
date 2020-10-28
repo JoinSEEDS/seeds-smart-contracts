@@ -911,10 +911,16 @@ describe('Stake limits', async assert => {
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
-  console.log('create proposal '+campaignbank)
+  console.log('x create proposal '+campaignbank)
+
+  console.log('create proposal 10k')
   await contracts.proposals.create(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  
+  console.log('create proposal 100k')
   await contracts.proposals.create(seconduser, seconduser, '100000.0000 SEEDS', '100,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
-  await contracts.proposals.create(thirduser, thirduser, '1000000.0000 SEEDS', '1,000,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
+  
+  console.log('create proposal 250k')
+  await contracts.proposals.create(thirduser, thirduser, '250000.0000 SEEDS', '250,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${thirduser}@active` })
 
   console.log('stake the minimum')
   await contracts.token.transfer(firstuser, proposals, '554.0000 SEEDS', '', { authorization: `${firstuser}@active` })
@@ -1322,5 +1328,99 @@ describe('Voice decay', async assert => {
   await sleep(4000)
 
   await testVoiceDecay([40, 89, 0], 6)
+
+})
+
+
+describe('Build trust', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('x create proposal '+campaignbank)
+  
+  console.log('create proposal 1M')
+  let canBigProposal = true
+  try {
+    await contracts.proposals.create(seconduser, seconduser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
+  } catch (err) {
+    canBigProposal = false
+  }
+  
+  console.log('create proposal 500')
+  await contracts.proposals.create(seconduser, seconduser, '500.0000 SEEDS', '500 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
+
+  console.log('stake')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('activate')
+  await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
+
+
+  console.log('add voice')
+  await contracts.proposals.addvoice(firstuser, 44, { authorization: `${proposals}@active` })
+  await contracts.proposals.addvoice(seconduser, 44, { authorization: `${proposals}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('vote ')
+  await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+
+  console.log('pass second user proposal')
+  await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
+
+  console.log('trusted user creates big proposal')
+  await contracts.proposals.create(seconduser, seconduser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
+
+  let props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  let rows = props.rows.filter(item => item.stage == "staged")
+
+  assert({
+    given: 'untrusted account asking for 1M Seeds',
+    should: 'fail',
+    actual: canBigProposal,
+    expected: false
+  })
+  
+  assert({
+    given: 'big proposal created by trusted user',
+    should: 'have entry in props table, creator is second user',
+    actual: [ rows.length, rows[0].creator ],
+    expected: [1, seconduser]
+  })
 
 })
