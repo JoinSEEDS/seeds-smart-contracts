@@ -1332,7 +1332,7 @@ describe('Voice decay', async assert => {
 })
 
 
-describe('Build trust', async assert => {
+describe.only('Build trust', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1408,6 +1408,9 @@ describe('Build trust', async assert => {
   })
 
   let rows = props.rows.filter(item => item.stage == "staged")
+
+  console.log('create big alliance proposal 1M')
+  await contracts.proposals.create(firstuser, firstuser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
 
   assert({
     given: 'untrusted account asking for 1M Seeds',

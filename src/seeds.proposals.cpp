@@ -385,9 +385,9 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
   utils::check_asset(quantity);
 
-  if (!is_trusted(creator)) {
+  if (proposal_type == type_campaign && !is_trusted(creator)) {
     uint64_t max_ask = config_get(max_initial_ask_prop);
-    check(quantity.amount <= max_ask, "Earn trust by making and passing proposals up to 250,000 Seeds before asking for more.");
+    check(quantity.amount <= max_ask, "First time campaign proposals are limited to 250,000 Seeds.");
   }
 
   uint64_t lastId = 0;
