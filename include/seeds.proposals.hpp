@@ -9,6 +9,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <vector>
+#include <cmath>
 
 using namespace eosio;
 using namespace utils;
@@ -25,8 +26,10 @@ CONTRACT proposals : public contract {
           cycle(receiver, receiver.value),
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
+          actives(receiver, receiver.value),
           config(contracts::settings, contracts::settings.value),
-          users(contracts::accounts, contracts::accounts.value)
+          users(contracts::accounts, contracts::accounts.value),
+          sizes(contracts::accounts, contracts::accounts.value)
           {}
 
       ACTION reset();
@@ -59,9 +62,19 @@ CONTRACT proposals : public contract {
 
       ACTION checkstake(uint64_t prop_id);
 
+      ACTION addactive(name account);
+
+      ACTION removeactive(name account);
+
+      ACTION updateactivs();
+
+      ACTION updateactive(uint64_t start);
+      
       ACTION decayvoices();
 
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
+
+      ACTION testvdecay(uint64_t timestamp);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -98,10 +111,19 @@ CONTRACT proposals : public contract {
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
       asset get_payout_amount(uint64_t cycle, uint32_t total_num_cycles, uint64_t cycle_proposal_passed, asset requested_amount, uint32_t initial_payout, name payout_mode, asset current_payout);
+      void size_change(name id, int64_t delta);
+      uint64_t get_size(name id);
+      void recover_voice(name account);
+      void demote_citizen(name account);
+      uint64_t calculate_decay(uint64_t voice);
 
       DEFINE_CONFIG_TABLE
         
       DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+      DEFINE_SIZE_TABLE
+
+      DEFINE_SIZE_TABLE_MULTI_INDEX
 
       TABLE proposal_table {
           uint64_t id;
@@ -169,11 +191,19 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return account.value; }
       };
 
-    TABLE cycle_table {
-      uint64_t propcycle; 
-      uint64_t t_onperiod; // last time onperiod ran
-      uint64_t t_voicedecay; // last time voice was decayed
-    };
+      TABLE cycle_table {
+        uint64_t propcycle; 
+        uint64_t t_onperiod; // last time onperiod ran
+        uint64_t t_voicedecay; // last time voice was decayed
+      };
+
+      TABLE active_table {
+        name account;
+        uint64_t timestamp;
+        bool active;
+
+        uint64_t primary_key()const { return account.value; }
+      };
     
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
@@ -187,6 +217,7 @@ CONTRACT proposals : public contract {
     typedef singleton<"cycle"_n, cycle_table> cycle_tables;
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
+    typedef eosio::multi_index<"actives"_n, active_table> active_tables;
 
     config_tables config;
     proposal_tables props;
@@ -196,6 +227,8 @@ CONTRACT proposals : public contract {
     last_proposal_tables lastprops;
     cycle_tables cycle;
     min_stake_tables minstake;
+    active_tables actives;
+    size_tables sizes;
 
 };
 
@@ -205,7 +238,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices))
+        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay))
       }
   }
 }
