@@ -8,6 +8,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <vector>
 
 using namespace eosio;
 using namespace utils;
@@ -34,7 +35,7 @@ CONTRACT proposals : public contract {
 
       ACTION cancel(uint64_t id);
 
-      ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
+      ACTION update(uint64_t id, string title, string summary, string description, string image, string url, uint64_t initial_payout, uint32_t num_cycles, name payout_mode);
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
@@ -70,6 +71,13 @@ CONTRACT proposals : public contract {
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
 
+      std::vector<uint64_t> default_step_distribution = {
+        10,  // initial payout
+        20,  // cycle 1
+        30,  // cycle 2
+        40  // cycle 3
+      };
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
@@ -89,7 +97,7 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
-      asset get_payout_amount(uint64_t cycle, uint32_t total_num_cycles, uint64_t cycle_proposal_passed, asset requested_amount, uint32_t initial_payout, name payout_mode);
+      asset get_payout_amount(uint64_t cycle, uint32_t total_num_cycles, uint64_t cycle_proposal_passed, asset requested_amount, uint32_t initial_payout, name payout_mode, asset current_payout);
 
       DEFINE_CONFIG_TABLE
         
@@ -119,8 +127,10 @@ CONTRACT proposals : public contract {
           uint32_t num_cycles;
           uint32_t age;
           name payout_mode;
+          asset current_payout;
 
           uint64_t primary_key()const { return id; }
+          uint64_t by_status()const { return status.value; }
       };
 
       TABLE min_stake_table {
@@ -165,7 +175,10 @@ CONTRACT proposals : public contract {
       uint64_t t_voicedecay; // last time voice was decayed
     };
     
-    typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
+    typedef eosio::multi_index<"props"_n, proposal_table,
+      indexed_by<"bystatus"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
+    > proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;

@@ -75,16 +75,14 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
-// total cycle, cycle proposal was passed, total number of seeds requested
-
-
 asset proposals::get_payout_amount(
   uint64_t cycle, 
   uint32_t total_num_cycles,
   uint64_t cycle_proposal_passed, 
   asset requested_amount, 
   uint32_t initial_payout, 
-  name payout_mode
+  name payout_mode,
+  asset current_payout
 ) {
   uint64_t current_proposal_cycle = cycle - cycle_proposal_passed;
   if (current_proposal_cycle < 0 || current_proposal_cycle > total_num_cycles) { return asset(0, seeds_symbol); }
@@ -96,13 +94,18 @@ asset proposals::get_payout_amount(
     return asset(initial_payout_amount, seeds_symbol);
   }
 
+  if (current_proposal_cycle == total_num_cycles) {
+    return requested_amount - current_payout;
+  }
+
   double percentage_remained = 1.0 - initial_payout_percentage;
   uint64_t cycle_amount = 0;
 
   if (payout_mode == linear_payout) {
     cycle_amount = (percentage_remained / total_num_cycles) * requested_amount.amount;
   } else if (payout_mode == stepped_payout) {
-    // to be implemented
+    double percentage_to_give = (double)default_step_distribution[current_proposal_cycle] / 100;
+    cycle_amount = percentage_to_give * requested_amount.amount;
   }
 
   return asset(cycle_amount, seeds_symbol);
@@ -138,7 +141,7 @@ void proposals::onperiod() {
         if (passed && valid_quorum) {
 
           if (pitr -> status != name("evaluate")) {
-            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, current_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode);
+            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, current_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode, pitr->current_payout);
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -154,10 +157,11 @@ void proposals::onperiod() {
               proposal.age = 0;
               proposal.staked = asset(0, seeds_symbol);
               proposal.status = name("evaluate");
+              proposal.current_payout += payout_amount;
             });
 
           } else {
-            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, pitr->passed_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode);
+            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, pitr->passed_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode, pitr->current_payout);
 
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
@@ -175,6 +179,7 @@ void proposals::onperiod() {
                 proposal.status = name("passed");
                 proposal.stage = name("done");
               }
+              proposal.current_payout += payout_amount;
             });
           }
 
@@ -369,8 +374,18 @@ void proposals::create(
   }
   utils::check_asset(quantity);
 
-  check(initial_payout >= 10 && initial_payout <= 20, "the initial payout must be between 10% and 20%, given:" + std::to_string(initial_payout));
+  if (initial_payout == 0) {
+    initial_payout = 10;
+  }
+
+  if (payout_mode == stepped_payout) {
+    initial_payout = 10;
+    check(num_cycles == 3, "the number of cycles a proposal can live is at most 3 for the stepped payout mode");
+  }
+
+  check(initial_payout <= 20, "the initial payout must be smaller than 20%, given:" + std::to_string(initial_payout));
   check(num_cycles >= 3, "the number of cycles is to small, it must be minumum 3, given:" + std::to_string(num_cycles));
+  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
   check(payout_mode == linear_payout || payout_mode == stepped_payout, "invalid payout mode - payout mode must be one of " + linear_payout.to_string() + ", " + stepped_payout.to_string());
 
   uint64_t lastId = 0;
@@ -406,6 +421,7 @@ void proposals::create(
       proposal.num_cycles = num_cycles;
       proposal.age = 0;
       proposal.payout_mode = payout_mode;
+      proposal.current_payout = asset(0, seeds_symbol);
   });
 
   auto litr = lastprops.find(creator.value);
@@ -423,7 +439,7 @@ void proposals::create(
   update_min_stake(propKey);
 }
 
-void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
+void proposals::update(uint64_t id, string title, string summary, string description, string image, string url, uint64_t initial_payout, uint32_t num_cycles, name payout_mode) {
   auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
@@ -431,12 +447,19 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
 
+  if (payout_mode == stepped_payout) {
+    initial_payout = 10;
+    check(num_cycles == 3, "the number of cycles a proposal can live is at most 3 for the stepped payout mode");
+  }
+
   props.modify(pitr, _self, [&](auto& proposal) {
     proposal.title = title;
     proposal.summary = summary;
     proposal.description = description;
     proposal.image = image;
     proposal.url = url;
+    proposal.initial_payout = initial_payout;
+    proposal.num_cycles = num_cycles;
   });
 }
 
@@ -553,6 +576,10 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   check(pitr->executed == false, "Proposal was already executed");
 
   check(pitr->stage == name("active"), "not active stage");
+
+  if (is_new) {
+    check(pitr->status == name("open"), "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
+  }
 
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "User does not have voice");
