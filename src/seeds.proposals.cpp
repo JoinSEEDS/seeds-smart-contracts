@@ -831,6 +831,9 @@ void proposals::migrate() {
   // all active and staged proposals will be
   // num_cycles = 3
   // stepped 25/25/25/25
+  std::vector<uint64_t> pay_perc = {25, 25, 25, 25};
+  std::vector<uint64_t> pay_perc_legacy = { 100 };
+
   while(pitr != props.end()) {
     props2.emplace(_self, [&](auto& proposal) {
       proposal.id = pitr->id;
@@ -847,15 +850,13 @@ void proposals::migrate() {
       proposal.description = pitr->description;
       proposal.image = pitr->image;
       proposal.url = pitr->url;
-      proposal.creation_date = pitr->creation_date;
       proposal.status = pitr->status;
       proposal.stage = pitr->stage;
       proposal.fund = pitr->fund;
+      proposal.creation_date = pitr->creation_date;
+      proposal.pay_percentages = pitr->stage == "done"_n ? pay_perc_legacy : pay_perc ;
       proposal.passed_cycle = 0;
-      proposal.initial_payout = pitr->stage == "done"_n ? 100 : 25;
-      proposal.num_cycles = pitr->stage == "done"_n ? 0 : 3;
       proposal.age = 0;
-      proposal.payout_mode = pitr->stage == "done"_n ? "legacy"_n : "step"_n;
       proposal.current_payout = asset(0, seeds_symbol);
     });
     pitr = props.erase(pitr);
