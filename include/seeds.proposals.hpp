@@ -135,28 +135,6 @@ CONTRACT proposals : public contract {
           name stage;
           name fund;
           uint64_t creation_date;
-          uint64_t primary_key()const { return id; }
-      };
-
-      TABLE proposal_table_2 {
-          uint64_t id;
-          name creator;
-          name recipient;
-          asset quantity;
-          asset staked;
-          bool executed;
-          uint64_t total;
-          uint64_t favour;
-          uint64_t against;
-          string title;
-          string summary;
-          string description;
-          string image;
-          string url;
-          name status;
-          name stage;
-          name fund;
-          uint64_t creation_date;
           uint64_t passed_cycle;
           uint32_t initial_payout;
           uint32_t num_cycles;
@@ -218,7 +196,10 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return account.value; }
       };
     
-      typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
+      typedef eosio::multi_index<"props"_n, proposal_table,
+        indexed_by<"bystatus"_n,
+        const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
+      > proposal_tables;
       typedef eosio::multi_index<"props2"_n, proposal_table_2> proposal_tables_2;
       typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
       typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;

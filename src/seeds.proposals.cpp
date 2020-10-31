@@ -827,12 +827,12 @@ void proposals::testvdecay(uint64_t timestamp) {
 }
 
 void proposals::migrate() {
-  auto pitr = props.begin();
+  auto pitr = props2.begin();
   // all active and staged proposals will be
   // num_cycles = 3
   // stepped 25/25/25/25
-  while(pitr != props.end()) {
-    props2.emplace(_self, [&](auto& proposal) {
+  while(pitr != props2.end()) {
+    props.emplace(_self, [&](auto& proposal) {
       proposal.id = pitr->id;
       proposal.creator = pitr->creator;
       proposal.recipient = pitr->recipient;
@@ -851,13 +851,13 @@ void proposals::migrate() {
       proposal.status = pitr->status;
       proposal.stage = pitr->stage;
       proposal.fund = pitr->fund;
-      proposal.passed_cycle = 0;
-      proposal.initial_payout = pitr->stage == "done"_n ? 100 : 25;
-      proposal.num_cycles = pitr->stage == "done"_n ? 0 : 3;
-      proposal.age = 0;
-      proposal.payout_mode = pitr->stage == "done"_n ? "legacy"_n : "step"_n;
-      proposal.current_payout = asset(0, seeds_symbol);
+      proposal.passed_cycle = pitr->passed_cycle;
+      proposal.initial_payout = pitr->initial_payout;
+      proposal.num_cycles = pitr->num_cycles;
+      proposal.age = pitr->age;
+      proposal.payout_mode = pitr->payout_mode;
+      proposal.current_payout = pitr->current_payout;
     });
-    pitr = props.erase(pitr);
+    pitr = props2.erase(pitr);
   }
 }
