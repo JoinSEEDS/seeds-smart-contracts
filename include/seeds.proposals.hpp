@@ -200,7 +200,7 @@ CONTRACT proposals : public contract {
         indexed_by<"bystatus"_n,
         const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
       > proposal_tables;
-      typedef eosio::multi_index<"props2"_n, proposal_table_2> proposal_tables_2;
+      typedef eosio::multi_index<"props2"_n, proposal_table> proposal_tables_2;
       typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
       typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
       typedef eosio::multi_index<"users"_n, user_table> user_tables;
