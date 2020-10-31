@@ -118,7 +118,6 @@ void proposals::initsz() {
     vitr++;
     count++;
   }
-  print("size change "+std::to_string(count));
   size_change("active.sz"_n, count - current);
 }
 
