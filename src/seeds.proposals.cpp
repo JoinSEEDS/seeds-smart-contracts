@@ -20,6 +20,7 @@ void proposals::reset() {
   auto voiceitr = voice.begin();
   while (voiceitr != voice.end()) {
     voiceitr = voice.erase(voiceitr);
+    size_change("active.sz"_n, -1);
   }
 
   auto paitr = participants.begin();
@@ -107,6 +108,18 @@ uint64_t proposals::get_size(name id) {
   } else {
     return sitr->size;
   }
+}
+
+void proposals::initsz() {
+  uint64_t current = get_size("active.sz"_n);
+  int64_t count = 0; 
+  auto vitr = voice.begin();
+  while(vitr != voice.end()) {
+    vitr++;
+    count++;
+  }
+  print("size change "+std::to_string(count));
+  size_change("active.sz"_n, count - current);
 }
 
 void proposals::onperiod() {
@@ -756,6 +769,7 @@ void proposals::addvoice(name user, uint64_t amount)
             voice.account = user;
             voice.balance = amount;
         });
+        size_change("active.sz"_n, 1);
     } else {
         voice.modify(vitr, _self, [&](auto& voice) {
             voice.balance += amount;
@@ -774,8 +788,10 @@ void proposals::changetrust(name user, bool trust)
             voice.account = user;
             voice.balance = 0;
         });
+        size_change("active.sz"_n, 1);
     } else if (vitr != voice.end() && !trust) {
         voice.erase(vitr);
+        size_change("active.sz"_n, -1);
     }
 }
 
@@ -876,7 +892,6 @@ void proposals::addactive(name account) {
         a.active = true;
       });
       recover_voice(account);
-      size_change("active.sz"_n, 1);
     }
   } else {
     actives.emplace(_self, [&](auto & a){
@@ -884,7 +899,6 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
-    size_change("active.sz"_n, 1);
   }
 }
 
@@ -924,6 +938,7 @@ void proposals::recover_voice(name account) {
       v.account = account;
       v.balance = voice_amount;
     });
+    size_change("active.sz"_n, 1);
   } else {
     voice.modify(vitr, _self, [&](auto & v){
       v.balance = voice_amount;
@@ -941,7 +956,6 @@ void proposals::removeactive(name account) {
         a.active = false;
       });
       demote_citizen(account);
-      size_change("active.sz"_n, -1);
     }
   }
 }
