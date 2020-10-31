@@ -894,3 +894,14 @@ void proposals::testvdecay(uint64_t timestamp) {
   c.t_voicedecay = timestamp;
   cycle.set(c, get_self());
 }
+
+void proposals::migrathistry() {
+
+  auto pitr = props.begin();
+
+  while (pitr != props.end()) {
+    acct_history(pitr->creator, pitr->quantity.amount, pitr->status == name("passed"));
+    pitr++;
+  }
+
+}
