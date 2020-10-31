@@ -852,10 +852,8 @@ void proposals::migrate() {
       proposal.stage = pitr->stage;
       proposal.fund = pitr->fund;
       proposal.passed_cycle = pitr->passed_cycle;
-      proposal.initial_payout = pitr->initial_payout;
-      proposal.num_cycles = pitr->num_cycles;
+      proposal.pay_percentages = pitr->pay_percentages;
       proposal.age = pitr->age;
-      proposal.payout_mode = pitr->payout_mode;
       proposal.current_payout = pitr->current_payout;
     });
     pitr = props2.erase(pitr);

@@ -135,11 +135,9 @@ CONTRACT proposals : public contract {
           name stage;
           name fund;
           uint64_t creation_date;
+          std::vector<uint64_t> pay_percentages;
           uint64_t passed_cycle;
-          uint32_t initial_payout;
-          uint32_t num_cycles;
           uint32_t age;
-          name payout_mode;
           asset current_payout;
 
           uint64_t primary_key()const { return id; }
