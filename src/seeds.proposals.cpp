@@ -958,6 +958,10 @@ void proposals::size_change(name id, int64_t delta) {
   ).send();
 }
 
+void proposals::migrate() {
+  
+}
+
 void proposals::testvdecay(uint64_t timestamp) {
   require_auth(get_self());
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());

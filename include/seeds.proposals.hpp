@@ -76,6 +76,8 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
+      ACTION migrate();
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -85,10 +87,10 @@ CONTRACT proposals : public contract {
       name stepped_payout = "step"_n;
 
       std::vector<uint64_t> default_step_distribution = {
-        10,  // initial payout
-        20,  // cycle 1
-        30,  // cycle 2
-        40  // cycle 3
+        25,  // initial payout
+        25,  // cycle 1
+        25,  // cycle 2
+        25  // cycle 3
       };
 
       void update_cycle();
@@ -239,7 +241,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(migrate))
       }
   }
 }
