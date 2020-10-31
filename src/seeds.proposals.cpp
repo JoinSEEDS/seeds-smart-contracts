@@ -345,6 +345,8 @@ void proposals::update_cycle() {
 
 void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
   
+  check(false, "create proposal is paused for maintenance. Will be back in 30 minutes");
+
   require_auth(creator);
 
   check_user(creator);
@@ -822,4 +824,40 @@ void proposals::testvdecay(uint64_t timestamp) {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
   c.t_voicedecay = timestamp;
   cycle.set(c, get_self());
+}
+
+void proposals::migrate() {
+  auto pitr = props.begin();
+  // all active and staged proposals will be
+  // num_cycles = 3
+  // stepped 25/25/25/25
+  while(pitr != props.end()) {
+    props2.emplace(_self, [&](auto& proposal) {
+      proposal.id = pitr->id;
+      proposal.creator = pitr->creator;
+      proposal.recipient = pitr->recipient;
+      proposal.quantity = pitr->quantity;
+      proposal.staked = pitr->staked;
+      proposal.executed = pitr->executed;
+      proposal.total = pitr->total;
+      proposal.favour = pitr->favour;
+      proposal.against = pitr->against;
+      proposal.title = pitr->title;
+      proposal.summary = pitr->summary;
+      proposal.description = pitr->description;
+      proposal.image = pitr->image;
+      proposal.url = pitr->url;
+      proposal.creation_date = pitr->creation_date;
+      proposal.status = pitr->status;
+      proposal.stage = pitr->stage;
+      proposal.fund = pitr->fund;
+      proposal.passed_cycle = 0;
+      proposal.initial_payout = pitr->stage == "done"_n ? 100 : 25;
+      proposal.num_cycles = pitr->stage == "done"_n ? 0 : 3;
+      proposal.age = 0;
+      proposal.payout_mode = pitr->stage == "done"_n ? "legacy"_n : "step"_n;
+      proposal.current_payout = asset(0, seeds_symbol);
+    });
+    pitr = props.erase(pitr);
+  }
 }
