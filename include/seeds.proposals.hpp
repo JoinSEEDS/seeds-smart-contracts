@@ -34,11 +34,15 @@ CONTRACT proposals : public contract {
 
       ACTION reset();
 
-      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, uint32_t initial_payout, uint32_t num_cycles, name payout_mode);
+      ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund);
+      
+      ACTION createx(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, std::vector<uint64_t> pay_percentages);
 
       ACTION cancel(uint64_t id);
 
-      ACTION update(uint64_t id, string title, string summary, string description, string image, string url, uint64_t initial_payout, uint32_t num_cycles, name payout_mode);
+      ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
+      
+      ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
@@ -76,8 +80,6 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
-      ACTION migrate();
-
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -112,12 +114,13 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
-      asset get_payout_amount(uint64_t cycle, uint32_t total_num_cycles, uint64_t cycle_proposal_passed, asset requested_amount, uint32_t initial_payout, name payout_mode, asset current_payout);
       void size_change(name id, int64_t delta);
       uint64_t get_size(name id);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
+      void check_percentages(std::vector<uint64_t> pay_percentages);
+      asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
 
       DEFINE_CONFIG_TABLE
         
@@ -146,11 +149,9 @@ CONTRACT proposals : public contract {
           name stage;
           name fund;
           uint64_t creation_date;
+          std::vector<uint64_t> pay_percentages;
           uint64_t passed_cycle;
-          uint32_t initial_payout;
-          uint32_t num_cycles;
           uint32_t age;
-          name payout_mode;
           asset current_payout;
 
           uint64_t primary_key()const { return id; }
@@ -239,9 +240,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(migrate))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay))
       }
   }
 }

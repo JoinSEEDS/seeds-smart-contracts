@@ -81,39 +81,23 @@ void proposals::update_min_stake(uint64_t prop_id) {
 }
 
 asset proposals::get_payout_amount(
-  uint64_t cycle, 
-  uint32_t total_num_cycles,
-  uint64_t cycle_proposal_passed, 
-  asset requested_amount, 
-  uint32_t initial_payout, 
-  name payout_mode,
+  std::vector<uint64_t> pay_percentages, 
+  uint64_t age, 
+  asset total_amount, 
   asset current_payout
 ) {
-  uint64_t current_proposal_cycle = cycle - cycle_proposal_passed;
-  if (current_proposal_cycle < 0 || current_proposal_cycle > total_num_cycles) { return asset(0, seeds_symbol); }
 
-  double initial_payout_percentage = initial_payout / 100.0;
-  uint64_t initial_payout_amount = initial_payout_percentage * requested_amount.amount;
+  if (age >= pay_percentages.size()) { return asset(0, seeds_symbol); }
+
+  if (age == pay_percentages.size() - 1) {
+    return total_amount - current_payout;
+  }
+
+  double payout_percentage = pay_percentages[age] / 100.0;
+  uint64_t payout_amount = payout_percentage * total_amount.amount;
   
-  if (current_proposal_cycle == 0) {
-    return asset(initial_payout_amount, seeds_symbol);
-  }
+  return asset(payout_amount, seeds_symbol);
 
-  if (current_proposal_cycle == total_num_cycles) {
-    return requested_amount - current_payout;
-  }
-
-  double percentage_remained = 1.0 - initial_payout_percentage;
-  uint64_t cycle_amount = 0;
-
-  if (payout_mode == linear_payout) {
-    cycle_amount = (percentage_remained / total_num_cycles) * requested_amount.amount;
-  } else if (payout_mode == stepped_payout) {
-    double percentage_to_give = (double)default_step_distribution[current_proposal_cycle] / 100;
-    cycle_amount = percentage_to_give * requested_amount.amount;
-  }
-
-  return asset(cycle_amount, seeds_symbol);
 }
 
 uint64_t proposals::get_size(name id) {
@@ -154,12 +138,13 @@ void proposals::onperiod() {
 
         if (passed && valid_quorum) {
 
-          if (pitr -> status != name("evaluate")) {
-            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, current_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode, pitr->current_payout);
+          if (pitr -> status == name("open")) {
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
 
+            asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+            
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
             } else {
@@ -175,7 +160,10 @@ void proposals::onperiod() {
             });
 
           } else {
-            asset payout_amount = get_payout_amount(current_cycle, pitr->num_cycles, pitr->passed_cycle, pitr->quantity, pitr->initial_payout, pitr->payout_mode, pitr->current_payout);
+            
+            uint64_t age = pitr -> age + 1;
+
+            asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
 
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
@@ -183,8 +171,7 @@ void proposals::onperiod() {
               withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
             }
 
-            uint64_t age = pitr -> age + 1;
-            uint64_t num_cycles = pitr -> num_cycles;
+            uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
 
             props.modify(pitr, _self, [&](auto & proposal){
               proposal.age = age;
@@ -421,15 +408,32 @@ void proposals::create(
   string description, 
   string image, 
   string url, 
+  name fund
+) {
+  require_auth(creator);
+  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc );
+}
+
+void proposals::createx(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
   name fund,
-  uint32_t initial_payout,
-  uint32_t num_cycles,
-  name payout_mode
+  std::vector<uint64_t> pay_percentages
 ) {
   
   require_auth(creator);
 
   check_user(creator);
+
+  check_percentages(pay_percentages);
 
   check(fund == bankaccts::milestone || fund == bankaccts::alliances || fund == bankaccts::campaigns, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
@@ -442,19 +446,6 @@ void proposals::create(
   }
   utils::check_asset(quantity);
 
-  if (initial_payout == 0) {
-    initial_payout = 10;
-  }
-
-  if (payout_mode == stepped_payout) {
-    initial_payout = 10;
-    check(num_cycles == 3, "the number of cycles a proposal can live is at most 3 for the stepped payout mode");
-  }
-
-  check(initial_payout <= 20, "the initial payout must be smaller than 20%, given:" + std::to_string(initial_payout));
-  check(num_cycles >= 3, "the number of cycles is to small, it must be minumum 3, given:" + std::to_string(num_cycles));
-  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
-  check(payout_mode == linear_payout || payout_mode == stepped_payout, "invalid payout mode - payout mode must be one of " + linear_payout.to_string() + ", " + stepped_payout.to_string());
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -484,11 +475,9 @@ void proposals::create(
       proposal.status = name("open");
       proposal.stage = name("staged");
       proposal.fund = fund;
+      proposal.pay_percentages = pay_percentages;
       proposal.passed_cycle = 0;
-      proposal.initial_payout = initial_payout;
-      proposal.num_cycles = num_cycles;
       proposal.age = 0;
-      proposal.payout_mode = payout_mode;
       proposal.current_payout = asset(0, seeds_symbol);
   });
 
@@ -507,7 +496,28 @@ void proposals::create(
   update_min_stake(propKey);
 }
 
-void proposals::update(uint64_t id, string title, string summary, string description, string image, string url, uint64_t initial_payout, uint32_t num_cycles, name payout_mode) {
+void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "Proposal not found");
+
+  updatex(id, title, summary, description, image, url, pitr->pay_percentages);
+}
+
+void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
+  uint64_t num_cycles = pay_percentages.size() - 1;
+  check(num_cycles >= 3, "the number of cycles is to small, it must be minumum 3, given:" + std::to_string(num_cycles));
+  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
+  uint64_t sum = 0;
+  for(std::size_t i = 0; i < pay_percentages.size(); ++i) {
+    sum += pay_percentages[i];
+  }
+  check(sum == 100, "percentages must add up to 100");
+  uint64_t initial_payout = pay_percentages[0];
+  check(initial_payout <= 25, "the initial payout must be smaller than 25%, given:" + std::to_string(initial_payout));
+  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
+}
+
+void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
   auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
@@ -515,10 +525,7 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
 
-  if (payout_mode == stepped_payout) {
-    initial_payout = 10;
-    check(num_cycles == 3, "the number of cycles a proposal can live is at most 3 for the stepped payout mode");
-  }
+  check_percentages(pay_percentages);
 
   props.modify(pitr, _self, [&](auto& proposal) {
     proposal.title = title;
@@ -526,8 +533,7 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
     proposal.description = description;
     proposal.image = image;
     proposal.url = url;
-    proposal.initial_payout = initial_payout;
-    proposal.num_cycles = num_cycles;
+    proposal.pay_percentages = pay_percentages;
   });
 }
 
@@ -956,10 +962,6 @@ void proposals::size_change(name id, int64_t delta) {
     "changesize"_n,
     std::make_tuple(id, delta)
   ).send();
-}
-
-void proposals::migrate() {
-  
 }
 
 void proposals::testvdecay(uint64_t timestamp) {
