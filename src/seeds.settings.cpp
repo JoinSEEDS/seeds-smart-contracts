@@ -5,8 +5,8 @@ void settings::reset() {
 
   // config
   confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "Minimum proposals stake threshold (in Seeds)", high_impact); 
-  confwithdesc(name("propmaxstake"), uint64_t(11111) * uint64_t(10000), "Max proposals stake 11,111 threshold (in Seeds)", high_impact);
-  confwithdesc(name("propstakeper"), 5, "Proposal funding fee in % - 5%", high_impact); 
+  confwithdesc(name("propmaxstake"), uint64_t(75000) * uint64_t(10000), "Max proposals stake 11,111 threshold (in Seeds)", high_impact);
+  confwithdesc(name("propstakeper"), 3, "Proposal funding fee in % - 3%", high_impact); 
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
   
