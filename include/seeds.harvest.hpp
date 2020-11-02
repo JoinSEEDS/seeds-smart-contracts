@@ -60,7 +60,8 @@ CONTRACT harvest : public contract {
     ACTION calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION ranktxs(); // rank transaction score // 1h interval
-    ACTION ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+    ACTION rankorgtxs(); // rank org transaction score
+    ACTION ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name table);
 
     ACTION calccss(); // calculate contribution points // 1h inteval
     ACTION updatecs(name account); 
@@ -78,13 +79,16 @@ CONTRACT harvest : public contract {
     ACTION testupdatecs(name account, uint64_t contribution_score);
     
     ACTION updtotal(); // MIGRATION ACTION
-    
+
+    ACTION setorgtxpt(name organization, uint64_t tx_points);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
 
     name planted_size = "planted.sz"_n;
     name tx_points_size = "txpt.sz"_n;
+    name org_tx_points_size = "org.tx.sz"_n;
     name cs_size = "cs.sz"_n;
 
     void init_balance(name account);
@@ -252,9 +256,12 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)(runharvest)
           (unplant)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(updatecs)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
-          (testclaim)(testupdatecs))
+          (setorgtxpt)
+          (testclaim)(testupdatecs)
+
+          )
       }
   }
 }

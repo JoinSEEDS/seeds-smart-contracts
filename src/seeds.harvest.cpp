@@ -24,6 +24,13 @@ void harvest::reset() {
   }
   size_set(tx_points_size, 0);
 
+  tx_points_tables orgtxpt(get_self(), "org"_n.value);
+  auto otitr = orgtxpt.begin();
+  while (otitr != orgtxpt.end()) {
+    otitr = orgtxpt.erase(otitr);
+  }
+  size_set(org_tx_points_size, 0);
+
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
@@ -381,7 +388,6 @@ uint32_t harvest::calc_transaction_points(name account) {
       //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
       //tx_to_itr = std::reverse_iterator(it);            
     } else {
-      //print("update to ");
 
       // update "to"
       if (current_to != tx_to_itr->to) {
@@ -392,12 +398,8 @@ uint32_t harvest::calc_transaction_points(name account) {
         current_num++;
       }
 
-      //print("iterating over "+std::to_string(tx_to_itr->id));
-
       if (current_num < max_number_of_transactions) {
         uint64_t volume = tx_to_itr->quantity.amount;
-
-      //print("volume "+std::to_string(volume));
 
         // limit max volume
         if (volume > max_quantity * 10000) {
@@ -405,12 +407,9 @@ uint32_t harvest::calc_transaction_points(name account) {
           volume = max_quantity * 10000;
         }
 
-
         // multiply by receiver reputation
         double points = (double(volume) / 10000.0) * current_rep_multiplier;
         
-        //print("tx points "+std::to_string(points));
-
         result += points;
 
       } 
@@ -420,14 +419,6 @@ uint32_t harvest::calc_transaction_points(name account) {
     count++;
   }
 
-  //print("set result "+std::to_string(result));
-
-  // use ceil function so each schore is counted if it is > 0
-    
-  // DEBUG
-  // if (result == 0) {
-  //   result = 33.0;
-  // }
   // enter into transaction points table
   auto titr = txpoints.find(account.value);
   uint64_t points = ceil(result);
@@ -492,27 +483,31 @@ void harvest::calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize) 
   }
 }
 
-void harvest::ranktxs() {
-  ranktx(0, 0, 200);
+void harvest::rankorgtxs() {
+  ranktx(0, 0, 200, "org"_n);
 }
 
-void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void harvest::ranktxs() {
+  ranktx(0, 0, 200, contracts::harvest);
+}
+
+void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name table) {
   require_auth(_self);
 
-  uint64_t total = get_size(tx_points_size);
+  auto s = table == "org"_n ? org_tx_points_size : tx_points_size;
+  uint64_t total = get_size(s);
   if (total == 0) return;
 
+  tx_points_tables txpoints_table(get_self(), table.value);
+
   uint64_t current = chunk * chunksize;
-  auto txpt_by_points = txpoints.get_index<"bypoints"_n>();
+  auto txpt_by_points = txpoints_table.get_index<"bypoints"_n>();
   auto titr = start_val == 0 ? txpt_by_points.begin() : txpt_by_points.lower_bound(start_val);
   uint64_t count = 0;
 
   while (titr != txpt_by_points.end() && count < chunksize) {
 
     uint64_t rank = (current * 100) / total;
-
-    //print(" rank: "+std::to_string(rank) + " total: " +std::to_string(total));
-
 
     txpt_by_points.modify(titr, _self, [&](auto& item) {
       item.rank = rank;
@@ -532,7 +527,7 @@ void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "ranktx"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, table)
     );
 
     transaction tx;
@@ -882,4 +877,31 @@ void harvest::change_total(bool add, asset quantity) {
     tt.total_planted = tt.total_planted - quantity;
   }
   total.set(tt, get_self());
+}
+
+ACTION harvest::setorgtxpt(name organization, uint64_t tx_points) {
+  require_auth(get_self());
+
+  tx_points_tables orgtxpoints(get_self(), "org"_n.value);
+  
+  auto oitr = orgtxpoints.find(organization.value);
+  if (oitr == orgtxpoints.end()) {
+    if (tx_points > 0) {
+      orgtxpoints.emplace(_self, [&](auto& item) {
+        item.account = organization;
+        item.points = tx_points;
+      });
+      size_change(org_tx_points_size, 1);
+    }
+  } else {
+    if (tx_points > 0) {
+      orgtxpoints.modify(oitr, _self, [&](auto& item) {
+        item.points = tx_points;
+      });
+    } else {
+      orgtxpoints.erase(oitr);
+      size_change(org_tx_points_size, -1);
+    }
+  } 
+
 }

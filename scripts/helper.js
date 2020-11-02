@@ -334,6 +334,22 @@ var permissions = [{
   target: `${accounts.accounts.account}@api`,
   action: 'subrep'
 }, {
+  target: `${accounts.harvest.account}@setorgtxpt`,
+  actor: `${accounts.history.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.harvest.account}@setorgtxpt`,
+  action: 'setorgtxpt'
+}, {
+  target: `${accounts.history.account}@orgtxpoints`,
+  actor: `${accounts.organization.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.history.account}@orgtxpoints`,
+  action: 'orgtxpoints'
+}, {
   target: `${accounts.accounts.account}@api`,
   action: 'addref'
 }, {
@@ -527,6 +543,21 @@ var permissions = [{
 }, { 
   target: `${accounts.organization.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
+}, {
+  target: `${accounts.organization.account}@active`,
+  actor: `${accounts.accounts.account}@active`
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'scoretrxs'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankregens'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankcbsorgs'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'rankorgtxs'
 }, {
   target: `${accounts.proposals.account}@execute`,
   action: 'decayvoices'
