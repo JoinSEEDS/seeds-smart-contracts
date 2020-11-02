@@ -65,19 +65,17 @@ uint64_t proposals::min_stake(asset quantity, name fund) {
   prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.").value;
   
   if (fund == bankaccts::campaigns) {
-    prop_percentage = (double)config.get(name("prop.cmp.stk").value, "The prop.cmp.stk has not been initialized yet.").value / 10000.0;
+    prop_percentage = (double)config.get(name("prop.cmp.pct").value, "The prop.cmp.pct has not been initialized yet.").value / 10000.0;
     prop_max = config.get(name("prop.cmp.cap").value, "The prop.cmp.cap has not been initialized yet.").value;
   } else if (fund == bankaccts::alliances) {
-    prop_percentage = (double)config.get(name("prop.al.stk").value, "The prop.al.stk has not been initialized yet.").value / 10000.0;
+    prop_percentage = (double)config.get(name("prop.al.pct").value, "The prop.al.pct has not been initialized yet.").value / 10000.0;
     prop_max = config.get(name("prop.al.cap").value, "The prop.al.cap has not been initialized yet.").value;
   } else {
-    prop_percentage = (double)config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.").value / 10000.0;
+    prop_percentage = (double)config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.").value;
     prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.").value;
   }
 
   asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), seeds_symbol);
-
-  print("\nquantity_prop_percentage:", quantity_prop_percentage, ", prop_percentage:", prop_percentage, ", quantity:", quantity, "\n");
 
   uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
   min_stake = std::min(prop_max, min_stake);
