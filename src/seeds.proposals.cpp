@@ -20,6 +20,7 @@ void proposals::reset() {
   auto voiceitr = voice.begin();
   while (voiceitr != voice.end()) {
     voiceitr = voice.erase(voiceitr);
+    size_change("active.sz"_n, -1);
   }
 
   auto paitr = participants.begin();
@@ -32,7 +33,6 @@ void proposals::reset() {
     mitr = minstake.erase(mitr);
   }
 
-  size_tables sizes(get_self(), get_self().value);
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
@@ -97,8 +97,27 @@ void proposals::testquorum(uint64_t total_proposals) {
   check(false, std::to_string(get_quorum(total_proposals)));
 }
 
-uint64_t proposals::get_size(name id, name contract) {
-  size_tables sizes(contract, contract.value);
+asset proposals::get_payout_amount(
+  std::vector<uint64_t> pay_percentages, 
+  uint64_t age, 
+  asset total_amount, 
+  asset current_payout
+) {
+
+  if (age >= pay_percentages.size()) { return asset(0, seeds_symbol); }
+
+  if (age == pay_percentages.size() - 1) {
+    return total_amount - current_payout;
+  }
+
+  double payout_percentage = pay_percentages[age] / 100.0;
+  uint64_t payout_amount = payout_percentage * total_amount.amount;
+  
+  return asset(payout_amount, seeds_symbol);
+
+}
+
+uint64_t proposals::get_size(name id) {
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     return 0;
@@ -107,25 +126,16 @@ uint64_t proposals::get_size(name id, name contract) {
   }
 }
 
-void proposals::prop_size_change(name id, int64_t delta) {
-  size_tables sizes(get_self(), get_self().value);
-  auto sitr = sizes.find(id.value);
-  if (sitr == sizes.end()) {
-    sizes.emplace(_self, [&](auto& item) {
-      item.id = id;
-      item.size = delta;
-    });
-  } else {
-    uint64_t newsize = sitr->size + delta; 
-    if (delta < 0) {
-      if (sitr->size < -delta) {
-        newsize = 0;
-      }
-    }
-    sizes.modify(sitr, _self, [&](auto& item) {
-      item.size = newsize;
-    });
+void proposals::initsz() {
+  uint64_t current = get_size("active.sz"_n);
+  int64_t count = 0; 
+  auto vitr = voice.begin();
+  while(vitr != voice.end()) {
+    vitr++;
+    count++;
   }
+  print("size change "+std::to_string(count));
+  size_change("active.sz"_n, count - current);
 }
 
 void proposals::onperiod() {
@@ -136,8 +146,11 @@ void proposals::onperiod() {
     auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
 
     uint64_t number_active_proposals = 0;
-    uint64_t total_eligible_voters = get_size("active.sz"_n, contracts::accounts);
-    uint64_t quorum =  get_quorum(get_size(prop_active_size, get_self()));
+    uint64_t total_eligible_voters = get_size("active.sz"_n);
+    uint64_t quorum =  get_quorum(get_size(prop_active_size));
+
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    uint64_t current_cycle = c.propcycle;
 
     while (pitr != props.end()) {
       if (pitr->stage == name("active")) {
@@ -148,29 +161,65 @@ void proposals::onperiod() {
         double majority = double(prop_majority.value) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
+
+        print("\nonperiod:", voters_number, ", ", quorum, ", ", total_eligible_voters, "\n");
+
         bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
         bool is_alliance_type = pitr->fund == bankaccts::alliances;
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
 
         if (passed && valid_quorum) {
-          refund_staked(pitr->creator, pitr->staked);
 
-          change_rep(pitr->creator, true);
+          if (pitr -> status == name("open")) {
 
-          if (is_alliance_type) {
-            send_to_escrow(pitr->fund, pitr->recipient, pitr->quantity, "proposal id: "+std::to_string(pitr->id));
+            refund_staked(pitr->creator, pitr->staked);
+            change_rep(pitr->creator, true);
+
+            asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+            
+            if (is_alliance_type) {
+              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+            } else {
+              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+            }
+
+            props.modify(pitr, _self, [&](auto & proposal){
+              proposal.passed_cycle = current_cycle;
+              proposal.age = 0;
+              proposal.staked = asset(0, seeds_symbol);
+              proposal.status = name("evaluate");
+              proposal.current_payout += payout_amount;
+            });
+
           } else {
-            withdraw(pitr->recipient, pitr->quantity, pitr->fund, "");// TODO limit by amount available
+            
+            uint64_t age = pitr -> age + 1;
+
+            asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
+
+            if (is_alliance_type) {
+              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+            } else {
+              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+            }
+
+            uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
+
+            props.modify(pitr, _self, [&](auto & proposal){
+              proposal.age = age;
+              if (age == num_cycles) {
+                proposal.executed = true;
+                proposal.status = name("passed");
+                proposal.stage = name("done");
+              }
+              proposal.current_payout += payout_amount;
+            });
           }
 
-          props.modify(pitr, _self, [&](auto& proposal) {
-              proposal.executed = true;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("passed");
-              proposal.stage = name("done");
-          });
         } else {
-          burn(pitr->staked);
+          if (pitr->status != name("evaluate")) {
+            burn(pitr->staked);
+          }
 
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
@@ -179,13 +228,13 @@ void proposals::onperiod() {
               proposal.stage = name("done");
           });
         }
-        prop_size_change(prop_active_size, -1);
+        size_change(prop_active_size, -1);
       }
 
       if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
-          prop_size_change(prop_active_size, 1);
+          size_change(prop_active_size, 1);
         });
       }
 
@@ -384,11 +433,41 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
-void proposals::create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund) {
+void proposals::create(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund
+) {
+  require_auth(creator);
+  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc );
+}
+
+void proposals::createx(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  std::vector<uint64_t> pay_percentages
+) {
   
   require_auth(creator);
 
   check_user(creator);
+
+  check_percentages(pay_percentages);
 
   check(fund == bankaccts::milestone || fund == bankaccts::alliances || fund == bankaccts::campaigns, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
@@ -400,6 +479,7 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
   utils::check_asset(quantity);
+
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -429,6 +509,10 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
       proposal.status = name("open");
       proposal.stage = name("staged");
       proposal.fund = fund;
+      proposal.pay_percentages = pay_percentages;
+      proposal.passed_cycle = 0;
+      proposal.age = 0;
+      proposal.current_payout = asset(0, seeds_symbol);
   });
 
   auto litr = lastprops.find(creator.value);
@@ -448,11 +532,34 @@ void proposals::create(name creator, name recipient, asset quantity, string titl
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
   auto pitr = props.find(id);
+  check(pitr != props.end(), "Proposal not found");
+
+  updatex(id, title, summary, description, image, url, pitr->pay_percentages);
+}
+
+void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
+  uint64_t num_cycles = pay_percentages.size() - 1;
+  check(num_cycles >= 3, "the number of cycles is to small, it must be minumum 3, given:" + std::to_string(num_cycles));
+  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
+  uint64_t sum = 0;
+  for(std::size_t i = 0; i < pay_percentages.size(); ++i) {
+    sum += pay_percentages[i];
+  }
+  check(sum == 100, "percentages must add up to 100");
+  uint64_t initial_payout = pay_percentages[0];
+  check(initial_payout <= 25, "the initial payout must be smaller than 25%, given:" + std::to_string(initial_payout));
+  check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
+}
+
+void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
+  auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
+
+  check_percentages(pay_percentages);
 
   props.modify(pitr, _self, [&](auto& proposal) {
     proposal.title = title;
@@ -460,6 +567,7 @@ void proposals::update(uint64_t id, string title, string summary, string descrip
     proposal.description = description;
     proposal.image = image;
     proposal.url = url;
+    proposal.pay_percentages = pay_percentages;
   });
 }
 
@@ -543,7 +651,31 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option) {
+bool proposals::revert_vote (name voter, uint64_t id) {
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    check(pitr->status == name("evaluate"), "Proposal is not in evaluate state");
+    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
+
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.total -= voteitr->amount;
+      proposal.favour -= voteitr->amount;
+    });
+
+    votes.erase(voteitr);
+    return true;
+  }
+
+  return false;
+}
+
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new) {
   require_auth(voter);
   check_citizen(voter);
 
@@ -553,14 +685,19 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
 
   check(pitr->stage == name("active"), "not active stage");
 
+  if (is_new) {
+    check(pitr->status == name("open"), "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
+  }
+
   auto vitr = voice.find(voter.value);
   check(vitr != voice.end(), "User does not have voice");
   check(vitr->balance >= amount, "voice balance exceeded");
   
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
-  check(voteitr == votes.end(), "only one vote");
 
+  check(voteitr == votes.end(), "only one vote");
+  
   check(option == trust || option == distrust || option == abstain, "Invalid option");
 
   if (option == trust) {
@@ -592,32 +729,34 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
     vote.proposal_id = id;
   });
 
-  auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
-  auto paitr = participants.find(voter.value);
-  if (paitr == participants.end()) {
-    // add reputation for entering in the table
-    action(
-      permission_level{contracts::accounts, "active"_n},
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(voter, rep.value)
-    ).send();
-    // add the voter to the table
-    participants.emplace(_self, [&](auto & participant){
-      participant.account = voter;
-      if (option == abstain) {
-        participant.nonneutral = false;
-      } else {
-        participant.nonneutral = true;
-      }
-      participant.count = 1;
-    });
-  } else {
-    participants.modify(paitr, _self, [&](auto & participant){
-      participant.count += 1;
-      if (option != abstain) {
-        participant.nonneutral = true;
-      }
-    });
+  if (is_new) {
+    auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+    auto paitr = participants.find(voter.value);
+    if (paitr == participants.end()) {
+      // add reputation for entering in the table
+      action(
+        permission_level{contracts::accounts, "active"_n},
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(voter, rep.value)
+      ).send();
+      // add the voter to the table
+      participants.emplace(_self, [&](auto & participant){
+        participant.account = voter;
+        if (option == abstain) {
+          participant.nonneutral = false;
+        } else {
+          participant.nonneutral = true;
+        }
+        participant.count = 1;
+      });
+    } else {
+      participants.modify(paitr, _self, [&](auto & participant){
+        participant.count += 1;
+        if (option != abstain) {
+          participant.nonneutral = true;
+        }
+      });
+    }
   }
 
   auto aitr = actives.find(voter.value);
@@ -628,15 +767,16 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option)
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, trust);
+  vote_aux(voter, id, amount, trust, true);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, distrust);
+  bool vote_reverted = revert_vote(voter, id);
+  vote_aux(voter, id, amount, distrust, !vote_reverted);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
-  vote_aux(voter, id, (uint64_t)0, abstain);
+  vote_aux(voter, id, (uint64_t)0, abstain, true);
 }
 
 void proposals::addvoice(name user, uint64_t amount)
@@ -650,6 +790,7 @@ void proposals::addvoice(name user, uint64_t amount)
             voice.account = user;
             voice.balance = amount;
         });
+        size_change("active.sz"_n, 1);
     } else {
         voice.modify(vitr, _self, [&](auto& voice) {
             voice.balance += amount;
@@ -668,8 +809,10 @@ void proposals::changetrust(name user, bool trust)
             voice.account = user;
             voice.balance = 0;
         });
+        size_change("active.sz"_n, 1);
     } else if (vitr != voice.end() && !trust) {
         voice.erase(vitr);
+        size_change("active.sz"_n, -1);
     }
 }
 
@@ -702,10 +845,10 @@ void proposals::change_rep(name beneficiary, bool passed) {
 
 void proposals::send_to_escrow(name fromfund, name recipient, asset quantity, string memo) {
 
-    action(
-      permission_level{fromfund, "active"_n},
-      contracts::token, "transfer"_n,
-      std::make_tuple(fromfund, contracts::escrow, quantity, memo))
+  action(
+    permission_level{fromfund, "active"_n},
+    contracts::token, "transfer"_n,
+    std::make_tuple(fromfund, contracts::escrow, quantity, memo))
   .send();
 
   action(
@@ -770,7 +913,6 @@ void proposals::addactive(name account) {
         a.active = true;
       });
       recover_voice(account);
-      size_change("active.sz"_n, 1);
     }
   } else {
     actives.emplace(_self, [&](auto & a){
@@ -778,7 +920,6 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
-    size_change("active.sz"_n, 1);
   }
 }
 
@@ -818,6 +959,7 @@ void proposals::recover_voice(name account) {
       v.account = account;
       v.balance = voice_amount;
     });
+    size_change("active.sz"_n, 1);
   } else {
     voice.modify(vitr, _self, [&](auto & v){
       v.balance = voice_amount;
@@ -835,7 +977,6 @@ void proposals::removeactive(name account) {
         a.active = false;
       });
       demote_citizen(account);
-      size_change("active.sz"_n, -1);
     }
   }
 }
@@ -850,12 +991,31 @@ void proposals::demote_citizen(name account) {
 }
 
 void proposals::size_change(name id, int64_t delta) {
-  action(
-    permission_level(contracts::accounts, "active"_n),
-    contracts::accounts,
-    "changesize"_n,
-    std::make_tuple(id, delta)
-  ).send();
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+  // if (id == "active.sz"_n) {
+  //   action(
+  //     permission_level(contracts::accounts, "active"_n),
+  //     contracts::accounts,
+  //     "changesize"_n,
+  //     std::make_tuple(id, delta)
+  //   ).send();
+  // }
 }
 
 void proposals::testvdecay(uint64_t timestamp) {
