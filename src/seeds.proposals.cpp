@@ -739,10 +739,10 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   auto aitr = actives.find(voter.value);
-  check(aitr != actives.end(), "the user does not have an entry in the actives table");
-  actives.modify(aitr, _self, [&](auto & a){
-    a.timestamp = current_time_point().sec_since_epoch();
-  });
+  // check(aitr != actives.end(), "the user does not have an entry in the actives table");
+  // actives.modify(aitr, _self, [&](auto & a){
+  //   a.timestamp = current_time_point().sec_since_epoch();
+  // });
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -899,7 +899,7 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
-  }
+  }s
 }
 
 uint64_t proposals::calculate_decay(uint64_t voice) {
