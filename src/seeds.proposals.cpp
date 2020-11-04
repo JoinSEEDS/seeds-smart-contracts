@@ -37,6 +37,13 @@ void proposals::reset() {
   while (aitr != actives.end()) {
     aitr = actives.erase(aitr);
   }
+
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
+  }
+
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
@@ -62,17 +69,21 @@ uint64_t proposals::min_stake(asset quantity, name fund) {
   uint64_t prop_min;
   uint64_t prop_max;
 
-  prop_min = config_get(name("propminstake"));
   
   if (fund == bankaccts::campaigns) {
-    prop_percentage = (double)config_get(name("prop.cmp.pct"));
+    prop_percentage = (double)config_get(name("prop.cmp.pct")) / 10000.0;
     prop_max = config_get(name("prop.cmp.cap"));
+    prop_min = config_get(name("prop.cmp.min"));
   } else if (fund == bankaccts::alliances) {
-    prop_percentage = (double)config_get(name("prop.al.pct"));
+    prop_percentage = (double)config_get(name("prop.al.pct")) / 10000.0;
     prop_max = config_get(name("prop.al.cap"));
-  } else {
+    prop_min = config_get(name("prop.al.min"));
+  } else if (fund == bankaccts::milestone) {
     prop_percentage = (double)config_get(name("propstakeper"));
-    prop_max = config_get(name("propmaxstake"));
+    prop_max = config_get(name("propminstake"));
+    prop_min = config_get(name("propminstake"));
+  } else {
+    check(false, "unknown proposal type, invalid fund");
   }
 
   asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), seeds_symbol);
@@ -129,6 +140,8 @@ asset proposals::get_payout_amount(
 }
 
 uint64_t proposals::get_size(name id) {
+  size_tables sizes(get_self(), get_self().value);
+
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     return 0;
@@ -138,6 +151,8 @@ uint64_t proposals::get_size(name id) {
 }
 
 void proposals::initsz() {
+  require_auth(_self);
+  
   uint64_t current = get_size("active.sz"_n);
   int64_t count = 0; 
   auto vitr = voice.begin();
@@ -147,6 +162,23 @@ void proposals::initsz() {
   }
   print("size change "+std::to_string(count));
   size_change("active.sz"_n, count - current);
+}
+
+void proposals::initactives() {
+  require_auth(_self);
+  
+  auto vitr = voice.begin();
+  while(vitr != voice.end()) {
+    auto aitr = actives.find(vitr->account.value);
+    if (aitr == actives.end()) {
+      actives.emplace(_self, [&](auto & item){
+        item.account = vitr->account;
+        item.active = true;
+        item.timestamp = eosio::current_time_point().sec_since_epoch();
+      });
+    }
+    vitr++;
+  }
 }
 
 void proposals::onperiod() {
@@ -766,10 +798,16 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   auto aitr = actives.find(voter.value);
-  // check(aitr != actives.end(), "the user does not have an entry in the actives table");
-  // actives.modify(aitr, _self, [&](auto & a){
-  //   a.timestamp = current_time_point().sec_since_epoch();
-  // });
+  if (aitr == actives.end()) {
+    actives.emplace(_self, [&](auto& item) {
+      item.account = voter;
+      item.timestamp = current_time_point().sec_since_epoch();
+    });
+  } else {
+    actives.modify(aitr, _self, [&](auto & item){
+      item.timestamp = current_time_point().sec_since_epoch();
+    });
+  }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -997,6 +1035,8 @@ void proposals::demote_citizen(name account) {
 }
 
 void proposals::size_change(name id, int64_t delta) {
+  size_tables sizes(get_self(), get_self().value);
+
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     sizes.emplace(_self, [&](auto& item) {

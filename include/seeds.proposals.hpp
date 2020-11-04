@@ -27,7 +27,6 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
-          sizes(receiver, receiver.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
 
@@ -81,6 +80,8 @@ CONTRACT proposals : public contract {
 
       ACTION initsz();
 
+      ACTION initactives();
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -124,9 +125,18 @@ CONTRACT proposals : public contract {
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
 
-      DEFINE_SIZE_TABLE
-
-      DEFINE_SIZE_TABLE_MULTI_INDEX
+      uint64_t config_get(name key) {
+        DEFINE_CONFIG_TABLE
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
+        config_tables config(contracts::settings, contracts::settings.value);
+        
+        auto citr = config.find(key.value);
+          if (citr == config.end()) { 
+          // only create the error message string in error case for efficiency
+          eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+        }
+        return citr->value;
+      }
 
       TABLE proposal_table {
           uint64_t id;
@@ -206,6 +216,7 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return account.value; }
       };
     
+
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
       const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
@@ -220,6 +231,9 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
 
+    DEFINE_SIZE_TABLE
+    DEFINE_SIZE_TABLE_MULTI_INDEX
+
     proposal_tables props;
     participant_tables participants;
     user_tables users;
@@ -228,20 +242,6 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
-    size_tables sizes;
-
-  uint64_t config_get(name key) {
-    DEFINE_CONFIG_TABLE
-    DEFINE_CONFIG_TABLE_MULTI_INDEX
-    config_tables config(contracts::settings, contracts::settings.value);
-    
-    auto citr = config.find(key.value);
-      if (citr == config.end()) { 
-      // only create the error message string in error case for efficiency
-      eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
-    }
-    return citr->value;
-  }
 
 };
 
@@ -252,7 +252,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives))
       }
   }
 }

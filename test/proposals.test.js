@@ -26,7 +26,8 @@ describe('Proposals', async assert => {
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
   console.log('change min stake')
-  await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -148,7 +149,7 @@ describe('Proposals', async assert => {
   await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
   await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
 
-  console.log('move proposals to active')
+  console.log('1 move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
 
@@ -616,7 +617,7 @@ describe('Evaluation phase', async assert => {
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
   console.log('change min stake')
-  await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -780,7 +781,7 @@ describe('Participants', async assert => {
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('change min stake')
-  await contracts.settings.configure('propminstake', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -1010,7 +1011,7 @@ describe('Proposals Quorum', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
   console.log('set settings')
-  await contracts.settings.configure("propminstake", 2 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
 
   // tested with 25 - pass, pass
   // 33 - fail, pass
@@ -1415,8 +1416,8 @@ describe('Demote inactive citizens', async assert => {
 
   const testActiveSize = async expectedValues => {
     const sizes = await eos.getTableRows({
-      code: accounts,
-      scope: accounts,
+      code: proposals,
+      scope: proposals,
       table: 'sizes',
       json: true,
     })
@@ -1470,22 +1471,26 @@ describe('Demote inactive citizens', async assert => {
     'visitor'
   ]
 
+  console.log('testActives')
   await testActives(actives)
   await testActiveSize(3)
 
   await sleep(2000)
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
+  console.log('testActives 2')
   await testActives(actives)
   await testActiveSize(3)
   await testUserStatus(users)
 
+  console.log('createx 2')
   await contracts.proposals.createx(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   await sleep(8000)
 
+  console.log('favour')
   await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
 
   const activesAfterVote = await eos.getTableRows({
@@ -1496,11 +1501,16 @@ describe('Demote inactive citizens', async assert => {
   })
   const firstActive = activesAfterVote.rows.filter(a => a.account === firstuser)
   const secondActive = activesAfterVote.rows.filter(a => a.account === seconduser)
-
+  
+  console.log('mooncyclesec')
   await contracts.settings.configure('mooncyclesec', 3, { authorization: `${settings}@active` })
   await sleep(2000)
+  console.log('onper 1')
+
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(2000)
+  console.log('onper 2')
+
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   actives[0].active = 0
@@ -1509,6 +1519,8 @@ describe('Demote inactive citizens', async assert => {
   await testActiveSize(1)
   users[0] = 'resident'
   users[2] = 'resident'
+  console.log('testUserStatus 2')
+
   await testUserStatus(users)
 
   console.log('user comes back from resident')
