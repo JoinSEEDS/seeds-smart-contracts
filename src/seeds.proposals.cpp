@@ -39,26 +39,53 @@ void proposals::reset() {
   }
 }
 
-bool proposals::is_enough_stake(asset staked, asset quantity) {
-  uint64_t min = min_stake(quantity);
+bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
+  uint64_t min = min_stake(quantity, fund);
   return staked.amount >= min;
 }
 
-uint64_t proposals::min_stake(asset quantity) {
-  auto prop_percentage = config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.");
-  auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
-  auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
-  asset quantity_prop_percentage = prop_percentage.value * quantity / 100;
+uint64_t proposals::cap_stake(name fund) {
+  uint64_t prop_max;
+  if (fund == bankaccts::campaigns) {
+    prop_max = config.get(name("prop.cmp.cap").value, "The prop.cmp.cap has not been initialized yet.").value;
+  } else if (fund == bankaccts::alliances) {
+    prop_max = config.get(name("prop.al.cap").value, "The prop.al.cap has not been initialized yet.").value;
+  } else {
+    prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.").value;
+  }
+  return prop_max;
+}
 
-  uint64_t min_stake = std::max(uint64_t(prop_min.value), uint64_t(quantity_prop_percentage.amount));
-  min_stake = std::min(prop_max.value, min_stake);
+uint64_t proposals::min_stake(asset quantity, name fund) {
+
+  double prop_percentage;
+  uint64_t prop_min;
+  uint64_t prop_max;
+
+  prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.").value;
+  
+  if (fund == bankaccts::campaigns) {
+    prop_percentage = (double)config.get(name("prop.cmp.pct").value, "The prop.cmp.pct has not been initialized yet.").value / 10000.0;
+    prop_max = config.get(name("prop.cmp.cap").value, "The prop.cmp.cap has not been initialized yet.").value;
+  } else if (fund == bankaccts::alliances) {
+    prop_percentage = (double)config.get(name("prop.al.pct").value, "The prop.al.pct has not been initialized yet.").value / 10000.0;
+    prop_max = config.get(name("prop.al.cap").value, "The prop.al.cap has not been initialized yet.").value;
+  } else {
+    prop_percentage = (double)config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.").value;
+    prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.").value;
+  }
+
+  asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), seeds_symbol);
+
+  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max, min_stake);
   return min_stake;
 }
 
 ACTION proposals::checkstake(uint64_t prop_id) {
   auto pitr = props.find(prop_id);
   check(pitr != props.end(), "proposal not found");
-  check(is_enough_stake(pitr->staked, pitr->quantity), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity)) + "' }");
+  check(is_enough_stake(pitr->staked, pitr->quantity, pitr->fund), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity, pitr->fund)) + "' }");
 }
 
 void proposals::update_min_stake(uint64_t prop_id) {
@@ -66,7 +93,7 @@ void proposals::update_min_stake(uint64_t prop_id) {
   auto pitr = props.find(prop_id);
   check(pitr != props.end(), "proposal not found");
 
-  uint64_t min = min_stake(pitr->quantity);
+  uint64_t min = min_stake(pitr->quantity, pitr->fund);
 
   auto mitr = minstake.find(prop_id);
   if (mitr == minstake.end()) {
@@ -211,7 +238,7 @@ void proposals::onperiod() {
         }
       }
 
-      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
+      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
         });
@@ -586,9 +613,9 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       check(pitr != props.end(), "no proposal");
       check(from == pitr->creator, "only the creator can stake into a proposal");
 
-      auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
-      check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
-        "The staked value can not be greater than " + std::to_string(prop_max.value / 10000) + " Seeds");
+      uint64_t prop_max = cap_stake(pitr->fund);
+      check((pitr -> staked + quantity) <= asset(prop_max, seeds_symbol), 
+        "The staked value can not be greater than " + std::to_string(prop_max / 10000) + " Seeds");
 
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;
@@ -970,12 +997,31 @@ void proposals::demote_citizen(name account) {
 }
 
 void proposals::size_change(name id, int64_t delta) {
-  action(
-    permission_level(contracts::accounts, "active"_n),
-    contracts::accounts,
-    "changesize"_n,
-    std::make_tuple(id, delta)
-  ).send();
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+  if (id == "active.sz"_n) {
+    action(
+      permission_level(contracts::accounts, "active"_n),
+      contracts::accounts,
+      "changesize"_n,
+      std::make_tuple(id, delta)
+    ).send();
+  }
 }
 
 void proposals::testvdecay(uint64_t timestamp) {
