@@ -681,7 +681,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = (current * 100) / (total + 1);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -730,7 +730,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = (current * 100) / (total + 1);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
