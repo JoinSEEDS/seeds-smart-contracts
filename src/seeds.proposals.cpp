@@ -47,11 +47,11 @@ bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
 uint64_t proposals::cap_stake(name fund) {
   uint64_t prop_max;
   if (fund == bankaccts::campaigns) {
-    prop_max = config.get(name("prop.cmp.cap").value, "The prop.cmp.cap has not been initialized yet.").value;
+    prop_max = config_get(name("prop.cmp.cap"));
   } else if (fund == bankaccts::alliances) {
-    prop_max = config.get(name("prop.al.cap").value, "The prop.al.cap has not been initialized yet.").value;
+    prop_max = config_get(name("prop.al.cap"));
   } else {
-    prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.").value;
+    prop_max = config_get(name("propmaxstake"));
   }
   return prop_max;
 }
@@ -62,17 +62,17 @@ uint64_t proposals::min_stake(asset quantity, name fund) {
   uint64_t prop_min;
   uint64_t prop_max;
 
-  prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.").value;
+  prop_min = config_get(name("propminstake"));
   
   if (fund == bankaccts::campaigns) {
-    prop_percentage = (double)config.get(name("prop.cmp.pct").value, "The prop.cmp.pct has not been initialized yet.").value / 10000.0;
-    prop_max = config.get(name("prop.cmp.cap").value, "The prop.cmp.cap has not been initialized yet.").value;
+    prop_percentage = (double)config_get(name("prop.cmp.pct"));
+    prop_max = config_get(name("prop.cmp.cap"));
   } else if (fund == bankaccts::alliances) {
-    prop_percentage = (double)config.get(name("prop.al.pct").value, "The prop.al.pct has not been initialized yet.").value / 10000.0;
-    prop_max = config.get(name("prop.al.cap").value, "The prop.al.cap has not been initialized yet.").value;
+    prop_percentage = (double)config_get(name("prop.al.pct"));
+    prop_max = config_get(name("prop.al.cap"));
   } else {
-    prop_percentage = (double)config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.").value;
-    prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.").value;
+    prop_percentage = (double)config_get(name("propstakeper"));
+    prop_max = config_get(name("propmaxstake"));
   }
 
   asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), seeds_symbol);
@@ -154,8 +154,8 @@ void proposals::onperiod() {
 
     auto pitr = props.begin();
 
-    auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
-    uint64_t quorum = config.find(name("propquorum").value)->value;
+    uint64_t prop_majority = config_get(name("propmajority"));
+    uint64_t quorum = config_get(name("propquorum"));
 
     uint64_t number_active_proposals = 0;
     uint64_t total_eligible_voters = get_size("active.sz"_n);
@@ -169,7 +169,7 @@ void proposals::onperiod() {
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
 
-        double majority = double(prop_majority.value) / 100.0;
+        double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
         bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
@@ -298,9 +298,9 @@ void proposals::updatevoice(uint64_t start) {
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
-  while (vitr != voice.end() && count < batch_size.value) {
+  while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
       if (csitr != cspoints.end()) {
         voice.modify(vitr, _self, [&](auto& item) {
@@ -339,8 +339,8 @@ void proposals::updateactive(uint64_t start) {
   require_auth(get_self());
 
   auto aitr = start == 0 ? actives.begin() : actives.find(start);
-  uint64_t batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.").value;
-  uint64_t moon_cycle_sec = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.").value;
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t moon_cycle_sec = config_get(name("mooncyclesec"));
   uint64_t count = 0;
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
@@ -370,13 +370,13 @@ void proposals::updateactive(uint64_t start) {
 }
 
 uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
-  return moon_cycle.value / 2; // Using half moon cycles for now
+  auto moon_cycle = config_get(name("mooncyclesec"));
+  return moon_cycle / 2; // Using half moon cycles for now
 }
 
 uint64_t proposals::get_voice_decay_period_sec() {
-  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
-  return voice_decay_period.value;
+  auto voice_decay_period = config_get(name("propdecaysec"));
+  return voice_decay_period;
 }
 
 void proposals::decayvoices() {
@@ -385,8 +385,8 @@ void proposals::decayvoices() {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
   uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
-  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t decay_time = config_get(name("decaytime"));
+  uint64_t decay_sec = config_get(name("propdecaysec"));
 
   if ((c.t_onperiod < now)
       && (now - c.t_onperiod >= decay_time)
@@ -394,19 +394,19 @@ void proposals::decayvoices() {
   ) {
     c.t_voicedecay = now;
     cycle.set(c, get_self());
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-    decayvoice(0, batch_size.value);
+    uint64_t batch_size = config_get(name("batchsize"));
+    decayvoice(0, batch_size);
   }
 }
 
 void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
-  auto percentage_decay = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.");
-  check(percentage_decay.value <= 100, "Voice decay parameter can not be more than 100%.");
+  auto percentage_decay = config_get(name("vdecayprntge"));
+  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
   uint64_t count = 0;
 
-  double multiplier = (100.0 - (double)percentage_decay.value) / 100.0;
+  double multiplier = (100.0 - (double)percentage_decay) / 100.0;
 
   while (vitr != voice.end() && count < chunksize) {
     voice.modify(vitr, _self, [&](auto & v){
@@ -626,24 +626,24 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 }
 
 void proposals::erasepartpts(uint64_t active_proposals) {
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-  auto reward_points = config.get(name("voterep1.ind").value, "The voterep1.ind parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t reward_points = config_get(name("voterep1.ind"));
 
   uint64_t counter = 0;
   auto pitr = participants.begin();
-  while (pitr != participants.end() && counter < batch_size.value) {
+  while (pitr != participants.end() && counter < batch_size) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(pitr -> account, reward_points.value)
+        std::make_tuple(pitr -> account, reward_points)
       ).send();
     }
     counter += 1;
     pitr = participants.erase(pitr);
   }
 
-  if (counter == batch_size.value) {
+  if (counter == batch_size) {
     transaction trx_erase_participants{};
     trx_erase_participants.actions.emplace_back(
       permission_level(_self, "active"_n),
@@ -736,14 +736,14 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   });
 
   if (is_new) {
-    auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+    auto rep = config_get(name("voterep2.ind"));
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
       // add reputation for entering in the table
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, rep.value)
+        std::make_tuple(voter, rep)
       ).send();
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
@@ -838,11 +838,11 @@ void proposals::refund_staked(name beneficiary, asset quantity) {
 }
 void proposals::change_rep(name beneficiary, bool passed) {
   if (passed) {
-    auto reward_points = config.get(name("proppass.rep").value, "The proppass.rep parameter has not been initialized yet.");
+    auto reward_points = config_get(name("proppass.rep"));
     action(
       permission_level{contracts::accounts, "active"_n},
       contracts::accounts, "addrep"_n,
-      std::make_tuple(beneficiary, reward_points.value)
+      std::make_tuple(beneficiary, reward_points)
     ).send();
 
   }
@@ -926,15 +926,15 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
-  }s
+  }
 }
 
 uint64_t proposals::calculate_decay(uint64_t voice) {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
   
-  uint64_t decay_percentage = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.").value;
-  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
-  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t decay_percentage = config_get(name("vdecayprntge"));
+  uint64_t decay_time = config_get(name("decaytime"));
+  uint64_t decay_sec = config_get(name("propdecaysec"));
   uint64_t temp = c.t_onperiod + decay_time;
 
   check(decay_percentage <= 100, "The decay percentage could not be grater than 100%");

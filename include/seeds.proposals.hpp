@@ -28,7 +28,6 @@ CONTRACT proposals : public contract {
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
           sizes(receiver, receiver.value),
-          config(contracts::settings, contracts::settings.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
 
@@ -124,10 +123,6 @@ CONTRACT proposals : public contract {
       uint64_t calculate_decay(uint64_t voice);
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
-
-      DEFINE_CONFIG_TABLE
-        
-      DEFINE_CONFIG_TABLE_MULTI_INDEX
 
       DEFINE_SIZE_TABLE
 
@@ -225,7 +220,6 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
 
-    config_tables config;
     proposal_tables props;
     participant_tables participants;
     user_tables users;
@@ -235,6 +229,19 @@ CONTRACT proposals : public contract {
     min_stake_tables minstake;
     active_tables actives;
     size_tables sizes;
+
+  uint64_t config_get(name key) {
+    DEFINE_CONFIG_TABLE
+    DEFINE_CONFIG_TABLE_MULTI_INDEX
+    config_tables config(contracts::settings, contracts::settings.value);
+    
+    auto citr = config.find(key.value);
+      if (citr == config.end()) { 
+      // only create the error message string in error case for efficiency
+      eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+    }
+    return citr->value;
+  }
 
 };
 
