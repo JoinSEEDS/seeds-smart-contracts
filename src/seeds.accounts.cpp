@@ -428,7 +428,12 @@ void accounts::send_reward(name beneficiary, asset quantity)
 
   // TODO: Check balance - if the balance runs out, the rewards run out too.
 
-  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
+  // Checks the current SEEDS price from tlosto.seeds table
+  auto price = pricehistory.end()->seeds_usd;
+  auto rate = price.amount / 909091;
+  asset adjusted_qty = quantity * rate;
+
+  send_to_escrow(bankaccts::referrals, beneficiary, adjusted_qty, "referral reward");
 }
 
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
