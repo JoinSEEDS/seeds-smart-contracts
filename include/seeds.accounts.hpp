@@ -24,6 +24,7 @@ CONTRACT accounts : public contract {
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
+          pricehistory(contracts::exchange, contracts::exchange.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
           actives(contracts::proposals, contracts::proposals.value)
@@ -212,6 +213,8 @@ CONTRACT accounts : public contract {
     size_tables sizes;
 
     config_tables config;
+
+    price_history_tables pricehistory;
 
     // From history contract
     TABLE transaction_table {
