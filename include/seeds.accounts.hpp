@@ -7,6 +7,7 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/price_history_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -142,6 +143,10 @@ CONTRACT accounts : public contract {
       DEFINE_CBS_TABLE
 
       DEFINE_CBS_TABLE_MULTI_INDEX
+
+      DEFINE_PRICE_HISTORY_TABLE
+
+      DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
 
       TABLE ref_table {
         name referrer;
