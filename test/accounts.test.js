@@ -502,7 +502,7 @@ describe('vouching with reputation', async assert => {
 
 })
 
-describe.only('Ambassador and Org rewards', async assert => {
+describe('Ambassador and Org rewards', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
