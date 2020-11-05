@@ -4,6 +4,7 @@
 #include <eosio/singleton.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <tables/price_history_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -119,6 +120,10 @@ CONTRACT exchange : public contract {
 
       uint64_t primary_key()const { return id; }
     };
+
+    DEFINE_PRICE_HISTORY_TABLE
+
+    DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
 
     TABLE price_history_table {
       uint64_t id;
