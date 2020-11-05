@@ -642,16 +642,6 @@ void accounts::testcitizen(name user)
   add_active(user);
 }
 
-void accounts::genesis(name user) // Remove this after Golive
-{ 
-  require_auth(_self);
-
-  testresident(user);
-  
-  testcitizen(user);
-
-}
-
 // return number of transactions outgoing, until a limit
 uint32_t accounts::num_transactions(name account, uint32_t limit) {
   transaction_tables transactions(contracts::history, account.value);
