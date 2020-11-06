@@ -425,13 +425,21 @@ void accounts::update(name user, name type, string nickname, string image, strin
 
 void accounts::send_reward(name beneficiary, asset quantity)
 {
-
-  // TODO: Check balance - if the balance runs out, the rewards run out too.
+  // Check balance - if the balance runs out, the rewards run out too.
+  
+  auto sitr = sponsors.find(bankaccts::referrals.value);
+  auto rem_balance = sitr->liquid_balance;
+  if (quantity > rem_balance) {
+    // check(false, ("DEBUG: not enough balance = "+rem_balance.to_string()).c_str());
+    return;
+  }
 
   // Checks the current SEEDS price from tlosto.seeds table
-  auto price = pricehistory.end()->seeds_usd;
-  auto rate = price.amount / 909091;
-  asset adjusted_qty = quantity * rate;
+  auto firstprice = pricehistory.rbegin()->seeds_usd;
+  auto lastprice = pricehistory.begin()->seeds_usd;
+  float rate = (float)firstprice.amount / (float) lastprice.amount;
+  asset adjusted_qty(quantity.amount*rate, symbol("SEEDS", 4));
+  // check(false, ("DEBUG: lastprice="+lastprice.to_string()+", rate="+std::to_string(rate)+", qty="+quantity.to_string()+", adj="+adjusted_qty.to_string()).c_str());
 
   send_to_escrow(bankaccts::referrals, beneficiary, adjusted_qty, "referral reward");
 }
