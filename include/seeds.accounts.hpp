@@ -8,6 +8,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/price_history_table.hpp>
+#include <tables/sponsors_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -25,6 +26,7 @@ CONTRACT accounts : public contract {
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
           pricehistory(contracts::exchange, contracts::exchange.value),
+          sponsors(contracts::escrow, contracts::escrow.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
           actives(contracts::proposals, contracts::proposals.value)
@@ -149,6 +151,10 @@ CONTRACT accounts : public contract {
 
       DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
 
+      DEFINE_SPONSORS_TABLE
+
+      DEFINE_SPONSORS_TABLE_MULTI_INDEX
+
       TABLE ref_table {
         name referrer;
         name invited;
@@ -213,6 +219,7 @@ CONTRACT accounts : public contract {
     config_tables config;
 
     price_history_tables pricehistory;
+    sponsors_tables sponsors;
 
     // From history contract
     TABLE transaction_table {
