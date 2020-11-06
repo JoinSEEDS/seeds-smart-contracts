@@ -3,6 +3,7 @@
 #include <eosio/asset.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <tables/sponsors_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -95,16 +96,10 @@ CONTRACT escrow : public contract {
         > token_lock_table;
 
         // scoped by get_self()
-        TABLE sponsors_table {
-            name    sponsor;
-            asset   locked_balance = asset (0, symbol("SEEDS", 4));
-            asset   liquid_balance = asset (0, symbol("SEEDS", 4));
+        DEFINE_SPONSORS_TABLE
 
-            uint64_t primary_key() const { return sponsor.value; }
-        };
-
-        typedef eosio::multi_index<"sponsors"_n, sponsors_table> sponsors_tables;
-
+        DEFINE_SPONSORS_TABLE_MULTI_INDEX
+        
         token_lock_table locks;
         sponsors_tables sponsors;
 
