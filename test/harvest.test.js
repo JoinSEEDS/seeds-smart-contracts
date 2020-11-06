@@ -530,7 +530,7 @@ describe("harvest transaction score", async assert => {
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', memoprefix+" tx "+i, { authorization: `${firstuser}@active` })
     await sleep(400)
   }
-  await checkScores([26, 16], [50, 0], "2 reputation, 2 tx", "75, 100 score")
+  await checkScores([26, 16], [50, 0], "2 reputation, 2 tx", "50, 0 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
@@ -568,7 +568,7 @@ describe("harvest transaction score", async assert => {
     given: 'contribution score',
     should: 'have contribution score score',
     actual: cspoints.rows.map(({ rank }) => rank), 
-    expected: [0]
+    expected: [89]
   })
 
 })
