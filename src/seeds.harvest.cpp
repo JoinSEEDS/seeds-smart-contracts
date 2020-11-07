@@ -507,7 +507,7 @@ void harvest::ranktx(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
 
   while (titr != txpt_by_points.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     txpt_by_points.modify(titr, _self, [&](auto& item) {
       item.rank = rank;
@@ -556,7 +556,7 @@ void harvest::rankplanted(uint128_t start_val, uint64_t chunk, uint64_t chunksiz
 
   while (pitr != planted_by_planted.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     planted_by_planted.modify(pitr, _self, [&](auto& item) {
       item.rank = rank;
@@ -684,7 +684,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     cs_by_points.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
