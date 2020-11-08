@@ -427,12 +427,13 @@ void accounts::send_reward(name beneficiary, asset quantity)
 {
   // Check balance - if the balance runs out, the rewards run out too.
   
-  auto sitr = sponsors.find(bankaccts::referrals.value);
-  auto rem_balance = sitr->liquid_balance;
-  if (quantity > rem_balance) {
-    // check(false, ("DEBUG: not enough balance = "+rem_balance.to_string()).c_str());
-    return;
-  }
+  // auto sitr = sponsors.find(bankaccts::referrals.value);
+  // auto rem_balance = sitr->liquid_balance;
+  // check(false, ("DEBUG: rem balance = "+rem_balance.to_string()+", qty= "+quantity.to_string()).c_str());
+  // if (quantity > rem_balance) {
+  //   check(false, ("DEBUG: not enough balance = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
+  //   return;
+  // }
 
   // Checks the current SEEDS price from tlosto.seeds table
   auto firstprice = pricehistory.rbegin()->seeds_usd;

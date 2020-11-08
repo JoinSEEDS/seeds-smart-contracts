@@ -619,7 +619,7 @@ describe('Ambassador and Org rewards', async assert => {
 })
 
 
-describe('Proportional rewards', async assert => {
+describe.only('Proportional rewards', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -638,7 +638,7 @@ describe('Proportional rewards', async assert => {
   console.log("set exchange price")
   await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
   await contracts.exchange.incprice({ authorization: `${exchange}@active` })
-  
+
   console.log("set fill rewards account")
   await contracts.token.transfer('hypha.seeds', 'refer.seeds', '100000.0000 SEEDS', '', { authorization: `hypha.seeds@active` })
 
@@ -675,9 +675,9 @@ describe('Proportional rewards', async assert => {
 
     assert({
       given: text,
-      should: 'reveive Seeds in escrow',
-      actual: escrows,
-      expected: [
+      should: 'receive Seeds in escrow',
+      actual: escrows.rows[n-1],
+      expected:
         {
           "lock_type": "event",
           "sponsor": "refer.seeds",
@@ -685,8 +685,7 @@ describe('Proportional rewards', async assert => {
           "quantity": amount+" SEEDS",
           "trigger_event": "golive",
           "trigger_source": "dao.hypha",
-        },
-      ]
+        }
     })
   }
 
@@ -700,7 +699,7 @@ describe('Proportional rewards', async assert => {
   console.log("user becomes citizen")
   await contracts.accounts.testcitizen(invited, { authorization: `${accounts}@active` })
 
-  const expected_reward2 = await setting_in_seeds("refrwd2.ind") * 0.968054;
+  const expected_reward2 = await setting_in_seeds("refrwd2.ind") * 0.9680538;
 
   await checkBalances("after resident", expected_reward2.toFixed(4))
 
