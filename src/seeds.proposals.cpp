@@ -896,6 +896,7 @@ void proposals::testvdecay(uint64_t timestamp) {
 }
 
 void proposals::migrathistry() {
+  require_auth(get_self());
 
   auto pitr = props.begin();
 
