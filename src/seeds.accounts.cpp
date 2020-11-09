@@ -1,5 +1,6 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
+#include <eosio/symbol.hpp>
 #include <eosio/transaction.hpp>
 #include <harvest_table.hpp>
 
@@ -426,14 +427,14 @@ void accounts::update(name user, name type, string nickname, string image, strin
 void accounts::send_reward(name beneficiary, asset quantity)
 {
   // Check balance - if the balance runs out, the rewards run out too.
-  
-  // auto sitr = sponsors.find(bankaccts::referrals.value);
-  // auto rem_balance = sitr->liquid_balance;
-  // check(false, ("DEBUG: rem balance = "+rem_balance.to_string()+", qty= "+quantity.to_string()).c_str());
-  // if (quantity > rem_balance) {
-  //   check(false, ("DEBUG: not enough balance = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
-  //   return;
-  // }
+  token_accts accts(contracts::token, bankaccts::referrals.value);
+  const auto& acc = accts.get(symbol("SEEDS", 4).code().raw());
+  auto rem_balance = acc.balance;
+  if (quantity > rem_balance) {
+    // Should not fail in case not enough balance
+    // check(false, ("DEBUG: not enough balance on "+bankaccts::referrals.to_string()+" = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
+    return;
+  }
 
   // Checks the current SEEDS price from tlosto.seeds table
   auto firstprice = pricehistory.rbegin()->seeds_usd;

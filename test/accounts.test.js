@@ -619,7 +619,7 @@ describe('Ambassador and Org rewards', async assert => {
 })
 
 
-describe.only('Proportional rewards', async assert => {
+describe('Proportional rewards', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -638,9 +638,6 @@ describe.only('Proportional rewards', async assert => {
   console.log("set exchange price")
   await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
   await contracts.exchange.incprice({ authorization: `${exchange}@active` })
-
-  console.log("set fill rewards account")
-  await contracts.token.transfer('hypha.seeds', 'refer.seeds', '100000.0000 SEEDS', '', { authorization: `hypha.seeds@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
