@@ -61,7 +61,8 @@ describe('accounts', async assert => {
   const thetoken = await eos.contract(token)
   const settingscontract = await eos.contract(settings)
   const escrowContract = await eos.contract(escrow)
-
+  const exchangecontract = await eos.contract(exchange)
+ 
   console.log('reset proposals')
   await proposalsContract.reset({ authorization: `${proposals}@active` })
 
@@ -74,8 +75,13 @@ describe('accounts', async assert => {
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
 
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+
   console.log('reset escrow')
   await escrowContract.reset({ authorization: `${escrow}@active` })
+
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -340,6 +346,7 @@ describe('vouching', async assert => {
   const thetoken = await eos.contract(token)
   const harvestContract = await eos.contract(harvest)
   const settingscontract = await eos.contract(settings)
+  const exchangecontract = await eos.contract(exchange)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -352,6 +359,10 @@ describe('vouching', async assert => {
 
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -465,6 +476,7 @@ describe('vouching with reputation', async assert => {
   const contract = await eos.contract(accounts)
   const harvestContract = await eos.contract(harvest)
   const settingscontract = await eos.contract(settings)
+  const exchangecontract = await eos.contract(exchange)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -474,6 +486,10 @@ describe('vouching with reputation', async assert => {
 
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -507,13 +523,15 @@ describe('Ambassador and Org rewards', async assert => {
     return
   }
 
-  const contracts = await initContracts({ settings, accounts, organization, token, onboarding, escrow })
+  const contracts = await initContracts({ settings, accounts, organization, token, onboarding, escrow, exchange })
 
   console.log('reset contracts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   await contracts.settings.reset({ authorization: `${settings}@active` })
   await contracts.organization.reset({ authorization: `${organization}@active` })
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -723,13 +741,17 @@ describe('make resident', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, token, history })
+  const contracts = await initContracts({ accounts, token, history, exchange })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('reset history')
   await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+
+  console.log('reset exchange')
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })

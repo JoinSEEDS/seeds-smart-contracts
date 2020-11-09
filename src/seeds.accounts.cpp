@@ -437,9 +437,9 @@ void accounts::send_reward(name beneficiary, asset quantity)
   }
 
   // Checks the current SEEDS price from tlosto.seeds table
-  auto firstprice = pricehistory.rbegin()->seeds_usd;
-  auto lastprice = pricehistory.begin()->seeds_usd;
-  float rate = (float)firstprice.amount / (float) lastprice.amount;
+  auto lastprice = pricehistory.rbegin()->seeds_usd;
+  auto initialprice = pricehistory.begin()->seeds_usd;
+  float rate = (float)lastprice.amount / (float) initialprice.amount;
   asset adjusted_qty(quantity.amount*rate, symbol("SEEDS", 4));
   // check(false, ("DEBUG: lastprice="+lastprice.to_string()+", rate="+std::to_string(rate)+", qty="+quantity.to_string()+", adj="+adjusted_qty.to_string()).c_str());
 
