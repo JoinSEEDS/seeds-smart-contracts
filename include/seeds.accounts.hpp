@@ -27,6 +27,7 @@ CONTRACT accounts : public contract {
           pricehistory(contracts::exchange, contracts::exchange.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
+          accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value)
           {}
 
@@ -202,6 +203,14 @@ CONTRACT accounts : public contract {
         const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
     > balance_tables;
     balance_tables balances;
+
+    struct [[eosio::table]] account {
+      asset    balance;
+
+      uint64_t primary_key()const { return balance.symbol.code().raw(); }
+    };
+    typedef eosio::multi_index< "accounts"_n, account > token_accts;
+    token_accts accts; 
 
     cbs_tables cbs;
     ref_tables refs;
