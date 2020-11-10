@@ -903,7 +903,7 @@ void proposals::migrathistry() {
   auto pitr = props.begin();
 
   while (pitr != props.end()) {
-    acct_history(pitr->creator, pitr->quantity.amount, pitr->status == name("passed"));
+    acct_history(pitr->creator, pitr->quantity.amount, pitr->status == name("passed") || pitr->status == name("evaluate"));
     pitr++;
   }
 
