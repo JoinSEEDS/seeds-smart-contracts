@@ -1076,15 +1076,6 @@ void proposals::recover_voice(name account) {
   }
 }
 
-uint64_t proposals::config_get(name key) {
-  auto citr = config.find(key.value);
-  if (citr == config.end()) { 
-    // only create the error message string in error case for efficiency
-    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
-  }
-  return citr->value;
-}
-
 void proposals::removeactive(name account) {
   require_auth(get_self());
 

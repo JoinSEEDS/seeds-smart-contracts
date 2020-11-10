@@ -1040,6 +1040,9 @@ describe('Proposals Quorum', async assert => {
   await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
   await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
 
+  console.log('fill bank')
+  await contracts.token.transfer(firstuser, campaignbank, '200000.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
   console.log('deposit stake (memo 2)')

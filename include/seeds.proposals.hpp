@@ -124,7 +124,6 @@ CONTRACT proposals : public contract {
       void change_rep(name beneficiary, bool passed);
       bool is_trusted(name account);
       void acct_history(name account, uint64_t amount, bool passed);
-      uint64_t config_get(name key);
       void size_change(name id, int64_t delta);
       uint64_t get_size(name id);
       void recover_voice(name account);
@@ -260,7 +259,6 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
-    size_tables sizes;
 
 };
 
