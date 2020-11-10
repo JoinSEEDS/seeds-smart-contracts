@@ -86,7 +86,9 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
+// quorum as integer % value - e.g. 90 == 90%
 uint64_t proposals::get_quorum(uint64_t total_proposals) {
+  // These need to be settings
   uint64_t quorum = total_proposals ? 90 / total_proposals : 0;
   quorum = std::max((uint64_t)7, quorum);
   return std::min((uint64_t)20, quorum);
