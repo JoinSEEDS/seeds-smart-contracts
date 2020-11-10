@@ -501,6 +501,8 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 }
 
 void proposals::erasepartpts(uint64_t active_proposals) {
+  require_auth(get_self());
+
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t reward_points = config_get(name("voterep1.ind"));
 
