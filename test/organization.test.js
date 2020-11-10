@@ -69,13 +69,6 @@ describe('organization', async assert => {
     await contracts.organization.create(firstuser, 'testorg2', "Org 2", eosDevKey,  { authorization: `${firstuser}@active` })
     await contracts.organization.create(seconduser, 'testorg3', "Org 3 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
 
-    let plantedAfter = (await getTableRows({
-        code: harvest,
-        scope: harvest,
-        table: 'balances',
-        json: true
-    })).rows.map( item => parseInt(item.planted) )
-
     const initialOrgs = await getTableRows({
         code: organization,
         scope: organization,
@@ -171,13 +164,6 @@ describe('organization', async assert => {
     catch(err){
         console.log('user has not enough balance')
     }
-
-    assert({
-        given: 'organisations were created',
-        should: 'they have planted scores',
-        actual: plantedAfter,
-        expected: [600, 200, 200, 200] // 600 is orgs contract, the other 3 are 3 created orgs
-    })
 
     assert({
         given: 'firstuser and second user transfer to organization contract',
@@ -633,7 +619,7 @@ describe('organization scores', async assert => {
     }))
     
     console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
+    //await contracts.settings.reset({ authorization: `${settings}@active` })
 
     console.log('reset organization')
     await contracts.organization.reset({ authorization: `${organization}@active` })
@@ -928,7 +914,7 @@ describe('organization status', async assert => {
     await contracts.token.resetweekly({ authorization: `${token}@active` })
 
     console.log('configure')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
+    //await contracts.settings.reset({ authorization: `${settings}@active` })
 
     const org1 = 'testorg1'
     const org2 = 'testorg2'
