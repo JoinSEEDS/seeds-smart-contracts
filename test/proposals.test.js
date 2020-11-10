@@ -1332,7 +1332,7 @@ describe('Voice decay', async assert => {
 })
 
 
-describe.only('Build trust', async assert => {
+describe('Build trust', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
