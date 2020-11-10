@@ -4,12 +4,14 @@ void settings::reset() {
   require_auth(_self);
 
   // config
+  // Description has multiplier in brackets [x10000] for example
   confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "Minimum proposals stake threshold (in Seeds)", high_impact); 
   confwithdesc(name("propmaxstake"), uint64_t(11111) * uint64_t(10000), "Max proposals stake 11,111 threshold (in Seeds)", high_impact);
   confwithdesc(name("propstakeper"), 5, "Proposal funding fee in % - 5%", high_impact); 
   confwithdesc(name("prop.maxask"), uint64_t(250000) * uint64_t(10000), "Max first ask 250,000 Seeds", high_impact);
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); 
+  confwithdesc(name("terminat.rep"), -50, "Reputation points penalty for terminated proposal", high_impact); 
   
   confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
@@ -68,10 +70,35 @@ void settings::reset() {
   confwithdesc(name("secndstoexec"), 60, "Seconds to execute", high_impact);
 
   // =====================================
+  // Qualifying Transactions 
+  // =====================================
+  conffloat(name("tx.cycle"), 3.0 , "Transaction Volume Cycle length / lookback period", high_impact);   
+  conffloat(name("local.mul"), 1.5 , "Local Economy Multiplier - Multiplier for exchanging within Bioregion", high_impact);   
+  conffloat(name("regen.mul"), 1.5 , "Regenerative Organisation Multiplier - multiplier for exchanging with Regenerative organisations", high_impact);   
+
+  // =====================================
+  // reputation points 
+  // =====================================
+  conffloat(name("flag.thresh"), -50.0 , "Flag threshold - nothing happens until an account is flagged with threshold negative points.", high_impact); 
+  
+  conffloat(name("flag.bas.res"), -10.0 , "Base value of flag rep points subtracted", high_impact); 
+  
+  conffloat(name("flag.bas.cit"), -20.0 , "Base value of flag rep points subtracted", high_impact); 
+
+  // =====================================
+  // Vote governance delegation multiplier 
+  // =====================================
+  conffloat(name("votedel.mul"), 0.8 , "Rep points multiplier - delegator get 80% of original rewards, delegate gets the other 20%", high_impact); 
+
+
+  // =====================================
   // citizenship path 
   // =====================================
+
+  confwithdesc(name("vis.plant"), 5 * 10000, "Minimum planted amount to participate in Seeds [x10000]", high_impact);   
+
   // Resident
-  confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   // min planted 50 Seeds
+  confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   
   confwithdesc(name("res.tx"), 10, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
   confwithdesc(name("res.referred"), 1, "Minimum number of referrals made to become a Resident", high_impact);         // min referred 1 other user
   confwithdesc(name("res.rep.pt"), 50, "Minimum reputation points to become a Resident", high_impact);          // min rep points
@@ -86,14 +113,33 @@ void settings::reset() {
 
 
   // =====================================
-  // referral rewards 
+  // vouch rewards - community building points
   // =====================================
 
   // community buiding points for referrer when user becomes resident
-  confwithdesc(name("refcbp1.ind"), 1, "Community buiding points for referrer when user becomes resident", high_impact);
+  confwithdesc(name("vou.cbp1.ind"), 1, "Community buiding points for referrer when user becomes resident", high_impact);
 
   // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("refcbp2.ind"), 1, "Community buiding points for referrer when user becomes citizen", high_impact);
+  confwithdesc(name("vou.cbp2.ind"), 1, "Community buiding points for referrer when user becomes citizen", high_impact);
+
+  // community buiding points for referrer when user becomes citizen
+  confwithdesc(name("ref.org1.cbp1"), 4, "Community buiding points for referrer when user they invited has a reputable org - when org becomes reputable", high_impact);
+
+  // community buiding points for Local Gathering
+  confwithdesc(name("cbp.loc.meet"), 1, "Local Gathering - When you’re with a Citizen and scan their QR code. One award per lunar cycle.", high_impact);
+  
+  // community buiding points for Local Exchange
+  confwithdesc(name("cbp.loc.exch"), 1, "Local Exchange - When you buy from an organisation in your Bioregion. One award per lunar cycle.", high_impact);
+
+  // community buiding points for Support Regenerative Org.
+  confwithdesc(name("cbp.buy.rgn"), 2, "When you buy from a Regenerative Organisation. One award per lunar cycle.", high_impact);
+
+  // community buiding points for ATM Market Making
+  confwithdesc(name("cbp.atm"), 1, "ATM Market Making: When you provide an offer in the SEEDS ATM and another member takes your offer.", high_impact);
+
+  // =====================================
+  // referral rewards 
+  // =====================================
 
   // reputation points for referrer when user becomes resident
   confwithdesc(name("refrep1.ind"), 1, "Reputation points for referrer when user becomes resident", high_impact);
@@ -138,8 +184,8 @@ void settings::reset() {
   // =====================================
   // forum 
   // =====================================
-  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
-  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user can give in voting", high_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points", high_impact);
   confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
   confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);

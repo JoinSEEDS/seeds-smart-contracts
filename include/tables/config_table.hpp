@@ -5,6 +5,8 @@ using eosio::name;
 #define DEFINE_CONFIG_TABLE TABLE config_table { \
         name param; \
         uint64_t value; \
+        double d_value; \
+        bool is_int_value; \
         string description; \
         name impact; \
 \
