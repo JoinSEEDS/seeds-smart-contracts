@@ -8,6 +8,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <vector>
 #include <cmath>
 
 using namespace eosio;
@@ -26,18 +27,20 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
-          config(contracts::settings, contracts::settings.value),
-          users(contracts::accounts, contracts::accounts.value),
-          sizes(contracts::accounts, contracts::accounts.value)
+          users(contracts::accounts, contracts::accounts.value)
           {}
 
       ACTION reset();
 
       ACTION create(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund);
+      
+      ACTION createx(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, std::vector<uint64_t> pay_percentages);
 
       ACTION cancel(uint64_t id);
 
       ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
+      
+      ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
@@ -75,8 +78,12 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
-      ACTION migrathistry(); // migrate trust - remove again when done
+      ACTION initsz();
 
+      ACTION initactives();
+
+      ACTION migrathistry(); // migrate trust - remove again when done
+      
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -88,12 +95,20 @@ CONTRACT proposals : public contract {
       name type_campaign = "campaign"_n;
       name type_hypha = "hypha"_n;
 
+      std::vector<uint64_t> default_step_distribution = {
+        25,   // initial payout
+        25,   // cycle 1
+        25,   // cycle 2
+        25    // cycle 3
+      };
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
-      bool is_enough_stake(asset staked, asset quantity);
-      uint64_t min_stake(asset quantity);
+      bool is_enough_stake(asset staked, asset quantity, name fund);
+      uint64_t min_stake(asset quantity, name fund);
+      uint64_t cap_stake(name fund);
       void update_min_stake(uint64_t prop_id);
 
       void check_user(name account);
@@ -104,7 +119,8 @@ CONTRACT proposals : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
-      void vote_aux(name voter, uint64_t id, uint64_t amount, name option);
+      void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
+      bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
       bool is_trusted(name account);
       void acct_history(name account, uint64_t amount, bool passed);
@@ -114,14 +130,21 @@ CONTRACT proposals : public contract {
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
+      void check_percentages(std::vector<uint64_t> pay_percentages);
+      asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
 
-      DEFINE_CONFIG_TABLE
+      uint64_t config_get(name key) {
+        DEFINE_CONFIG_TABLE
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
+        config_tables config(contracts::settings, contracts::settings.value);
         
-      DEFINE_CONFIG_TABLE_MULTI_INDEX
-
-      DEFINE_SIZE_TABLE
-
-      DEFINE_SIZE_TABLE_MULTI_INDEX
+        auto citr = config.find(key.value);
+          if (citr == config.end()) { 
+          // only create the error message string in error case for efficiency
+          eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+        }
+        return citr->value;
+      }
 
       TABLE proposal_table {
           uint64_t id;
@@ -142,7 +165,13 @@ CONTRACT proposals : public contract {
           name stage;
           name fund;
           uint64_t creation_date;
+          std::vector<uint64_t> pay_percentages;
+          uint64_t passed_cycle;
+          uint32_t age;
+          asset current_payout;
+
           uint64_t primary_key()const { return id; }
+          uint64_t by_status()const { return status.value; }
       };
 
       TABLE min_stake_table {
@@ -181,30 +210,33 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return account.value; }
       };
 
-    TABLE cycle_table {
-      uint64_t propcycle; 
-      uint64_t t_onperiod; // last time onperiod ran
-      uint64_t t_voicedecay; // last time voice was decayed
-    };
+      TABLE cycle_table {
+        uint64_t propcycle; 
+        uint64_t t_onperiod; // last time onperiod ran
+        uint64_t t_voicedecay; // last time voice was decayed
+      };
 
-    TABLE active_table {
-      name account;
-      uint64_t timestamp;
-      bool active;
+      TABLE active_table {
+        name account;
+        uint64_t timestamp;
+        bool active;
 
-      uint64_t primary_key()const { return account.value; }
-    };
+        uint64_t primary_key()const { return account.value; }
+      };
+    
+      TABLE proposer_history_table {
+        name account;
+        uint64_t props_succeeded;
+        uint64_t props_failed;
+        uint64_t total_raised;
+        uint64_t total_asked;
+        uint64_t primary_key()const { return account.value; }
+      };
 
-    TABLE proposer_history_table {
-      name account;
-      uint64_t props_succeeded;
-      uint64_t props_failed;
-      uint64_t total_raised;
-      uint64_t total_asked;
-      uint64_t primary_key()const { return account.value; }
-    };
-
-    typedef eosio::multi_index<"props"_n, proposal_table> proposal_tables;
+    typedef eosio::multi_index<"props"_n, proposal_table,
+      indexed_by<"bystatus"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
+    > proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
@@ -214,9 +246,12 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
     typedef eosio::multi_index<"prophist"_n, proposer_history_table> proposer_history_tables;
+
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
 
-    config_tables config;
+    DEFINE_SIZE_TABLE
+    DEFINE_SIZE_TABLE_MULTI_INDEX
+
     proposal_tables props;
     participant_tables participants;
     user_tables users;
@@ -234,9 +269,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(update)(addvoice)(changetrust)(favour)(against)
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(migrathistry))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(migrathistry))
       }
   }
 }
