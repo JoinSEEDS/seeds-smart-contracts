@@ -634,7 +634,7 @@ void organization::check_can_make_reputable(name organization) {
     uint64_t regen_score = get_regen_score(organization);
     uint64_t valid_trxs = count_transactions(organization, 300);
 
-    check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
+    check(bitr -> planted.amount + oitr -> planted >= planted_min, "organization has less than the required amount of seeds planted");
     check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
     check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
         std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
