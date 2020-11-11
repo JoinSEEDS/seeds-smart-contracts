@@ -1090,12 +1090,12 @@ describe('Proposals Quorum', async assert => {
 
   const min = 7
   const max = 20
-  await testQuorum(0, 7)
+  await testQuorum(0, 5)
   await testQuorum(1, 20)
   await testQuorum(2, 20)
   await testQuorum(5, 18)
   await testQuorum(10, 9)
-  await testQuorum(20, 7)
+  await testQuorum(20, 5)
 
   assert({
     given: 'failed proposal quorum',

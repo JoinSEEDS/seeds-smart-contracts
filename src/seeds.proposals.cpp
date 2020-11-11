@@ -287,14 +287,16 @@ void proposals::onperiod() {
               proposal.stage = name("done");
           });
         }
+
         size_change(prop_active_size, -1);
+      
       }
 
       if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
           proposal.stage = name("active");
-          size_change(prop_active_size, 1);
         });
+        size_change(prop_active_size, 1);
       }
 
       pitr++;
