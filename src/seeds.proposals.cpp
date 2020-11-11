@@ -212,7 +212,7 @@ void proposals::onperiod() {
     uint64_t current_cycle = c.propcycle;
 
     while (pitr != props.end()) {
-      if (pitr->stage == name("active")) {
+      if (pitr->stage == stage_active) {
         number_active_proposals += 1;
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
@@ -229,7 +229,7 @@ void proposals::onperiod() {
 
         if (passed && valid_quorum) {
 
-          if (pitr -> status == name("open")) {
+          if (pitr -> status == status_open) {
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -246,7 +246,7 @@ void proposals::onperiod() {
               proposal.passed_cycle = current_cycle;
               proposal.age = 0;
               proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("evaluate");
+              proposal.status = status_evaluate;
               proposal.current_payout += payout_amount;
             });
 
@@ -268,23 +268,23 @@ void proposals::onperiod() {
               proposal.age = age;
               if (age == num_cycles) {
                 proposal.executed = true;
-                proposal.status = name("passed");
-                proposal.stage = name("done");
+                proposal.status = status_passed;
+                proposal.stage = stage_done;
               }
               proposal.current_payout += payout_amount;
             });
           }
 
         } else {
-          if (pitr->status != name("evaluate")) {
+          if (pitr->status != status_evaluate) {
             burn(pitr->staked);
           }
 
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
               proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("rejected");
-              proposal.stage = name("done");
+              proposal.status = status_rejected;
+              proposal.stage = stage_done;
           });
         }
 
@@ -292,9 +292,9 @@ void proposals::onperiod() {
       
       }
 
-      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
+      if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
-          proposal.stage = name("active");
+          proposal.stage = stage_active;
         });
         size_change(prop_active_size, 1);
       }
@@ -567,8 +567,8 @@ void proposals::createx(
       proposal.image = image;
       proposal.url = url;
       proposal.creation_date = eosio::current_time_point().sec_since_epoch();
-      proposal.status = name("open");
-      proposal.stage = name("staged");
+      proposal.status = status_open;
+      proposal.stage = stage_staged;
       proposal.fund = fund;
       proposal.pay_percentages = pay_percentages;
       proposal.passed_cycle = 0;
@@ -637,7 +637,7 @@ void proposals::cancel(uint64_t id) {
   check(pitr != props.end(), "Proposal not found");
 
   require_auth(pitr->creator);
-  check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
+  check(pitr->status == status_open, "Proposal state is not open, it can no longer be cancelled");
   
   refund_staked(pitr->creator, pitr->staked);
 
@@ -721,7 +721,7 @@ bool proposals::revert_vote (name voter, uint64_t id) {
   auto voteitr = votes.find(voter.value);
 
   if (voteitr != votes.end()) {
-    check(pitr->status == name("evaluate"), "Proposal is not in evaluate state");
+    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
     check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
 
     props.modify(pitr, _self, [&](auto& proposal) {
@@ -744,10 +744,10 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  check(pitr->stage == name("active"), "not active stage");
+  check(pitr->stage == stage_active, "not active stage");
 
   if (is_new) {
-    check(pitr->status == name("open"), "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
+    check(pitr->status == status_open, "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
   }
 
   auto vitr = voice.find(voter.value);
@@ -1085,4 +1085,22 @@ void proposals::testvdecay(uint64_t timestamp) {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
   c.t_voicedecay = timestamp;
   cycle.set(c, get_self());
+}
+
+ACTION proposals::initnumprop(uint64_t total_proposals) {
+  require_auth(get_self());
+
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.find(prop_active_size.value);
+
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = prop_active_size;
+      item.size = total_proposals;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = total_proposals;
+    });
+  }
 }

@@ -84,6 +84,8 @@ CONTRACT proposals : public contract {
 
       ACTION initactives();
 
+      ACTION initnumprop(uint64_t total_proposals);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -92,6 +94,16 @@ CONTRACT proposals : public contract {
       name prop_active_size = "prop.act.sz"_n;
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
+
+      name status_open = name("open");        // 1 - open: can be cancelled, edited
+      name status_evaluate = name("evaluate");
+      name status_passed = name("passed");
+      name status_rejected = name("rejected");
+
+      // stages
+      name stage_staged = name("staged"); // 1 staged: can be cancelled, edited
+      name stage_active = name("active"); // 2 active: can be voted on, can't be edited; open or evaluate status
+      name stage_done = name("done");     // 3 done: can't be edited or voted on
 
       std::vector<uint64_t> default_step_distribution = {
         25,  // initial payout
@@ -257,7 +269,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop))
       }
   }
 }
