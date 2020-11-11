@@ -26,7 +26,6 @@ CONTRACT proposals : public contract {
           cycle(receiver, receiver.value),
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
-          sizes(receiver, receiver.value),
           actives(receiver, receiver.value),
           users(contracts::accounts, contracts::accounts.value)
           {}

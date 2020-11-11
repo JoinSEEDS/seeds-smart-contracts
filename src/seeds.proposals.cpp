@@ -33,11 +33,6 @@ void proposals::reset() {
     mitr = minstake.erase(mitr);
   }
 
-  auto sitr = sizes.begin();
-  while (sitr != sizes.end()) {
-    sitr = sizes.erase(sitr);
-  }
-
   auto aitr = actives.begin();
   while (aitr != actives.end()) {
     aitr = actives.erase(aitr);
@@ -420,7 +415,7 @@ void proposals::updateactive(uint64_t start) {
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(name("active.sz").value, _self);
+    tx.send(name("active1sz").value, _self);
   }
 }
 
@@ -1062,6 +1057,7 @@ void proposals::size_change(name id, int64_t delta) {
 
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
+    check(delta >= 0, "can't add negagtive size");
     sizes.emplace(_self, [&](auto& item) {
       item.id = id;
       item.size = delta;
