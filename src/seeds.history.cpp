@@ -326,3 +326,102 @@ uint64_t history::config_get(name key) {
   }
   return citr->value;
 }
+
+
+void history::resetmigrate (name account) {
+  require_auth(get_self());
+  
+  transaction_table_migrations transactions(get_self(), account.value);
+  auto titr = transactions.begin();  
+  while (titr != transactions.end()) {
+    titr = transactions.erase(titr);
+  }
+  
+  org_tx_table_migrations orgtx(get_self(), account.value);
+  auto oitr = orgtx.begin();
+  while (oitr != orgtx.end()) {
+    oitr = orgtx.erase(oitr);
+  } 
+}
+
+void history::migratebacks () {
+  require_auth(get_self());
+  migratetrx(0, 400);
+}
+
+void history::migrateback (uint64_t start, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < chunksize) {
+    if (uitr -> type != name("organisation")) {
+      transaction_tables transactions(get_self(), uitr -> account.value);
+      transaction_table_migrations transactions_migration(get_self(), uitr -> account.value);
+
+      auto titr = transactions_migration.begin();
+      while (titr != transactions_migration.end()) {
+        auto tmigration = transactions.find(titr -> id);
+        if (tmigration != transactions.end()) {
+          transactions.modify(tmigration, _self, [&](auto & item){
+            item.to = titr -> to;
+            item.quantity = titr -> quantity;
+            item.timestamp = titr -> timestamp;            
+          });
+        } else {
+          transactions.emplace(_self, [&](auto & item){
+            item.id = titr -> id;
+            item.to = titr -> to;
+            item.quantity = titr -> quantity;
+            item.timestamp = titr -> timestamp;
+          });
+        }
+        // titr = transactions_migration.erase(titr);
+        count++;
+      }
+      count++;
+    } else {
+      org_tx_tables transactions(get_self(), uitr -> account.value);
+      org_tx_table_migrations transactions_migration(get_self(), uitr -> account.value);
+
+      auto titr = transactions_migration.begin();
+      while (titr != transactions_migration.end()) {
+        auto tmigration = transactions.find(titr -> id);
+        if (tmigration != transactions.end()) {
+          transactions.modify(tmigration, _self, [&](auto & item){
+            item.other = titr -> other;
+            item.in = titr -> in;
+            item.quantity = titr -> quantity;
+            item.timestamp = titr -> timestamp;            
+          });
+        } else {
+          transactions.emplace(_self, [&](auto & item){
+            item.id = titr -> id;
+            item.other = titr -> other;
+            item.in = titr -> in;
+            item.quantity = titr -> quantity;
+            item.timestamp = titr -> timestamp;
+          });
+        }
+        // titr = transactions_migration.erase(titr);
+        count++;
+      }
+      count++;
+    }
+    uitr++;
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "migratetrx"_n,
+        std::make_tuple(uitr -> account, chunksize)
+    );
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr -> account.value + 1, _self);
+  }
+}

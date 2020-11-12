@@ -43,6 +43,10 @@ CONTRACT history : public contract {
 
         ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
 
+        ACTION resetmigrate (name account);
+        ACTION migratebacks();
+        ACTION migrateback();
+
 
     private:
       void check_user(name account);
@@ -108,6 +112,7 @@ CONTRACT history : public contract {
         uint64_t by_timestamp() const { return timestamp; }
         uint64_t by_to() const { return to.value; }
         uint64_t by_quantity() const { return quantity.amount; }
+        uint128_t by_to_quantity() const { return (uint128_t(to.value) << 64) + quantity.amount; }
       };
 
       TABLE org_tx_table {
@@ -121,7 +126,58 @@ CONTRACT history : public contract {
         uint64_t by_timestamp() const { return timestamp; }
         uint64_t by_quantity() const { return quantity.amount; }
         uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
+        uint128_t by_to_quantity() const { 
+          if (!in) {
+            return (uint128_t(other.value) << 64) + quantity.amount;
+          } else {
+            return uint128_t(0);
+          }
+        }
       };
+
+      // --- migration tables ---
+      TABLE transaction_table_migration {
+        uint64_t id;
+        name to;
+        asset quantity;
+        uint64_t timestamp;
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_to() const { return to.value; }
+        uint64_t by_quantity() const { return quantity.amount; }
+        uint128_t by_to_quantity() const { return (uint128_t(to.value) << 64) + quantity.amount; }
+      };
+      TABLE org_tx_table_migration{
+        uint64_t id;
+        name other;
+        bool in;
+        asset quantity;
+        uint64_t timestamp;
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_quantity() const { return quantity.amount; }
+        uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
+        uint128_t by_to_quantity() const { 
+          if (!in) {
+            return (uint128_t(other.value) << 64) + quantity.amount;
+          } else {
+            return uint128_t(0);
+          }
+        }
+      };
+      typedef eosio::multi_index<"orgtxm"_n, org_tx_table_migration,
+        indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table_migration, uint64_t, &org_tx_table_migration::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<org_tx_table_migration, uint64_t, &org_tx_table_migration::by_quantity>>,
+        indexed_by<"byother"_n,const_mem_fun<org_tx_table_migration, uint128_t, &org_tx_table_migration::by_other>>,
+        indexed_by<"bytoquantity"_n,const_mem_fun<org_tx_table_migration, uint128_t, &org_tx_table_migration::by_to_quantity>>
+      > org_tx_table_migrations;
+      typedef eosio::multi_index<"transactionm"_n, transaction_table_migration,
+        indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table_migration, uint64_t, &transaction_table_migration::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<transaction_table_migration, uint64_t, &transaction_table_migration::by_quantity>>,
+        indexed_by<"byto"_n,const_mem_fun<transaction_table_migration, uint64_t, &transaction_table_migration::by_to>>,
+        indexed_by<"bytoquantity"_n,const_mem_fun<transaction_table_migration, uint128_t, &transaction_table_migration::by_to_quantity>>
+      > transaction_table_migrations;
+      // -----------------------
 
       typedef eosio::multi_index<"orgtx"_n, org_tx_table,
         indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
@@ -175,4 +231,5 @@ EOSIO_DISPATCH(history,
   (addreputable)(addregen)
   (numtrx)
   (orgtxpoints)(orgtxpt)
+  (resetmigrate)(migratebacks)(migrateback)
   );
