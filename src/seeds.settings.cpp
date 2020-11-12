@@ -17,16 +17,20 @@ void settings::reset() {
   confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.low"), 60, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 7, "High threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.mdium"), 5, "Medium threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.low"), 3, "Low threshold for quorum (in percentage)", high_impact);
+  confwithdesc(name("quorum.high"), 10, "Referendums: High threshold for quorum (in percentage)", high_impact);
+  confwithdesc(name("quorum.med"), 7, "Referendums: Medium threshold for quorum (in percentage)", high_impact);
+  confwithdesc(name("quorum.low"), 5, "Referendums: Low threshold for quorum (in percentage)", high_impact);
+  
+  confwithdesc(name("unity.high"), 90, "Referendums: High threshold for unity (in percentage)", high_impact);
+  confwithdesc(name("unity.med"), 85, "Referendums: Medium threshold for unity (in percentage)", high_impact);
+  confwithdesc(name("unity.low"), 80, "Referendums: Low threshold for unity (in percentage)", high_impact);
 
-  confwithdesc(name("refsnewprice"), 25 * 10000, "Minimum price to create a referendum", high_impact);
-  confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
-  confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
+  confwithdesc(name("refsnewprice"), 1111 * 10000, "Minimum price to create a referendum", high_impact);
+  confwithdesc(name("refsmajority"), 90, "Deprecated - Majority referendums threshold", high_impact);
+  confwithdesc(name("refsquorum"), 80, "Deprecated - Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
-  confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact);
-  confwithdesc(name("propvoice"), 77, "(No longer used)", high_impact); // No longer used - remove
+  confwithdesc(name("propquorum"), 5, "Deprecated: Quorum proposals threshold", high_impact);
+  confwithdesc(name("propvoice"), 77, "Deprecated", high_impact); // No longer used - remove
 
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
@@ -98,6 +102,11 @@ void settings::reset() {
 
 
   // =====================================
+  // Proposal cyle length
+  // =====================================
+  conffloat(name("prop.cyc.len"), 0.5 , "Length of proposal cycle expressed in moon cycles - e.g. 1/2 moon cycle", high_impact); 
+
+  // =====================================
   // citizenship path 
   // =====================================
 
@@ -142,6 +151,12 @@ void settings::reset() {
 
   // community buiding points for ATM Market Making
   confwithdesc(name("cbp.atm"), 1, "ATM Market Making: When you provide an offer in the SEEDS ATM and another member takes your offer.", high_impact);
+
+  // community buiding points for org when user becomes resident
+  confwithdesc(name("refcbp1.org"), 2, "Community buiding points for org when user becomes citizen", high_impact);
+
+  // community buiding points for org when user becomes citizen
+  confwithdesc(name("refcbp2.org"), 2, "Community buiding points for org when user becomes citizen", high_impact);
 
   // =====================================
   // referral rewards 

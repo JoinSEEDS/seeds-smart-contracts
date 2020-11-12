@@ -83,8 +83,8 @@ CONTRACT accounts : public contract {
       const name organization = "organisation"_n;
 
       const name not_found = ""_n;
-      const name cbp_reward_resident = "refcbp1.ind"_n;
-      const name cbp_reward_citizen = "refcbp2.ind"_n;
+      const name cbp_reward_resident = "refcbp1.org"_n;
+      const name cbp_reward_citizen = "refcbp2.org"_n;
 
       const name reputation_reward_resident = "refrep1.ind"_n;
       const name reputation_reward_citizen = "refrep2.ind"_n;
