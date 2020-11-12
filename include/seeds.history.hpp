@@ -43,9 +43,10 @@ CONTRACT history : public contract {
 
         ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
 
-        ACTION resetmigrate (name account);
+        ACTION resetmigrate(name account);
         ACTION migratebacks();
-        ACTION migrateback();
+        ACTION migrateback(uint64_t start, uint64_t chunksize);
+        ACTION testtrx(name from, name to, asset quantity);
 
 
     private:
@@ -231,5 +232,5 @@ EOSIO_DISPATCH(history,
   (addreputable)(addregen)
   (numtrx)
   (orgtxpoints)(orgtxpt)
-  (resetmigrate)(migratebacks)(migrateback)
+  (resetmigrate)(migratebacks)(migrateback)(testtrx)
   );

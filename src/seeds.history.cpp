@@ -346,7 +346,7 @@ void history::resetmigrate (name account) {
 
 void history::migratebacks () {
   require_auth(get_self());
-  migratetrx(0, 400);
+  migrateback(0, 400);
 }
 
 void history::migrateback (uint64_t start, uint64_t chunksize) {
@@ -377,7 +377,7 @@ void history::migrateback (uint64_t start, uint64_t chunksize) {
             item.timestamp = titr -> timestamp;
           });
         }
-        // titr = transactions_migration.erase(titr);
+        titr++; // titr = transactions_migration.erase(titr); if uncomment, remember to remove titr++
         count++;
       }
       count++;
@@ -404,7 +404,7 @@ void history::migrateback (uint64_t start, uint64_t chunksize) {
             item.timestamp = titr -> timestamp;
           });
         }
-        // titr = transactions_migration.erase(titr);
+        titr++; // titr = transactions_migration.erase(titr); if uncomment, remember to remove titr++
         count++;
       }
       count++;
@@ -424,4 +424,49 @@ void history::migrateback (uint64_t start, uint64_t chunksize) {
     tx.delay_sec = 1;
     tx.send(uitr -> account.value + 1, _self);
   }
+}
+
+void history::testtrx (name from, name to, asset quantity) {
+  require_auth(get_self());
+  
+  auto from_user = users.find(from.value);
+  auto to_user = users.find(to.value);
+  
+  if (from_user == users.end() || to_user == users.end()) {
+    return;
+  }
+
+  bool from_is_organization = from_user->type == "organisation"_n;
+  
+  if (from_is_organization) {
+    org_tx_table_migrations orgtx(get_self(), from.value);
+    orgtx.emplace(_self, [&](auto& item) {
+      item.id = orgtx.available_primary_key();
+      item.other = to;
+      item.in = false;
+      item.quantity = quantity;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    transaction_table_migrations transactions(get_self(), from.value);
+    transactions.emplace(_self, [&](auto& item) {
+      item.id = transactions.available_primary_key();
+      item.to = to;
+      item.quantity = quantity;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
+
+  // Orgs get entry for "to"
+  if (to_user->type == "organisation"_n) {
+      org_tx_table_migrations orgtx(get_self(), to.value);
+      orgtx.emplace(_self, [&](auto& item) {
+        item.id = orgtx.available_primary_key();
+        item.other = from;
+        item.in = true;
+        item.quantity = quantity;
+        item.timestamp = eosio::current_time_point().sec_since_epoch();
+      });
+  }
+
 }
