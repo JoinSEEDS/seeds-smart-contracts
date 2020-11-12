@@ -471,7 +471,6 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
 
       utils::check_asset(quantity);
-      //check_user(from);
 
       uint64_t id = 0;
 
@@ -742,6 +741,7 @@ void proposals::check_user(name account)
 {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
+  check(uitr -> status == name("citizen") || uitr -> status == name("resident"), "Creator must be a citizen or resident to create a proposal.");
 }
 
 void proposals::check_citizen(name account)

@@ -54,10 +54,14 @@ describe('Proposals', async assert => {
 
   console.log('create proposal '+campaignbank)
 
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
 
   console.log('create another proposal')
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
   await contracts.proposals.create(seconduser, seconduser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
   const numberOfProposals = async () => {
@@ -71,6 +75,7 @@ describe('Proposals', async assert => {
   }
   
   console.log('create and cancel proposal')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(firstuser, firstuser, '200.0000 SEEDS', 'prop to cancel', 'will be canceled', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '50.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   
@@ -83,6 +88,7 @@ describe('Proposals', async assert => {
   const numberOfProposalsAfterCancel = await numberOfProposals()
 
   console.log('create alliance proposal')
+  await contract.testcitizen(fourthuser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${fourthuser}@active` })
 
   let notOwnerStake = true
@@ -516,6 +522,7 @@ describe('Participants', async assert => {
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(firstuser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
 
@@ -745,6 +752,9 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
   await contracts.proposals.create(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.proposals.create(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
@@ -825,7 +835,9 @@ describe('Recepient invalid', async assert => {
 
   console.log('create proposal')
   var createdProp = false
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   try {
+
     await contracts.proposals.create(firstuser, "23", '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
     createdProp = true
     console.log('error')
@@ -914,6 +926,10 @@ describe('Stake limits', async assert => {
   console.log('x create proposal '+campaignbank)
 
   console.log('create proposal 10k')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(thirduser, { authorization: `${accounts}@active` })
+
   await contracts.proposals.create(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   
   console.log('create proposal 100k')
@@ -1148,6 +1164,8 @@ describe('Demote inactive citizens', async assert => {
   await testActiveSize(3)
   await testUserStatus(users)
 
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -1367,6 +1385,8 @@ describe.only('Build trust', async assert => {
   
   console.log('create proposal 1M')
   let canBigProposal = true
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
   try {
     await contracts.proposals.create(seconduser, seconduser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
   } catch (err) {
@@ -1374,6 +1394,7 @@ describe.only('Build trust', async assert => {
   }
   
   console.log('create proposal 500')
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(seconduser, seconduser, '500.0000 SEEDS', '500 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
   console.log('stake')
@@ -1398,6 +1419,7 @@ describe.only('Build trust', async assert => {
   await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
 
   console.log('trusted user creates big proposal')
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(seconduser, seconduser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${seconduser}@active` })
 
   let props = await eos.getTableRows({
@@ -1410,6 +1432,7 @@ describe.only('Build trust', async assert => {
   let rows = props.rows.filter(item => item.stage == "staged")
 
   console.log('create big alliance proposal 1M')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.proposals.create(firstuser, firstuser, '1000000.0000 SEEDS', '1,000,0000 seeds please', 'summary', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
 
   assert({
