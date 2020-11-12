@@ -642,16 +642,6 @@ void accounts::testcitizen(name user)
   add_active(user);
 }
 
-void accounts::genesis(name user) // Remove this after Golive
-{ 
-  require_auth(_self);
-
-  testresident(user);
-  
-  testcitizen(user);
-
-}
-
 // return number of transactions outgoing, until a limit
 uint32_t accounts::num_transactions(name account, uint32_t limit) {
   transaction_tables transactions(contracts::history, account.value);
@@ -681,7 +671,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -730,7 +720,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;

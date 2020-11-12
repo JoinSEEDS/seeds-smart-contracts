@@ -38,8 +38,6 @@ CONTRACT accounts : public contract {
       ACTION makecitizen(name user);
       ACTION cancitizen(name user);
 
-      ACTION genesis(name user);
-
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
       ACTION addref(name referrer, name invited);
@@ -240,7 +238,7 @@ CONTRACT accounts : public contract {
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
-(subrep)(testsetrep)(testsetrs)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
+(subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 (demotecitizn)

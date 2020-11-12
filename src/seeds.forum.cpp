@@ -409,7 +409,7 @@ ACTION forum::rankforum(uint64_t start, uint64_t chunksize, uint64_t chunk) {
 
     while (fitr != forum_rep_by_points.end() && count < chunksize) {
 
-        uint64_t rank = (current * 100) / total;
+        uint64_t rank = utils::rank(current, total);
 
         forum_rep_by_points.modify(fitr, _self, [&](auto& item) {
             item.rank = rank;
