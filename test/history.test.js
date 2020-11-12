@@ -4,6 +4,10 @@ const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 const { firstuser, seconduser, history, accounts, organization, token, settings } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('make a transaction entry', async assert => {
 
   if (!isLocal()) {
@@ -279,4 +283,171 @@ describe('org transaction entry', async assert => {
       }
     ]
   })
+})
+
+
+describe('Migration test', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const firstorg = 'testorg111'
+  const secondorg = 'testorg222'
+
+  const contracts = await initContracts({ settings, history, accounts, organization, token })
+  
+  console.log('history reset')
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+  await contracts.history.reset(seconduser, { authorization: `${history}@active` })
+  await contracts.history.reset(firstorg, { authorization: `${history}@active` })
+  await contracts.history.reset(secondorg, { authorization: `${history}@active` })
+
+  await contracts.history.resetmigrate(firstuser, { authorization: `${history}@active` })
+  await contracts.history.resetmigrate(seconduser, { authorization: `${history}@active` })
+  await contracts.history.resetmigrate(firstorg, { authorization: `${history}@active` })
+  await contracts.history.resetmigrate(secondorg, { authorization: `${history}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('org reset')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('token reset weekly')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  
+  console.log('create org, users')
+  await contracts.accounts.adduser(firstuser, 'Bob', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Alice', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+  
+  console.log('create organization')
+  const amount1 = '12.0000 SEEDS'
+  const amount2 = '11.1111 SEEDS'
+
+  await contracts.organization.create(firstuser, firstorg, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+  await contracts.organization.create(seconduser, secondorg, "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
+
+  console.log('add transaction entry from user to org')
+  await contracts.token.transfer(firstuser, firstorg, amount1, "test", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, secondorg, amount1, "test", { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(firstorg, seconduser, amount2, "test", { authorization: `${firstorg}@active` })
+  await contracts.token.transfer(secondorg, seconduser, amount2, "test", { authorization: `${secondorg}@active` })
+
+  const getTransactions = async () => {
+
+    const transactions1 = await getTableRows({
+      code: history,
+      scope: firstuser,
+      table: 'transactions',
+      json: true
+    })
+  
+    const transactions2 = await getTableRows({
+      code: history,
+      scope: seconduser,
+      table: 'transactions',
+      json: true
+    })
+  
+    const transactions3 = await getTableRows({
+      code: history,
+      scope: firstorg,
+      table: 'orgtx',
+      json: true
+    })
+  
+    const transactions4 = await getTableRows({
+      code: history,
+      scope: secondorg,
+      table: 'orgtx',
+      json: true
+    })
+
+    return [
+      transactions1.rows,
+      transactions2.rows,
+      transactions3.rows,
+      transactions4.rows
+    ]
+
+  }
+
+  const getTransactionsMigration = async () => {
+
+    const transactions1 = await getTableRows({
+      code: history,
+      scope: firstuser,
+      table: 'transactionm',
+      json: true
+    })
+  
+    const transactions2 = await getTableRows({
+      code: history,
+      scope: seconduser,
+      table: 'transactionm',
+      json: true
+    })
+  
+    const transactions3 = await getTableRows({
+      code: history,
+      scope: firstorg,
+      table: 'orgtxm',
+      json: true
+    })
+  
+    const transactions4 = await getTableRows({
+      code: history,
+      scope: secondorg,
+      table: 'orgtxm',
+      json: true
+    })
+
+    return [
+      transactions1.rows,
+      transactions2.rows,
+      transactions3.rows,
+      transactions4.rows
+    ]
+
+  }
+
+  const transactionsBefore = await getTransactions()
+  const transactionsMigrationBefore = await getTransactionsMigration()
+
+  await contracts.history.migratetrxs({ authorization: `${history}@active` })
+  await sleep(300)
+
+  const transactionsAfter = await getTransactions()
+  const transactionsMigrationAfter = await getTransactionsMigration()
+
+  assert({
+    given: 'before migration',
+    should: 'be empty',
+    expected: [[], [], [], []],
+    actual: transactionsMigrationBefore
+  })
+
+  assert({
+    given: 'migration finished',
+    should: 'have the same information',
+    expected: transactionsBefore,
+    actual: transactionsMigrationAfter
+  })
+
+  assert({
+    given: 'migration finished',
+    should: 'be empty',
+    expected: [[], [], [], []],
+    actual: transactionsAfter
+  })
+
 })
