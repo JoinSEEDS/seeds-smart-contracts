@@ -41,6 +41,11 @@ void harvest::reset() {
     pitr = planted.erase(pitr);
   }
 
+  auto qitr = qevgrowths.begin();
+  while (qitr != qevgrowths.end()) {
+    qitr = qevgrowths.erase(qitr);
+  }
+
   total.remove();
 
   init_balance(_self);
@@ -905,3 +910,57 @@ ACTION harvest::setorgtxpt(name organization, uint64_t tx_points) {
   } 
 
 }
+
+uint64_t harvest::get_beginning_of_day_in_seconds() {
+  auto sec = eosio::current_time_point().sec_since_epoch();
+  auto date = eosio::time_point_sec(sec / 86400 * 86400);
+  return date.utc_seconds;
+}
+
+ACTION harvest::calcqevgrwth() {
+  uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+  auto previous_quarter = eosio::time_point_sec((today_timestamp - (3 * utils::moon_cycle)) / 86400 * 86400);
+  uint64_t previous_quarter_timestamp = previous_quarter.utc_seconds;
+
+  auto qitr_today = qevs.find(today_timestamp);
+  auto qitr_previous = qevs.find(previous_quarter_timestamp);
+
+  print("today:", today_timestamp, "\n");
+  print("previous:", previous_quarter_timestamp, "\n");
+
+  check(qitr_today != qevs.end(), "There is no QEV entry for the given timestamp:" + std::to_string(today_timestamp));
+  check(qitr_previous != qevs.end(), "There is no QEV entry for the given timestamp:" + std::to_string(previous_quarter_timestamp));
+
+  double volume_growth = double(qitr_today -> qev.amount - qitr_previous -> qev.amount) / double(qitr_previous -> qev.amount);
+
+  print("qev today:", qitr_today -> qev.amount, ", qev previous:", qitr_previous -> qev.amount, ", diff = ", (qitr_today -> qev.amount - qitr_previous -> qev.amount), "\n");
+
+  int64_t target_supply = (1.0 + volume_growth) * qitr_previous -> circulating_supply.amount;
+  int64_t delta = target_supply - qitr_today -> circulating_supply.amount;
+
+  print("previous circulating supply:", qitr_previous -> circulating_supply.amount, "growth multiplier:", (1.0 + volume_growth), "\n");
+  print("target supply:", target_supply, "\n");
+  print("current circulating supply:", qitr_today -> circulating_supply.amount);
+  print("delta:", delta, "\n");
+
+  double mint_rate = double(delta) / 708.0;
+
+  print("volume growth:", volume_growth, ", mint rate:", mint_rate, "\n");
+
+  auto gitr = qevgrowths.begin();
+  if (gitr != qevgrowths.end()) {
+    qevgrowths.modify(gitr, _self, [&](auto & item){
+      item.qev_growth = volume_growth * 10000;
+      item.mint_rate = mint_rate * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    qevgrowths.emplace(_self, [&](auto & item){
+      item.id = qevgrowths.available_primary_key();
+      item.qev_growth = volume_growth * 10000;
+      item.mint_rate = mint_rate * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
+}
+

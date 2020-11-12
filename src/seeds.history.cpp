@@ -34,6 +34,11 @@ void history::reset(name account) {
   while (ritr != residents.end()) {
     ritr = residents.erase(ritr);
   }
+
+  auto qitr = qevs.begin();
+  while (qitr != qevs.end()) {
+    qitr = qevs.erase(qitr);
+  }
 }
 
 void history::addresident(name account) {
@@ -326,3 +331,176 @@ uint64_t history::config_get(name key) {
   }
   return citr->value;
 }
+
+uint64_t history::get_beginning_of_day_in_seconds() {
+    auto sec = eosio::current_time_point().sec_since_epoch();
+    auto date = eosio::time_point_sec(sec / 86400 * 86400);
+    return date.utc_seconds;
+}
+
+uint64_t history::count_transaction_volume_user (name user, uint64_t & max_transactions, uint64_t & transactions_cap, uint64_t * volume) {
+  transaction_tables transactions_users(get_self(), user.value);
+
+  auto transactions_by_to_quantity = transactions_users.get_index<"bytoquantity"_n>();
+  auto titr = transactions_by_to_quantity.rbegin();
+
+  uint64_t count = 0;
+  uint64_t transactions_count = 0;
+
+  name current_to = ""_n;
+
+  while (titr != transactions_by_to_quantity.rend()) {
+    
+    name to = titr -> to;
+
+    if (current_to == to) {
+      transactions_count += 1;
+    } else {
+      current_to = to;
+      transactions_count = 1;
+    }
+
+    if (transactions_count <= max_transactions) {
+      *volume += std::min(int64_t(transactions_cap & ((uint64_t(1) << 63) - 1)), titr -> quantity.amount);
+      titr++;
+    } else {
+      auto next_titr = transactions_by_to_quantity.lower_bound(uint128_t(to.value) << 64);
+      if (next_titr == transactions_by_to_quantity.begin()) {
+        break;
+      }
+      titr = std::make_reverse_iterator(next_titr);
+    }
+    count++;
+  }
+
+  return count;
+}
+
+uint64_t history::count_transaction_volume_org (name org, uint64_t & max_transactions, uint64_t & transactions_cap, uint64_t * volume) {
+  org_tx_tables transactions_orgs(get_self(), org.value);
+
+  auto transactions_by_to_quantity = transactions_orgs.get_index<"bytoquantity"_n>();
+  auto titr = transactions_by_to_quantity.rbegin();
+
+  uint64_t count = 0;
+  uint64_t transactions_count = 0;
+  name current_to = ""_n;
+
+  while (titr != transactions_by_to_quantity.rend() && !(titr -> in)) {
+
+    name to = titr -> other;
+
+    if (current_to == to) {
+      transactions_count += 1;
+    } else {
+      current_to = to;
+      transactions_count = 1;
+    }
+
+    if (transactions_count <= max_transactions) {
+      *volume += std::min(int64_t(transactions_cap & ((uint64_t(1) << 63) - 1)), titr -> quantity.amount);
+      titr++;
+    } else {
+      auto next_titr = transactions_by_to_quantity.lower_bound(uint128_t(to.value) << 64);
+      if (next_titr == transactions_by_to_quantity.begin()) {
+        break;
+      }
+      titr = std::make_reverse_iterator(next_titr);
+    }
+    count++;
+  }
+
+  return count;
+}
+
+void history::calcmqev () {
+  uint64_t batch_size = config_get("batchsize"_n);
+  calcqev(0, batch_size, 0);
+}
+
+void history::calcqev(uint64_t start, uint64_t chunksize, uint64_t volume) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+  uint64_t max_transactions = config_get("qev.trx.div"_n);
+  uint64_t transactions_cap = config_get("qev.trx.max"_n);
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < chunksize) {
+    if (uitr -> type != name("organisation")) {
+      count += count_transaction_volume_user(uitr -> account, max_transactions, transactions_cap, &volume);
+    } else {
+      count += count_transaction_volume_org(uitr -> account, max_transactions, transactions_cap, &volume);
+    }
+    count++;
+    uitr++;
+  }
+
+  if (uitr != users.end()) {
+    
+    uint64_t next_value = uitr -> account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "calcqev"_n,
+        std::make_tuple(next_value, chunksize, volume)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self);
+
+  } else {
+    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+    auto qitr = qevs.find(today_timestamp);
+
+    total_table tt = total.get();
+    circulating_supply_table c = circulating.get();
+
+    if (qitr == qevs.end()) {
+      qevs.emplace(_self, [&](auto & item){
+        item.begin_of_day_timestamp = today_timestamp;
+        item.qev = asset(volume, utils::seeds_symbol);
+        item.circulating_supply = asset(c.circulating, utils::seeds_symbol);
+        item.planted = tt.total_planted;
+      });
+    } else {
+      qevs.modify(qitr, _self, [&](auto & item){
+        item.qev = asset(volume, utils::seeds_symbol);
+        item.circulating_supply = asset(c.circulating, utils::seeds_symbol);
+        item.planted = tt.total_planted;
+      });
+    }
+  }
+}
+
+void history::testqev() {
+  require_auth(get_self());
+
+  uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+  circulating_supply_table c = circulating.get();
+
+  for (int i = 0; i < 95; i++) {
+    uint64_t day = today_timestamp - i * utils::seconds_per_day;
+    auto itr = qevs.find(day);
+    if (itr != qevs.end()) {
+      qevs.modify(itr, _self, [&](auto & item){
+        item.qev = asset(10000 * 10000 - i*100000, utils::seeds_symbol);
+        item.circulating_supply = asset(c.circulating - i*9000000, utils::seeds_symbol);
+      });
+    } else {
+      qevs.emplace(_self, [&](auto & item){
+        item.begin_of_day_timestamp = day;
+        item.qev = asset(10000 * 10000 - i*100000, utils::seeds_symbol);;
+        item.circulating_supply = asset(c.circulating - i*9000000, utils::seeds_symbol);
+      });
+    }
+  }
+
+}
+
+
+
+
+

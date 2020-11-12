@@ -1,8 +1,13 @@
 const { describe } = require("riteway")
-const { names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
+const { names, getTableRows, isLocal, initContracts } = require("../scripts/helper");
+const { assert } = require("chai");
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, history, accounts, organization, token, settings } = names
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const { firstuser, seconduser, thirduser, fourthuser, history, harvest, accounts, organization, token, settings } = names
 
 describe('make a transaction entry', async assert => {
 
@@ -280,3 +285,124 @@ describe('org transaction entry', async assert => {
     ]
   })
 })
+
+describe('Calculate QEV', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const firstorg = 'testorg111'
+  const secondorg = 'testorg222'
+
+  const contracts = await initContracts({ settings, history, accounts, organization, token, harvest })
+  
+  console.log('history reset')
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+  await contracts.history.reset(seconduser, { authorization: `${history}@active` })
+  await contracts.history.reset(secondorg, { authorization: `${history}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('org reset')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('token reset weekly')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('token reset weekly')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  
+  console.log('create org, users')
+  await contracts.accounts.adduser(firstuser, 'Bob', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Alice', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'Bob\'s sister', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'Alice\'s brother', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  const transfer = async (from, to, amount, times = 1) => {
+    for (let i = 0; i < times; i++) {
+      await contracts.token.transfer(from, to, `${amount}.0000 SEEDS`, `test supply ${i+1}`, { authorization: `${from}@active` })
+      await sleep(100)
+    }
+  }
+  
+  await contracts.token.transfer(firstuser, harvest, "200.0000 SEEDS", "", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+
+  await contracts.organization.create(seconduser, secondorg, "Org 2 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
+
+  await transfer(firstuser, seconduser, 100, 5)
+  await transfer(seconduser, firstuser, 3000, 1)
+  await transfer(seconduser, thirduser, 2000, 3)
+  await transfer(seconduser, fourthuser, 4000, 1)
+  await transfer(firstuser, secondorg, 10000, 1)
+  await transfer(secondorg, seconduser, 1000, 4)
+
+  console.log('update circulating supply')
+
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+  await sleep(200)
+
+  console.log('calculate qev')
+  await contracts.history.calcmqev({ authorization: `${history}@active` })
+
+  await sleep(300)
+
+  const qevTable = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'qevs',
+    json: true
+  })
+
+  console.log('change max transactions taken into account')
+  await contracts.settings.configure('qev.trx.div', 2, { authorization: `${settings}@active` })
+
+  console.log('calculate qev')
+  await contracts.history.calcmqev({ authorization: `${history}@active` })
+
+  await sleep(300)
+
+  const qevTable2 = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'qevs',
+    json: true
+  })
+
+  delete qevTable.rows[0].circulating_supply
+  delete qevTable2.rows[0].circulating_supply
+
+  const beginOfDate = (new Date().setUTCHours(0,0,0,0)) / 1000
+
+  assert({
+    given: 'calcmqev ran',
+    should: 'get the correct qev',
+    expected: [
+      {
+        begin_of_day_timestamp: beginOfDate,
+        qev: '15162.0000 SEEDS',
+        planted: '400.0000 SEEDS',
+        burned: '0 ' 
+      },
+      {
+        begin_of_day_timestamp: beginOfDate,
+        qev: '11085.0000 SEEDS',
+        planted: '400.0000 SEEDS',
+        burned: '0 ' 
+      }
+    ],
+    actual: [
+      qevTable.rows[0],
+      qevTable2.rows[0]
+    ]
+  })
+
+})
+

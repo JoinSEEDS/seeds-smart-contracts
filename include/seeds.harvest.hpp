@@ -33,10 +33,12 @@ CONTRACT harvest : public contract {
         sizes(receiver, receiver.value),
         total(receiver, receiver.value),
         harveststat(receiver, receiver.value),
+        qevgrowths(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
-        cbs(contracts::accounts, contracts::accounts.value)
+        cbs(contracts::accounts, contracts::accounts.value),
+        qevs(contracts::history, contracts::history.value)
         {}
         
     ACTION reset();
@@ -82,6 +84,8 @@ CONTRACT harvest : public contract {
 
     ACTION setorgtxpt(name organization, uint64_t tx_points);
 
+    ACTION calcqevgrwth();
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
@@ -107,6 +111,7 @@ CONTRACT harvest : public contract {
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
     uint64_t get_size(name id);
+    uint64_t get_beginning_of_day_in_seconds();
 
     // Contract Tables
 
@@ -212,6 +217,7 @@ CONTRACT harvest : public contract {
        uint64_t by_timestamp() const { return timestamp; }
        uint64_t by_to() const { return to.value; }
        uint64_t by_quantity() const { return quantity.amount; }
+       uint128_t by_to_quantity() const { return (uint128_t(to.value) << 64) + quantity.amount; }
     };
 
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
@@ -227,6 +233,29 @@ CONTRACT harvest : public contract {
       indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
     > transaction_tables;
 
+    TABLE qev_growth_table {
+      uint64_t id;
+      uint64_t qev_growth; // 4 decimals precision
+      uint64_t mint_rate; // 4 decimals precision
+      uint64_t timestamp;
+
+      uint64_t primary_key() const { return id; }
+    };
+
+    TABLE qev_table { // from history contract
+      uint64_t begin_of_day_timestamp;
+      asset qev;
+      asset circulating_supply;
+      asset planted;
+      asset burned; // ?
+
+      uint64_t primary_key() const { return begin_of_day_timestamp; }
+    };
+
+    typedef eosio::multi_index<"qevgrowths"_n, qev_growth_table> qev_growth_tables;
+
+    typedef eosio::multi_index<"qevs"_n, qev_table> qev_tables;
+
     // Contract Tables
     balance_tables balances;
     planted_tables planted;
@@ -234,6 +263,7 @@ CONTRACT harvest : public contract {
     cs_points_tables cspoints;
     size_tables sizes;
     total_tables total;
+    qev_growth_tables qevgrowths;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -245,6 +275,7 @@ CONTRACT harvest : public contract {
     user_tables users;
     cbs_tables cbs;
     rep_tables rep;
+    qev_tables qevs;
 
 };
 
@@ -260,7 +291,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)
-
+          (calcqevgrwth)
           )
       }
   }

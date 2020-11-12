@@ -216,7 +216,7 @@ describe("Harvest General", async assert => {
     scope: seconduser,
     table: 'refunds',
     json: true,
-    limit: 100
+    limit: 100qevs
   })
 
   const balanceAfterClaimed = await getBalanceFloat(seconduser)
@@ -734,3 +734,53 @@ describe("plant for other user", async assert => {
   })
 
 })
+
+
+describe('Calculate QEV Growth', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest, settings, history })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('history reset')
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+  await contracts.history.reset(seconduser, { authorization: `${history}@active` })
+
+  await contracts.history.testqev({ authorization: `${history}@active` })
+
+  await sleep(100)
+
+  await contracts.harvest.calcqevgrwth({ authorization: `${harvest}@active` })
+
+  const growthTable = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'qevgrowths',
+    json: true,
+  })
+
+  console.log(growthTable)
+
+  delete growthTable.rows[0].timestamp
+
+  assert({
+    given: 'qev growth called',
+    should: 'calculate growth correctly',
+    expected: [
+      { 
+        id: 0,
+        qev_growth: 976,
+        mint_rate: '1781134253658'
+      }
+    ],
+    actual: growthTable.rows
+  })
+
+})
+

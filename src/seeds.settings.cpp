@@ -49,6 +49,9 @@ void settings::reset() {
   confwithdesc(name("org.trx.max"), uint64_t(1777) * uint64_t(10000), "Organization: Maximum points for a transaction", high_impact);
   confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
 
+  confwithdesc(name("qev.trx.max"), uint64_t(1777) * uint64_t(10000), "QEV Calculation: Maximum SEEDS per transaction", high_impact);
+  confwithdesc(name("qev.trx.div"), 26, "QEV Calculation: Transaction diversity not more than 26 between two parties", high_impact);
+
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
   // Organizations
