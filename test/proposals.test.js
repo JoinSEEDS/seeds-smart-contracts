@@ -3,7 +3,7 @@ const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper');
 const { expect } = require('chai');
 
-const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser } = names
+const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -998,7 +998,6 @@ describe('Change Trust', async assert => {
 
 })
 
-
 describe('Proposals Quorum', async assert => {
 
   if (!isLocal()) {
@@ -1031,6 +1030,8 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fifthuser, 'fifthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(sixthuser, 'sixthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
@@ -1046,14 +1047,13 @@ describe('Proposals Quorum', async assert => {
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
-  let users = [firstuser, seconduser, thirduser, fourthuser]
+  let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser]
   for (i = 0; i<users.length; i++ ) {
     let user = users[i]
     console.log('add voice '+user)
     await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
     await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
   }
-
 
   console.log('vote on first proposal')
   await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
@@ -1072,7 +1072,32 @@ describe('Proposals Quorum', async assert => {
     json: true
   })
 
+  await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
+
+  const testQuorum = async (numberProposals, expectedValue) => {
+    try {
+      await contracts.proposals.testquorum(numberProposals, { authorization: `${proposals}@active` })
+    } catch (err) {
+      const e = JSON.parse(err)
+      assert({
+        given: 'get quorum called',
+        should: 'give the correct quorum threshold',
+        expected: `assertion failure with message: ${expectedValue}`,
+        actual: e.error.details[0].message
+      })
+    }
+  }
+
   //console.log("props "+JSON.stringify(props, null, 2))
+
+  const min = 7
+  const max = 20
+  await testQuorum(0, 5)
+  await testQuorum(1, 20)
+  await testQuorum(2, 20)
+  await testQuorum(5, 18)
+  await testQuorum(10, 9)
+  await testQuorum(20, 5)
 
   assert({
     given: 'failed proposal quorum',
@@ -1090,6 +1115,7 @@ describe('Proposals Quorum', async assert => {
   })
 
 })
+
 describe('Recepient invalid', async assert => {
 
   if (!isLocal()) {
