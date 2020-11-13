@@ -76,8 +76,8 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
-
       ACTION testquorum(uint64_t total_proposals);
+
       ACTION testvdecay(uint64_t timestamp);
 
       ACTION initsz();
