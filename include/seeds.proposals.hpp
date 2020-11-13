@@ -76,19 +76,34 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
+      ACTION testquorum(uint64_t total_proposals);
+
       ACTION testvdecay(uint64_t timestamp);
 
       ACTION initsz();
 
       ACTION initactives();
 
+      ACTION initnumprop();
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
+      name prop_active_size = "prop.act.sz"_n;
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
+
+      name status_open = name("open");        // 1 - open: can be cancelled, edited
+      name status_evaluate = name("evaluate");
+      name status_passed = name("passed");
+      name status_rejected = name("rejected");
+
+      // stages
+      name stage_staged = name("staged"); // 1 staged: can be cancelled, edited
+      name stage_active = name("active"); // 2 active: can be voted on, can't be edited; open or evaluate status
+      name stage_done = name("done");     // 3 done: can't be edited or voted on
 
       std::vector<uint64_t> default_step_distribution = {
         25,  // initial payout
@@ -117,8 +132,10 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
-      void size_change(name id, int64_t delta);
       uint64_t get_size(name id);
+      void size_change(name id, int64_t delta);
+
+      uint64_t get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
@@ -252,7 +269,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop))
       }
   }
 }

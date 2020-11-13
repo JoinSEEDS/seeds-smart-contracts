@@ -31,7 +31,12 @@ void settings::reset() {
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
-  confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact);
+  confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
+
+  confwithdesc(name("quorum.base"), 90, "Quorum base percentage = 90% / number of proposals.", high_impact);
+  confwithdesc(name("quor.min.pct"), 5, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quor.max.pct"), 20, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
+
   confwithdesc(name("propvoice"), 77, "Voice base per period", high_impact); // voice base per period
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
