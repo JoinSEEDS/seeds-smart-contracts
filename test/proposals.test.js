@@ -1072,6 +1072,8 @@ describe('Proposals Quorum', async assert => {
     json: true
   })
 
+  await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
+
   const testQuorum = async (numberProposals, expectedValue) => {
     try {
       await contracts.proposals.testquorum(numberProposals, { authorization: `${proposals}@active` })

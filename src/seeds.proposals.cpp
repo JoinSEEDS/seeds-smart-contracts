@@ -213,7 +213,6 @@ void proposals::onperiod() {
 
     while (pitr != props.end()) {
       if (pitr->stage == stage_active) {
-        number_active_proposals += 1;
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
 
@@ -230,6 +229,7 @@ void proposals::onperiod() {
         if (passed && valid_quorum) {
 
           if (pitr -> status == status_open) {
+            number_active_proposals += 1;
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -1087,8 +1087,21 @@ void proposals::testvdecay(uint64_t timestamp) {
   cycle.set(c, get_self());
 }
 
-ACTION proposals::initnumprop(uint64_t total_proposals) {
+ACTION proposals::initnumprop() {
   require_auth(get_self());
+
+  uint64_t total_proposals = 0;
+
+  auto pitr = props.rbegin();
+  while(pitr != props.rend()) {
+    if (pitr->status == status_open && pitr->stage == stage_active) {
+      total_proposals++;
+    }
+    if (pitr->status != status_open) {
+      break;
+    }
+    pitr++;
+  }
 
   size_tables sizes(get_self(), get_self().value);
   auto sitr = sizes.find(prop_active_size.value);

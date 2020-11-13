@@ -84,7 +84,7 @@ CONTRACT proposals : public contract {
 
       ACTION initactives();
 
-      ACTION initnumprop(uint64_t total_proposals);
+      ACTION initnumprop();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
