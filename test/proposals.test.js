@@ -88,13 +88,13 @@ describe('Proposals', async assert => {
   console.log('create alliance proposal')
   await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${fourthuser}@active` })
 
-  let notOwnerStake = true
-  try {
-    await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
-    notOwnerStake = false
-  } catch(err) {
-    console.log('stake from not owner (failed)')
-  }
+  // let notOwnerStake = true
+  // try {
+  //   await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
+  //   notOwnerStake = false
+  // } catch(err) {
+  //   console.log('stake from not owner (failed)')
+  // }
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
@@ -371,12 +371,12 @@ describe('Proposals', async assert => {
     expected: 0
   })
 
-  assert({
-    given: 'stake from not owner',
-    should: 'has error',
-    actual: notOwnerStake,
-    expected: true
-  })
+  // assert({
+  //   given: 'stake from not owner',
+  //   should: 'has error',
+  //   actual: notOwnerStake,
+  //   expected: true
+  // })
 
   assert({
     given: 'cancel proposal',

@@ -204,9 +204,9 @@ void proposals::onperiod() {
 
     uint64_t prop_majority = config_get(name("propmajority"));
 
-    uint64_t number_active_proposals = 0;
+    uint64_t number_active_proposals = get_size(prop_active_size);
     uint64_t total_eligible_voters = get_size("active.sz"_n);
-    uint64_t quorum =  get_quorum(get_size(prop_active_size));
+    uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     uint64_t current_cycle = c.propcycle;
@@ -226,7 +226,6 @@ void proposals::onperiod() {
         if (passed && valid_quorum) {
 
           if (pitr -> status == status_open) {
-            number_active_proposals += 1;
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -663,7 +662,8 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
       auto pitr = props.find(id);
       check(pitr != props.end(), "no proposal");
-      check(from == pitr->creator, "only the creator can stake into a proposal");
+      // now, other people can stake for other people - code change 2020-11-13
+      //check(from == pitr->creator, "only the creator can stake into a proposal");
 
       uint64_t prop_max = cap_stake(pitr->fund);
       check((pitr -> staked + quantity) <= asset(prop_max, seeds_symbol), 
