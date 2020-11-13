@@ -219,9 +219,6 @@ void proposals::onperiod() {
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-
-        print("\nonperiod:", voters_number, ", ", quorum, ", ", total_eligible_voters, "\n");
-
         bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
         bool is_alliance_type = pitr->fund == bankaccts::alliances;
         bool is_campaign_type = pitr->fund == bankaccts::campaigns;
