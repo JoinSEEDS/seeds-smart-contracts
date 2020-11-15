@@ -68,6 +68,11 @@ ACTION scheduler::reset() {
         name("hrvst.calctx"), // 24h
 
         name("org.clndaus"),
+        name("org.rankregn"),
+        name("org.rankcbs"),
+        name("org.scortrxs"),
+
+        name("hrvst.orgtxs"),
 
         name("prop.dvoices"),
 
@@ -90,6 +95,11 @@ ACTION scheduler::reset() {
         name("calctrxpts"),
 
         name("cleandaus"),
+        name("rankregens"),
+        name("rankcbsorgs"),
+        name("scoretrxs"),
+
+        name("rankorgtxs"),
 
         name("decayvoices"),
 
@@ -112,6 +122,11 @@ ACTION scheduler::reset() {
         contracts::harvest,
 
         contracts::organization,
+        contracts::organization,
+        contracts::organization,
+        contracts::organization,
+
+        contracts::harvest,
 
         contracts::proposals,
 
@@ -134,9 +149,14 @@ ACTION scheduler::reset() {
         utils::seconds_per_day,
 
         utils::seconds_per_day / 2,
+        utils::seconds_per_day,
+        utils::seconds_per_day,
+        utils::seconds_per_day,
 
         utils::seconds_per_day,
 
+        utils::seconds_per_day,
+        
         utils::moon_cycle / 4,
         utils::moon_cycle / 4,
     };
@@ -158,6 +178,12 @@ ACTION scheduler::reset() {
         now,
 
         now,
+        now,
+        now,
+        now,
+
+        now,
+
         now,
 
         now,

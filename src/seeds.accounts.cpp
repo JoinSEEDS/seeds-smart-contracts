@@ -296,6 +296,14 @@ void accounts::refreward(name account, name new_status) {
         }
       }
 
+      // register cbs in the cbsorg table to rank orgs
+      action(
+        permission_level(contracts::organization, "active"_n),
+        contracts::organization,
+        "addcbpoints"_n,
+        std::make_tuple(referrer, community_building_points)
+      ).send();
+
     } 
     else 
     {
@@ -634,16 +642,6 @@ void accounts::testcitizen(name user)
   add_active(user);
 }
 
-void accounts::genesis(name user) // Remove this after Golive
-{ 
-  require_auth(_self);
-
-  testresident(user);
-  
-  testcitizen(user);
-
-}
-
 // return number of transactions outgoing, until a limit
 uint32_t accounts::num_transactions(name account, uint32_t limit) {
   transaction_tables transactions(contracts::history, account.value);
@@ -655,45 +653,6 @@ uint32_t accounts::num_transactions(name account, uint32_t limit) {
   }
   return count;
 }
-
-// void accounts::migraterep(uint64_t account, uint64_t cycle, uint64_t chunksize) {
-//   require_auth(_self);
-//   auto uitr = account == 0 ? users.begin() : users.find(account);
-//   uint64_t count = 0;
-//   while (uitr != users.end() && count < chunksize) {
-//     if (uitr->reputation > 0) {
-//       auto ritr = rep.find(uitr->account.value);
-//       if (ritr != rep.end()) {
-//         rep.modify(ritr, _self, [&](auto& item) {
-//           item.rep = uitr->reputation;
-//         });
-//       } else {
-//         add_rep_item(uitr->account, uitr->reputation);
-//       }
-//     }
-//     uitr++;
-//     count++;
-//   }
-//   if (uitr == users.end()) {
-//     // done
-//     size_set("users.sz"_n, chunksize * cycle + count);
-//   } else {
-//     // recursive call
-//     uint64_t nextaccount = uitr->account.value;
-//     action next_execution(
-//         permission_level{get_self(), "active"_n},
-//         get_self(),
-//         "migraterep"_n,
-//         std::make_tuple(nextaccount, cycle+1, chunksize)
-//     );
-
-//     transaction tx;
-//     tx.actions.emplace_back(next_execution);
-//     tx.delay_sec = 1;
-//     tx.send(nextaccount + 1, _self);
-    
-//   }
-// }
 
 void accounts::rankreps() {
   rankrep(0, 0, 200);
@@ -712,7 +671,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -761,7 +720,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
@@ -924,6 +883,8 @@ void accounts::testsetcbs(name user, uint64_t amount) {
 
   check(is_account(user), "non existing user");
 
+  auto usritr = users.find(user.value);
+
   auto citr = cbs.find(user.value);
   if (citr == cbs.end()) {
     cbs.emplace(_self, [&](auto& item) {
@@ -936,6 +897,16 @@ void accounts::testsetcbs(name user, uint64_t amount) {
     cbs.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
     });
+  }
+
+  if (usritr -> type == organization) {
+    // register cbs in the cbsorg table to rank orgs
+    action(
+      permission_level(contracts::organization, "active"_n),
+      contracts::organization,
+      "addcbpoints"_n,
+      std::make_tuple(user, amount)
+    ).send();
   }
 }
 

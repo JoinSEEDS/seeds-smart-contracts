@@ -2,13 +2,18 @@
 #include <eosio/system.hpp>
 
 
+uint64_t organization::get_config(name key) {
+    auto citr = config.find(key.value);
+    check(citr != config.end(), ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+    return citr -> value;
+}
+
 void organization::check_owner(name organization, name owner) {
     require_auth(owner);
     auto itr = organizations.get(organization.value, "The organization does not exist.");
     check(itr.owner == owner, "Only the organization's owner can do that.");
     check_user(owner);
 }
-
 
 void organization::init_balance(name account) {
     auto itr = sponsors.find(account.value);
@@ -27,13 +32,46 @@ void organization::check_user(name account) {
 
 int64_t organization::getregenp(name account) {
     auto itr = users.find(account.value);
-    return 1 * itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
+    return itr -> reputation; // suposing a 4 decimals reputation allocated in a uint64_t variable
 }
 
 uint64_t organization::get_beginning_of_day_in_seconds() {
     auto sec = eosio::current_time_point().sec_since_epoch();
     auto date = eosio::time_point_sec(sec / 86400 * 86400);
     return date.utc_seconds;
+}
+
+uint64_t organization::get_size(name id) {
+    auto itr = sizes.find(id.value);
+    if (itr == sizes.end()) {
+        return 0;
+    }
+    return itr -> size;
+}
+
+void organization::increase_size_by_one(name id) {
+    auto itr = sizes.find(id.value);
+    if (itr != sizes.end()) {
+        sizes.modify(itr, _self, [&](auto & s){
+            s.size += 1;
+        });
+    } else {
+        sizes.emplace(_self, [&](auto & s){
+            s.id = id;
+            s.size = 1;
+        });
+    }
+}
+
+void organization::decrease_size_by_one(name id) {
+    auto itr = sizes.find(id.value);
+    if (itr != sizes.end()) {
+        sizes.modify(itr, _self, [&](auto & s){
+            if (s.size > 0) {
+                s.size -= 1;
+            }
+        });
+    }
 }
 
 void organization::deposit(name from, name to, asset quantity, string memo) {
@@ -113,6 +151,26 @@ ACTION organization::reset() {
     while(bitr != sponsors.end()){
         bitr = sponsors.erase(bitr);
     }
+
+    auto sitr = sizes.begin();
+    while (sitr != sizes.end()) {
+        sitr = sizes.erase(sitr);
+    }
+
+    auto avgitr = avgvotes.begin();
+    while (avgitr != avgvotes.end()) {
+        avgitr = avgvotes.erase(avgitr);
+    }
+
+    auto regenitr = regenscores.begin();
+    while (regenitr != regenscores.end()) {
+        regenitr = regenscores.erase(regenitr);
+    }
+
+    auto cbsitr = cbsorgs.begin();
+    while (cbsitr != cbsorgs.end()) {
+        cbsitr = cbsorgs.erase(cbsitr);
+    }
 }
 
 
@@ -154,10 +212,11 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
         norg.org_name = orgaccount;
         norg.owner = sponsor;
         norg.planted = quantity;
-        norg.status = 0;
+        norg.status = regular_org;
     });
 
     addmember(orgaccount, sponsor, sponsor, ""_n);
+    increase_size_by_one(get_self());
 }
 
 void organization::create_account(name sponsor, name orgaccount, string orgfullname, string publicKey) 
@@ -188,6 +247,8 @@ ACTION organization::destroy(name organization, name owner) {
     
     auto org = organizations.find(organization.value);
     organizations.erase(org);
+
+    decrease_size_by_one(get_self());
 
     // refund(owner, planted); this method could be called if we want to refund as soon as the user destroys an organization
 }
@@ -271,6 +332,28 @@ ACTION organization::changeowner(name organization, name owner, name account) {
     });
 }
 
+void organization::revert_previous_vote(name organization, name account) {
+    vote_tables votes(get_self(), organization.value);
+
+    auto vitr = votes.find(account.value);
+    
+    if(vitr != votes.end()){
+        auto itr = organizations.find(organization.value);
+        check(itr != organizations.end(), "organisation does not exist.");
+        organizations.modify(itr, _self, [&](auto & morg) {
+            morg.regen -= vitr -> regen_points;
+        });
+        
+        auto avgitr = avgvotes.find(organization.value);
+        check(avgitr != avgvotes.end(), "the organisation does not have an average entry");
+        avgvotes.modify(avgitr, _self, [&](auto & avg){
+            avg.total_sum -= vitr -> regen_points;
+            avg.num_votes -= 1;
+        });
+
+        votes.erase(vitr);
+    }
+}
 
 void organization::vote(name organization, name account, int64_t regen) {
     vote_tables votes(get_self(), organization.value);
@@ -278,8 +361,10 @@ void organization::vote(name organization, name account, int64_t regen) {
     auto itr = organizations.find(organization.value);
     check(itr != organizations.end(), "organisation does not exist.");
     
+    int64_t org_regen = itr -> regen + regen;
+
     organizations.modify(itr, _self, [&](auto & morg) {
-        morg.regen += regen;
+        morg.regen = org_regen;
     });
 
     votes.emplace(_self, [&](auto & nvote) {
@@ -287,48 +372,350 @@ void organization::vote(name organization, name account, int64_t regen) {
         nvote.timestamp = eosio::current_time_point().sec_since_epoch();
         nvote.regen_points = regen;
     });
+
+    auto avgitr = avgvotes.find(organization.value);
+    int64_t average;
+
+    if (avgitr != avgvotes.end()) {
+        int64_t total_sum = avgitr -> total_sum + regen;
+        int64_t num_votes = (int64_t)(avgitr -> num_votes) + 1;
+        average = total_sum / num_votes;
+
+        avgvotes.modify(avgitr, _self, [&](auto & avg){
+            avg.total_sum = total_sum;
+            avg.num_votes = num_votes;
+            avg.average = average;
+        });
+    } else {
+        average = regen;
+        avgvotes.emplace(_self, [&](auto & avg){
+            avg.org_name = organization;
+            avg.total_sum = regen;
+            avg.num_votes = 1;
+            avg.average = average;
+        });
+    }
+
+    int64_t min_regen = (int64_t)config.get(name("org.rgen.min").value, "The org.rgen.min parameter has not been initialized yet").value;
+    if (org_regen >= min_regen) {
+        auto itr_regen = regenscores.find(organization.value);
+        if (itr_regen != regenscores.end()) {
+            regenscores.modify(itr_regen, _self, [&](auto & rs){
+                rs.regen_avg = average;
+            });
+        } else {
+            regenscores.emplace(_self, [&](auto & rs){
+                rs.org_name = organization;
+                rs.regen_avg = average;
+                rs.rank = 0;
+            });
+            increase_size_by_one(regen_score_size);
+        }
+    }
+
 }
 
-
-ACTION organization::addregen(name organization, name account) {
+ACTION organization::addregen(name organization, name account, uint64_t amount) {
     require_auth(account);
     check_user(account);
 
-    vote_tables votes(get_self(), organization.value);
+    uint64_t maxAmount = config.get(name("org.maxadd").value, "The parameter org.maxadd has not been initialized yet").value;
+    amount = std::min(amount, maxAmount);
 
-    auto vitr = votes.find(account.value);
-    
-    if(vitr != votes.end()){
-        auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "organisation does not exist.");
-        organizations.modify(itr, _self, [&](auto & morg) {
-            morg.regen -= vitr -> regen_points;
-        });
-        votes.erase(vitr);
-    }
-    
-    vote(organization, account, getregenp(account));
+    revert_previous_vote(organization, account);
+    vote(organization, account, amount * getregenp(account));
 }
 
 
-ACTION organization::subregen(name organization, name account) {
+ACTION organization::subregen(name organization, name account, uint64_t amount) {
     require_auth(account);
     check_user(account);
 
-    vote_tables votes(get_self(), organization.value);
+    uint64_t minAmount = config.get(name("org.minsub").value, "The parameter org.minsub has not been initialized yet").value;
+    amount = std::min(amount, minAmount);
 
-    auto vitr = votes.find(account.value);
-    
-    if(vitr != votes.end()){
-        auto itr = organizations.find(organization.value);
-        check(itr != organizations.end(), "organisation does not exist.");
-        organizations.modify(itr, _self, [&](auto & morg) {
-            morg.regen -= vitr -> regen_points;
+    revert_previous_vote(organization, account);
+    vote(organization, account, -1 * amount * getregenp(account));
+}
+
+ACTION organization::rankregens() {
+    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
+    rankregen((uint64_t)0, (uint64_t)0, batch_size.value);
+}
+
+ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize) {
+    require_auth(get_self());
+
+    check(chunksize > 0, "chunk size must be > 0");
+
+    uint64_t total = get_size(regen_score_size);
+    if (total == 0) return;
+
+    uint64_t current = chunk * chunksize;
+    auto regen_score_by_avg_regen = regenscores.get_index<"byregenavg"_n>();
+    auto rsitr = start == 0 ? regen_score_by_avg_regen.begin() : regen_score_by_avg_regen.lower_bound(start);
+    uint64_t count = 0;
+
+    while (rsitr != regen_score_by_avg_regen.end() && count < chunksize) {
+
+        uint64_t rank = utils::rank(current, total);
+
+        regen_score_by_avg_regen.modify(rsitr, _self, [&](auto & item) {
+            item.rank = rank;
         });
-        votes.erase(vitr);
+
+        current++;
+        count++;
+        rsitr++;
     }
+
+    if (rsitr != regen_score_by_avg_regen.end()) {
+        action next_execution(
+            permission_level("active"_n, get_self()),
+            get_self(),
+            "rankregen"_n,
+            std::make_tuple((rsitr -> org_name).value, chunk + 1, chunksize)
+        );
+        transaction tx;
+        tx.actions.emplace_back(next_execution);
+        tx.delay_sec = 1;
+        tx.send(regen_score_size.value, _self);
+    }
+}
+
+ACTION organization::addcbpoints(name organization, uint32_t cbscore) {
+    require_auth(get_self());
+    auto itr_cbs = cbsorgs.find(organization.value);
+    if (itr_cbs != cbsorgs.end()) {
+        cbsorgs.modify(itr_cbs, _self, [&](auto & cbs){
+            cbs.community_building_score += cbscore;
+        });
+    } else {
+        cbsorgs.emplace(_self, [&](auto & cbs){
+            cbs.org_name = organization;
+            cbs.community_building_score = cbscore;
+        });
+        increase_size_by_one(cb_score_size);
+    }
+}
+
+ACTION organization::subcbpoints(name organization, uint32_t cbscore) {
+    require_auth(get_self());
+    auto itr_cbs = cbsorgs.find(organization.value);
+    if (itr_cbs != cbsorgs.end()) {
+        if (itr_cbs -> community_building_score > cbscore) {
+            cbsorgs.modify(itr_cbs, _self, [&](auto & cbs){
+                cbs.community_building_score -= cbscore;
+            });
+        } else {
+            cbsorgs.erase(itr_cbs);
+            decrease_size_by_one(cb_score_size);
+        }
+    }
+}
+
+ACTION organization::rankcbsorgs() {
+    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
+    rankcbsorg((uint64_t)0, (uint64_t)0, batch_size.value);
+}
+
+ACTION organization::rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize) {
+    require_auth(get_self());
+
+    check(chunksize > 0, "chunk size must be > 0");
     
-    vote(organization, account, -1 * getregenp(account));
+    uint64_t total = get_size(cb_score_size);
+
+    if (total == 0) return;
+
+    uint64_t current = chunk * chunksize;
+    auto cbs_by_points = cbsorgs.get_index<"bycbs"_n>();
+    auto cbsitr = start == 0 ? cbs_by_points.begin() : cbs_by_points.lower_bound(start);
+    uint64_t count = 0;
+
+    while (cbsitr != cbs_by_points.end() && count < chunksize) {
+
+        uint64_t rank = utils::rank(current, total);
+
+        cbs_by_points.modify(cbsitr, _self, [&](auto & item) {
+            item.rank = rank;
+        });
+
+        current++;
+        count++;
+        cbsitr++;
+    }
+
+    if (cbsitr != cbs_by_points.end()) {
+        uint64_t next_value = (cbsitr -> org_name).value;
+        action next_execution(
+            permission_level("active"_n, get_self()),
+            get_self(),
+            "rankcbsorg"_n,
+            std::make_tuple(next_value, chunk + 1, chunksize)
+        );
+        transaction tx;
+        tx.actions.emplace_back(next_execution);
+        tx.delay_sec = 1;
+        tx.send(cb_score_size.value, _self);
+    }
+}
+
+uint64_t organization::get_regen_score(name organization) {
+    auto ritr = regenscores.find(organization.value);
+    if (ritr == regenscores.end()) {
+        return 0;
+    }
+    return ritr -> rank;
+}
+
+uint64_t organization::count_refs(name organization, uint32_t check_num_residents) {
+    auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
+    if (check_num_residents == 0) {
+      return std::distance(refs_by_referrer.lower_bound(organization.value), refs_by_referrer.upper_bound(organization.value));
+    } else {
+      uint64_t count = 0;
+      int residents = 0;
+      auto ritr = refs_by_referrer.lower_bound(organization.value);
+      while (ritr != refs_by_referrer.end() && ritr->referrer == organization) {
+        auto uitr = users.find(ritr->invited.value);
+        if (uitr != users.end()) {
+          if (uitr->status == "resident"_n || uitr->status == "citizen"_n) {
+            residents++;
+          }
+        }
+        ritr++;
+        count++;
+      }
+      check(residents >= check_num_residents, "organization has not referred enough residents or citizens: "+std::to_string(residents));
+      return count;
+    }
+}
+
+uint64_t organization::count_transactions(name organization, uint64_t limit) {
+    org_tx_tables transactions(contracts::history, organization.value);
+    auto transactions_by_date = transactions.get_index<"bytimestamp"_n>();
+    auto titr = transactions_by_date.rbegin();
+    uint64_t count = 0;
+    uint64_t t_number = 0;
+
+    while (titr != transactions_by_date.rend() && count < limit) {
+        auto other = titr -> other;
+        auto uitr = users.find(other.value);
+        if (uitr -> status == name("citizen")) {
+            t_number += 1;
+        } else if (uitr -> type == name("organisation")) {
+            auto oitr = organizations.find(other.value);
+            if (oitr -> status == reputable_org || oitr -> status == regenerative_org) {
+                t_number += 1;
+            }
+        }
+        count++;
+        titr++;
+    }
+
+    return t_number;
+}
+
+void organization::check_can_make_reputable(name organization) {
+    auto oitr = organizations.find(organization.value);
+    check(oitr != organizations.end(), "the organization does not exist");
+    check(oitr->status == regular_org, "the organization is not a regular organization");
+
+    auto bitr = balances.find(organization.value);
+
+    uint64_t planted_min = get_config(name("rep.minplnt"));
+    uint64_t regen_min_rank = get_config(name("rep.minrank"));
+    uint64_t min_invited = get_config(name("rep.refrred"));
+    uint64_t min_residents_invited = get_config(name("rep.resref"));
+    uint64_t min_trx = get_config(name("rep.mintrx"));
+
+    uint64_t invited_users_number = count_refs(organization, min_residents_invited);
+    uint64_t regen_score = get_regen_score(organization);
+    uint64_t valid_trxs = count_transactions(organization, 300);
+
+    check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
+    check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
+    check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
+        std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
+    check(valid_trxs >= min_trx, 
+        "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
+}
+
+void organization::check_can_make_regen(name organization) {
+    auto oitr = organizations.find(organization.value);
+    check(oitr != organizations.end(), "the organization does not exist");
+    check(oitr->status == reputable_org, "the organization is not reputable");
+
+    auto bitr = balances.find(organization.value);
+
+    uint64_t planted_min = get_config(name("rgen.minplnt"));
+    uint64_t regen_min_rank = get_config(name("rgen.minrank"));
+    uint64_t min_invited = get_config(name("rgen.refrred"));
+    uint64_t min_residents_invited = get_config(name("rgen.resref"));
+    uint64_t min_trx = get_config(name("rgen.mintrx"));
+
+    uint64_t invited_users_number = count_refs(organization, min_residents_invited);
+    uint64_t regen_score = get_regen_score(organization);
+    uint64_t valid_trxs = count_transactions(organization, 300);
+
+    check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
+    check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
+    check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
+        std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
+    check(valid_trxs >= min_trx, 
+        "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
+}
+
+void organization::update_status(name organization, uint64_t status) {
+  auto oitr = organizations.find(organization.value);
+
+  check(oitr != organizations.end(), "the organization does not exist");
+  check(status == regenerative_org || status == reputable_org, "invalid organization status");
+
+  organizations.modify(oitr, _self, [&](auto& org) {
+    org.status = status;
+  });
+}
+
+void organization::history_add_regenerative(name organization) {
+    action(
+        permission_level{contracts::history, "active"_n},
+        contracts::history, "addregen"_n,
+        std::make_tuple(organization)
+    ).send();
+}
+
+void organization::history_add_reputable(name organization) {
+    action(
+        permission_level{contracts::history, "active"_n},
+        contracts::history, "addreputable"_n,
+        std::make_tuple(organization)
+    ).send();
+}
+
+ACTION organization::makeregen(name organization) {
+    check_can_make_regen(organization);
+    update_status(organization, regenerative_org);
+    history_add_regenerative(organization);
+}
+
+ACTION organization::makereptable(name organization) {
+    check_can_make_reputable(organization);
+    update_status(organization, reputable_org);
+    history_add_reputable(organization);
+}
+
+ACTION organization::testregen(name organization) {
+    require_auth(get_self());
+    update_status(organization, regenerative_org);
+    history_add_regenerative(organization);
+}
+
+ACTION organization::testreptable(name organization) {
+    require_auth(get_self());
+    update_status(organization, reputable_org);
+    history_add_reputable(organization);
 }
 
 ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
@@ -480,3 +867,32 @@ ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t s
     }
 }
 
+ACTION organization::scoretrxs() {
+    scoreorgs(""_n);
+}
+
+ACTION organization::scoreorgs(name next) {
+    require_auth(get_self());
+
+    auto itr = next == ""_n ? organizations.begin() : organizations.lower_bound(next.value);
+    if(itr != organizations.end()) {
+        action(
+            permission_level{contracts::history, "active"_n},
+            contracts::history, "orgtxpoints"_n,
+            std::make_tuple(itr -> org_name)
+        ).send();
+        itr++;
+        if (itr != organizations.end()) {
+            action next_execution(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "scoreorgs"_n,
+                std::make_tuple(itr->org_name)
+            );
+            transaction tx;
+            tx.actions.emplace_back(next_execution);
+            tx.delay_sec = 1; // change this to 1 to test
+            tx.send(next.value+2, _self);
+        }
+    }
+}
