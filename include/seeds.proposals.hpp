@@ -80,6 +80,9 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
+      ACTION migratevoice(uint64_t start);
+
+      ACTION testsetvoice(name user, uint64_t amount);
       ACTION initsz();
 
       ACTION initactives();
@@ -112,6 +115,9 @@ CONTRACT proposals : public contract {
         25  // cycle 3
       };
 
+      name alliance_type = "alliance"_n;
+      name campaign_type = "campaign"_n;
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
@@ -139,6 +145,10 @@ CONTRACT proposals : public contract {
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
+      name get_type (name fund);
+      void voice_change (name user, uint64_t amount, bool reduce, name scope);
+      void set_voice (name user, uint64_t amount, name scope);
+      void erase_voice (name user);
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
 
@@ -269,7 +279,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop)
+        (migratevoice)(testsetvoice))
       }
   }
 }

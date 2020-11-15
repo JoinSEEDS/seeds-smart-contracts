@@ -970,6 +970,12 @@ describe('Change Trust', async assert => {
       table: 'voice',
       json: true,
     })
+    const voiceAlliance = await eos.getTableRows({
+      code: proposals,
+      scope: 'alliance',
+      table: 'voice',
+      json: true,
+    })
     //console.log('given ' + given + " : "  + JSON.stringify(voice))
     assert({
       given: given,
@@ -977,7 +983,12 @@ describe('Change Trust', async assert => {
       actual: voice.rows.length,
       expected: expected
     })
-
+    assert({
+      given: given,
+      should: should,
+      actual: voiceAlliance.rows.length,
+      expected: expected
+    })
   }
 
   await check("before", "empty", 0) 
@@ -993,8 +1004,6 @@ describe('Change Trust', async assert => {
   //await contracts.proposals.changetrust(firstuser, 1, { authorization: `${proposals}@active` })
 
   //await check("after", "has voice", 1) 
-
-  
 
 })
 
@@ -1586,7 +1595,14 @@ describe('Demote inactive citizens', async assert => {
 
   console.log("user 3 comes back to citizen from being demoted")
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  
   const voiceFirstUser = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })
+  const voiceAllianceFirstUser = await eos.getTableRows({
     code: proposals,
     scope: proposals,
     table: 'voice',
@@ -1601,13 +1617,23 @@ describe('Demote inactive citizens', async assert => {
   })
 
   assert({
-    given: 'voice recovered',
+    given: 'voice for campaigns recovered',
     should: 'have the correct amount of voice',
     expected: [
       { account: 'seedsuseraaa', balance: 50 },
       { account: 'seedsuserccc', balance: 57 }
     ],
     actual: voiceFirstUser.rows.filter(r => r.account == firstuser || r.account == thirduser)
+  })
+
+  assert({
+    given: 'voice for alliances recovered',
+    should: 'have the correct amount of voice',
+    expected: [
+      { account: 'seedsuseraaa', balance: 50 },
+      { account: 'seedsuserccc', balance: 57 }
+    ],
+    actual: voiceAllianceFirstUser.rows.filter(r => r.account == firstuser || r.account == thirduser)
   })
 
 })
@@ -1672,10 +1698,23 @@ describe('Voice decay', async assert => {
       json: true,
     })
 
+    const voiceAlliance = await eos.getTableRows({
+      code: proposals,
+      scope: 'alliance',
+      table: 'voice',
+      json: true,
+    })
+
     assert({
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices if required',
       actual: voice.rows.map(r => r.balance),
+      expected: expectedValues
+    })
+    assert({
+      given: 'ran voice decay for the ' + n + ' time',
+      should: 'decay voices for alliance if required',
+      actual: voiceAlliance.rows.map(r => r.balance),
       expected: expectedValues
     })
   }
@@ -1698,5 +1737,98 @@ describe('Voice decay', async assert => {
   await sleep(4000)
 
   await testVoiceDecay([40, 89, 0], 6)
+
+})
+
+
+describe('Voice scope', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('create alliance proposal')
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
+  
+  console.log('create campaign proposal')
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'campaign', 'test campaign', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'campaign', 'test campaign 2', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+
+  console.log('stake')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  console.log('active proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  console.log('add voice')
+  await contracts.proposals.testsetvoice(firstuser, 40, { authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvoice(seconduser, 60, { authorization: `${proposals}@active` })
+
+  console.log('spend voice')
+  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(seconduser, 3, 8, { authorization: `${seconduser}@active` })
+
+  const voiceCampaignsAfter = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'voice',
+    json: true,
+  })  
+
+  const voiceAlliancesAfter = await eos.getTableRows({
+    code: proposals,
+    scope: 'alliance',
+    table: 'voice',
+    json: true,
+  })
+
+  assert({
+    given: 'voice for campaigns used',
+    should: 'spend the correct scope',
+    expected: [
+      { account: 'seedsuseraaa', balance: 40 },
+      { account: 'seedsuserbbb', balance: 44 }
+    ],
+    actual: voiceCampaignsAfter.rows
+  })
+
+  assert({
+    given: 'voice for alliances used',
+    should: 'spend the correct scope',
+    expected: [
+      { account: 'seedsuseraaa', balance: 40 },
+      { account: 'seedsuserbbb', balance: 52 }
+    ],
+    actual: voiceAlliancesAfter.rows
+  })
 
 })
