@@ -461,8 +461,8 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
 
-  auto percentage_decay = config_get(name("vdecayprntge"));
-  check(percentage_decay.value <= 100, "Voice decay parameter can not be more than 100%.");
+  uint64_t percentage_decay = config_get(name("vdecayprntge"));
+  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
   uint64_t count = 0;
 
