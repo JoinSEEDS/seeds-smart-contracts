@@ -1,5 +1,6 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
+#include <eosio/symbol.hpp>
 #include <eosio/transaction.hpp>
 #include <harvest_table.hpp>
 
@@ -425,10 +426,24 @@ void accounts::update(name user, name type, string nickname, string image, strin
 
 void accounts::send_reward(name beneficiary, asset quantity)
 {
+  // Check balance - if the balance runs out, the rewards run out too.
+  token_accts accts(contracts::token, bankaccts::referrals.value);
+  const auto& acc = accts.get(symbol("SEEDS", 4).code().raw());
+  auto rem_balance = acc.balance;
+  if (quantity > rem_balance) {
+    // Should not fail in case not enough balance
+    // check(false, ("DEBUG: not enough balance on "+bankaccts::referrals.to_string()+" = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
+    return;
+  }
 
-  // TODO: Check balance - if the balance runs out, the rewards run out too.
+  // Checks the current SEEDS price from tlosto.seeds table
+  auto lastprice = pricehistory.rbegin()->seeds_usd;
+  auto initialprice = pricehistory.begin()->seeds_usd;
+  float rate = (float)lastprice.amount / (float) initialprice.amount;
+  asset adjusted_qty(quantity.amount*rate, symbol("SEEDS", 4));
+  // check(false, ("DEBUG: lastprice="+lastprice.to_string()+", rate="+std::to_string(rate)+", qty="+quantity.to_string()+", adj="+adjusted_qty.to_string()).c_str());
 
-  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
+  send_to_escrow(bankaccts::referrals, beneficiary, adjusted_qty, "referral reward");
 }
 
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)

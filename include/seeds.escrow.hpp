@@ -99,12 +99,12 @@ CONTRACT escrow : public contract {
             name    sponsor;
             asset   locked_balance = asset (0, symbol("SEEDS", 4));
             asset   liquid_balance = asset (0, symbol("SEEDS", 4));
-
+            
             uint64_t primary_key() const { return sponsor.value; }
         };
 
         typedef eosio::multi_index<"sponsors"_n, sponsors_table> sponsors_tables;
-
+        
         token_lock_table locks;
         sponsors_tables sponsors;
 

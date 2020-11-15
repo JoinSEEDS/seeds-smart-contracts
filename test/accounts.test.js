@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, history, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -61,7 +61,8 @@ describe('accounts', async assert => {
   const thetoken = await eos.contract(token)
   const settingscontract = await eos.contract(settings)
   const escrowContract = await eos.contract(escrow)
-
+  const exchangecontract = await eos.contract(exchange)
+ 
   console.log('reset proposals')
   await proposalsContract.reset({ authorization: `${proposals}@active` })
 
@@ -74,8 +75,13 @@ describe('accounts', async assert => {
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
 
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+
   console.log('reset escrow')
   await escrowContract.reset({ authorization: `${escrow}@active` })
+
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -93,8 +99,6 @@ describe('accounts', async assert => {
 
   console.log('add referral firstuser is referrer for seconduser')
   await contract.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
-
-
 
   console.log('update reputation')
   await contract.addrep(firstuser, 100, { authorization: `${accounts}@api` })
@@ -342,6 +346,7 @@ describe('vouching', async assert => {
   const thetoken = await eos.contract(token)
   const harvestContract = await eos.contract(harvest)
   const settingscontract = await eos.contract(settings)
+  const exchangecontract = await eos.contract(exchange)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -354,6 +359,10 @@ describe('vouching', async assert => {
 
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -467,6 +476,7 @@ describe('vouching with reputation', async assert => {
   const contract = await eos.contract(accounts)
   const harvestContract = await eos.contract(harvest)
   const settingscontract = await eos.contract(settings)
+  const exchangecontract = await eos.contract(exchange)
 
   console.log('reset accounts')
   await contract.reset({ authorization: `${accounts}@active` })
@@ -476,6 +486,10 @@ describe('vouching with reputation', async assert => {
 
   console.log('reset settings')
   await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('reset exchange')
+  await exchangecontract.reset({ authorization: `${exchange}@active` })
+  await exchangecontract.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add users')
   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -509,13 +523,15 @@ describe('Ambassador and Org rewards', async assert => {
     return
   }
 
-  const contracts = await initContracts({ settings, accounts, organization, token, onboarding, escrow })
+  const contracts = await initContracts({ settings, accounts, organization, token, onboarding, escrow, exchange })
 
   console.log('reset contracts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   await contracts.settings.reset({ authorization: `${settings}@active` })
   await contracts.organization.reset({ authorization: `${organization}@active` })
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -600,7 +616,7 @@ describe('Ambassador and Org rewards', async assert => {
         
       
     })
-}
+  }
 
   console.log("user 1 becomes resident")
   await contracts.accounts.testresident(orguser1, { authorization: `${accounts}@active` })
@@ -617,6 +633,90 @@ describe('Ambassador and Org rewards', async assert => {
 
   await checkBalances("after citizen 2", "refrwd2.amb", "refrwd2.org")
 
+
+})
+
+
+describe('Proportional rewards', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts, organization, exchange, token, onboarding, escrow })
+
+  console.log('reset contracts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })
+
+  console.log("set exchange price")
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+  await contracts.exchange.incprice({ authorization: `${exchange}@active` })
+
+  console.log('add user')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+
+  let individual = firstuser
+  let invited = "invited"
+
+  console.log('individual invites a user named invited')
+  let secret = await invite(individual, 800, false)
+
+  console.log('user accepts the invite and becomes a Seeds user')
+  await accept(invited, secret, activePublicKey, contracts)
+
+  const checkBalances = async (text, amount) => {
+
+    const escrows = await getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      json: true
+    })
+    //console.log("escrow: "+JSON.stringify(escrows, null, 2))
+
+    let n = escrows.rows.length
+    let item = escrows.rows[n-1]
+
+    delete item.id
+    delete item.vesting_date
+    delete item.notes
+    delete item.created_date
+    delete item.updated_date
+
+    assert({
+      given: text,
+      should: 'receive Seeds in escrow',
+      actual: escrows.rows[n-1],
+      expected:
+        {
+          "lock_type": "event",
+          "sponsor": "refer.seeds",
+          "beneficiary": "seedsuseraaa",
+          "quantity": amount+" SEEDS",
+          "trigger_event": "golive",
+          "trigger_source": "dao.hypha",
+        }
+    })
+  }
+
+  console.log("user becomes resident")
+  await contracts.accounts.testresident(invited, { authorization: `${accounts}@active` })
+
+  const expected_reward1 = await setting_in_seeds("refrwd1.ind") * 0.9680538;
+
+  await checkBalances("after resident", expected_reward1.toFixed(4))
+
+  console.log("user becomes citizen")
+  await contracts.accounts.testcitizen(invited, { authorization: `${accounts}@active` })
+
+  const expected_reward2 = await setting_in_seeds("refrwd2.ind") * 0.9680538;
+
+  await checkBalances("after resident", expected_reward2.toFixed(4))
 
 })
 
@@ -641,13 +741,17 @@ describe('make resident', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, token, history })
+  const contracts = await initContracts({ accounts, token, history, exchange })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('reset history')
   await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+
+  console.log('reset exchange')
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
