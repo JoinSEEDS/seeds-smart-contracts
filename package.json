@@ -16,13 +16,16 @@
   "dependencies": {
     "bignumber.js": "^8.1.1",
     "chai": "^4.2.0",
+    "cheerio": "^1.0.0-rc.3",
     "commander": "^3.0.2",
+    "commonmark": "^0.29.2",
     "dotenv": "^8.1.0",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.7",
     "json": "^9.0.6",
     "mocha": "^6.1.4",
     "moment": "^2.24.0",
+    "mustache": "^4.0.1",
     "ramda": "^0.26.1",
     "riteway": "^6.0.3",
     "tap-nirvana": "^1.1.0"

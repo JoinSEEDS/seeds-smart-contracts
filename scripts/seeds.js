@@ -4,6 +4,7 @@ const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
 const { isLocal, names, allContracts, allContractNames, allBankAccountNames } = require('./helper')
+const docsgen = require('./docsgen')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
@@ -137,35 +138,35 @@ program
     await batchCallFunc(contract, moreContracts, runAction)
   })
 
-  program
+program
   .command('test <contract> [moreContracts...]')
   .description('Run unit tests for deployed contract')
   .action(async function(contract, moreContracts) {
     await batchCallFunc(contract, moreContracts, test)
   })
 
-  program
+program
   .command('reset <contract> [moreContracts...]')
   .description('Reset deployed contract')
   .action(async function(contract, moreContracts) {
     await batchCallFunc(contract, moreContracts, resetAction)
   })
 
-  program
+program
   .command('init')
   .description('Initial creation of all accounts and contracts contract')
   .action(async function(contract) {
     await initAction()
   })
 
-  program
+program
   .command('updatePermissions')
   .description('Update all permissions of all contracts')
   .action(async function(contract) {
     await updatePermissionAction()
   })
 
-  program
+program
   .command('list')
   .description('List all contracts / accounts')
   .action(async function() {
@@ -175,7 +176,7 @@ program
     allContractNames.forEach(item=>console.print(item))
   })
 
-  program
+program
   .command('changekey <contract> <key>')
   .description('Change owner and active key')
   .action(async function(contract, key) {
@@ -183,7 +184,7 @@ program
     await changeOwnerAndActivePermission(contract, key)
   })
 
-  program
+program
   .command('change_key_permission <contract> <role> <parentrole> <key>')
   .description('Change owner and active key')
   .action(async function(contract, role, parentrole, key) {
@@ -191,6 +192,12 @@ program
     await changeExistingKeyPermission(contract, role, parentrole, key)
   })
 
+program
+  .command('docsgen <contract> [moreContracts...]')
+  .description('Exports SDK docs for contract')
+  .action(async function(contract, moreContracts) {
+    await batchCallFunc(contract, moreContracts, docsgen)
+  })
 
 program.parse(process.argv)
 
