@@ -202,18 +202,6 @@ CONTRACT harvest : public contract {
     typedef singleton<"total"_n, total_table> total_tables;
     typedef eosio::multi_index<"total"_n, total_table> dump_for_total;
 
-    TABLE transaction_table { // from History contract - scoped by 'from'
-       uint64_t id;
-       name to;
-       asset quantity;
-       uint64_t timestamp;
-
-       uint64_t primary_key() const { return id; }
-       uint64_t by_timestamp() const { return timestamp; }
-       uint64_t by_to() const { return to.value; }
-       uint64_t by_quantity() const { return quantity.amount; }
-    };
-
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
@@ -221,11 +209,56 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-    typedef eosio::multi_index<"transactions"_n, transaction_table,
-      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-    > transaction_tables;
+
+    // new tables ------------------------------
+
+    TABLE transaction_points_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t points;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_points() const { return points; }
+    };
+
+    TABLE qev_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t qualifying_volume;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
+      indexed_by<"bypoints"_n,
+      const_mem_fun<transaction_points_table, uint64_t, &transaction_points_table::by_points>>
+    > transaction_points_tables;
+
+    typedef eosio::multi_index<"qevs"_n, qev_table,
+      indexed_by<"byvolume"_n,
+      const_mem_fun<qev_table, uint64_t, &qev_table::by_volume>>
+    > qev_tables;
+
+    // -----------------------------------------
+
+
+
+    // TABLE transaction_table { // from History contract - scoped by 'from'
+    //    uint64_t id;
+    //    name to;
+    //    asset quantity;
+    //    uint64_t timestamp;
+
+    //    uint64_t primary_key() const { return id; }
+    //    uint64_t by_timestamp() const { return timestamp; }
+    //    uint64_t by_to() const { return to.value; }
+    //    uint64_t by_quantity() const { return quantity.amount; }
+    // };
+
+    // typedef eosio::multi_index<"transactions"_n, transaction_table,
+    //   indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+    //   indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+    //   indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
+    // > transaction_tables;
 
     // Contract Tables
     balance_tables balances;
