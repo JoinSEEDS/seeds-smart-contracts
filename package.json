@@ -22,10 +22,10 @@
     "dotenv": "^8.1.0",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.7",
+    "handlebars": "^4.7.6",
     "json": "^9.0.6",
     "mocha": "^6.1.4",
     "moment": "^2.24.0",
-    "mustache": "^4.0.1",
     "ramda": "^0.26.1",
     "riteway": "^6.0.3",
     "tap-nirvana": "^1.1.0"
