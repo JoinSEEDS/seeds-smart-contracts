@@ -1,0 +1,187 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for exchange</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>addround / <a href="#addround">addround</a> - <comment type="action" name="addround"></comment></li>
+<li>incprice / <a href="#incprice">incprice</a> - <comment type="action" name="incprice"></comment></li>
+<li>initrounds / <a href="#initrounds">initrounds</a> - <comment type="action" name="initrounds"></comment></li>
+<li>initsale / <a href="#initsale">initsale</a> - <comment type="action" name="initsale"></comment></li>
+<li>migrate / <a href="#migrate">migrate</a> - <comment type="action" name="migrate"></comment></li>
+<li>newpayment / <a href="#newpayment">newpayment</a> - <comment type="action" name="newpayment"></comment></li>
+<li>onperiod / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
+<li>ontransfer / <a href="#ontransfer">ontransfer</a> - <comment type="action" name="ontransfer"></comment></li>
+<li>pause / <a href="#pause">pause</a> - <comment type="action" name="pause"></comment></li>
+<li>priceupdate / <a href="#priceupdate">priceupdate</a> - <comment type="action" name="priceupdate"></comment></li>
+<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li>setflag / <a href="#setflag">setflag</a> - <comment type="action" name="setflag"></comment></li>
+<li>unpause / <a href="#unpause">unpause</a> - <comment type="action" name="unpause"></comment></li>
+<li>updatelimit / <a href="#updatelimit">updatelimit</a> - <comment type="action" name="updatelimit"></comment></li>
+<li>updatetlos / <a href="#updatetlos">updatetlos</a> - <comment type="action" name="updatetlos"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>config</strong> / <a href="#configtable">configtable</a> (i64) - <comment type="table" name="config"></comment></li>
+<li><strong>dailystats</strong> / <a href="#stattable">stattable</a> (i64) - <comment type="table" name="dailystats"></comment></li>
+<li><strong>flags</strong> / <a href="#flags_table">flags_table</a> (i64) - <comment type="table" name="flags"></comment></li>
+<li><strong>payhistory</strong> / <a href="#payhistory_table">payhistory_table</a> (i64) - <comment type="table" name="payhistory"></comment></li>
+<li><strong>price</strong> / <a href="#price_table">price_table</a> (i64) - <comment type="table" name="price"></comment></li>
+<li><strong>pricehistory</strong> / <a href="#price_history_table">price_history_table</a> (i64) - <comment type="table" name="pricehistory"></comment></li>
+<li><strong>rounds</strong> / <a href="#round_table">round_table</a> (i64) - <comment type="table" name="rounds"></comment></li>
+<li><strong>sold</strong> / <a href="#soldtable">soldtable</a> (i64) - <comment type="table" name="sold"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="addround"> addround </h3>
+<ul>
+<li>volume / uint64</li>
+<li>seeds_per_usd / asset</li>
+</ul>
+<h3 id="configtable"> configtable </h3>
+<ul>
+<li>seeds_per_usd / asset</li>
+<li>tlos_per_usd / asset</li>
+<li>citizen_limit / asset</li>
+<li>resident_limit / asset</li>
+<li>visitor_limit / asset</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="flags_table"> flags_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+</ul>
+<h3 id="incprice"> incprice </h3>
+<h3 id="initrounds"> initrounds </h3>
+<ul>
+<li>volume_per_round / uint64</li>
+<li>initial_seeds_per_usd / asset</li>
+</ul>
+<h3 id="initsale"> initsale </h3>
+<h3 id="migrate"> migrate </h3>
+<h3 id="newpayment"> newpayment </h3>
+<ul>
+<li>recipientAccount / name</li>
+<li>paymentSymbol / string</li>
+<li>paymentId / string</li>
+<li>multipliedUsdValue / uint64</li>
+</ul>
+<h3 id="onperiod"> onperiod </h3>
+<h3 id="ontransfer"> ontransfer </h3>
+<ul>
+<li>buyer / name</li>
+<li>contract / name</li>
+<li>tlos_quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="pause"> pause </h3>
+<h3 id="payhistory_table"> payhistory_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>recipientAccount / name</li>
+<li>paymentSymbol / string</li>
+<li>paymentId / string</li>
+<li>multipliedUsdValue / uint64</li>
+</ul>
+<h3 id="price_history_table"> price_history_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>seeds_usd / asset</li>
+<li>date / time_point</li>
+</ul>
+<h3 id="price_table"> price_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>current_round_id / uint64</li>
+<li>current_seeds_per_usd / asset</li>
+<li>remaining / uint64</li>
+</ul>
+<h3 id="priceupdate"> priceupdate </h3>
+<h3 id="reset"> reset </h3>
+<h3 id="round_table"> round_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>max_sold / uint64</li>
+<li>seeds_per_usd / asset</li>
+</ul>
+<h3 id="setflag"> setflag </h3>
+<ul>
+<li>flagname / name</li>
+<li>value / uint64</li>
+</ul>
+<h3 id="soldtable"> soldtable </h3>
+<ul>
+<li>id / uint64</li>
+<li>total_sold / uint64</li>
+</ul>
+<h3 id="stattable"> stattable </h3>
+<ul>
+<li>buyer_account / name</li>
+<li>seeds_purchased / uint64</li>
+</ul>
+<h3 id="unpause"> unpause </h3>
+<h3 id="updatelimit"> updatelimit </h3>
+<ul>
+<li>citizen_limit / asset</li>
+<li>resident_limit / asset</li>
+<li>visitor_limit / asset</li>
+</ul>
+<h3 id="updatetlos"> updatetlos </h3>
+<ul>
+<li>tlos_per_usd / asset</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

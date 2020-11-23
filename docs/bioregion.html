@@ -1,0 +1,187 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for bioregion</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>addrole / <a href="#addrole">addrole</a> - <comment type="action" name="addrole"></comment></li>
+<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li>join / <a href="#join">join</a> - <comment type="action" name="join"></comment></li>
+<li>leave / <a href="#leave">leave</a> - <comment type="action" name="leave"></comment></li>
+<li>leaverole / <a href="#leaverole">leaverole</a> - <comment type="action" name="leaverole"></comment></li>
+<li>removebr / <a href="#removebr">removebr</a> - <comment type="action" name="removebr"></comment></li>
+<li>removemember / <a href="#removemember">removemember</a> - <comment type="action" name="removemember"></comment></li>
+<li>removerole / <a href="#removerole">removerole</a> - <comment type="action" name="removerole"></comment></li>
+<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li>setfounder / <a href="#setfounder">setfounder</a> - <comment type="action" name="setfounder"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>bioregions</strong> / <a href="#bioregion_table">bioregion_table</a> (i64) - <comment type="table" name="bioregions"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) - <comment type="table" name="config"></comment></li>
+<li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) - <comment type="table" name="members"></comment></li>
+<li><strong>roles</strong> / <a href="#roles_table">roles_table</a> (i64) - <comment type="table" name="roles"></comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsors_table">sponsors_table</a> (i64) - <comment type="table" name="sponsors"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) - <comment type="table" name="users"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="addrole"> addrole </h3>
+<ul>
+<li>bioregion / name</li>
+<li>admin / name</li>
+<li>account / name</li>
+<li>role / name</li>
+</ul>
+<h3 id="bioregion_table"> bioregion_table </h3>
+<ul>
+<li>id / name</li>
+<li>founder / name</li>
+<li>status / name</li>
+<li>description / string</li>
+<li>locationjson / string</li>
+<li>latitude / float32</li>
+<li>longitude / float32</li>
+<li>members_count / uint64</li>
+<li>created_at / time_point</li>
+</ul>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="create"> create </h3>
+<ul>
+<li>founder / name</li>
+<li>bioaccount / name</li>
+<li>description / string</li>
+<li>locationJson / string</li>
+<li>latitude / float32</li>
+<li>longitude / float32</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="join"> join </h3>
+<ul>
+<li>bioregion / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="leave"> leave </h3>
+<ul>
+<li>bioregion / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="leaverole"> leaverole </h3>
+<ul>
+<li>bioregion / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="members_table"> members_table </h3>
+<ul>
+<li>bioregion / name</li>
+<li>account / name</li>
+<li>joined_date / time_point</li>
+</ul>
+<h3 id="removebr"> removebr </h3>
+<ul>
+<li>bioregion / name</li>
+</ul>
+<h3 id="removemember"> removemember </h3>
+<ul>
+<li>bioregion / name</li>
+<li>admin / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="removerole"> removerole </h3>
+<ul>
+<li>bioregion / name</li>
+<li>admin / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="roles_table"> roles_table </h3>
+<ul>
+<li>account / name</li>
+<li>role / name</li>
+<li>joined_date / time_point</li>
+</ul>
+<h3 id="setfounder"> setfounder </h3>
+<ul>
+<li>bioregion / name</li>
+<li>founder / name</li>
+<li>new_founder / name</li>
+</ul>
+<h3 id="sponsors_table"> sponsors_table </h3>
+<ul>
+<li>account / name</li>
+<li>balance / asset</li>
+</ul>
+<h3 id="user_table"> user_table </h3>
+<ul>
+<li>account / name</li>
+<li>status / name</li>
+<li>type / name</li>
+<li>nickname / string</li>
+<li>image / string</li>
+<li>story / string</li>
+<li>roles / string</li>
+<li>skills / string</li>
+<li>interests / string</li>
+<li>reputation / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

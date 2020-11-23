@@ -1,0 +1,157 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for token</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>burn / <a href="#burn">burn</a> - <comment type="action" name="burn"></comment></li>
+<li>close / <a href="#close">close</a> - <comment type="action" name="close"></comment></li>
+<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li>issue / <a href="#issue">issue</a> - <comment type="action" name="issue"></comment></li>
+<li>open / <a href="#open">open</a> - <comment type="action" name="open"></comment></li>
+<li>resetweekly / <a href="#resetweekly">resetweekly</a> - <comment type="action" name="resetweekly"></comment></li>
+<li>resetwhelper / <a href="#resetwhelper">resetwhelper</a> - <comment type="action" name="resetwhelper"></comment></li>
+<li>retire / <a href="#retire">retire</a> - <comment type="action" name="retire"></comment></li>
+<li>transfer / <a href="#transfer">transfer</a> - <comment type="action" name="transfer"></comment></li>
+<li>updatecirc / <a href="#updatecirc">updatecirc</a> - <comment type="action" name="updatecirc"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>accounts</strong> / <a href="#account">account</a> (i64) - <comment type="table" name="accounts"></comment></li>
+<li><strong>circulating</strong> / <a href="#circulating_supply_table">circulating_supply_table</a> (i64) - <comment type="table" name="circulating"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) - <comment type="table" name="config"></comment></li>
+<li><strong>stat</strong> / <a href="#currency_stats">currency_stats</a> (i64) - <comment type="table" name="stat"></comment></li>
+<li><strong>trxstat</strong> / <a href="#transaction_stats">transaction_stats</a> (i64) - <comment type="table" name="trxstat"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="account"> account </h3>
+<ul>
+<li>balance / asset</li>
+</ul>
+<h3 id="burn"> burn </h3>
+<ul>
+<li>from / name</li>
+<li>quantity / asset</li>
+</ul>
+<h3 id="circulating_supply_table"> circulating_supply_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>total / uint64</li>
+<li>circulating / uint64</li>
+</ul>
+<h3 id="close"> close </h3>
+<ul>
+<li>owner / name</li>
+<li>symbol / symbol</li>
+</ul>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="create"> create </h3>
+<ul>
+<li>issuer / name</li>
+<li>initial_supply / asset</li>
+</ul>
+<h3 id="currency_stats"> currency_stats </h3>
+<ul>
+<li>supply / asset</li>
+<li>initial_supply / asset</li>
+<li>issuer / name</li>
+</ul>
+<h3 id="issue"> issue </h3>
+<ul>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="open"> open </h3>
+<ul>
+<li>owner / name</li>
+<li>symbol / symbol</li>
+<li>ram_payer / name</li>
+</ul>
+<h3 id="resetweekly"> resetweekly </h3>
+<h3 id="resetwhelper"> resetwhelper </h3>
+<ul>
+<li>begin / uint64</li>
+</ul>
+<h3 id="retire"> retire </h3>
+<ul>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="transaction_stats"> transaction_stats </h3>
+<ul>
+<li>account / name</li>
+<li>transactions_volume / asset</li>
+<li>total_transactions / uint64</li>
+<li>incoming_transactions / uint64</li>
+<li>outgoing_transactions / uint64</li>
+</ul>
+<h3 id="transfer"> transfer </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="updatecirc"> updatecirc </h3>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

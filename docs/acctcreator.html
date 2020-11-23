@@ -1,0 +1,101 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for acctcreator</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>activate / <a href="#activate">activate</a> - <comment type="action" name="activate"></comment></li>
+<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li>pause / <a href="#pause">pause</a> - <comment type="action" name="pause"></comment></li>
+<li>setconfig / <a href="#setconfig">setconfig</a> - <comment type="action" name="setconfig"></comment></li>
+<li>setsetting / <a href="#setsetting">setsetting</a> - <comment type="action" name="setsetting"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>config</strong> / <a href="#config">config</a> (i64) - <comment type="table" name="config"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="activate"> activate </h3>
+<h3 id="config"> config </h3>
+<ul>
+<li>account_creator_contract / name</li>
+<li>account_creator_oracle / name</li>
+<li>settings / pair_name_uint8[]</li>
+</ul>
+<h3 id="create"> create </h3>
+<ul>
+<li>account_to_create / name</li>
+<li>owner_key / string</li>
+<li>active_key / string</li>
+</ul>
+<h3 id="pair_name_uint8"> pair_name_uint8 </h3>
+<ul>
+<li>key / name</li>
+<li>value / uint8</li>
+</ul>
+<h3 id="pause"> pause </h3>
+<h3 id="setconfig"> setconfig </h3>
+<ul>
+<li>account_creator_contract / name</li>
+<li>account_creator_oracle / name</li>
+</ul>
+<h3 id="setsetting"> setsetting </h3>
+<ul>
+<li>setting_name / name</li>
+<li>setting_value / uint8</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

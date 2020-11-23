@@ -1,0 +1,132 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for scheduler</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>configop / <a href="#configop">configop</a> - <comment type="action" name="configop"></comment></li>
+<li>confirm / <a href="#confirm">confirm</a> - <comment type="action" name="confirm"></comment></li>
+<li>execute / <a href="#execute">execute</a> - <comment type="action" name="execute"></comment></li>
+<li>pauseop / <a href="#pauseop">pauseop</a> - <comment type="action" name="pauseop"></comment></li>
+<li>removeop / <a href="#removeop">removeop</a> - <comment type="action" name="removeop"></comment></li>
+<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li>start / <a href="#start">start</a> - <comment type="action" name="start"></comment></li>
+<li>stop / <a href="#stop">stop</a> - <comment type="action" name="stop"></comment></li>
+<li>test1 / <a href="#test1">test1</a> - <comment type="action" name="test1"></comment></li>
+<li>test2 / <a href="#test2">test2</a> - <comment type="action" name="test2"></comment></li>
+<li>testexec / <a href="#testexec">testexec</a> - <comment type="action" name="testexec"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) - <comment type="table" name="config"></comment></li>
+<li><strong>operations</strong> / <a href="#operations_table">operations_table</a> (i64) - <comment type="table" name="operations"></comment></li>
+<li><strong>test</strong> / <a href="#test_table">test_table</a> (i64) - <comment type="table" name="test"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="configop"> configop </h3>
+<ul>
+<li>id / name</li>
+<li>action / name</li>
+<li>contract / name</li>
+<li>period / uint64</li>
+<li>starttime / uint64</li>
+</ul>
+<h3 id="confirm"> confirm </h3>
+<ul>
+<li>operation / name</li>
+</ul>
+<h3 id="execute"> execute </h3>
+<h3 id="operations_table"> operations_table </h3>
+<ul>
+<li>id / name</li>
+<li>operation / name</li>
+<li>contract / name</li>
+<li>pause / uint8</li>
+<li>period / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="pauseop"> pauseop </h3>
+<ul>
+<li>id / name</li>
+<li>pause / uint8</li>
+</ul>
+<h3 id="removeop"> removeop </h3>
+<ul>
+<li>id / name</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="start"> start </h3>
+<h3 id="stop"> stop </h3>
+<h3 id="test1"> test1 </h3>
+<h3 id="test2"> test2 </h3>
+<h3 id="test_table"> test_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+</ul>
+<h3 id="testexec"> testexec </h3>
+<ul>
+<li>op / name</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

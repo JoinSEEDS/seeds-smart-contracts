@@ -1,0 +1,302 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+
+</head><body onload="loadUser()">
+  <div id="target"><h1>Smartcontract documentation for harvest</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li>calccs / <a href="#calccs">calccs</a> - <comment type="action" name="calccs"></comment></li>
+<li>calccss / <a href="#calccss">calccss</a> - <comment type="action" name="calccss"></comment></li>
+<li>calctotal / <a href="#calctotal">calctotal</a> - <comment type="action" name="calctotal"></comment></li>
+<li>calctrxpt / <a href="#calctrxpt">calctrxpt</a> - <comment type="action" name="calctrxpt"></comment></li>
+<li>calctrxpts / <a href="#calctrxpts">calctrxpts</a> - <comment type="action" name="calctrxpts"></comment></li>
+<li>cancelrefund / <a href="#cancelrefund">cancelrefund</a> - <comment type="action" name="cancelrefund"></comment></li>
+<li>claimrefund / <a href="#claimrefund">claimrefund</a> - <comment type="action" name="claimrefund"></comment></li>
+<li>payforcpu / <a href="#payforcpu">payforcpu</a> - <comment type="action" name="payforcpu"></comment></li>
+<li>plant / <a href="#plant">plant</a> - <comment type="action" name="plant"></comment></li>
+<li>rankcs / <a href="#rankcs">rankcs</a> - <comment type="action" name="rankcs"></comment></li>
+<li>rankcss / <a href="#rankcss">rankcss</a> - <comment type="action" name="rankcss"></comment></li>
+<li>rankorgtxs / <a href="#rankorgtxs">rankorgtxs</a> - <comment type="action" name="rankorgtxs"></comment></li>
+<li>rankplanted / <a href="#rankplanted">rankplanted</a> - <comment type="action" name="rankplanted"></comment></li>
+<li>rankplanteds / <a href="#rankplanteds">rankplanteds</a> - <comment type="action" name="rankplanteds"></comment></li>
+<li>ranktx / <a href="#ranktx">ranktx</a> - <comment type="action" name="ranktx"></comment></li>
+<li>ranktxs / <a href="#ranktxs">ranktxs</a> - <comment type="action" name="ranktxs"></comment></li>
+<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li>runharvest / <a href="#runharvest">runharvest</a> - <comment type="action" name="runharvest"></comment></li>
+<li>setorgtxpt / <a href="#setorgtxpt">setorgtxpt</a> - <comment type="action" name="setorgtxpt"></comment></li>
+<li>sow / <a href="#sow">sow</a> - <comment type="action" name="sow"></comment></li>
+<li>testclaim / <a href="#testclaim">testclaim</a> - <comment type="action" name="testclaim"></comment></li>
+<li>testupdatecs / <a href="#testupdatecs">testupdatecs</a> - <comment type="action" name="testupdatecs"></comment></li>
+<li>unplant / <a href="#unplant">unplant</a> - <comment type="action" name="unplant"></comment></li>
+<li>updatecs / <a href="#updatecs">updatecs</a> - <comment type="action" name="updatecs"></comment></li>
+<li>updatetxpt / <a href="#updatetxpt">updatetxpt</a> - <comment type="action" name="updatetxpt"></comment></li>
+<li>updtotal / <a href="#updtotal">updtotal</a> - <comment type="action" name="updtotal"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>balances</strong> / <a href="#balance_table">balance_table</a> (i64) - <comment type="table" name="balances"></comment></li>
+<li><strong>cbs</strong> / <a href="#cbs_table">cbs_table</a> (i64) - <comment type="table" name="cbs"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) - <comment type="table" name="config"></comment></li>
+<li><strong>cspoints</strong> / <a href="#cs_points_table">cs_points_table</a> (i64) - <comment type="table" name="cspoints"></comment></li>
+<li><strong>harvest</strong> / <a href="#harvest_table">harvest_table</a> (i64) - <comment type="table" name="harvest"></comment></li>
+<li><strong>planted</strong> / <a href="#planted_table">planted_table</a> (i64) - <comment type="table" name="planted"></comment></li>
+<li><strong>refunds</strong> / <a href="#refund_table">refund_table</a> (i64) - <comment type="table" name="refunds"></comment></li>
+<li><strong>rep</strong> / <a href="#rep_table">rep_table</a> (i64) - <comment type="table" name="rep"></comment></li>
+<li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) - <comment type="table" name="sizes"></comment></li>
+<li><strong>total</strong> / <a href="#total_table">total_table</a> (i64) - <comment type="table" name="total"></comment></li>
+<li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) - <comment type="table" name="transactions"></comment></li>
+<li><strong>txpoints</strong> / <a href="#tx_points_table">tx_points_table</a> (i64) - <comment type="table" name="txpoints"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) - <comment type="table" name="users"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="balance_table"> balance_table </h3>
+<ul>
+<li>account / name</li>
+<li>planted / asset</li>
+<li>reward / asset</li>
+</ul>
+<h3 id="calccs"> calccs </h3>
+<ul>
+<li>start_val / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="calccss"> calccss </h3>
+<h3 id="calctotal"> calctotal </h3>
+<ul>
+<li>startval / uint64</li>
+</ul>
+<h3 id="calctrxpt"> calctrxpt </h3>
+<ul>
+<li>start_val / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="calctrxpts"> calctrxpts </h3>
+<h3 id="cancelrefund"> cancelrefund </h3>
+<ul>
+<li>from / name</li>
+<li>request_id / uint64</li>
+</ul>
+<h3 id="cbs_table"> cbs_table </h3>
+<ul>
+<li>account / name</li>
+<li>community_building_score / uint32</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="claimrefund"> claimrefund </h3>
+<ul>
+<li>from / name</li>
+<li>request_id / uint64</li>
+</ul>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="cs_points_table"> cs_points_table </h3>
+<ul>
+<li>account / name</li>
+<li>contribution_points / uint32</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="harvest_table"> harvest_table </h3>
+<ul>
+<li>account / name</li>
+<li>planted_score / uint64</li>
+<li>planted_timestamp / uint64</li>
+<li>transactions_score / uint64</li>
+<li>tx_timestamp / uint64</li>
+<li>reputation_score / uint64</li>
+<li>rep_timestamp / uint64</li>
+<li>community_building_score / uint64</li>
+<li>community_building_timestamp / uint64</li>
+<li>contribution_score / uint64</li>
+<li>contrib_timestamp / uint64</li>
+</ul>
+<h3 id="payforcpu"> payforcpu </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="plant"> plant </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="planted_table"> planted_table </h3>
+<ul>
+<li>account / name</li>
+<li>planted / asset</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="rankcs"> rankcs </h3>
+<ul>
+<li>start_val / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="rankcss"> rankcss </h3>
+<h3 id="rankorgtxs"> rankorgtxs </h3>
+<h3 id="rankplanted"> rankplanted </h3>
+<ul>
+<li>start_val / uint128</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="rankplanteds"> rankplanteds </h3>
+<h3 id="ranktx"> ranktx </h3>
+<ul>
+<li>start_val / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+<li>table / name</li>
+</ul>
+<h3 id="ranktxs"> ranktxs </h3>
+<h3 id="refund_table"> refund_table </h3>
+<ul>
+<li>request_id / uint64</li>
+<li>refund_id / uint64</li>
+<li>account / name</li>
+<li>amount / asset</li>
+<li>weeks_delay / uint32</li>
+<li>request_time / uint32</li>
+</ul>
+<h3 id="rep_table"> rep_table </h3>
+<ul>
+<li>account / name</li>
+<li>rep / uint32</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="runharvest"> runharvest </h3>
+<h3 id="setorgtxpt"> setorgtxpt </h3>
+<ul>
+<li>organization / name</li>
+<li>tx_points / uint64</li>
+</ul>
+<h3 id="size_table"> size_table </h3>
+<ul>
+<li>id / name</li>
+<li>size / uint64</li>
+</ul>
+<h3 id="sow"> sow </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+</ul>
+<h3 id="testclaim"> testclaim </h3>
+<ul>
+<li>from / name</li>
+<li>request_id / uint64</li>
+<li>sec_rewind / uint64</li>
+</ul>
+<h3 id="testupdatecs"> testupdatecs </h3>
+<ul>
+<li>account / name</li>
+<li>contribution_score / uint64</li>
+</ul>
+<h3 id="total_table"> total_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>total_planted / asset</li>
+</ul>
+<h3 id="transaction_table"> transaction_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="tx_points_table"> tx_points_table </h3>
+<ul>
+<li>account / name</li>
+<li>points / uint32</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="unplant"> unplant </h3>
+<ul>
+<li>from / name</li>
+<li>quantity / asset</li>
+</ul>
+<h3 id="updatecs"> updatecs </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="updatetxpt"> updatetxpt </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="updtotal"> updtotal </h3>
+<h3 id="user_table"> user_table </h3>
+<ul>
+<li>account / name</li>
+<li>status / name</li>
+<li>type / name</li>
+<li>nickname / string</li>
+<li>image / string</li>
+<li>story / string</li>
+<li>roles / string</li>
+<li>skills / string</li>
+<li>interests / string</li>
+<li>reputation / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main">{{comment}}</comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>
