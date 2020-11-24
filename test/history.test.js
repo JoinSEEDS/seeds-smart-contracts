@@ -251,7 +251,7 @@ describe("make a history entry", async (assert) => {
 
 })
 
-describe('QEV', async assert => {
+describe('individual transactions', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -268,6 +268,7 @@ describe('QEV', async assert => {
   await contracts.history.reset(firstuser, { authorization: `${history}@active` })
   await contracts.history.reset(seconduser, { authorization: `${history}@active` })
   await contracts.history.reset(thirduser, { authorization: `${history}@active` })
+  await contracts.history.reset(history, { authorization: `${history}@active` })
   await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
 
   console.log('token reset weekly')
@@ -348,6 +349,7 @@ describe('QEV', async assert => {
   const infoFirstUser = await getTransactionEntries(firstuser)
   const infoSecondUser = await getTransactionEntries(seconduser)
   const infoThirdUser = await getTransactionEntries(thirduser)
+  const historyTotal = await getTransactionEntries(history)
 
   const totals = await getTableRows({
     code: history,
@@ -430,7 +432,11 @@ describe('QEV', async assert => {
   assert({
     given: 'transaction made',
     should: 'have the correct entries in trx points tables',
-    actual: [ infoFirstUser.trxPoints, infoSecondUser.trxPoints, infoThirdUser.trxPoints ],
+    actual: [
+      infoFirstUser.trxPoints,
+      infoSecondUser.trxPoints, 
+      infoThirdUser.trxPoints 
+    ],
     expected: [
       [{ timestamp: day, points: 412 }],
       [{ timestamp: day, points: 1120 }],
@@ -441,11 +447,17 @@ describe('QEV', async assert => {
   assert({
     given: 'transactions made',
     should: 'have the correct entries in qevs tables',
-    actual: [ infoFirstUser.qevVolume, infoSecondUser.qevVolume, infoThirdUser.qevVolume ],
+    actual: [ 
+      infoFirstUser.qevVolume, 
+      infoSecondUser.qevVolume, 
+      infoThirdUser.qevVolume, 
+      historyTotal.qevVolume 
+    ],
     expected: [
       [{ timestamp: day, qualifying_volume: 11500000 }],
       [{ timestamp: day, qualifying_volume: 9550000 }],
-      [{ timestamp: day, qualifying_volume: 100000 }]
+      [{ timestamp: day, qualifying_volume: 100000 }],
+      [{ timestamp: day, qualifying_volume: 21150000 }]
     ]
   })
 

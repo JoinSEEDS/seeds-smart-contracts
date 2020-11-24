@@ -35,21 +35,18 @@ CONTRACT history : public contract {
         ACTION addcitizen(name account);
         
         ACTION addresident(name account);
-
-//        ACTION numtrx(name account);
+        
+        ACTION numtrx(name account);
 
         ACTION addreputable(name organization);
 
         ACTION addregen(name organization);
 
-//        ACTION orgtxpoints(name organization);
-
-//        ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
-
-
-        ACTION deldailytrx (uint64_t day);
+        ACTION deldailytrx(uint64_t day);
 
         ACTION savepoints(uint64_t id, uint64_t timestamp);
+
+        ACTION testtotalqev(uint64_t numdays, uint64_t volume);
 
 
     private:
@@ -58,6 +55,8 @@ CONTRACT history : public contract {
       uint64_t config_get(name key);
       void fire_orgtx_calc(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
       bool clean_old_tx(name org, uint64_t chunksize);
+      void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
+      void send_update_txpoints (name from);
 
       TABLE citizen_table {
         uint64_t id;
@@ -106,42 +105,47 @@ CONTRACT history : public contract {
         uint64_t primary_key()const { return history_id; }
       };
       
-      // TABLE transaction_table {
-      //   uint64_t id;
-      //   name to;
-      //   asset quantity;
-      //   uint64_t timestamp;
+      // --------------------------------------------------- //
+      // old tables
 
-      //   uint64_t primary_key() const { return id; }
-      //   uint64_t by_timestamp() const { return timestamp; }
-      //   uint64_t by_to() const { return to.value; }
-      //   uint64_t by_quantity() const { return quantity.amount; }
-      // };
+      TABLE transaction_table {
+        uint64_t id;
+        name to;
+        asset quantity;
+        uint64_t timestamp;
 
-      // TABLE org_tx_table {
-      //   uint64_t id;
-      //   name other;
-      //   bool in;
-      //   asset quantity;
-      //   uint64_t timestamp;
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_to() const { return to.value; }
+        uint64_t by_quantity() const { return quantity.amount; }
+      };
 
-      //   uint64_t primary_key() const { return id; }
-      //   uint64_t by_timestamp() const { return timestamp; }
-      //   uint64_t by_quantity() const { return quantity.amount; }
-      //   uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
-      // };
+      TABLE org_tx_table {
+        uint64_t id;
+        name other;
+        bool in;
+        asset quantity;
+        uint64_t timestamp;
 
-      // typedef eosio::multi_index<"orgtx"_n, org_tx_table,
-      //   indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
-      //   indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
-      //   indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint128_t, &org_tx_table::by_other>>
-      // > org_tx_tables;
+        uint64_t primary_key() const { return id; }
+        uint64_t by_timestamp() const { return timestamp; }
+        uint64_t by_quantity() const { return quantity.amount; }
+        uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
+      };
 
-      // typedef eosio::multi_index<"transactions"_n, transaction_table,
-      //   indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      //   indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      //   indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-      // > transaction_tables;
+      typedef eosio::multi_index<"orgtx"_n, org_tx_table,
+        indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
+        indexed_by<"byother"_n,const_mem_fun<org_tx_table, uint128_t, &org_tx_table::by_other>>
+      > org_tx_tables;
+
+      typedef eosio::multi_index<"transactions"_n, transaction_table,
+        indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
+        indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
+        indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
+      > transaction_tables;
+
+      // --------------------------------------------------- //
 
       TABLE daily_transactions_table { // scoped by beginning_of_day_in_seconds
         uint64_t id;
@@ -248,5 +252,7 @@ EOSIO_DISPATCH(history,
   (historyentry)(trxentry)
   (addcitizen)(addresident)
   (addreputable)(addregen)
+  (numtrx)
   (deldailytrx)(savepoints)
-  );
+  (testtotalqev)
+);

@@ -1,3 +1,4 @@
+ 
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>
@@ -659,14 +660,13 @@ void accounts::testcitizen(name user)
 
 // return number of transactions outgoing, until a limit
 uint32_t accounts::num_transactions(name account, uint32_t limit) {
-  transaction_tables transactions(contracts::history, account.value);
-  auto titr = transactions.begin();
-  uint32_t count = 0;
-  while(titr != transactions.end() && count < limit) {
-    titr++;
-    count++;
+  auto titr = totals.find(account.value);
+  
+  if (titr == totals.end()) {
+    return 0;
   }
-  return count;
+
+  return titr -> total_number_of_transactions;
 }
 
 void accounts::rankreps() {
@@ -968,4 +968,3 @@ uint64_t accounts::rep_score(name user)
 
     return ritr->rank;
 }
-

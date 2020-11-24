@@ -12,12 +12,6 @@ void history::reset(name account) {
   while(hitr != history.end()) {
     hitr = history.erase(hitr);
   }
-  
-  // org_tx_tables orgtx(get_self(), account.value);
-  // auto oitr = orgtx.begin();
-  // while (oitr != orgtx.end()) {
-  //   oitr = orgtx.erase(oitr);
-  // }
 
   transaction_points_tables transactions(get_self(), account.value);
   auto titr = transactions.begin();
@@ -143,8 +137,6 @@ void history::trxentry(name from, name to, asset quantity) {
 
   double trx_multiplier = std::min(max_transaction_points, quantity.amount) / 10000.0;
 
-  print("MIRA: to = ", to, ", multiplier = ", utils::get_rep_multiplier(to), ", volume = ", trx_multiplier, "\n");
-  
   transactions.emplace(_self, [&](auto & transaction){
     transaction.id = transaction_id;
     transaction.from = from;
@@ -242,8 +234,6 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
       current_itr = ft_itr;
     }
 
-    print("count = ", count, ", volume = ", ft_itr -> volume, "\n");
-
     ft_itr++;
     count++;
   }
@@ -260,11 +250,37 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
     transactions_by_from_to.erase(current_itr);
   }
 
+  save_from_metrics (from, from_points, qualifying_volume, day);
+
+  if (uitr_to -> type == name("organisation")) {
+    transaction_points_tables trx_points_to(get_self(), to.value);
+    auto trx_itr_to = trx_points_to.find(day);
+
+    if (trx_itr_to != trx_points_to.end()) {
+      trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
+        item.points += to_points;
+      });
+    } else {
+      trx_points_to.emplace(_self, [&](auto & item){
+        item.timestamp = day;
+        item.points = to_points;
+      });
+    }
+  }
+
+  if (uitr_from -> type != name("organisation")) {
+    send_update_txpoints(from);
+  }
+}
+
+void history::save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day) {
   transaction_points_tables trx_points_from(get_self(), from.value);
   qev_tables qevs(get_self(), from.value);
+  qev_tables qevs_total(get_self(), get_self().value);
 
   auto trx_itr = trx_points_from.find(day);
   auto qev_itr = qevs.find(day);
+  auto qev_total_itr = qevs_total.find(day);
 
   if (trx_itr != trx_points_from.end()) {
     trx_points_from.modify(trx_itr, _self, [&](auto & item){
@@ -288,196 +304,48 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
     });
   }
 
-  if (uitr_to -> type == name("organisation")) {
-    transaction_points_tables trx_points_to(get_self(), to.value);
-    auto trx_itr_to = trx_points_to.find(day);
-
-    if (trx_itr_to != trx_points_to.end()) {
-      trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
-        item.points += to_points;
-      });
-    } else {
-      trx_points_to.emplace(_self, [&](auto & item){
-        item.timestamp = day;
-        item.points = to_points;
-      });
-    }
-  }
-
-  if (uitr_from -> type != name("organisation")) {
-    // delayed update
-    cancel_deferred(from.value);
-
-    // delayed update
-    cancel_deferred(from.value);
-
-    action a(
-        permission_level{contracts::harvest, "active"_n},
-        contracts::harvest,
-        "updatetxpt"_n,
-        std::make_tuple(from)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(a);
-    tx.delay_sec = 1; 
-    tx.send(from.value, _self);
+  if (qev_total_itr != qevs_total.end()) {
+    qevs_total.modify(qev_total_itr, _self, [&](auto & item){
+      item.qualifying_volume += qualifying_volume;
+    });
+  } else {
+    qevs_total.emplace(_self, [&](auto & item){
+      item.timestamp = day;
+      item.qualifying_volume = qualifying_volume;
+    });
   }
 }
 
+void history::send_update_txpoints (name from) {
+  // delayed update
+  cancel_deferred(from.value);
 
-// // return true if anything was cleaned up, false otherwise
-// bool history::clean_old_tx(name org, uint64_t chunksize) {
-  
-//   auto now = eosio::current_time_point().sec_since_epoch();
-//   auto cutoffdate = now - utils::moon_cycle * 3;
+  // delayed update
+  cancel_deferred(from.value);
 
-//   org_tx_tables orgtx(get_self(), org.value);
-//   uint64_t count = 0;
-//   auto transactions_by_time = orgtx.get_index<"bytimestamp"_n>();
-//   auto tx_time_itr = transactions_by_time.begin();
-//   bool result = false;
-//   while(tx_time_itr != transactions_by_time.end() && tx_time_itr->timestamp < cutoffdate && count < chunksize) {
-//     tx_time_itr = transactions_by_time.erase(tx_time_itr);
-//     result = true;
-//     count++;
-//   }  
-//   return result;
-  
-// }
+  action a(
+      permission_level{contracts::harvest, "active"_n},
+      contracts::harvest,
+      "updatetxpt"_n,
+      std::make_tuple(from)
+  );
 
-// void history::orgtxpoints(name org) {
-//   require_auth(get_self());
-//   orgtxpt(org, 0, 200, 0);
-// }
+  transaction tx;
+  tx.actions.emplace_back(a);
+  tx.delay_sec = 1; 
+  tx.send(from.value, _self);
+}
 
-// void history::orgtxpt(name org, uint128_t start_val, uint64_t chunksize, uint64_t running_total) {
-//   require_auth(get_self());
+void history::numtrx(name account) {
+  auto titr = totals.find(account.value);
+  uint64_t num = 0;
 
+  if (titr != totals.end()) {
+    num = titr -> total_number_of_transactions;
+  }
 
-
-// }
-
-// void history::orgtxpt(name org, uint128_t start_val, uint64_t chunksize, uint64_t running_total) {
-//   require_auth(get_self());
-
-//   org_tx_tables orgtx(get_self(), org.value);
-//   uint64_t count = 0;
-
-//   if (start_val == 0 && clean_old_tx(org, chunksize)) {    // Step 0 - remove all old transactions
-//     fire_orgtx_calc(org, 0, chunksize, running_total);
-//     return;
-//   }
-
-//   // Step 1 - add up values
-//   uint64_t max_quantity = config_get("org.trx.max"_n);
-//   uint64_t max_number_of_transactions = config_get("org.trx.div"_n);;
-
-//   auto transactions_by_other = orgtx.get_index<"byother"_n>();
-//   auto tx_other_itr = start_val == 0 ? transactions_by_other.begin() : transactions_by_other.lower_bound(start_val);
-
-//   name      current_other = name("");
-//   uint64_t  current_num = 0;
-//   double    current_rep_multiplier = 0.0;
-
-//   //print("orgtxpt for "+org.to_string());
-
-//   while(tx_other_itr != transactions_by_other.end() && count < chunksize) {
-
-//     if (current_other != tx_other_itr->other) {
-//       current_other = tx_other_itr->other;
-//       current_num = 0;
-//       current_rep_multiplier = utils::get_rep_multiplier(current_other);
-//       //print("new other "+current_other.to_string());
-//       //print("rep mul "+std::to_string(current_rep_multiplier));
-//     } else {
-//       //print("same iter other "+current_other.to_string());
-//       current_num++;
-//     }
-
-//     if (current_num < max_number_of_transactions) {
-//       uint64_t volume = tx_other_itr->quantity.amount;
-      
-//       //print("; vol: "+std::to_string(volume));
-
-//       // limit max volume
-//       if (volume > max_quantity) {
-//         volume = max_quantity;
-//         //print("; vol exceed max - limited to: "+std::to_string(volume));
-//       }
-
-//       // multiply by receiver reputation
-//       double points = (double(volume) / 10000.0) * current_rep_multiplier;
-//       //print("; rep mul "+std::to_string(current_rep_multiplier));
-//       //print("; points "+std::to_string(points));
-
-//       running_total += points;
-      
-//       //print("; total "+std::to_string(running_total));
-//       tx_other_itr++;
-//     } else {
-//       tx_other_itr++;
-//       // TODO skip ahead to next account!
-//       // rather than increasing account by 1, increase name by 1 and look for a new 
-//       // iterator starting with that name as lower limit
-//       // name next_name = name(tx_other_itr->other.value + 1);
-//       // uunt128_t next_val = uunt128_t(next_name.value) << 64;
-//       // tx_other_itr = transactions_by_other.lower_bound(next_val);
-//       // print("; skip to "+std::to_string(next_val));
-
-//     }
-  
-//     count++;
-//   }
-//   if (tx_other_itr == transactions_by_other.end()) {
-//     action(
-//       permission_level{contracts::harvest, "active"_n},
-//       contracts::harvest, "setorgtxpt"_n,
-//       std::make_tuple(org, running_total)
-//     ).send();
-//   } else {
-//     uint128_t next_value = tx_other_itr->by_other();
-//     fire_orgtx_calc(org, next_value, chunksize, running_total);
-//   }
-
-  
-
-// }
-
-// void history::fire_orgtx_calc(name org, uint128_t next_value, uint64_t chunksize, uint64_t running_total) {
-//   action next_execution(
-//       permission_level{get_self(), "active"_n},
-//       get_self(),
-//       "orgtxpt"_n,
-//       std::make_tuple(org, next_value, chunksize, running_total)
-//   );
-//   transaction tx;
-//   tx.actions.emplace_back(next_execution);
-//   tx.delay_sec = 1;
-//   tx.send(next_value + 1, _self);
-// }
-
-
-
-
-// void history::numtrx(name account) {
-//   uint32_t num = num_transactions(account, 200);
-//   check(false, "{ numtrx: " + std::to_string(num) + " }");
-// }
-
-// // return number of transactions outgoing, until a limit
-// uint32_t history::num_transactions(name account, uint32_t limit) {
-//   transaction_tables transactions(contracts::history, account.value);
-//   auto titr = transactions.begin();
-//   uint32_t count = 0;
-//   while(titr != transactions.end() && count < limit) {
-//     titr++;
-//     count++;
-//   }
-//   return count;
-// }
-
-
+  check(false, "{ numtrx: " + std::to_string(num) + " }");
+}
 
 
 void history::check_user(name account)
@@ -497,3 +365,33 @@ uint64_t history::config_get(name key) {
   }
   return citr->value;
 }
+
+
+void history::testtotalqev (uint64_t numdays, uint64_t volume) {
+  require_auth(get_self());
+
+  qev_tables qevs_total(get_self(), get_self().value);
+
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  uint64_t cutoff = day - (numdays * utils::seconds_per_day);
+  uint64_t current_day = day;
+
+  while (current_day >= cutoff) {
+    auto qitr = qevs_total.find(current_day);
+
+    if (qitr != qevs_total.end()) {
+      qevs_total.modify(qitr, _self, [&](auto & item){
+        item.qualifying_volume = volume;
+      });
+    } else {
+      qevs_total.emplace(_self, [&](auto & item){
+        item.timestamp = current_day;
+        item.qualifying_volume = volume;
+      });
+    }
+
+    current_day -= utils::seconds_per_day;
+  }
+
+}
+
