@@ -10,12 +10,25 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-<body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+<body>
   <div id="target">Loading...</div>
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -27,19 +40,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

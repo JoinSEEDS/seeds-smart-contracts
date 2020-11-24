@@ -10,39 +10,56 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for accounts</h1>
-<p><comment type="main">Welcome!</comment></p>
+<p><comment type="main">
+  ### Welcome!
+
+  This is **markdown**! 
+</comment></p>
 <h2>Actions</h2>
 <ul>
-<li>addref / <a href="#addref">addref</a> - <comment type="action" name="addref">The addref action.</comment></li>
-<li>addrep / <a href="#addrep">addrep</a> - <comment type="action" name="addrep"></comment></li>
-<li>adduser / <a href="#adduser">adduser</a> - <comment type="action" name="adduser"></comment></li>
-<li>cancitizen / <a href="#cancitizen">cancitizen</a> - <comment type="action" name="cancitizen"></comment></li>
-<li>canresident / <a href="#canresident">canresident</a> - <comment type="action" name="canresident"></comment></li>
-<li>changesize / <a href="#changesize">changesize</a> - <comment type="action" name="changesize"></comment></li>
-<li>demotecitizn / <a href="#demotecitizn">demotecitizn</a> - <comment type="action" name="demotecitizn"></comment></li>
-<li>invitevouch / <a href="#invitevouch">invitevouch</a> - <comment type="action" name="invitevouch"></comment></li>
-<li>makecitizen / <a href="#makecitizen">makecitizen</a> - <comment type="action" name="makecitizen"></comment></li>
-<li>makeresident / <a href="#makeresident">makeresident</a> - <comment type="action" name="makeresident"></comment></li>
-<li>punish / <a href="#punish">punish</a> - <comment type="action" name="punish"></comment></li>
-<li>rankcbs / <a href="#rankcbs">rankcbs</a> - <comment type="action" name="rankcbs"></comment></li>
-<li>rankcbss / <a href="#rankcbss">rankcbss</a> - <comment type="action" name="rankcbss"></comment></li>
-<li>rankrep / <a href="#rankrep">rankrep</a> - <comment type="action" name="rankrep"></comment></li>
-<li>rankreps / <a href="#rankreps">rankreps</a> - <comment type="action" name="rankreps"></comment></li>
-<li>requestvouch / <a href="#requestvouch">requestvouch</a> - <comment type="action" name="requestvouch"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>subrep / <a href="#subrep">subrep</a> - <comment type="action" name="subrep"></comment></li>
-<li>testcitizen / <a href="#testcitizen">testcitizen</a> - <comment type="action" name="testcitizen"></comment></li>
-<li>testremove / <a href="#testremove">testremove</a> - <comment type="action" name="testremove"></comment></li>
-<li>testresident / <a href="#testresident">testresident</a> - <comment type="action" name="testresident"></comment></li>
-<li>testreward / <a href="#testreward">testreward</a> - <comment type="action" name="testreward"></comment></li>
-<li>testsetcbs / <a href="#testsetcbs">testsetcbs</a> - <comment type="action" name="testsetcbs"></comment></li>
-<li>testsetrep / <a href="#testsetrep">testsetrep</a> - <comment type="action" name="testsetrep"></comment></li>
-<li>testsetrs / <a href="#testsetrs">testsetrs</a> - <comment type="action" name="testsetrs"></comment></li>
-<li>testvisitor / <a href="#testvisitor">testvisitor</a> - <comment type="action" name="testvisitor"></comment></li>
-<li>update / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
-<li>vouch / <a href="#vouch">vouch</a> - <comment type="action" name="vouch"></comment></li>
+<li><strong>addref</strong> / <a href="#addref">addref</a> - <comment type="action" name="addref">Testing `markup`</comment></li>
+<li><strong>addrep</strong> / <a href="#addrep">addrep</a> - <comment type="action" name="addrep"></comment></li>
+<li><strong>adduser</strong> / <a href="#adduser">adduser</a> - <comment type="action" name="adduser"></comment></li>
+<li><strong>cancitizen</strong> / <a href="#cancitizen">cancitizen</a> - <comment type="action" name="cancitizen"></comment></li>
+<li><strong>canresident</strong> / <a href="#canresident">canresident</a> - <comment type="action" name="canresident"></comment></li>
+<li><strong>changesize</strong> / <a href="#changesize">changesize</a> - <comment type="action" name="changesize"></comment></li>
+<li><strong>demotecitizn</strong> / <a href="#demotecitizn">demotecitizn</a> - <comment type="action" name="demotecitizn"></comment></li>
+<li><strong>invitevouch</strong> / <a href="#invitevouch">invitevouch</a> - <comment type="action" name="invitevouch"></comment></li>
+<li><strong>makecitizen</strong> / <a href="#makecitizen">makecitizen</a> - <comment type="action" name="makecitizen"></comment></li>
+<li><strong>makeresident</strong> / <a href="#makeresident">makeresident</a> - <comment type="action" name="makeresident"></comment></li>
+<li><strong>punish</strong> / <a href="#punish">punish</a> - <comment type="action" name="punish"></comment></li>
+<li><strong>rankcbs</strong> / <a href="#rankcbs">rankcbs</a> - <comment type="action" name="rankcbs"></comment></li>
+<li><strong>rankcbss</strong> / <a href="#rankcbss">rankcbss</a> - <comment type="action" name="rankcbss"></comment></li>
+<li><strong>rankrep</strong> / <a href="#rankrep">rankrep</a> - <comment type="action" name="rankrep"></comment></li>
+<li><strong>rankreps</strong> / <a href="#rankreps">rankreps</a> - <comment type="action" name="rankreps"></comment></li>
+<li><strong>requestvouch</strong> / <a href="#requestvouch">requestvouch</a> - <comment type="action" name="requestvouch"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>subrep</strong> / <a href="#subrep">subrep</a> - <comment type="action" name="subrep"></comment></li>
+<li><strong>testcitizen</strong> / <a href="#testcitizen">testcitizen</a> - <comment type="action" name="testcitizen"></comment></li>
+<li><strong>testremove</strong> / <a href="#testremove">testremove</a> - <comment type="action" name="testremove"></comment></li>
+<li><strong>testresident</strong> / <a href="#testresident">testresident</a> - <comment type="action" name="testresident"></comment></li>
+<li><strong>testreward</strong> / <a href="#testreward">testreward</a> - <comment type="action" name="testreward"></comment></li>
+<li><strong>testsetcbs</strong> / <a href="#testsetcbs">testsetcbs</a> - <comment type="action" name="testsetcbs"></comment></li>
+<li><strong>testsetrep</strong> / <a href="#testsetrep">testsetrep</a> - <comment type="action" name="testsetrep"></comment></li>
+<li><strong>testsetrs</strong> / <a href="#testsetrs">testsetrs</a> - <comment type="action" name="testsetrs"></comment></li>
+<li><strong>testvisitor</strong> / <a href="#testvisitor">testvisitor</a> - <comment type="action" name="testvisitor"></comment></li>
+<li><strong>update</strong> / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
+<li><strong>vouch</strong> / <a href="#vouch">vouch</a> - <comment type="action" name="vouch"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -267,7 +284,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -279,19 +296,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

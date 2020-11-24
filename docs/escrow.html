@@ -10,17 +10,30 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for escrow</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>cancellock / <a href="#cancellock">cancellock</a> - <comment type="action" name="cancellock"></comment></li>
-<li>claim / <a href="#claim">claim</a> - <comment type="action" name="claim"></comment></li>
-<li>lock / <a href="#lock">lock</a> - <comment type="action" name="lock"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>trigger / <a href="#trigger">trigger</a> - <comment type="action" name="trigger"></comment></li>
-<li>withdraw / <a href="#withdraw">withdraw</a> - <comment type="action" name="withdraw"></comment></li>
+<li><strong>cancellock</strong> / <a href="#cancellock">cancellock</a> - <comment type="action" name="cancellock"></comment></li>
+<li><strong>claim</strong> / <a href="#claim">claim</a> - <comment type="action" name="claim"></comment></li>
+<li><strong>lock</strong> / <a href="#lock">lock</a> - <comment type="action" name="lock"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>trigger</strong> / <a href="#trigger">trigger</a> - <comment type="action" name="trigger"></comment></li>
+<li><strong>withdraw</strong> / <a href="#withdraw">withdraw</a> - <comment type="action" name="withdraw"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -92,7 +105,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -104,19 +117,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

@@ -10,28 +10,41 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for forum</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>createcomt / <a href="#createcomt">createcomt</a> - <comment type="action" name="createcomt"></comment></li>
-<li>createpost / <a href="#createpost">createpost</a> - <comment type="action" name="createpost"></comment></li>
-<li>deleteactive / <a href="#deleteactive">deleteactive</a> - <comment type="action" name="deleteactive"></comment></li>
-<li>delteactives / <a href="#delteactives">delteactives</a> - <comment type="action" name="delteactives"></comment></li>
-<li>downvotecomt / <a href="#downvotecomt">downvotecomt</a> - <comment type="action" name="downvotecomt"></comment></li>
-<li>downvotepost / <a href="#downvotepost">downvotepost</a> - <comment type="action" name="downvotepost"></comment></li>
-<li>giverep / <a href="#giverep">giverep</a> - <comment type="action" name="giverep"></comment></li>
-<li>givereps / <a href="#givereps">givereps</a> - <comment type="action" name="givereps"></comment></li>
-<li>newday / <a href="#newday">newday</a> - <comment type="action" name="newday"></comment></li>
-<li>onperiod / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
-<li>rankforum / <a href="#rankforum">rankforum</a> - <comment type="action" name="rankforum"></comment></li>
-<li>rankforums / <a href="#rankforums">rankforums</a> - <comment type="action" name="rankforums"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>testapoints / <a href="#testapoints">testapoints</a> - <comment type="action" name="testapoints"></comment></li>
-<li>testsize / <a href="#testsize">testsize</a> - <comment type="action" name="testsize"></comment></li>
-<li>upvotecomt / <a href="#upvotecomt">upvotecomt</a> - <comment type="action" name="upvotecomt"></comment></li>
-<li>upvotepost / <a href="#upvotepost">upvotepost</a> - <comment type="action" name="upvotepost"></comment></li>
+<li><strong>createcomt</strong> / <a href="#createcomt">createcomt</a> - <comment type="action" name="createcomt"></comment></li>
+<li><strong>createpost</strong> / <a href="#createpost">createpost</a> - <comment type="action" name="createpost"></comment></li>
+<li><strong>deleteactive</strong> / <a href="#deleteactive">deleteactive</a> - <comment type="action" name="deleteactive"></comment></li>
+<li><strong>delteactives</strong> / <a href="#delteactives">delteactives</a> - <comment type="action" name="delteactives"></comment></li>
+<li><strong>downvotecomt</strong> / <a href="#downvotecomt">downvotecomt</a> - <comment type="action" name="downvotecomt"></comment></li>
+<li><strong>downvotepost</strong> / <a href="#downvotepost">downvotepost</a> - <comment type="action" name="downvotepost"></comment></li>
+<li><strong>giverep</strong> / <a href="#giverep">giverep</a> - <comment type="action" name="giverep"></comment></li>
+<li><strong>givereps</strong> / <a href="#givereps">givereps</a> - <comment type="action" name="givereps"></comment></li>
+<li><strong>newday</strong> / <a href="#newday">newday</a> - <comment type="action" name="newday"></comment></li>
+<li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
+<li><strong>rankforum</strong> / <a href="#rankforum">rankforum</a> - <comment type="action" name="rankforum"></comment></li>
+<li><strong>rankforums</strong> / <a href="#rankforums">rankforums</a> - <comment type="action" name="rankforums"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>testapoints</strong> / <a href="#testapoints">testapoints</a> - <comment type="action" name="testapoints"></comment></li>
+<li><strong>testsize</strong> / <a href="#testsize">testsize</a> - <comment type="action" name="testsize"></comment></li>
+<li><strong>upvotecomt</strong> / <a href="#upvotecomt">upvotecomt</a> - <comment type="action" name="upvotecomt"></comment></li>
+<li><strong>upvotepost</strong> / <a href="#upvotepost">upvotepost</a> - <comment type="action" name="upvotepost"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -187,7 +200,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -199,19 +212,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

@@ -10,21 +10,34 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for history</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>addcitizen / <a href="#addcitizen">addcitizen</a> - <comment type="action" name="addcitizen"></comment></li>
-<li>addregen / <a href="#addregen">addregen</a> - <comment type="action" name="addregen"></comment></li>
-<li>addreputable / <a href="#addreputable">addreputable</a> - <comment type="action" name="addreputable"></comment></li>
-<li>addresident / <a href="#addresident">addresident</a> - <comment type="action" name="addresident"></comment></li>
-<li>historyentry / <a href="#historyentry">historyentry</a> - <comment type="action" name="historyentry"></comment></li>
-<li>numtrx / <a href="#numtrx">numtrx</a> - <comment type="action" name="numtrx"></comment></li>
-<li>orgtxpoints / <a href="#orgtxpoints">orgtxpoints</a> - <comment type="action" name="orgtxpoints"></comment></li>
-<li>orgtxpt / <a href="#orgtxpt">orgtxpt</a> - <comment type="action" name="orgtxpt"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>trxentry / <a href="#trxentry">trxentry</a> - <comment type="action" name="trxentry"></comment></li>
+<li><strong>addcitizen</strong> / <a href="#addcitizen">addcitizen</a> - <comment type="action" name="addcitizen"></comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> - <comment type="action" name="addregen"></comment></li>
+<li><strong>addreputable</strong> / <a href="#addreputable">addreputable</a> - <comment type="action" name="addreputable"></comment></li>
+<li><strong>addresident</strong> / <a href="#addresident">addresident</a> - <comment type="action" name="addresident"></comment></li>
+<li><strong>historyentry</strong> / <a href="#historyentry">historyentry</a> - <comment type="action" name="historyentry"></comment></li>
+<li><strong>numtrx</strong> / <a href="#numtrx">numtrx</a> - <comment type="action" name="numtrx"></comment></li>
+<li><strong>orgtxpoints</strong> / <a href="#orgtxpoints">orgtxpoints</a> - <comment type="action" name="orgtxpoints"></comment></li>
+<li><strong>orgtxpt</strong> / <a href="#orgtxpt">orgtxpt</a> - <comment type="action" name="orgtxpt"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>trxentry</strong> / <a href="#trxentry">trxentry</a> - <comment type="action" name="trxentry"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -154,7 +167,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -166,19 +179,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

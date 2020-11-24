@@ -10,20 +10,33 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for referendums</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>addvoice / <a href="#addvoice">addvoice</a> - <comment type="action" name="addvoice"></comment></li>
-<li>against / <a href="#against">against</a> - <comment type="action" name="against"></comment></li>
-<li>cancelvote / <a href="#cancelvote">cancelvote</a> - <comment type="action" name="cancelvote"></comment></li>
-<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
-<li>favour / <a href="#favour">favour</a> - <comment type="action" name="favour"></comment></li>
-<li>onperiod / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>stake / <a href="#stake">stake</a> - <comment type="action" name="stake"></comment></li>
-<li>update / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
+<li><strong>addvoice</strong> / <a href="#addvoice">addvoice</a> - <comment type="action" name="addvoice"></comment></li>
+<li><strong>against</strong> / <a href="#against">against</a> - <comment type="action" name="against"></comment></li>
+<li><strong>cancelvote</strong> / <a href="#cancelvote">cancelvote</a> - <comment type="action" name="cancelvote"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li><strong>favour</strong> / <a href="#favour">favour</a> - <comment type="action" name="favour"></comment></li>
+<li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>stake</strong> / <a href="#stake">stake</a> - <comment type="action" name="stake"></comment></li>
+<li><strong>update</strong> / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -129,7 +142,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -141,19 +154,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

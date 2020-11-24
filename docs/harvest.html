@@ -10,37 +10,50 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for harvest</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>calccs / <a href="#calccs">calccs</a> - <comment type="action" name="calccs"></comment></li>
-<li>calccss / <a href="#calccss">calccss</a> - <comment type="action" name="calccss"></comment></li>
-<li>calctotal / <a href="#calctotal">calctotal</a> - <comment type="action" name="calctotal"></comment></li>
-<li>calctrxpt / <a href="#calctrxpt">calctrxpt</a> - <comment type="action" name="calctrxpt"></comment></li>
-<li>calctrxpts / <a href="#calctrxpts">calctrxpts</a> - <comment type="action" name="calctrxpts"></comment></li>
-<li>cancelrefund / <a href="#cancelrefund">cancelrefund</a> - <comment type="action" name="cancelrefund"></comment></li>
-<li>claimrefund / <a href="#claimrefund">claimrefund</a> - <comment type="action" name="claimrefund"></comment></li>
-<li>payforcpu / <a href="#payforcpu">payforcpu</a> - <comment type="action" name="payforcpu"></comment></li>
-<li>plant / <a href="#plant">plant</a> - <comment type="action" name="plant"></comment></li>
-<li>rankcs / <a href="#rankcs">rankcs</a> - <comment type="action" name="rankcs"></comment></li>
-<li>rankcss / <a href="#rankcss">rankcss</a> - <comment type="action" name="rankcss"></comment></li>
-<li>rankorgtxs / <a href="#rankorgtxs">rankorgtxs</a> - <comment type="action" name="rankorgtxs"></comment></li>
-<li>rankplanted / <a href="#rankplanted">rankplanted</a> - <comment type="action" name="rankplanted"></comment></li>
-<li>rankplanteds / <a href="#rankplanteds">rankplanteds</a> - <comment type="action" name="rankplanteds"></comment></li>
-<li>ranktx / <a href="#ranktx">ranktx</a> - <comment type="action" name="ranktx"></comment></li>
-<li>ranktxs / <a href="#ranktxs">ranktxs</a> - <comment type="action" name="ranktxs"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>runharvest / <a href="#runharvest">runharvest</a> - <comment type="action" name="runharvest"></comment></li>
-<li>setorgtxpt / <a href="#setorgtxpt">setorgtxpt</a> - <comment type="action" name="setorgtxpt"></comment></li>
-<li>sow / <a href="#sow">sow</a> - <comment type="action" name="sow"></comment></li>
-<li>testclaim / <a href="#testclaim">testclaim</a> - <comment type="action" name="testclaim"></comment></li>
-<li>testupdatecs / <a href="#testupdatecs">testupdatecs</a> - <comment type="action" name="testupdatecs"></comment></li>
-<li>unplant / <a href="#unplant">unplant</a> - <comment type="action" name="unplant"></comment></li>
-<li>updatecs / <a href="#updatecs">updatecs</a> - <comment type="action" name="updatecs"></comment></li>
-<li>updatetxpt / <a href="#updatetxpt">updatetxpt</a> - <comment type="action" name="updatetxpt"></comment></li>
-<li>updtotal / <a href="#updtotal">updtotal</a> - <comment type="action" name="updtotal"></comment></li>
+<li><strong>calccs</strong> / <a href="#calccs">calccs</a> - <comment type="action" name="calccs"></comment></li>
+<li><strong>calccss</strong> / <a href="#calccss">calccss</a> - <comment type="action" name="calccss"></comment></li>
+<li><strong>calctotal</strong> / <a href="#calctotal">calctotal</a> - <comment type="action" name="calctotal"></comment></li>
+<li><strong>calctrxpt</strong> / <a href="#calctrxpt">calctrxpt</a> - <comment type="action" name="calctrxpt"></comment></li>
+<li><strong>calctrxpts</strong> / <a href="#calctrxpts">calctrxpts</a> - <comment type="action" name="calctrxpts"></comment></li>
+<li><strong>cancelrefund</strong> / <a href="#cancelrefund">cancelrefund</a> - <comment type="action" name="cancelrefund"></comment></li>
+<li><strong>claimrefund</strong> / <a href="#claimrefund">claimrefund</a> - <comment type="action" name="claimrefund"></comment></li>
+<li><strong>payforcpu</strong> / <a href="#payforcpu">payforcpu</a> - <comment type="action" name="payforcpu"></comment></li>
+<li><strong>plant</strong> / <a href="#plant">plant</a> - <comment type="action" name="plant"></comment></li>
+<li><strong>rankcs</strong> / <a href="#rankcs">rankcs</a> - <comment type="action" name="rankcs"></comment></li>
+<li><strong>rankcss</strong> / <a href="#rankcss">rankcss</a> - <comment type="action" name="rankcss"></comment></li>
+<li><strong>rankorgtxs</strong> / <a href="#rankorgtxs">rankorgtxs</a> - <comment type="action" name="rankorgtxs"></comment></li>
+<li><strong>rankplanted</strong> / <a href="#rankplanted">rankplanted</a> - <comment type="action" name="rankplanted"></comment></li>
+<li><strong>rankplanteds</strong> / <a href="#rankplanteds">rankplanteds</a> - <comment type="action" name="rankplanteds"></comment></li>
+<li><strong>ranktx</strong> / <a href="#ranktx">ranktx</a> - <comment type="action" name="ranktx"></comment></li>
+<li><strong>ranktxs</strong> / <a href="#ranktxs">ranktxs</a> - <comment type="action" name="ranktxs"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>runharvest</strong> / <a href="#runharvest">runharvest</a> - <comment type="action" name="runharvest"></comment></li>
+<li><strong>setorgtxpt</strong> / <a href="#setorgtxpt">setorgtxpt</a> - <comment type="action" name="setorgtxpt"></comment></li>
+<li><strong>sow</strong> / <a href="#sow">sow</a> - <comment type="action" name="sow"></comment></li>
+<li><strong>testclaim</strong> / <a href="#testclaim">testclaim</a> - <comment type="action" name="testclaim"></comment></li>
+<li><strong>testupdatecs</strong> / <a href="#testupdatecs">testupdatecs</a> - <comment type="action" name="testupdatecs"></comment></li>
+<li><strong>unplant</strong> / <a href="#unplant">unplant</a> - <comment type="action" name="unplant"></comment></li>
+<li><strong>updatecs</strong> / <a href="#updatecs">updatecs</a> - <comment type="action" name="updatecs"></comment></li>
+<li><strong>updatetxpt</strong> / <a href="#updatetxpt">updatetxpt</a> - <comment type="action" name="updatetxpt"></comment></li>
+<li><strong>updtotal</strong> / <a href="#updtotal">updtotal</a> - <comment type="action" name="updtotal"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -262,7 +275,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -274,19 +287,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

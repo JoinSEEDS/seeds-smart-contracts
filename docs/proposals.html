@@ -10,37 +10,50 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for proposals</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>addactive / <a href="#addactive">addactive</a> - <comment type="action" name="addactive"></comment></li>
-<li>addvoice / <a href="#addvoice">addvoice</a> - <comment type="action" name="addvoice"></comment></li>
-<li>against / <a href="#against">against</a> - <comment type="action" name="against"></comment></li>
-<li>cancel / <a href="#cancel">cancel</a> - <comment type="action" name="cancel"></comment></li>
-<li>changetrust / <a href="#changetrust">changetrust</a> - <comment type="action" name="changetrust"></comment></li>
-<li>checkstake / <a href="#checkstake">checkstake</a> - <comment type="action" name="checkstake"></comment></li>
-<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
-<li>createx / <a href="#createx">createx</a> - <comment type="action" name="createx"></comment></li>
-<li>decayvoice / <a href="#decayvoice">decayvoice</a> - <comment type="action" name="decayvoice"></comment></li>
-<li>decayvoices / <a href="#decayvoices">decayvoices</a> - <comment type="action" name="decayvoices"></comment></li>
-<li>erasepartpts / <a href="#erasepartpts">erasepartpts</a> - <comment type="action" name="erasepartpts"></comment></li>
-<li>favour / <a href="#favour">favour</a> - <comment type="action" name="favour"></comment></li>
-<li>initactives / <a href="#initactives">initactives</a> - <comment type="action" name="initactives"></comment></li>
-<li>initsz / <a href="#initsz">initsz</a> - <comment type="action" name="initsz"></comment></li>
-<li>neutral / <a href="#neutral">neutral</a> - <comment type="action" name="neutral"></comment></li>
-<li>onperiod / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
-<li>removeactive / <a href="#removeactive">removeactive</a> - <comment type="action" name="removeactive"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>stake / <a href="#stake">stake</a> - <comment type="action" name="stake"></comment></li>
-<li>testvdecay / <a href="#testvdecay">testvdecay</a> - <comment type="action" name="testvdecay"></comment></li>
-<li>update / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
-<li>updateactive / <a href="#updateactive">updateactive</a> - <comment type="action" name="updateactive"></comment></li>
-<li>updateactivs / <a href="#updateactivs">updateactivs</a> - <comment type="action" name="updateactivs"></comment></li>
-<li>updatevoice / <a href="#updatevoice">updatevoice</a> - <comment type="action" name="updatevoice"></comment></li>
-<li>updatevoices / <a href="#updatevoices">updatevoices</a> - <comment type="action" name="updatevoices"></comment></li>
-<li>updatex / <a href="#updatex">updatex</a> - <comment type="action" name="updatex"></comment></li>
+<li><strong>addactive</strong> / <a href="#addactive">addactive</a> - <comment type="action" name="addactive"></comment></li>
+<li><strong>addvoice</strong> / <a href="#addvoice">addvoice</a> - <comment type="action" name="addvoice"></comment></li>
+<li><strong>against</strong> / <a href="#against">against</a> - <comment type="action" name="against"></comment></li>
+<li><strong>cancel</strong> / <a href="#cancel">cancel</a> - <comment type="action" name="cancel"></comment></li>
+<li><strong>changetrust</strong> / <a href="#changetrust">changetrust</a> - <comment type="action" name="changetrust"></comment></li>
+<li><strong>checkstake</strong> / <a href="#checkstake">checkstake</a> - <comment type="action" name="checkstake"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li><strong>createx</strong> / <a href="#createx">createx</a> - <comment type="action" name="createx"></comment></li>
+<li><strong>decayvoice</strong> / <a href="#decayvoice">decayvoice</a> - <comment type="action" name="decayvoice"></comment></li>
+<li><strong>decayvoices</strong> / <a href="#decayvoices">decayvoices</a> - <comment type="action" name="decayvoices"></comment></li>
+<li><strong>erasepartpts</strong> / <a href="#erasepartpts">erasepartpts</a> - <comment type="action" name="erasepartpts"></comment></li>
+<li><strong>favour</strong> / <a href="#favour">favour</a> - <comment type="action" name="favour"></comment></li>
+<li><strong>initactives</strong> / <a href="#initactives">initactives</a> - <comment type="action" name="initactives"></comment></li>
+<li><strong>initsz</strong> / <a href="#initsz">initsz</a> - <comment type="action" name="initsz"></comment></li>
+<li><strong>neutral</strong> / <a href="#neutral">neutral</a> - <comment type="action" name="neutral"></comment></li>
+<li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> - <comment type="action" name="onperiod"></comment></li>
+<li><strong>removeactive</strong> / <a href="#removeactive">removeactive</a> - <comment type="action" name="removeactive"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>stake</strong> / <a href="#stake">stake</a> - <comment type="action" name="stake"></comment></li>
+<li><strong>testvdecay</strong> / <a href="#testvdecay">testvdecay</a> - <comment type="action" name="testvdecay"></comment></li>
+<li><strong>update</strong> / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
+<li><strong>updateactive</strong> / <a href="#updateactive">updateactive</a> - <comment type="action" name="updateactive"></comment></li>
+<li><strong>updateactivs</strong> / <a href="#updateactivs">updateactivs</a> - <comment type="action" name="updateactivs"></comment></li>
+<li><strong>updatevoice</strong> / <a href="#updatevoice">updatevoice</a> - <comment type="action" name="updatevoice"></comment></li>
+<li><strong>updatevoices</strong> / <a href="#updatevoices">updatevoices</a> - <comment type="action" name="updatevoices"></comment></li>
+<li><strong>updatex</strong> / <a href="#updatex">updatex</a> - <comment type="action" name="updatex"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -268,7 +281,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -280,19 +293,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

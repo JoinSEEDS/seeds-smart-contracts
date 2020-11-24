@@ -10,22 +10,42 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for onboarding</h1>
-<p><comment type="main"></comment></p>
+<p><comment type="main">
+  The onboarding contract is responsible for managing the invitations for ambassadors, bioregions and organizations.
+
+  Here&apos;s the process for ambassadors invitations:
+
+  - call `invite(sponsor, transfer_quantity, sow_quantity, invite_hash)`
+  - the other end calls `accept(account, invite_secret, publicKey)`
+</comment></p>
 <h2>Actions</h2>
 <ul>
-<li>accept / <a href="#accept">accept</a> - <comment type="action" name="accept"></comment></li>
-<li>acceptexist / <a href="#acceptexist">acceptexist</a> - <comment type="action" name="acceptexist"></comment></li>
-<li>acceptnew / <a href="#acceptnew">acceptnew</a> - <comment type="action" name="acceptnew"></comment></li>
-<li>cancel / <a href="#cancel">cancel</a> - <comment type="action" name="cancel"></comment></li>
-<li>cleanup / <a href="#cleanup">cleanup</a> - <comment type="action" name="cleanup"></comment></li>
-<li>createbio / <a href="#createbio">createbio</a> - <comment type="action" name="createbio"></comment></li>
-<li>deposit / <a href="#deposit">deposit</a> - <comment type="action" name="deposit"></comment></li>
-<li>invite / <a href="#invite">invite</a> - <comment type="action" name="invite"></comment></li>
-<li>invitefor / <a href="#invitefor">invitefor</a> - <comment type="action" name="invitefor"></comment></li>
-<li>onboardorg / <a href="#onboardorg">onboardorg</a> - <comment type="action" name="onboardorg"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>accept</strong> / <a href="#accept">accept</a> - <comment type="action" name="accept">Accepts an invitation based on provided `invite_secret`.</comment></li>
+<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> - <comment type="action" name="acceptexist"></comment></li>
+<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> - <comment type="action" name="acceptnew"></comment></li>
+<li><strong>cancel</strong> / <a href="#cancel">cancel</a> - <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
+<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> - <comment type="action" name="cleanup"></comment></li>
+<li><strong>createbio</strong> / <a href="#createbio">createbio</a> - <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
+<li><strong>deposit</strong> / <a href="#deposit">deposit</a> - <comment type="action" name="deposit"></comment></li>
+<li><strong>invite</strong> / <a href="#invite">invite</a> - <comment type="action" name="invite"></comment></li>
+<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> - <comment type="action" name="invitefor"></comment></li>
+<li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> - <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -126,7 +146,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -138,19 +158,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

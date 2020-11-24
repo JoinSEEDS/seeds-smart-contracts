@@ -10,22 +10,35 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for scheduler</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>configop / <a href="#configop">configop</a> - <comment type="action" name="configop"></comment></li>
-<li>confirm / <a href="#confirm">confirm</a> - <comment type="action" name="confirm"></comment></li>
-<li>execute / <a href="#execute">execute</a> - <comment type="action" name="execute"></comment></li>
-<li>pauseop / <a href="#pauseop">pauseop</a> - <comment type="action" name="pauseop"></comment></li>
-<li>removeop / <a href="#removeop">removeop</a> - <comment type="action" name="removeop"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>start / <a href="#start">start</a> - <comment type="action" name="start"></comment></li>
-<li>stop / <a href="#stop">stop</a> - <comment type="action" name="stop"></comment></li>
-<li>test1 / <a href="#test1">test1</a> - <comment type="action" name="test1"></comment></li>
-<li>test2 / <a href="#test2">test2</a> - <comment type="action" name="test2"></comment></li>
-<li>testexec / <a href="#testexec">testexec</a> - <comment type="action" name="testexec"></comment></li>
+<li><strong>configop</strong> / <a href="#configop">configop</a> - <comment type="action" name="configop"></comment></li>
+<li><strong>confirm</strong> / <a href="#confirm">confirm</a> - <comment type="action" name="confirm"></comment></li>
+<li><strong>execute</strong> / <a href="#execute">execute</a> - <comment type="action" name="execute"></comment></li>
+<li><strong>pauseop</strong> / <a href="#pauseop">pauseop</a> - <comment type="action" name="pauseop"></comment></li>
+<li><strong>removeop</strong> / <a href="#removeop">removeop</a> - <comment type="action" name="removeop"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>start</strong> / <a href="#start">start</a> - <comment type="action" name="start"></comment></li>
+<li><strong>stop</strong> / <a href="#stop">stop</a> - <comment type="action" name="stop"></comment></li>
+<li><strong>test1</strong> / <a href="#test1">test1</a> - <comment type="action" name="test1"></comment></li>
+<li><strong>test2</strong> / <a href="#test2">test2</a> - <comment type="action" name="test2"></comment></li>
+<li><strong>testexec</strong> / <a href="#testexec">testexec</a> - <comment type="action" name="testexec"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -92,7 +105,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -104,19 +117,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

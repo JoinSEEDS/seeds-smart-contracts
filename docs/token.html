@@ -10,21 +10,34 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for token</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>burn / <a href="#burn">burn</a> - <comment type="action" name="burn"></comment></li>
-<li>close / <a href="#close">close</a> - <comment type="action" name="close"></comment></li>
-<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
-<li>issue / <a href="#issue">issue</a> - <comment type="action" name="issue"></comment></li>
-<li>open / <a href="#open">open</a> - <comment type="action" name="open"></comment></li>
-<li>resetweekly / <a href="#resetweekly">resetweekly</a> - <comment type="action" name="resetweekly"></comment></li>
-<li>resetwhelper / <a href="#resetwhelper">resetwhelper</a> - <comment type="action" name="resetwhelper"></comment></li>
-<li>retire / <a href="#retire">retire</a> - <comment type="action" name="retire"></comment></li>
-<li>transfer / <a href="#transfer">transfer</a> - <comment type="action" name="transfer"></comment></li>
-<li>updatecirc / <a href="#updatecirc">updatecirc</a> - <comment type="action" name="updatecirc"></comment></li>
+<li><strong>burn</strong> / <a href="#burn">burn</a> - <comment type="action" name="burn"></comment></li>
+<li><strong>close</strong> / <a href="#close">close</a> - <comment type="action" name="close"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li><strong>issue</strong> / <a href="#issue">issue</a> - <comment type="action" name="issue"></comment></li>
+<li><strong>open</strong> / <a href="#open">open</a> - <comment type="action" name="open"></comment></li>
+<li><strong>resetweekly</strong> / <a href="#resetweekly">resetweekly</a> - <comment type="action" name="resetweekly"></comment></li>
+<li><strong>resetwhelper</strong> / <a href="#resetwhelper">resetwhelper</a> - <comment type="action" name="resetwhelper"></comment></li>
+<li><strong>retire</strong> / <a href="#retire">retire</a> - <comment type="action" name="retire"></comment></li>
+<li><strong>transfer</strong> / <a href="#transfer">transfer</a> - <comment type="action" name="transfer"></comment></li>
+<li><strong>updatecirc</strong> / <a href="#updatecirc">updatecirc</a> - <comment type="action" name="updatecirc"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -117,7 +130,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -129,19 +142,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

@@ -10,38 +10,51 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
 
-</head><body onload="loadUser()">
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
   <div id="target"><h1>Smartcontract documentation for organization</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li>addcbpoints / <a href="#addcbpoints">addcbpoints</a> - <comment type="action" name="addcbpoints"></comment></li>
-<li>addmember / <a href="#addmember">addmember</a> - <comment type="action" name="addmember"></comment></li>
-<li>addregen / <a href="#addregen">addregen</a> - <comment type="action" name="addregen"></comment></li>
-<li>appuse / <a href="#appuse">appuse</a> - <comment type="action" name="appuse"></comment></li>
-<li>banapp / <a href="#banapp">banapp</a> - <comment type="action" name="banapp"></comment></li>
-<li>changeowner / <a href="#changeowner">changeowner</a> - <comment type="action" name="changeowner"></comment></li>
-<li>changerole / <a href="#changerole">changerole</a> - <comment type="action" name="changerole"></comment></li>
-<li>cleandau / <a href="#cleandau">cleandau</a> - <comment type="action" name="cleandau"></comment></li>
-<li>cleandaus / <a href="#cleandaus">cleandaus</a> - <comment type="action" name="cleandaus"></comment></li>
-<li>create / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
-<li>destroy / <a href="#destroy">destroy</a> - <comment type="action" name="destroy"></comment></li>
-<li>makeregen / <a href="#makeregen">makeregen</a> - <comment type="action" name="makeregen"></comment></li>
-<li>makereptable / <a href="#makereptable">makereptable</a> - <comment type="action" name="makereptable"></comment></li>
-<li>rankcbsorg / <a href="#rankcbsorg">rankcbsorg</a> - <comment type="action" name="rankcbsorg"></comment></li>
-<li>rankcbsorgs / <a href="#rankcbsorgs">rankcbsorgs</a> - <comment type="action" name="rankcbsorgs"></comment></li>
-<li>rankregen / <a href="#rankregen">rankregen</a> - <comment type="action" name="rankregen"></comment></li>
-<li>rankregens / <a href="#rankregens">rankregens</a> - <comment type="action" name="rankregens"></comment></li>
-<li>refund / <a href="#refund">refund</a> - <comment type="action" name="refund"></comment></li>
-<li>registerapp / <a href="#registerapp">registerapp</a> - <comment type="action" name="registerapp"></comment></li>
-<li>removemember / <a href="#removemember">removemember</a> - <comment type="action" name="removemember"></comment></li>
-<li>reset / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li>scoreorgs / <a href="#scoreorgs">scoreorgs</a> - <comment type="action" name="scoreorgs"></comment></li>
-<li>scoretrxs / <a href="#scoretrxs">scoretrxs</a> - <comment type="action" name="scoretrxs"></comment></li>
-<li>subcbpoints / <a href="#subcbpoints">subcbpoints</a> - <comment type="action" name="subcbpoints"></comment></li>
-<li>subregen / <a href="#subregen">subregen</a> - <comment type="action" name="subregen"></comment></li>
-<li>testregen / <a href="#testregen">testregen</a> - <comment type="action" name="testregen"></comment></li>
-<li>testreptable / <a href="#testreptable">testreptable</a> - <comment type="action" name="testreptable"></comment></li>
+<li><strong>addcbpoints</strong> / <a href="#addcbpoints">addcbpoints</a> - <comment type="action" name="addcbpoints"></comment></li>
+<li><strong>addmember</strong> / <a href="#addmember">addmember</a> - <comment type="action" name="addmember"></comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> - <comment type="action" name="addregen"></comment></li>
+<li><strong>appuse</strong> / <a href="#appuse">appuse</a> - <comment type="action" name="appuse"></comment></li>
+<li><strong>banapp</strong> / <a href="#banapp">banapp</a> - <comment type="action" name="banapp"></comment></li>
+<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> - <comment type="action" name="changeowner"></comment></li>
+<li><strong>changerole</strong> / <a href="#changerole">changerole</a> - <comment type="action" name="changerole"></comment></li>
+<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> - <comment type="action" name="cleandau"></comment></li>
+<li><strong>cleandaus</strong> / <a href="#cleandaus">cleandaus</a> - <comment type="action" name="cleandaus"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
+<li><strong>destroy</strong> / <a href="#destroy">destroy</a> - <comment type="action" name="destroy"></comment></li>
+<li><strong>makeregen</strong> / <a href="#makeregen">makeregen</a> - <comment type="action" name="makeregen"></comment></li>
+<li><strong>makereptable</strong> / <a href="#makereptable">makereptable</a> - <comment type="action" name="makereptable"></comment></li>
+<li><strong>rankcbsorg</strong> / <a href="#rankcbsorg">rankcbsorg</a> - <comment type="action" name="rankcbsorg"></comment></li>
+<li><strong>rankcbsorgs</strong> / <a href="#rankcbsorgs">rankcbsorgs</a> - <comment type="action" name="rankcbsorgs"></comment></li>
+<li><strong>rankregen</strong> / <a href="#rankregen">rankregen</a> - <comment type="action" name="rankregen"></comment></li>
+<li><strong>rankregens</strong> / <a href="#rankregens">rankregens</a> - <comment type="action" name="rankregens"></comment></li>
+<li><strong>refund</strong> / <a href="#refund">refund</a> - <comment type="action" name="refund"></comment></li>
+<li><strong>registerapp</strong> / <a href="#registerapp">registerapp</a> - <comment type="action" name="registerapp"></comment></li>
+<li><strong>removemember</strong> / <a href="#removemember">removemember</a> - <comment type="action" name="removemember"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>scoreorgs</strong> / <a href="#scoreorgs">scoreorgs</a> - <comment type="action" name="scoreorgs"></comment></li>
+<li><strong>scoretrxs</strong> / <a href="#scoretrxs">scoretrxs</a> - <comment type="action" name="scoretrxs"></comment></li>
+<li><strong>subcbpoints</strong> / <a href="#subcbpoints">subcbpoints</a> - <comment type="action" name="subcbpoints"></comment></li>
+<li><strong>subregen</strong> / <a href="#subregen">subregen</a> - <comment type="action" name="subregen"></comment></li>
+<li><strong>testregen</strong> / <a href="#testregen">testregen</a> - <comment type="action" name="testregen"></comment></li>
+<li><strong>testreptable</strong> / <a href="#testreptable">testreptable</a> - <comment type="action" name="testreptable"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -282,7 +295,7 @@
   <script id="template" type="x-tmpl-handlebars">
 # Smartcontract documentation for {{ file }}
 
-<comment type="main">{{comment}}</comment>
+<comment type="main"></comment>
 
 {{#if types}}
 ## Types
@@ -294,19 +307,19 @@
 ## Actions
 
 {{#each actions}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - {{ name }} / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}">{{comment}}</comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

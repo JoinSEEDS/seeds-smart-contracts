@@ -56,6 +56,24 @@ const docsgen = async (contract) => {
         var result = writer.render(parsed);
         $('#target').html(result);
 
+        $('#target comment').each(function(i, elem) {
+            if ($(this).attr("type") == "main") {
+                $(this).text(abiContents["comment"]);
+            } else {
+                const desired_type = $(this).attr("type")+"s"; 
+                const desired_name = $(this).attr("name");
+                if ($(this).attr("type") == "action") {
+                    var old = abiContents[desired_type].find(function (e) { 
+                        return e["name"]==desired_name;
+                    });
+                    if (old) {
+                        var pos = abiContents[desired_type].indexOf(old)
+                        $(this).text(abiContents[desired_type][pos]["comment"]);    
+                    }
+                }
+            }
+        });
+
         fs.writeFile(outputPath, $.html(), function (err) {
             if (err) throw err;
             console.log('Saved!');
