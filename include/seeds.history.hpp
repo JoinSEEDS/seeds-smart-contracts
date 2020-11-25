@@ -7,6 +7,8 @@
 #include <contracts.hpp>
 #include <tables/user_table.hpp>
 
+#include <cmath> 
+
 using namespace eosio;
 using std::string;
 
@@ -45,12 +47,22 @@ CONTRACT history : public contract {
         ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
 
 
+        ACTION migrateusers();
+        ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
+        ACTION testentry(name from, name to, asset quantity, uint64_t timestamp);
+
+
     private:
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
       uint64_t config_get(name key);
       void fire_orgtx_calc(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
       bool clean_old_tx(name org, uint64_t chunksize);
+
+      // migration functions
+      void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
+      void adjust_transactions(uint64_t id, uint64_t timestamp);
+      void save_from_metrics(name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
 
       TABLE citizen_table {
         uint64_t id;
@@ -243,4 +255,5 @@ EOSIO_DISPATCH(history,
   (addreputable)(addregen)
   (numtrx)
   (orgtxpoints)(orgtxpt)
+  (migrateusers)(migrateuser)(testentry)
   );

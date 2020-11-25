@@ -90,6 +90,12 @@ namespace utils {
 
   }
 
+  uint64_t get_beginning_of_day_in_seconds() {
+    auto sec = eosio::current_time_point().sec_since_epoch();
+    auto date = eosio::time_point_sec(sec / 86400 * 86400);
+    return date.utc_seconds;
+  }
+
 }
 
 
