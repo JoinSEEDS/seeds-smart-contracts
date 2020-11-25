@@ -28,15 +28,15 @@ $(function() {
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>create</strong> / <a href="#create">create</a> - <comment type="action" name="create"></comment></li>
-<li><strong>remove</strong> / <a href="#remove">remove</a> - <comment type="action" name="remove"></comment></li>
-<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li><strong>update</strong> / <a href="#update">update</a> - <comment type="action" name="update"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create"></comment></li>
+<li><strong>remove</strong> / <a href="#remove">remove</a> <comment type="action" name="remove"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>update</strong> / <a href="#update">update</a> <comment type="action" name="update"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>devicepolicy</strong> / <a href="#device_policy_table">device_policy_table</a> (i64) - <comment type="table" name="devicepolicy"></comment></li>
+<li><strong>devicepolicy</strong> / <a href="#device_policy_table">device_policy_table</a> (i64) <comment type="table" name="devicepolicy"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
@@ -87,19 +87,19 @@ $(function() {
 ## Actions
 
 {{#each actions}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

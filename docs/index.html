@@ -32,22 +32,22 @@ Here you will find all about the existing contracts and how you can call them on
 </comment></p>
 <h2>Index</h2>
 <ul>
-<li><strong>accounts</strong> / <a href="./accounts.html">accounts.html</a> - <comment type="contract" name="accounts"></comment></li>
-<li><strong>acctcreator</strong> / <a href="./acctcreator.html">acctcreator.html</a> - <comment type="contract" name="acctcreator"></comment></li>
-<li><strong>bioregion</strong> / <a href="./bioregion.html">bioregion.html</a> - <comment type="contract" name="bioregion"></comment></li>
-<li><strong>escrow</strong> / <a href="./escrow.html">escrow.html</a> - <comment type="contract" name="escrow"></comment></li>
-<li><strong>exchange</strong> / <a href="./exchange.html">exchange.html</a> - <comment type="contract" name="exchange"></comment></li>
-<li><strong>forum</strong> / <a href="./forum.html">forum.html</a> - <comment type="contract" name="forum"></comment></li>
-<li><strong>harvest</strong> / <a href="./harvest.html">harvest.html</a> - <comment type="contract" name="harvest"></comment></li>
-<li><strong>history</strong> / <a href="./history.html">history.html</a> - <comment type="contract" name="history"></comment></li>
-<li><strong>onboarding</strong> / <a href="./onboarding.html">onboarding.html</a> - <comment type="contract" name="onboarding"></comment></li>
-<li><strong>organization</strong> / <a href="./organization.html">organization.html</a> - <comment type="contract" name="organization"></comment></li>
-<li><strong>policy</strong> / <a href="./policy.html">policy.html</a> - <comment type="contract" name="policy"></comment></li>
-<li><strong>proposals</strong> / <a href="./proposals.html">proposals.html</a> - <comment type="contract" name="proposals"></comment></li>
-<li><strong>referendums</strong> / <a href="./referendums.html">referendums.html</a> - <comment type="contract" name="referendums"></comment></li>
-<li><strong>scheduler</strong> / <a href="./scheduler.html">scheduler.html</a> - <comment type="contract" name="scheduler"></comment></li>
-<li><strong>settings</strong> / <a href="./settings.html">settings.html</a> - <comment type="contract" name="settings"></comment></li>
-<li><strong>token</strong> / <a href="./token.html">token.html</a> - <comment type="contract" name="token"></comment></li>
+<li><strong>seeds.accounts</strong> / <a href="./accounts.html">accounts.html</a> <comment type="contract" name="accounts">For most account interactions, including moving from visitor to citizen, vouching, rewards and user ranking.</comment></li>
+<li><strong>seeds.acctcreator</strong> / <a href="./acctcreator.html">acctcreator.html</a> <comment type="contract" name="acctcreator">Focused on TELOS account creation and binding to SEEDS account.</comment></li>
+<li><strong>seeds.bioregion</strong> / <a href="./bioregion.html">bioregion.html</a> <comment type="contract" name="bioregion">Bioregion general rules, from creation, activation and governance.</comment></li>
+<li><strong>seeds.escrow</strong> / <a href="./escrow.html">escrow.html</a> <comment type="contract" name="escrow">Escrow contract to keep SEEDS reserved for the future launch.</comment></li>
+<li><strong>seeds.exchange</strong> / <a href="./exchange.html">exchange.html</a> <comment type="contract" name="exchange">The exchange contract is responsible for selling SEEDS in rounds and keeping reference TLOS/SEEDS pricing.</comment></li>
+<li><strong>seeds.forum</strong> / <a href="./forum.html">forum.html</a> <comment type="contract" name="forum">The forum contract implements a rankable forum used for resident proposal discussions.</comment></li>
+<li><strong>seeds.harvest</strong> / <a href="./harvest.html">harvest.html</a> <comment type="contract" name="harvest">This contract implements the Harvest protocol to distribute SEEDS based on the monetary variation.</comment></li>
+<li><strong>seeds.history</strong> / <a href="./history.html">history.html</a> <comment type="contract" name="history">The history contract keeps all stats and metrics for the evolution of citizens, orgs and transactions, generating data used by other contracts.</comment></li>
+<li><strong>seeds.onboarding</strong> / <a href="./onboarding.html">onboarding.html</a> <comment type="contract" name="onboarding">The onboarding contract is responsible for generating invites for new individual users and also organization.</comment></li>
+<li><strong>seeds.organization</strong> / <a href="./organization.html">organization.html</a> <comment type="contract" name="organization">The main contract used for managing organizations, voting and assets.</comment></li>
+<li><strong>seeds.policy</strong> / <a href="./policy.html">policy.html</a> <comment type="contract" name="policy">A contract for managing SEEDS policy creation and updates.</comment></li>
+<li><strong>seeds.proposals</strong> / <a href="./proposals.html">proposals.html</a> <comment type="contract" name="proposals">The contract for dealing with SEEDS proposals, and voting rules.</comment></li>
+<li><strong>seeds.referendums</strong> / <a href="./referendums.html">referendums.html</a> <comment type="contract" name="referendums">A contract for managing SEEDS constitution referendum creation and updates.</comment></li>
+<li><strong>seeds.scheduler</strong> / <a href="./scheduler.html">scheduler.html</a> <comment type="contract" name="scheduler">A general contract for time based contract execution scheduling based on moon cycles.</comment></li>
+<li><strong>seeds.settings</strong> / <a href="./settings.html">settings.html</a> <comment type="contract" name="settings">The SEEDS settings contract.</comment></li>
+<li><strong>seeds.token</strong> / <a href="./token.html">token.html</a> <comment type="contract" name="token">The main SEEDS token contract.</comment></li>
 </ul>
 </div>
 
@@ -59,7 +59,7 @@ Here you will find all about the existing contracts and how you can call them on
 ## Index
 
 {{#each contracts}}
-- **{{ name }}** / [{{ file }}](./{{ file }}) - <comment type="contract" name="{{name}}"></comment>
-{{/each}}    
+- **{{ contract }}** / [{{ file }}](./{{ file }}) <comment type="contract" name="{{name}}"></comment>
+{{/each}}
 </script>    
 </body></html>

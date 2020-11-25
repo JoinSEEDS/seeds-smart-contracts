@@ -35,24 +35,24 @@ $(function() {
 </comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>accept</strong> / <a href="#accept">accept</a> - <comment type="action" name="accept">Accepts an invitation based on provided `invite_secret`.</comment></li>
-<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> - <comment type="action" name="acceptexist"></comment></li>
-<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> - <comment type="action" name="acceptnew"></comment></li>
-<li><strong>cancel</strong> / <a href="#cancel">cancel</a> - <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
-<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> - <comment type="action" name="cleanup"></comment></li>
-<li><strong>createbio</strong> / <a href="#createbio">createbio</a> - <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
-<li><strong>deposit</strong> / <a href="#deposit">deposit</a> - <comment type="action" name="deposit"></comment></li>
-<li><strong>invite</strong> / <a href="#invite">invite</a> - <comment type="action" name="invite"></comment></li>
-<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> - <comment type="action" name="invitefor"></comment></li>
-<li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> - <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
-<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
+<li><strong>accept</strong> / <a href="#accept">accept</a> <comment type="action" name="accept">Accepts an invitation based on provided `invite_secret`.</comment></li>
+<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> <comment type="action" name="acceptexist"></comment></li>
+<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> <comment type="action" name="acceptnew"></comment></li>
+<li><strong>cancel</strong> / <a href="#cancel">cancel</a> <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
+<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> <comment type="action" name="cleanup"></comment></li>
+<li><strong>createbio</strong> / <a href="#createbio">createbio</a> <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
+<li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit"></comment></li>
+<li><strong>invite</strong> / <a href="#invite">invite</a> <comment type="action" name="invite"></comment></li>
+<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> <comment type="action" name="invitefor"></comment></li>
+<li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) - <comment type="table" name="invites"></comment></li>
-<li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) - <comment type="table" name="referrers"></comment></li>
-<li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) - <comment type="table" name="sponsors"></comment></li>
+<li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) <comment type="table" name="invites"></comment></li>
+<li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) <comment type="table" name="referrers"></comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) <comment type="table" name="sponsors"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
@@ -158,19 +158,19 @@ $(function() {
 ## Actions
 
 {{#each actions}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

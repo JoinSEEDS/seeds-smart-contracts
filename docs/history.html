@@ -28,28 +28,28 @@ $(function() {
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>addcitizen</strong> / <a href="#addcitizen">addcitizen</a> - <comment type="action" name="addcitizen"></comment></li>
-<li><strong>addregen</strong> / <a href="#addregen">addregen</a> - <comment type="action" name="addregen"></comment></li>
-<li><strong>addreputable</strong> / <a href="#addreputable">addreputable</a> - <comment type="action" name="addreputable"></comment></li>
-<li><strong>addresident</strong> / <a href="#addresident">addresident</a> - <comment type="action" name="addresident"></comment></li>
-<li><strong>historyentry</strong> / <a href="#historyentry">historyentry</a> - <comment type="action" name="historyentry"></comment></li>
-<li><strong>numtrx</strong> / <a href="#numtrx">numtrx</a> - <comment type="action" name="numtrx"></comment></li>
-<li><strong>orgtxpoints</strong> / <a href="#orgtxpoints">orgtxpoints</a> - <comment type="action" name="orgtxpoints"></comment></li>
-<li><strong>orgtxpt</strong> / <a href="#orgtxpt">orgtxpt</a> - <comment type="action" name="orgtxpt"></comment></li>
-<li><strong>reset</strong> / <a href="#reset">reset</a> - <comment type="action" name="reset"></comment></li>
-<li><strong>trxentry</strong> / <a href="#trxentry">trxentry</a> - <comment type="action" name="trxentry"></comment></li>
+<li><strong>addcitizen</strong> / <a href="#addcitizen">addcitizen</a> <comment type="action" name="addcitizen"></comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen"></comment></li>
+<li><strong>addreputable</strong> / <a href="#addreputable">addreputable</a> <comment type="action" name="addreputable"></comment></li>
+<li><strong>addresident</strong> / <a href="#addresident">addresident</a> <comment type="action" name="addresident"></comment></li>
+<li><strong>historyentry</strong> / <a href="#historyentry">historyentry</a> <comment type="action" name="historyentry"></comment></li>
+<li><strong>numtrx</strong> / <a href="#numtrx">numtrx</a> <comment type="action" name="numtrx"></comment></li>
+<li><strong>orgtxpoints</strong> / <a href="#orgtxpoints">orgtxpoints</a> <comment type="action" name="orgtxpoints"></comment></li>
+<li><strong>orgtxpt</strong> / <a href="#orgtxpt">orgtxpt</a> <comment type="action" name="orgtxpt"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>trxentry</strong> / <a href="#trxentry">trxentry</a> <comment type="action" name="trxentry"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>citizens</strong> / <a href="#citizen_table">citizen_table</a> (i64) - <comment type="table" name="citizens"></comment></li>
-<li><strong>history</strong> / <a href="#history_table">history_table</a> (i64) - <comment type="table" name="history"></comment></li>
-<li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) - <comment type="table" name="orgtx"></comment></li>
-<li><strong>regens</strong> / <a href="#regenerative_table">regenerative_table</a> (i64) - <comment type="table" name="regens"></comment></li>
-<li><strong>reputables</strong> / <a href="#reputable_table">reputable_table</a> (i64) - <comment type="table" name="reputables"></comment></li>
-<li><strong>residents</strong> / <a href="#resident_table">resident_table</a> (i64) - <comment type="table" name="residents"></comment></li>
-<li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) - <comment type="table" name="transactions"></comment></li>
-<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) - <comment type="table" name="users"></comment></li>
+<li><strong>citizens</strong> / <a href="#citizen_table">citizen_table</a> (i64) <comment type="table" name="citizens"></comment></li>
+<li><strong>history</strong> / <a href="#history_table">history_table</a> (i64) <comment type="table" name="history"></comment></li>
+<li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) <comment type="table" name="orgtx"></comment></li>
+<li><strong>regens</strong> / <a href="#regenerative_table">regenerative_table</a> (i64) <comment type="table" name="regens"></comment></li>
+<li><strong>reputables</strong> / <a href="#reputable_table">reputable_table</a> (i64) <comment type="table" name="reputables"></comment></li>
+<li><strong>residents</strong> / <a href="#resident_table">resident_table</a> (i64) <comment type="table" name="residents"></comment></li>
+<li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) <comment type="table" name="transactions"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
@@ -179,19 +179,19 @@ $(function() {
 ## Actions
 
 {{#each actions}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="action" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
 {{/each}}
 
 ## Events
 
 {{#each events}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) - <comment type="event" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
 {{/each}}
 
 ## Tables
 
 {{#each tables}}
-  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) - <comment type="table" name="{{name}}"></comment>
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
 {{/each}}
 
 ## ABI Extensions

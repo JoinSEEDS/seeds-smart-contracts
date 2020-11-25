@@ -25,8 +25,10 @@ const docsgen = async (contract) => {
             //remove unwanted from the list
             files.splice(files.indexOf("index.html"), 1);
             files.splice(files.indexOf("docstemplate.html"), 1);
-            abiContents = {"contracts": files.map(function(contract) {
-                return {"name":contract.substring(0, contract.length-5), "file": contract};
+            abiContents = {"contracts": files.map(function(file) {
+                return {"contract": "seeds."+file.substring(0, file.length-5),
+                        "name": file.substring(0, file.length-5),
+                        "file": file};
             })};
             templatePath = path.join(__dirname, '../docs/index.html')
         } else {
@@ -55,8 +57,7 @@ const docsgen = async (contract) => {
                     if (old) {
                         var pos = abiContents[desired_type].indexOf(old)
                         abiContents[desired_type][pos]["comment"] = $(this).text();    
-                    }
-        
+                    }        
                 }
             });
         }
@@ -79,14 +80,12 @@ const docsgen = async (contract) => {
             } else {
                 const desired_type = $(this).attr("type")+"s"; 
                 const desired_name = $(this).attr("name");
-                if ($(this).attr("type") == "action") {
-                    var old = abiContents[desired_type].find(function (e) { 
-                        return e["name"]==desired_name;
-                    });
-                    if (old) {
-                        var pos = abiContents[desired_type].indexOf(old)
-                        $(this).text(abiContents[desired_type][pos]["comment"]);    
-                    }
+                var old = abiContents[desired_type].find(function (e) { 
+                    return e["name"]==desired_name;
+                });
+                if (old) {
+                    var pos = abiContents[desired_type].indexOf(old)
+                    $(this).text(abiContents[desired_type][pos]["comment"]);    
                 }
             }
         });
