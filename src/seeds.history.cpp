@@ -326,3 +326,40 @@ uint64_t history::config_get(name key) {
   }
   return citr->value;
 }
+
+
+uint64_t history::migrateusers () {
+  uint64_t batch_size = config.get(name("batchsize").value, "the batchsize parameter has not been initialized yet.").value;
+  migrateuser(0, 0, batch_size);
+}
+
+uint64_t history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+  uint64_t count = 0;
+
+  transaction_tables transactions(get_self(), start);
+  auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
+
+  while (uitr != users.end() && count < chunksize) {
+    while (titr != transactions.end() && count < chunksize) {
+
+
+
+      titr++;
+      count++;
+    }
+    if (titr != transactions.end()) {
+      transaction_id = 0;
+    }
+    uitr++;
+  }
+
+}
+
+
+uint64_t history::migrateorgs () {
+
+}
+
