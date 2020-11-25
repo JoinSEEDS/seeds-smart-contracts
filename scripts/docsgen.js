@@ -12,14 +12,31 @@ const { promisify } = require('util')
 const { source } = require('./deploy')
 
 const readFileAsync = promisify(fs.readFile)
+const appendFileAsync = promisify(fs.appendFile)
 
 const docsgen = async (contract) => {
     try {
-        const abiPath = path.join(__dirname, '../artifacts', contract.concat('.abi'))
+        var abiContents;
+        var files;
+        var templatePath;
+        if (contract === "index") {
+            const directoryPath = path.join(__dirname, '../docs');
+            files = fs.readdirSync(directoryPath);
+            //remove unwanted from the list
+            files.splice(files.indexOf("index.html"), 1);
+            files.splice(files.indexOf("docstemplate.html"), 1);
+            abiContents = {"contracts": files.map(function(contract) {
+                return {"name":contract.substring(0, contract.length-5), "file": contract};
+            })};
+            templatePath = path.join(__dirname, '../docs/index.html')
+        } else {
+            const abiPath = path.join(__dirname, '../artifacts', contract.concat('.abi'))
+            var abiFile = await readFileAsync(abiPath, "utf8")
+            abiContents = JSON.parse(abiFile);
+            templatePath = path.join(__dirname, '../docs/docstemplate.html')
+        }
+
         const outputPath = path.join(__dirname, '../docs', contract.concat('.html'))
-        const templatePath = path.join(__dirname, '../docs/docstemplate.html')
-        var abiFile = await readFileAsync(abiPath, "utf8")
-        var abiContents = JSON.parse(abiFile);
         abiContents["file"] = contract;
 
         // Imports comments from previous genrated page

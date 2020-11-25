@@ -1,0 +1,65 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+    
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+    
+    <script>
+    $(function() {
+      var reader = new commonmark.Parser();
+      var writer = new commonmark.HtmlRenderer();
+    
+      $('#target comment').each(function(i, elem) {
+        var parsed = reader.parse($(this).text()); 
+        var result = writer.render(parsed);
+        $(this).html(result);
+      });
+     });
+    </script>
+    
+    </head><body>
+      <div id="target"><h1>SEEDS Smartcontract documentation</h1>
+<p><comment type="main">
+Welcome to the SEEDS smartcontract documentation library.
+
+Here you will find all about the existing contracts and how you can call them on you blockchain application.
+</comment></p>
+<h2>Index</h2>
+<ul>
+<li><strong>accounts</strong> / <a href="./accounts.html">accounts.html</a> - <comment type="contract" name="accounts"></comment></li>
+<li><strong>acctcreator</strong> / <a href="./acctcreator.html">acctcreator.html</a> - <comment type="contract" name="acctcreator"></comment></li>
+<li><strong>bioregion</strong> / <a href="./bioregion.html">bioregion.html</a> - <comment type="contract" name="bioregion"></comment></li>
+<li><strong>escrow</strong> / <a href="./escrow.html">escrow.html</a> - <comment type="contract" name="escrow"></comment></li>
+<li><strong>exchange</strong> / <a href="./exchange.html">exchange.html</a> - <comment type="contract" name="exchange"></comment></li>
+<li><strong>forum</strong> / <a href="./forum.html">forum.html</a> - <comment type="contract" name="forum"></comment></li>
+<li><strong>harvest</strong> / <a href="./harvest.html">harvest.html</a> - <comment type="contract" name="harvest"></comment></li>
+<li><strong>history</strong> / <a href="./history.html">history.html</a> - <comment type="contract" name="history"></comment></li>
+<li><strong>onboarding</strong> / <a href="./onboarding.html">onboarding.html</a> - <comment type="contract" name="onboarding"></comment></li>
+<li><strong>organization</strong> / <a href="./organization.html">organization.html</a> - <comment type="contract" name="organization"></comment></li>
+<li><strong>policy</strong> / <a href="./policy.html">policy.html</a> - <comment type="contract" name="policy"></comment></li>
+<li><strong>proposals</strong> / <a href="./proposals.html">proposals.html</a> - <comment type="contract" name="proposals"></comment></li>
+<li><strong>referendums</strong> / <a href="./referendums.html">referendums.html</a> - <comment type="contract" name="referendums"></comment></li>
+<li><strong>scheduler</strong> / <a href="./scheduler.html">scheduler.html</a> - <comment type="contract" name="scheduler"></comment></li>
+<li><strong>settings</strong> / <a href="./settings.html">settings.html</a> - <comment type="contract" name="settings"></comment></li>
+<li><strong>token</strong> / <a href="./token.html">token.html</a> - <comment type="contract" name="token"></comment></li>
+</ul>
+</div>
+
+<script id="template" type="x-tmpl-handlebars">
+# SEEDS Smartcontract documentation
+
+<comment type="main"></comment>
+
+## Index
+
+{{#each contracts}}
+- **{{ name }}** / [{{ file }}](./{{ file }}) - <comment type="contract" name="{{name}}"></comment>
+{{/each}}    
+</script>    
+</body></html>
