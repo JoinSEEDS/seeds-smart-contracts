@@ -339,13 +339,14 @@ uint64_t history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t
   auto uitr = start == 0 ? users.begin() : users.find(start);
   uint64_t count = 0;
 
-  transaction_tables transactions(get_self(), start);
-  auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
-
   while (uitr != users.end() && count < chunksize) {
+
+    transaction_tables transactions(get_self(), uitr -> account);
+    auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
+
     while (titr != transactions.end() && count < chunksize) {
 
-
+      
 
       titr++;
       count++;
