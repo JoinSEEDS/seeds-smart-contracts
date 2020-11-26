@@ -87,13 +87,13 @@ void settings::reset() {
   // =====================================
   // Resident
   confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   // min planted 50 Seeds
-  confwithdesc(name("res.tx"), 10, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
+  confwithdesc(name("res.tx"), 1, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
   confwithdesc(name("res.referred"), 1, "Minimum number of referrals made to become a Resident", high_impact);         // min referred 1 other user
   confwithdesc(name("res.rep.pt"), 50, "Minimum reputation points to become a Resident", high_impact);          // min rep points
 
   // Citizen
   confwithdesc(name("cit.plant"), 200 * 10000, "Minimum planted amount to become a Citizen (in Seeds)", high_impact);  // min planted 200 Seeds
-  confwithdesc(name("cit.tx"), 10, "Minimum transactions to become a Citizen", high_impact);              // min 10 transactions
+  confwithdesc(name("cit.tx"), 5, "Minimum transactions to become a Citizen", high_impact);              // min 10 transactions
   confwithdesc(name("cit.referred"), 3, "Minimum number of referrals made to become a Citizen", high_impact);         // min referred 3 other users
   confwithdesc(name("cit.ref.res"), 1, "Minimum residents or citizens referred to become a Citizen", high_impact);          // min referred 1 resident or citizen
   confwithdesc(name("cit.rep.sc"), 50, "Minimum reputation score to become a Citizen (not points)", high_impact);          // min reputation score (not points)
