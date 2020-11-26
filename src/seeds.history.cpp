@@ -132,10 +132,20 @@ void history::trxentry(name from, name to, asset quantity) {
   uint64_t transaction_id = transactions.available_primary_key();
   uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
 
-  int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
-  int64_t max_transaction_points = int64_t(config_get("i.trx.max"_n));
+  bool from_is_organization = from_user -> type == "organisation"_n;
+  bool to_is_organization = to_user -> type == "organisation"_n;
 
-  double trx_multiplier = std::min(max_transaction_points, quantity.amount) / 10000.0;
+  int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
+  int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
+  int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
+
+  double from_trx_multiplier = (
+    from_is_organization ? 
+    std::min(max_transaction_points_organizations, quantity.amount) : 
+    std::min(max_transaction_points_individuals, quantity.amount)
+  ) / 10000.0;
+  
+  double to_trx_multiplier = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
   transactions.emplace(_self, [&](auto & transaction){
     transaction.id = transaction_id;
@@ -143,14 +153,12 @@ void history::trxentry(name from, name to, asset quantity) {
     transaction.to = to;
     transaction.volume = quantity.amount;
     transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
-    transaction.from_points = uint64_t(ceil(trx_multiplier * utils::get_rep_multiplier(to)));
-    transaction.to_points = uint64_t(ceil(trx_multiplier * utils::get_rep_multiplier(from)));
+    transaction.from_points = uint64_t(ceil(from_trx_multiplier * utils::get_rep_multiplier(to)));
+    transaction.to_points = uint64_t(ceil(to_trx_multiplier * utils::get_rep_multiplier(from)));
     transaction.timestamp = timestamp;
   });
 
   auto from_totals_itr = totals.find(from.value);
-  bool from_is_organization = from_user -> type == "organisation"_n;
-  bool to_is_organization = to_user -> type == "organisation"_n;
 
   if (from_totals_itr != totals.end()) {
     totals.modify(from_totals_itr, _self, [&](auto & item){
