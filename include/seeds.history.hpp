@@ -46,6 +46,7 @@ CONTRACT history : public contract {
 
         ACTION orgtxpt(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
 
+        ACTION deldailytrx (uint64_t day);
 
         ACTION migrateusers();
         ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
@@ -249,7 +250,7 @@ CONTRACT history : public contract {
 };
 
 EOSIO_DISPATCH(history, 
-  (reset)
+  (reset)(deldailytrx)
   (historyentry)(trxentry)
   (addcitizen)(addresident)
   (addreputable)(addregen)

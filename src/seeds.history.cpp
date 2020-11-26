@@ -34,6 +34,31 @@ void history::reset(name account) {
   while (ritr != residents.end()) {
     ritr = residents.erase(ritr);
   }
+
+  transaction_points_tables trx_points(get_self(), account.value);
+  auto tpitr = trx_points.begin();
+  while (tpitr != trx_points.end()) {
+    tpitr = trx_points.erase(tpitr);
+  }
+
+  qev_tables qevs(get_self(), account.value);
+  auto qitr = qevs.begin();
+  while (qitr != qevs.end()) {
+    qitr = qevs.erase(qitr);
+  }
+
+  auto toitr = totals.begin();
+  while (toitr != totals.end()) {
+    toitr = totals.erase(toitr);
+  }
+}
+
+void history::deldailytrx (uint64_t day) {
+  daily_transactions_tables transactions(get_self(), day);
+  auto titr = transactions.begin();
+  while (titr != transactions.end()) {
+    titr = transactions.erase(titr);
+  }
 }
 
 void history::addresident(name account) {
@@ -349,12 +374,17 @@ void history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t chu
       auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
 
       while (titr != transactions.end() && count < chunksize) {
+
         save_migration_user_transaction(uitr -> account, titr -> to, titr -> quantity, titr -> timestamp);
         titr++;
         count += 5;
-      }
-      if (titr == transactions.end()) {
-        transaction_id = 0;
+
+        if (titr == transactions.end()) {
+          transaction_id = 0;
+        } else {
+          transaction_id = titr -> id;
+        }
+
       }
 
     } else {
@@ -362,21 +392,26 @@ void history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t chu
       auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
 
       while (titr != transactions.end() && count < chunksize) {
-        if (titr -> in) {
-          save_migration_user_transaction(titr -> other, uitr -> account, titr -> quantity, titr -> timestamp);
-        } else {
+        if (!(titr -> in)) {
+          transaction_id = titr -> id;
           save_migration_user_transaction(uitr -> account, titr -> other, titr -> quantity, titr -> timestamp);
         }
         titr++;
         count += 5;
-      }
-      if (titr == transactions.end()) {
-        transaction_id = 0;
+
+        if (titr == transactions.end()) {
+          transaction_id = 0;
+        } else {
+          transaction_id = titr -> id;
+        }
+
       }
 
     }
 
-    uitr++;
+    if (transaction_id == 0) {
+      uitr++;
+    }
   }
 
   if (uitr != users.end()) {
@@ -391,25 +426,39 @@ void history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t chu
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(get_self().value, _self);
+  } else {
+    print("\n############################ I have FINISHED ############################\n");
   }
 
 }
 
 void history::save_migration_user_transaction (name from, name to, asset quantity, uint64_t timestamp) {
 
-  print("migrating...\n");
-
   auto from_user = users.find(from.value);
   auto to_user = users.find(to.value);
 
-  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
+  uint64_t day = date.utc_seconds;
   daily_transactions_tables transactions(get_self(), day);
+
+  print("saving: from = ", from, ", to = ", to, ", quantity = ", quantity, ", timestamp = ", timestamp, "\n");
   
   uint64_t transaction_id = transactions.available_primary_key();
 
+  bool from_is_organization = from_user -> type == "organisation"_n;
+  bool to_is_organization = to_user -> type == "organisation"_n;
+
   int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
-  int64_t max_transaction_points = int64_t(config_get("i.trx.max"_n));
-  double trx_multiplier = std::min(max_transaction_points, quantity.amount) / 10000.0;
+  int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
+  int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
+
+  double from_trx_multiplier = (
+    from_is_organization ? 
+    std::min(max_transaction_points_organizations, quantity.amount) : 
+    std::min(max_transaction_points_individuals, quantity.amount)
+  ) / 10000.0;
+
+  double to_trx_multiplier = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
   transactions.emplace(_self, [&](auto & transaction){
     transaction.id = transaction_id;
@@ -417,14 +466,12 @@ void history::save_migration_user_transaction (name from, name to, asset quantit
     transaction.to = to;
     transaction.volume = quantity.amount;
     transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
-    transaction.from_points = uint64_t(ceil(trx_multiplier * utils::get_rep_multiplier(to)));
-    transaction.to_points = uint64_t(ceil(trx_multiplier * utils::get_rep_multiplier(from)));
+    transaction.from_points = uint64_t(ceil(from_trx_multiplier * utils::get_rep_multiplier(to)));
+    transaction.to_points = uint64_t(ceil(to_trx_multiplier * utils::get_rep_multiplier(from)));
     transaction.timestamp = timestamp;
   });
 
   auto from_totals_itr = totals.find(from.value);
-  bool from_is_organization = from_user -> type == "organisation"_n;
-  bool to_is_organization = to_user -> type == "organisation"_n;
 
   if (from_totals_itr != totals.end()) {
     totals.modify(from_totals_itr, _self, [&](auto & item){
