@@ -30,29 +30,30 @@ $(function() {
 
   Here&apos;s the process for ambassadors invitations:
 
-  - call `invite(sponsor, transfer_quantity, sow_quantity, invite_hash)`
-  - the other end calls `accept(account, invite_secret, publicKey)`
+  - to initiate an invitation, push action `invite` with paramenters `[sponsor, transfer_quantity, sow_quantity, invite_hash]`
+  - the receiving user then pushes action `accept` with parameters `[account, invite_secret=invite_hash, publicKey]`
+
 </comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>accept</strong> / <a href="#accept">accept</a> <comment type="action" name="accept">Accepts an invitation based on provided `invite_secret`.</comment></li>
-<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> <comment type="action" name="acceptexist"></comment></li>
-<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> <comment type="action" name="acceptnew"></comment></li>
+<li><strong>accept</strong> / <a href="#accept">accept</a> <comment type="action" name="accept">Accepts an invitation invite using already existing account or creating new account, based on provided `invite_secret`.</comment></li>
+<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> <comment type="action" name="acceptexist">Accepts an invitation using existing account.</comment></li>
+<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> <comment type="action" name="acceptnew">Accepts an invitation creating a new account.</comment></li>
 <li><strong>cancel</strong> / <a href="#cancel">cancel</a> <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
-<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> <comment type="action" name="cleanup"></comment></li>
+<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> <comment type="action" name="cleanup">Cleanup very old invites</comment></li>
 <li><strong>createbio</strong> / <a href="#createbio">createbio</a> <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
-<li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit"></comment></li>
-<li><strong>invite</strong> / <a href="#invite">invite</a> <comment type="action" name="invite"></comment></li>
-<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> <comment type="action" name="invitefor"></comment></li>
+<li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit">Deposit funds using another account as sponsor account</comment></li>
+<li><strong>invite</strong> / <a href="#invite">invite</a> <comment type="action" name="invite">Creates an invitation, specifying the `sponsor`, `transfer_quantity`, `sow_quantity`(planted amount) and the unique `invite_hash`</comment></li>
+<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> <comment type="action" name="invitefor">Invite in the name of the referer account.</comment></li>
 <li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) <comment type="table" name="invites"></comment></li>
-<li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) <comment type="table" name="referrers"></comment></li>
-<li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) <comment type="table" name="sponsors"></comment></li>
+<li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) <comment type="table" name="invites">Table holding the invitations.</comment></li>
+<li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) <comment type="table" name="referrers">Table with the referrer for each invitation.</comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) <comment type="table" name="sponsors">Table for storing the deposit sponsors and the balance they commited.</comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>

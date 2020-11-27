@@ -25,36 +25,57 @@ $(function() {
 
 </head><body>
   <div id="target"><h1>Smartcontract documentation for organization</h1>
-<p><comment type="main"></comment></p>
+<p><comment type="main">
+Organizations are an essential part of SEEDS, enabling regeneration to take place in the many contexts the new society will need.
+
+They are covered on the SEEDS COnstitution, Part 2, Section 1 **Organization Accounts**.
+
+A new Organization can be created by pushing the `create` action, after doing the `deposit` (from onboarding contract) for the sponsoring amount.
+
+Organizations can get **Reputable** and **Regenerative** status, if they meet the Constitution requisites in terms of
+Contribution Scores and Regen Scores, this is started using the `makeregen` and `makereptable` actions.
+
+The Org owner can add people invoking the `addmember` action, and remove using the `removemember` action.
+
+The owner / manager can also change member roles using the `changerole` action.
+
+Another very important aspect of Organization are their APPs, that can be used to track usage and allow the Org to get more bonus.
+
+To create an APP, the manager / owner calls `registerapp` (and then `banapp` to remove).
+Each daily use by the APP must call the `appuse` action to inform that.
+
+
+
+</comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>addcbpoints</strong> / <a href="#addcbpoints">addcbpoints</a> <comment type="action" name="addcbpoints"></comment></li>
-<li><strong>addmember</strong> / <a href="#addmember">addmember</a> <comment type="action" name="addmember"></comment></li>
-<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen"></comment></li>
-<li><strong>appuse</strong> / <a href="#appuse">appuse</a> <comment type="action" name="appuse"></comment></li>
-<li><strong>banapp</strong> / <a href="#banapp">banapp</a> <comment type="action" name="banapp"></comment></li>
-<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> <comment type="action" name="changeowner"></comment></li>
-<li><strong>changerole</strong> / <a href="#changerole">changerole</a> <comment type="action" name="changerole"></comment></li>
-<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> <comment type="action" name="cleandau"></comment></li>
-<li><strong>cleandaus</strong> / <a href="#cleandaus">cleandaus</a> <comment type="action" name="cleandaus"></comment></li>
-<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create"></comment></li>
-<li><strong>destroy</strong> / <a href="#destroy">destroy</a> <comment type="action" name="destroy"></comment></li>
-<li><strong>makeregen</strong> / <a href="#makeregen">makeregen</a> <comment type="action" name="makeregen"></comment></li>
-<li><strong>makereptable</strong> / <a href="#makereptable">makereptable</a> <comment type="action" name="makereptable"></comment></li>
-<li><strong>rankcbsorg</strong> / <a href="#rankcbsorg">rankcbsorg</a> <comment type="action" name="rankcbsorg"></comment></li>
-<li><strong>rankcbsorgs</strong> / <a href="#rankcbsorgs">rankcbsorgs</a> <comment type="action" name="rankcbsorgs"></comment></li>
-<li><strong>rankregen</strong> / <a href="#rankregen">rankregen</a> <comment type="action" name="rankregen"></comment></li>
-<li><strong>rankregens</strong> / <a href="#rankregens">rankregens</a> <comment type="action" name="rankregens"></comment></li>
-<li><strong>refund</strong> / <a href="#refund">refund</a> <comment type="action" name="refund"></comment></li>
-<li><strong>registerapp</strong> / <a href="#registerapp">registerapp</a> <comment type="action" name="registerapp"></comment></li>
-<li><strong>removemember</strong> / <a href="#removemember">removemember</a> <comment type="action" name="removemember"></comment></li>
+<li><strong>addcbpoints</strong> / <a href="#addcbpoints">addcbpoints</a> <comment type="action" name="addcbpoints">Adds Contribution points to the Org score.</comment></li>
+<li><strong>addmember</strong> / <a href="#addmember">addmember</a> <comment type="action" name="addmember">Adds a member to the Organization</comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen">Adds Regenerative score to the Organization.</comment></li>
+<li><strong>appuse</strong> / <a href="#appuse">appuse</a> <comment type="action" name="appuse">Called to indicate daily Org APP usage.</comment></li>
+<li><strong>banapp</strong> / <a href="#banapp">banapp</a> <comment type="action" name="banapp">Bans an APP from the Organization.</comment></li>
+<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> <comment type="action" name="changeowner">Let's the Org owner pass it along to some other account.</comment></li>
+<li><strong>changerole</strong> / <a href="#changerole">changerole</a> <comment type="action" name="changerole">Change the role for an Org member.</comment></li>
+<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> <comment type="action" name="cleandau"></comment>Cleans the DAU from a batch of Org APPs.</li>
+<li><strong>cleandaus</strong> / <a href="#cleandaus">cleandaus</a> <comment type="action" name="cleandaus">Batch cleans the DAU from all Org apps.</comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create">Creates a new Organization, proving the sponsor has allocated enough funds</comment></li>
+<li><strong>destroy</strong> / <a href="#destroy">destroy</a> <comment type="action" name="destroy">Destroys an Organization, called by the owner.</comment></li>
+<li><strong>makeregen</strong> / <a href="#makeregen">makeregen</a> <comment type="action" name="makeregen">Converts and Org status to Regenerative if all pre-requisites are met.</comment></li>
+<li><strong>makereptable</strong> / <a href="#makereptable">makereptable</a> <comment type="action" name="makereptable">Converts and Org status to Reputable if all pre-requisites are met.</comment></li>
+<li><strong>rankcbsorg</strong> / <a href="#rankcbsorg">rankcbsorg</a> <comment type="action" name="rankcbsorg">Ranks a batch or Orgs in terms of Contribution score.</comment></li>
+<li><strong>rankcbsorgs</strong> / <a href="#rankcbsorgs">rankcbsorgs</a> <comment type="action" name="rankcbsorgs">Batch ranks all Orgs based on Contribution score.</comment></li>
+<li><strong>rankregen</strong> / <a href="#rankregen">rankregen</a> <comment type="action" name="rankregen">Ranks a batch or Orgs in terms of Regenerative score.</comment></li>
+<li><strong>rankregens</strong> / <a href="#rankregens">rankregens</a> <comment type="action" name="rankregens">Batch ranks all Orgs based on Regenerative score.</comment></li>
+<li><strong>refund</strong> / <a href="#refund">refund</a> <comment type="action" name="refund">Refunds the Org creation fees.</comment></li>
+<li><strong>registerapp</strong> / <a href="#registerapp">registerapp</a> <comment type="action" name="registerapp">Registers a new APP to the Org.</comment></li>
+<li><strong>removemember</strong> / <a href="#removemember">removemember</a> <comment type="action" name="removemember">Removes a member from the Org.</comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
-<li><strong>scoreorgs</strong> / <a href="#scoreorgs">scoreorgs</a> <comment type="action" name="scoreorgs"></comment></li>
-<li><strong>scoretrxs</strong> / <a href="#scoretrxs">scoretrxs</a> <comment type="action" name="scoretrxs"></comment></li>
-<li><strong>subcbpoints</strong> / <a href="#subcbpoints">subcbpoints</a> <comment type="action" name="subcbpoints"></comment></li>
-<li><strong>subregen</strong> / <a href="#subregen">subregen</a> <comment type="action" name="subregen"></comment></li>
-<li><strong>testregen</strong> / <a href="#testregen">testregen</a> <comment type="action" name="testregen"></comment></li>
-<li><strong>testreptable</strong> / <a href="#testreptable">testreptable</a> <comment type="action" name="testreptable"></comment></li>
+<li><strong>scoreorgs</strong> / <a href="#scoreorgs">scoreorgs</a> <comment type="action" name="scoreorgs">Called periodically to calculate Org scores.</comment></li>
+<li><strong>scoretrxs</strong> / <a href="#scoretrxs">scoretrxs</a> <comment type="action" name="scoretrxs">Called to recalculate Org transaction scores.</comment></li>
+<li><strong>subcbpoints</strong> / <a href="#subcbpoints">subcbpoints</a> <comment type="action" name="subcbpoints">Subtracts Contribution points from the Org score.</comment></li>
+<li><strong>subregen</strong> / <a href="#subregen">subregen</a> <comment type="action" name="subregen">Subtracts Regenerative points from the Org score.</comment></li>
+<li><strong>testregen</strong> / <a href="#testregen">testregen</a> <comment type="action" name="testregen">Converts the org to Regenerative, used only for testing.</comment></li>
+<li><strong>testreptable</strong> / <a href="#testreptable">testreptable</a> <comment type="action" name="testreptable">Converts the org to Reputable, used only for testing.</comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>

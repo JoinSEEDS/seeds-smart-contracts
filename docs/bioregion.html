@@ -25,29 +25,40 @@ $(function() {
 
 </head><body>
   <div id="target"><h1>Smartcontract documentation for bioregion</h1>
-<p><comment type="main"></comment></p>
+<p><comment type="main">
+Bioregions are geographically centeres locations where SEEDS Citizens may decide to base off their operations.
+
+They are covered in the SEEDS Constitution on Part 2, Section 1 **Bioregional Accounts**.
+
+Bioregions are created using the `create` action, however it only becomes active as long as enough people `join` the Bioregion.
+
+Members can also choose to `leave` the Bioregion. 
+
+The founder account may call `addrole` on member accounts for specifying their roles on the Bioregions.
+
+</comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>addrole</strong> / <a href="#addrole">addrole</a> <comment type="action" name="addrole"></comment></li>
-<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create"></comment></li>
-<li><strong>join</strong> / <a href="#join">join</a> <comment type="action" name="join"></comment></li>
-<li><strong>leave</strong> / <a href="#leave">leave</a> <comment type="action" name="leave"></comment></li>
-<li><strong>leaverole</strong> / <a href="#leaverole">leaverole</a> <comment type="action" name="leaverole"></comment></li>
-<li><strong>removebr</strong> / <a href="#removebr">removebr</a> <comment type="action" name="removebr"></comment></li>
-<li><strong>removemember</strong> / <a href="#removemember">removemember</a> <comment type="action" name="removemember"></comment></li>
-<li><strong>removerole</strong> / <a href="#removerole">removerole</a> <comment type="action" name="removerole"></comment></li>
+<li><strong>addrole</strong> / <a href="#addrole">addrole</a> <comment type="action" name="addrole">Add a named `role` to a member of the Bioregion.</comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create">Creates a new Bioregion.</comment></li>
+<li><strong>join</strong> / <a href="#join">join</a> <comment type="action" name="join">Allows people to join a Bioregion.</comment></li>
+<li><strong>leave</strong> / <a href="#leave">leave</a> <comment type="action" name="leave">This is called when one wants to leave a Bioregion.</comment></li>
+<li><strong>leaverole</strong> / <a href="#leaverole">leaverole</a> <comment type="action" name="leaverole">Allows the account owner to leave a Role.</comment></li>
+<li><strong>removebr</strong> / <a href="#removebr">removebr</a> <comment type="action" name="removebr">The founder will invoke that to remove a Bioregion, removing all members.</comment></li>
+<li><strong>removemember</strong> / <a href="#removemember">removemember</a> <comment type="action" name="removemember">The founder removes a specific Bioregion member.</comment></li>
+<li><strong>removerole</strong> / <a href="#removerole">removerole</a> <comment type="action" name="removerole">The founder removes someone from a Role.</comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
-<li><strong>setfounder</strong> / <a href="#setfounder">setfounder</a> <comment type="action" name="setfounder"></comment></li>
+<li><strong>setfounder</strong> / <a href="#setfounder">setfounder</a> <comment type="action" name="setfounder">This is called by the founder to change the founder of a Bioregion.</comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>bioregions</strong> / <a href="#bioregion_table">bioregion_table</a> (i64) <comment type="table" name="bioregions"></comment></li>
-<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
-<li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) <comment type="table" name="members"></comment></li>
-<li><strong>roles</strong> / <a href="#roles_table">roles_table</a> (i64) <comment type="table" name="roles"></comment></li>
-<li><strong>sponsors</strong> / <a href="#sponsors_table">sponsors_table</a> (i64) <comment type="table" name="sponsors"></comment></li>
-<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
+<li><strong>bioregions</strong> / <a href="#bioregion_table">bioregion_table</a> (i64) <comment type="table" name="bioregions">The main Bioregions table.</comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config">Access to the SEEDS config table.</comment></li>
+<li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) <comment type="table" name="members">Bioregion members table.</comment></li>
+<li><strong>roles</strong> / <a href="#roles_table">roles_table</a> (i64) <comment type="table" name="roles">Bioregion roles table.</comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsors_table">sponsors_table</a> (i64) <comment type="table" name="sponsors">Bioregions deposit sponsor table.</comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users">Access to the users table.</comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
