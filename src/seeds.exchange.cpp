@@ -19,7 +19,7 @@ void exchange::reset() {
   setflag(tlos_paused_flag, 1);
 
   // COMMENT in for testing, never check in commented in
-/**/
+/**
   // we never want to erase rounds or sold table or history except for unit testing
   
   sold.remove();
