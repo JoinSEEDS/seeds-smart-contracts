@@ -799,6 +799,9 @@ describe('Monthly QEV', async assert => {
   console.log('reset harvest')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
+  console.log('update circulaing supply')
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+
   console.log('calculate total monthly qev')
   
   await contracts.history.testtotalqev(120, 100 * 10000, { authorization: `${history}@active` })
@@ -811,6 +814,8 @@ describe('Monthly QEV', async assert => {
     table: 'monthlyqevs',
     json: true,
   })
+
+  delete totalQev.rows[0].circulating_supply
 
   assert({
     given: 'monthly qev calculated',

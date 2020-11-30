@@ -882,16 +882,20 @@ void harvest::calcmqevs () {
     qitr++;
   }
 
+  circulating_supply_table c = circulating.get();
+
   auto mqitr = monthlyqevs.find(day);
   
   if (mqitr != monthlyqevs.end()) {
     monthlyqevs.modify(mqitr, _self, [&](auto & item){
       item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
     });
   } else {
     monthlyqevs.emplace(_self, [&](auto & item){
       item.timestamp = day;
       item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
     });
   }
 }
