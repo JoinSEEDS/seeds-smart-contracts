@@ -896,3 +896,24 @@ void harvest::calcmqevs () {
   }
 }
 
+void harvest::calcmintrate () {
+  require_auth(get_self());
+
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  uint64_t past_day_three_months = eosio::current_time_point().sec_since_epoch() - (3 * utils::moon_cycle);
+
+  auto past_day_temp = eosio::time_point_sec(past_day_three_months / 86400 * 86400);
+  uint64_t past_day = past_day_temp.utc_seconds;
+
+  auto current_qev_itr = monthlyqevs.find(day);
+  auto past_qev_itr = monthlyqevs.find(past_day);
+
+  check(current_qev_itr != monthlyqevs.end(), "no monthly qev found for day " + std::to_string(day));
+  check(past_qev_itr != monthlyqevs.end(), "no monthly qev found for day " + std::to_string(past_day));
+
+  double volume_growth = (current_qev_itr -> qualifying_volume - past_qev_itr -> qualifying_volume) / past_qev_itr -> qualifying_volume;
+
+  
+
+}
+

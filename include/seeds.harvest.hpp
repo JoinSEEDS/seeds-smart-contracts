@@ -34,10 +34,12 @@ CONTRACT harvest : public contract {
         total(receiver, receiver.value),
         harveststat(receiver, receiver.value),
         monthlyqevs(receiver, receiver.value),
+        mintrate(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
-        cbs(contracts::accounts, contracts::accounts.value)
+        cbs(contracts::accounts, contracts::accounts.value),
+        circulating(contracts::token, contracts::token.value)
         {}
         
     ACTION reset();
@@ -212,9 +214,6 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-
-    // new tables ------------------------------
-
     // From history contract
     TABLE transaction_points_table { // scoped by account
       uint64_t timestamp;
@@ -236,6 +235,9 @@ CONTRACT harvest : public contract {
     TABLE monthly_qev_table {
       uint64_t timestamp;
       uint64_t qualifying_volume;
+      uint64_t circulating_supply;
+      uint64_t planted;
+      uint64_t burned;
 
       uint64_t primary_key() const { return timestamp; }
       uint64_t by_volume() const { return qualifying_volume; }
@@ -256,7 +258,32 @@ CONTRACT harvest : public contract {
       const_mem_fun<monthly_qev_table, uint64_t, &monthly_qev_table::by_volume>>
     > monthly_qev_tables;
 
+    // new tables ------------------------------
+
+    TABLE mint_rate_table {
+      uint64_t id;
+      uint64_t mint_rate;
+      uint64_t volume_growth;
+      uint64_t timestamp;
+
+      uint64_t primary_key() const { return id; }
+    };
+
+    typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
+
+    // From token contract
+    TABLE circulating_supply_table {
+      uint64_t id;
+      uint64_t total;
+      uint64_t circulating;
+      uint64_t primary_key()const { return id; }
+    };
+
+    typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
+    typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+
     // -----------------------------------------
+
 
     // Contract Tables
     balance_tables balances;
@@ -265,6 +292,7 @@ CONTRACT harvest : public contract {
     cs_points_tables cspoints;
     size_tables sizes;
     monthly_qev_tables monthlyqevs;
+    mint_rate_tables mintrate;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -277,6 +305,7 @@ CONTRACT harvest : public contract {
     cbs_tables cbs;
     rep_tables rep;
     total_tables total;
+    circulating_supply_tables circulating;
 
 };
 
