@@ -882,38 +882,77 @@ void harvest::calcmqevs () {
     qitr++;
   }
 
+  circulating_supply_table c = circulating.get();
+
   auto mqitr = monthlyqevs.find(day);
   
   if (mqitr != monthlyqevs.end()) {
     monthlyqevs.modify(mqitr, _self, [&](auto & item){
       item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
     });
   } else {
     monthlyqevs.emplace(_self, [&](auto & item){
       item.timestamp = day;
       item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
     });
   }
 }
+
+void harvest::testcalcmqev (uint64_t day, uint64_t total_volume, uint64_t circulating) {
+  require_auth(get_self());
+  
+  auto mqitr = monthlyqevs.find(day);
+  
+  if (mqitr != monthlyqevs.end()) {
+    monthlyqevs.modify(mqitr, _self, [&](auto & item){
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = circulating;
+    });
+  } else {
+    monthlyqevs.emplace(_self, [&](auto & item){
+      item.timestamp = day;
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = circulating;
+    });
+  }
+}
+
 
 void harvest::calcmintrate () {
   require_auth(get_self());
 
   uint64_t day = utils::get_beginning_of_day_in_seconds();
-  uint64_t past_day_three_months = eosio::current_time_point().sec_since_epoch() - (3 * utils::moon_cycle);
+  auto previous_day_temp = eosio::time_point_sec((day - (3 * utils::moon_cycle)) / 86400 * 86400);
+  uint64_t previous_day = previous_day_temp.utc_seconds;
 
-  auto past_day_temp = eosio::time_point_sec(past_day_three_months / 86400 * 86400);
-  uint64_t past_day = past_day_temp.utc_seconds;
+  auto current_qev_itr = monthlyqevs.get(day, "no monthly qev found");
+  auto previous_qev_itr = monthlyqevs.get(previous_day, "no previous monthly qev found");
 
-  auto current_qev_itr = monthlyqevs.find(day);
-  auto past_qev_itr = monthlyqevs.find(past_day);
+  double volume_growth = double(current_qev_itr.qualifying_volume - previous_qev_itr.qualifying_volume) / previous_qev_itr.qualifying_volume;
 
-  check(current_qev_itr != monthlyqevs.end(), "no monthly qev found for day " + std::to_string(day));
-  check(past_qev_itr != monthlyqevs.end(), "no monthly qev found for day " + std::to_string(past_day));
+  int64_t target_supply = (1.0 + volume_growth) * previous_qev_itr.circulating_supply;
 
-  double volume_growth = (current_qev_itr -> qualifying_volume - past_qev_itr -> qualifying_volume) / past_qev_itr -> qualifying_volume;
+  int64_t delta = target_supply - current_qev_itr.circulating_supply;
 
-  
+  double mint_rate = delta / 708.0;
+
+  auto mitr = mintrate.begin();
+  if (mitr != mintrate.end()) {
+    mintrate.modify(mitr, _self, [&](auto & item){
+      item.mint_rate = mint_rate;
+      item.volume_growth = volume_growth * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    mintrate.emplace(_self, [&](auto & item){
+      item.id = mintrate.available_primary_key();
+      item.mint_rate = mint_rate;
+      item.volume_growth = volume_growth * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
 
 }
 

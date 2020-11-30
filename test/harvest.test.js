@@ -799,6 +799,9 @@ describe('Monthly QEV', async assert => {
   console.log('reset harvest')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
+  console.log('update circulaing supply')
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+
   console.log('calculate total monthly qev')
   
   await contracts.history.testtotalqev(120, 100 * 10000, { authorization: `${history}@active` })
@@ -812,6 +815,8 @@ describe('Monthly QEV', async assert => {
     json: true,
   })
 
+  delete totalQev.rows[0].circulating_supply
+
   assert({
     given: 'monthly qev calculated',
     should: 'have the correct monthlyqevs entries',
@@ -819,6 +824,83 @@ describe('Monthly QEV', async assert => {
     expected: [
       { timestamp: day, qualifying_volume: 30000000 }
     ]
+  })
+
+})
+
+describe('Mint Rate', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await Promise.all([
+    eos.contract(token),
+    eos.contract(accounts),
+    eos.contract(harvest),
+    eos.contract(settings),
+    eos.contract(history)
+  ]).then(([token, accounts, harvest, settings, history]) => ({
+    token, accounts, harvest, settings, history
+  }))
+
+  const day = getBeginningOfDayInSeconds()
+  const secondsPerDay =  86400
+  const moonCycle = secondsPerDay * 29 + parseInt(secondsPerDay / 2)
+  const previousDay = (new Date((day - 3 * moonCycle) * 1000).setUTCHours(0,0,0,0)) / 1000
+
+  console.log('reset history')
+  await contracts.history.reset(history, { authorization: `${history}@active` })
+  await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+  
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('update circulaing supply')
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+
+  console.log('calculate total monthly qev')
+  await contracts.history.testtotalqev(120, 100 * 10000, { authorization: `${history}@active` })
+  await sleep(100)
+  await contracts.harvest.calcmqevs({ authorization: `${harvest}@active` })
+
+  const mqevsBefore = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'monthlyqevs',
+    json: true,
+  })
+
+  const currentCirculatingSupply = mqevsBefore.rows[0].circulating_supply
+  const pastCirculatingSupply = currentCirculatingSupply - 5000 * 10000
+  const expectedVolumeGrowth = 0.2
+  const targetSupply = (1 + expectedVolumeGrowth) * pastCirculatingSupply
+  const delta = targetSupply - currentCirculatingSupply
+  const expectedMintRate = parseInt(delta / 708)
+
+  await contracts.harvest.testcalcmqev(previousDay, 2500 * 10000, pastCirculatingSupply, { authorization: `${harvest}@active` })
+
+  await contracts.harvest.calcmintrate({ authorization: `${harvest}@active` })
+
+  const mintRateTable = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'mintrate',
+    json: true,
+  })
+
+  delete mintRateTable.rows[0].timestamp
+
+  assert({
+    given: 'mint rate calculated',
+    should: 'have the correct values',
+    actual: mintRateTable.rows,
+    expected: [{
+      id: 0,
+      mint_rate: expectedMintRate,
+      volume_growth: parseInt(expectedVolumeGrowth * 10000)
+    }]
   })
 
 })

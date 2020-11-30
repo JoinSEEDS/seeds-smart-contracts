@@ -85,7 +85,10 @@ CONTRACT harvest : public contract {
 
     ACTION setorgtxpt(name organization, uint64_t tx_points);
 
-    ACTION calcmqevs ();
+    ACTION calcmqevs();
+
+    ACTION testcalcmqev(uint64_t day, uint64_t total_volume, uint64_t circulating);
+    ACTION calcmintrate();
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -236,11 +239,18 @@ CONTRACT harvest : public contract {
       uint64_t timestamp;
       uint64_t qualifying_volume;
       uint64_t circulating_supply;
-      uint64_t planted;
-      uint64_t burned;
 
       uint64_t primary_key() const { return timestamp; }
       uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    // From token contract
+    TABLE circulating_supply_table {
+      uint64_t id;
+      uint64_t total;
+      uint64_t circulating;
+
+      uint64_t primary_key()const { return id; }
     };
 
     typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
@@ -258,6 +268,9 @@ CONTRACT harvest : public contract {
       const_mem_fun<monthly_qev_table, uint64_t, &monthly_qev_table::by_volume>>
     > monthly_qev_tables;
 
+    typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
+    typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+
     // new tables ------------------------------
 
     TABLE mint_rate_table {
@@ -270,17 +283,6 @@ CONTRACT harvest : public contract {
     };
 
     typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
-
-    // From token contract
-    TABLE circulating_supply_table {
-      uint64_t id;
-      uint64_t total;
-      uint64_t circulating;
-      uint64_t primary_key()const { return id; }
-    };
-
-    typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
-    typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
 
     // -----------------------------------------
 
@@ -320,8 +322,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
-          (testclaim)(testupdatecs)
-          (calcmqevs)
+          (testclaim)(testupdatecs)(testcalcmqev)
+          (calcmqevs)(calcmintrate)
         )
       }
   }
