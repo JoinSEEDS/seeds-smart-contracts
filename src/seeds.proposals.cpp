@@ -545,69 +545,6 @@ void proposals::migratevoice(uint64_t start) {
   }
 }
 
-bool proposals::has_unity(uint64_t prop_majority, uint64_t favour, uint64_t against) {
-  double majority = double(prop_majority) / 100.0;
-  bool passed = favour > 0 && double(favour) >= double(favour + against) * majority;
-  return passed;
-}
-
-// check and restore all proposals in eval mode
-void proposals::checkeval() {
-  require_auth(get_self());
-  uint64_t prop_majority = config_get(name("propmajority"));
-
-  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-
-  uint64_t last_cycle = c.propcycle - 1;
-
-  auto pitr = props.begin();
-  while (pitr != props.end()) {
-    if (
-      pitr->passed_cycle != 0 && 
-      pitr->passed_cycle + pitr->age < last_cycle &&
-      pitr->current_payout != pitr->quantity && 
-      has_unity(prop_majority, pitr->favour, pitr->against)
-    ) {
-
-      name prop_type = get_type(pitr->fund);
-      bool is_alliance_type = prop_type == alliance_type;
-
-      uint64_t age = pitr -> age + 1;
-
-      asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
-
-      print("\n === re-instating prop id "+std::to_string(pitr->id) + " --> "+ payout_amount.to_string());
-
-      if (is_alliance_type) {
-        send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-      } else {
-        withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
-      }
-
-      uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
-
-      props.modify(pitr, _self, [&](auto & proposal){
-        proposal.age = age;
-        if (age == num_cycles) {
-          proposal.executed = true;
-          proposal.status = status_passed;
-          proposal.stage = stage_done;
-        } else {
-          proposal.executed = false;
-          proposal.status = status_evaluate;
-          proposal.stage = stage_active;
-        }
-        proposal.current_payout += payout_amount;
-      });
-      
-
-    }
-    
-    pitr++;
-  }
-
-}
-
 void proposals::update_cycle() {
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     c.propcycle += 1;
