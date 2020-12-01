@@ -74,6 +74,8 @@ CONTRACT proposals : public contract {
       
       ACTION decayvoices();
 
+      ACTION checkeval();
+
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
       ACTION testquorum(uint64_t total_proposals);
@@ -151,6 +153,7 @@ CONTRACT proposals : public contract {
       void erase_voice (name user);
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
+      bool has_unity(uint64_t prop_majority, uint64_t favour, uint64_t against);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -280,7 +283,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop)
-        (migratevoice)(testsetvoice))
+        (migratevoice)(testsetvoice)(checkeval))
       }
   }
 }
