@@ -80,6 +80,7 @@ CONTRACT harvest : public contract {
 
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
+    ACTION testcspoints(name account, uint64_t contribution_points);
     
     ACTION updtotal(); // MIGRATION ACTION
 
@@ -91,6 +92,8 @@ CONTRACT harvest : public contract {
     ACTION calcmintrate();
 
     ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstbios(uint64_t start, uint64_t chunksize, asset total_amount);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -101,6 +104,9 @@ CONTRACT harvest : public contract {
     name tx_points_size = "txpt.sz"_n;
     name org_tx_points_size = "org.tx.sz"_n;
     name cs_size = "cs.sz"_n;
+    name sum_rank_users = "usr.rnk.sz"_n;
+    name sum_rank_orgs = "org.rnk.sz"_n;
+    name sum_rank_bios = "bio.rnk.sz"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
@@ -281,8 +287,8 @@ CONTRACT harvest : public contract {
 
     TABLE mint_rate_table {
       uint64_t id;
-      uint64_t mint_rate;
-      uint64_t volume_growth;
+      int64_t mint_rate;
+      int64_t volume_growth;
       uint64_t timestamp;
 
       uint64_t primary_key() const { return id; }
@@ -328,9 +334,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
-          (testclaim)(testupdatecs)(testcalcmqev)
+          (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
-          (runharvest)(disthvstusrs)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstbios)
         )
       }
   }

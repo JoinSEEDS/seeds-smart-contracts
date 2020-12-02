@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, owner } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, owner, proposals } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -871,11 +871,32 @@ describe('Mint Rate and Harvest', async assert => {
   await sleep(100)
   await contracts.harvest.calcmqevs({ authorization: `${harvest}@active` })
 
-  let users = [firstuser, seconduser, thirduser, fourthuser]
-  users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
-  users.forEach( async (user, index) => await contracts.harvest.testupdatecs(user, index * 33,{ authorization: `${harvest}@active` }))
+  const csBefore = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'cspoints',
+    json: true,
+  })
+  console.log(csBefore)
 
+  let users = [firstuser, seconduser, thirduser, fourthuser]
+  for (let index = 0; index < users.length; index++) {
+    const user = users[index]
+    await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.harvest.testcspoints(user, index * 33,{ authorization: `${harvest}@active` })
+  }
   await sleep(100)
+
+  await contracts.harvest.rankcss({ authorization: `${harvest}@active` })
+  await sleep(100)
+
+  const csAfter = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'cspoints',
+    json: true,
+  })
+  console.log(csAfter)
 
   const mqevsBefore = await getTableRows({
     code: harvest,
@@ -906,7 +927,7 @@ describe('Mint Rate and Harvest', async assert => {
 
   const getTestBalance = async (user) => {
     const balance = await eos.getCurrencyBalance(names.token, user, 'THSEEDS')
-    return Number.parseInt(balance[0])
+    return Number.parseFloat(balance[0])
   }
 
   await contracts.token.updatecirc({ authorization: `${token}@active` })
@@ -915,8 +936,11 @@ describe('Mint Rate and Harvest', async assert => {
 
   await contracts.harvest.runharvest({ authorization: `${harvest}@active` })
 
-  const balanceProposalsContract = await getTestBalance(proposals)
-  console.log('balance test proposals:', balanceProposalsContract)
+  const thirduserBalance = await getTestBalance(thirduser)
+  console.log('balance thirduser:', thirduserBalance)
+
+  const firstuserBalance = await getTestBalance(firstuser)
+  console.log('balance firstuser:', firstuserBalance)
 
   const stats = await getTableRows({
     code: token,

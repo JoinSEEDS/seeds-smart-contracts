@@ -46,6 +46,11 @@ void harvest::reset() {
     qitr = monthlyqevs.erase(qitr);
   }
 
+  auto csitr = cspoints.begin();
+  while (csitr != cspoints.end()) {
+    csitr = cspoints.erase(csitr);
+  }
+
   total.remove();
 
   init_balance(_self);
@@ -623,6 +628,7 @@ void harvest::calc_contribution_score(name account) {
 }
 
 void harvest::rankcss() {
+  size_set(sum_rank_users, 0);
   rankcs(0, 0, 200);
 }
 
@@ -636,6 +642,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   auto cs_by_points = cspoints.get_index<"bycspoints"_n>();
   auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
   uint64_t count = 0;
+  uint64_t sum_rank = 0;
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -645,10 +652,15 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
       item.rank = rank;
     });
 
+    sum_rank += rank;
+
     current++;
     count++;
     citr++;
   }
+
+  size_change(sum_rank_users, int64_t(sum_rank));
+  print("sum rank = ", sum_rank, "\n");
 
   if (citr == cs_by_points.end()) {
     // Done.
@@ -742,6 +754,29 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
     ritr++;
   }
   
+}
+
+void harvest::testcspoints(name account, uint64_t contribution_points) {
+  require_auth(get_self());
+  auto csitr = cspoints.find(account.value);
+  if (csitr == cspoints.end()) {
+    if (contribution_points > 0) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = account;
+        item.contribution_points = contribution_points;
+      });
+      size_change(cs_size, 1);
+    }
+  } else {
+    if (contribution_points > 0) {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.contribution_points = contribution_points;
+      });
+    } else {
+      cspoints.erase(csitr);
+      size_change(cs_size, -1);
+    }
+  }
 }
 
 void harvest::testupdatecs(name account, uint64_t contribution_score) {
@@ -971,11 +1006,12 @@ void harvest::send_distribute_harvest (name key, asset amount) {
     key,
     std::make_tuple(uint64_t(0), config_get("batchsize"_n), amount)
   );
+  next_execution.send();
 
-  transaction tx;
-  tx.actions.emplace_back(next_execution);
-  tx.delay_sec = 1;
-  tx.send(key.value, _self);
+  // transaction tx;
+  // tx.actions.emplace_back(next_execution);
+  // tx.delay_sec = 1;
+  // tx.send(key.value, _self);
 
 }
 
@@ -992,17 +1028,19 @@ void harvest::runharvest() {
   token::issue_action i_action{contracts::token, { contracts::owner, "active"_n }};
   i_action.send(contracts::owner, quantity, "harvest");
 
-  token::transfer_action t_action{contracts::token, { contracts::owner, "active"_n }};
-  t_action.send(contracts::owner, contracts::proposals, quantity, "harvest");
-
   double users_percentage = config_get("hrvst.users"_n) / 1000000.0;
   double bios_percentage = config_get("hrvst.bios"_n) / 1000000.0;
   double orgs_percentage = config_get("hrvst.orgs"_n) / 1000000.0;
   double global_percentage = config_get("hrvst.global"_n) / 1000000.0;
 
-  send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
-
   print("amount for users: ", asset(mitr -> mint_rate * users_percentage, test_symbol), "\n");
+  print("amount for bios: ", asset(mitr -> mint_rate * bios_percentage, test_symbol), "\n");
+  print("amount for orgs: ", asset(mitr -> mint_rate * orgs_percentage, test_symbol), "\n");
+  print("amount for global: ", asset(mitr -> mint_rate * global_percentage, test_symbol), "\n");
+
+  send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
+  send_distribute_harvest("disthvstbios"_n, asset(mitr -> mint_rate * bios_percentage, test_symbol));
+  send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
 
 }
 
@@ -1012,19 +1050,24 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
   auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
   uint64_t count = 0;
 
+  uint64_t sum_rank = get_size(sum_rank_users);
+  check(sum_rank > 0, "the suma rank for users must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(get_size(sum_rank_users));
+  
   print("-------------- users --------------\n");
 
-  double multiplier = total_amount.amount / 4950.0; // n(n+1)/2, n=99
+  print("fragment seeds = ", fragment_seeds, "\n");
 
   while (csitr != cspoints.end() && count < chunksize) {
 
     auto uitr = users.find(csitr -> account.value);
-    if (uitr -> account != users.end() && uitr -> type != "organisation"_n) {
-      print("user:", csitr -> account, ", rank:", csitr -> rank, ", amount for that rank = ", asset(csitr -> rank * multiplier, test_symbol), "\n");
+    if (uitr != users.end() && uitr -> type != "organisation"_n && csitr -> rank > 0) {
+      print("user:", csitr -> account, ", rank:", csitr -> rank, ", amount for that rank = ", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+    
+      token::transfer_action t_action{contracts::token, { contracts::owner, "active"_n }};
+      t_action.send(contracts::owner, csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
     }
-
-    // token::transfer_action action{contracts::token, {_self, "active"_n}};
-    // action.send(_self, contracts::bank, quantity, "");
 
     csitr++;
     count++;
@@ -1046,17 +1089,10 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
 
 }
 
-// void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
-//   require_auth(get_self());
+void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+}
 
-//   print("-------------- users --------------\n");
-
-//   auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
-//   uint64_t count = 0;
-
-// }
-
-// void harvest::disthvstbios () {
-//   require_auth(get_self());
-// }
-
+void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+}
