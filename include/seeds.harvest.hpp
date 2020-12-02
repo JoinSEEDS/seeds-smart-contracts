@@ -90,8 +90,11 @@ CONTRACT harvest : public contract {
     ACTION testcalcmqev(uint64_t day, uint64_t total_volume, uint64_t circulating);
     ACTION calcmintrate();
 
+    ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
+    symbol test_symbol = symbol("THSEEDS", 4);
     uint64_t ONE_WEEK = 604800;
 
     name planted_size = "planted.sz"_n;
@@ -115,6 +118,9 @@ CONTRACT harvest : public contract {
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
     uint64_t get_size(name id);
+
+    uint64_t config_get(name key);
+    void send_distribute_harvest (name key, asset amount);
 
     // Contract Tables
 
@@ -317,13 +323,14 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(harvest, 
-          (payforcpu)(reset)(runharvest)
+          (payforcpu)(reset)
           (unplant)(claimrefund)(cancelrefund)(sow)
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)
           (calcmqevs)(calcmintrate)
+          (runharvest)(disthvstusrs)
         )
       }
   }

@@ -254,10 +254,6 @@ void harvest::unplant(name from, asset quantity) {
 
 }
 
-void harvest::runharvest() {
-  require_auth(get_self());
-}
-
 ACTION harvest::updatetxpt(name account) {
   require_auth(get_self());
   auto uitr = users.get(account.value, "user not found");
@@ -955,4 +951,112 @@ void harvest::calcmintrate () {
   }
 
 }
+
+
+uint64_t harvest::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+void harvest::send_distribute_harvest (name key, asset amount) {
+
+  cancel_deferred(key.value);
+
+  action next_execution(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    key,
+    std::make_tuple(uint64_t(0), config_get("batchsize"_n), amount)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(key.value, _self);
+
+}
+
+void harvest::runharvest() {
+  require_auth(get_self());
+
+  auto mitr = mintrate.begin();
+  check(mitr != mintrate.end(), "mint rate table is empty");
+
+  asset quantity = asset(mitr -> mint_rate, test_symbol);
+
+  print("mint rate:", quantity, "\n");
+
+  token::issue_action i_action{contracts::token, { contracts::owner, "active"_n }};
+  i_action.send(contracts::owner, quantity, "harvest");
+
+  token::transfer_action t_action{contracts::token, { contracts::owner, "active"_n }};
+  t_action.send(contracts::owner, contracts::proposals, quantity, "harvest");
+
+  double users_percentage = config_get("hrvst.users"_n) / 1000000.0;
+  double bios_percentage = config_get("hrvst.bios"_n) / 1000000.0;
+  double orgs_percentage = config_get("hrvst.orgs"_n) / 1000000.0;
+  double global_percentage = config_get("hrvst.global"_n) / 1000000.0;
+
+  send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
+
+  print("amount for users: ", asset(mitr -> mint_rate * users_percentage, test_symbol), "\n");
+
+}
+
+void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  uint64_t count = 0;
+
+  print("-------------- users --------------\n");
+
+  double multiplier = total_amount.amount / 4950.0; // n(n+1)/2, n=99
+
+  while (csitr != cspoints.end() && count < chunksize) {
+
+    auto uitr = users.find(csitr -> account.value);
+    if (uitr -> account != users.end() && uitr -> type != "organisation"_n) {
+      print("user:", csitr -> account, ", rank:", csitr -> rank, ", amount for that rank = ", asset(csitr -> rank * multiplier, test_symbol), "\n");
+    }
+
+    // token::transfer_action action{contracts::token, {_self, "active"_n}};
+    // action.send(_self, contracts::bank, quantity, "");
+
+    csitr++;
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstusrs"_n,
+      std::make_tuple(csitr -> account.value, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(csitr -> account.value, _self);
+  }
+
+}
+
+// void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
+//   require_auth(get_self());
+
+//   print("-------------- users --------------\n");
+
+//   auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+//   uint64_t count = 0;
+
+// }
+
+// void harvest::disthvstbios () {
+//   require_auth(get_self());
+// }
 
