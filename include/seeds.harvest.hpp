@@ -275,8 +275,8 @@ CONTRACT harvest : public contract {
 
     TABLE mint_rate_table {
       uint64_t id;
-      uint64_t mint_rate;
-      uint64_t volume_growth;
+      int64_t mint_rate;
+      int64_t volume_growth;
       uint64_t timestamp;
 
       uint64_t primary_key() const { return id; }
