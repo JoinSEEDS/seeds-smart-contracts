@@ -445,6 +445,17 @@ program
   })
 
   program
+  .command('invite <sponsor>')
+  .description('create 1 invite')
+  .action(async function (sponsor) {
+      
+    console.log("invite from " + sponsor)
+    let result = await invite(sponsor, 10, true, true) 
+
+    console.log("created invite with  secret: " + JSON.stringify(result, null, 2));
+  })
+
+  program
   .command('bulk_cancel <sponsor> <filename>')
   .description('Bulk cancel invites from a file, each line contains an invite hash')
   .action(async function (sponsor, filename) {

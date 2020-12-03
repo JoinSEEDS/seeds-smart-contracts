@@ -23,6 +23,12 @@ void proposals::reset() {
     size_change("active.sz"_n, -1);
   }
 
+  voice_tables voice_alliance(get_self(), alliance_type.value);
+  auto vaitr = voice_alliance.begin();
+  while (vaitr != voice_alliance.end()) {
+    vaitr = voice_alliance.erase(vaitr);
+  }
+
   auto paitr = participants.begin();
   while (paitr != participants.end()) {
     paitr = participants.erase(paitr);
@@ -37,28 +43,66 @@ void proposals::reset() {
   while (aitr != actives.end()) {
     aitr = actives.erase(aitr);
   }
+
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
+  }
+
 }
 
-bool proposals::is_enough_stake(asset staked, asset quantity) {
-  uint64_t min = min_stake(quantity);
+bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
+  uint64_t min = min_stake(quantity, fund);
   return staked.amount >= min;
 }
 
-uint64_t proposals::min_stake(asset quantity) {
-  auto prop_percentage = config.get(name("propstakeper").value, "The propstakeper parameter has not been initialized yet.");
-  auto prop_min = config.get(name("propminstake").value, "The propminstake has not been initialized yet.");
-  auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake has not been initialized yet.");
-  asset quantity_prop_percentage = prop_percentage.value * quantity / 100;
+uint64_t proposals::cap_stake(name fund) {
+  uint64_t prop_max;
+  if (fund == bankaccts::campaigns) {
+    prop_max = config_get(name("prop.cmp.cap"));
+  } else if (fund == bankaccts::alliances) {
+    prop_max = config_get(name("prop.al.cap"));
+  } else {
+    prop_max = config_get(name("propmaxstake"));
+  }
+  return prop_max;
+}
 
-  uint64_t min_stake = std::max(uint64_t(prop_min.value), uint64_t(quantity_prop_percentage.amount));
-  min_stake = std::min(prop_max.value, min_stake);
+uint64_t proposals::min_stake(asset quantity, name fund) {
+
+  double prop_percentage;
+  uint64_t prop_min;
+  uint64_t prop_max;
+
+  
+  if (fund == bankaccts::campaigns) {
+    prop_percentage = (double)config_get(name("prop.cmp.pct")) / 10000.0;
+    prop_max = config_get(name("prop.cmp.cap"));
+    prop_min = config_get(name("prop.cmp.min"));
+  } else if (fund == bankaccts::alliances) {
+    prop_percentage = (double)config_get(name("prop.al.pct")) / 10000.0;
+    prop_max = config_get(name("prop.al.cap"));
+    prop_min = config_get(name("prop.al.min"));
+  } else if (fund == bankaccts::milestone) {
+    prop_percentage = (double)config_get(name("propstakeper"));
+    prop_max = config_get(name("propminstake"));
+    prop_min = config_get(name("propminstake"));
+  } else {
+    check(false, "unknown proposal type, invalid fund");
+  }
+
+  asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), seeds_symbol);
+
+  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max, min_stake);
   return min_stake;
 }
 
 ACTION proposals::checkstake(uint64_t prop_id) {
   auto pitr = props.find(prop_id);
   check(pitr != props.end(), "proposal not found");
-  check(is_enough_stake(pitr->staked, pitr->quantity), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity)) + "' }");
+  check(is_enough_stake(pitr->staked, pitr->quantity, pitr->fund), "{ 'error':'not enough stake', 'has':" + std::to_string(pitr->staked.amount) + "', 'min_stake':'"+std::to_string(min_stake(pitr->quantity, pitr->fund)) + "' }");
 }
 
 void proposals::update_min_stake(uint64_t prop_id) {
@@ -66,7 +110,7 @@ void proposals::update_min_stake(uint64_t prop_id) {
   auto pitr = props.find(prop_id);
   check(pitr != props.end(), "proposal not found");
 
-  uint64_t min = min_stake(pitr->quantity);
+  uint64_t min = min_stake(pitr->quantity, pitr->fund);
 
   auto mitr = minstake.find(prop_id);
   if (mitr == minstake.end()) {
@@ -79,6 +123,22 @@ void proposals::update_min_stake(uint64_t prop_id) {
       item.min_stake = min;
     });
   }
+}
+
+// quorum as integer % value - e.g. 90 == 90%
+uint64_t proposals::get_quorum(uint64_t total_proposals) {
+  uint64_t base_quorum = config_get("quorum.base"_n);
+  uint64_t quorum_min = config_get("quor.min.pct"_n);
+  uint64_t quorum_max = config_get("quor.max.pct"_n);
+
+  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  quorum = std::max(quorum_min, quorum);
+  return std::min(quorum_max, quorum);
+}
+
+void proposals::testquorum(uint64_t total_proposals) {
+  require_auth(get_self());
+  check(false, std::to_string(get_quorum(total_proposals)));
 }
 
 asset proposals::get_payout_amount(
@@ -102,6 +162,8 @@ asset proposals::get_payout_amount(
 }
 
 uint64_t proposals::get_size(name id) {
+  size_tables sizes(get_self(), get_self().value);
+
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     return 0;
@@ -111,6 +173,8 @@ uint64_t proposals::get_size(name id) {
 }
 
 void proposals::initsz() {
+  require_auth(_self);
+  
   uint64_t current = get_size("active.sz"_n);
   int64_t count = 0; 
   auto vitr = voice.begin();
@@ -122,36 +186,60 @@ void proposals::initsz() {
   size_change("active.sz"_n, count - current);
 }
 
+void proposals::initactives() {
+  require_auth(_self);
+  
+  auto vitr = voice.begin();
+  while(vitr != voice.end()) {
+    auto aitr = actives.find(vitr->account.value);
+    if (aitr == actives.end()) {
+      actives.emplace(_self, [&](auto & item){
+        item.account = vitr->account;
+        item.active = true;
+        item.timestamp = eosio::current_time_point().sec_since_epoch();
+      });
+    }
+    vitr++;
+  }
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
     auto pitr = props.begin();
 
-    auto prop_majority = config.get(name("propmajority").value, "The propmajority parameter has not been initialized yet.");
-    uint64_t quorum = config.find(name("propquorum").value)->value;
+    uint64_t prop_majority = config_get(name("propmajority"));
 
-    uint64_t number_active_proposals = 0;
+    uint64_t number_active_proposals = get_size(prop_active_size);
     uint64_t total_eligible_voters = get_size("active.sz"_n);
+    uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     uint64_t current_cycle = c.propcycle;
 
     while (pitr != props.end()) {
-      if (pitr->stage == name("active")) {
-        number_active_proposals += 1;
+      if (pitr->stage == stage_active) {
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
 
-        double majority = double(prop_majority.value) / 100.0;
+        double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
-        bool is_alliance_type = pitr->fund == bankaccts::alliances;
-        bool is_campaign_type = pitr->fund == bankaccts::campaigns;
+        name prop_type = get_type(pitr->fund);
+        bool is_alliance_type = prop_type == alliance_type;
+        bool is_campaign_type = prop_type == campaign_type;
+
+        bool valid_quorum = false;
+
+        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+          valid_quorum = true;
+        } else { // in open status, quorum is calculated
+          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+        }
 
         if (passed && valid_quorum) {
 
-          if (pitr -> status == name("open")) {
+          if (pitr -> status == status_open) {
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -168,7 +256,7 @@ void proposals::onperiod() {
               proposal.passed_cycle = current_cycle;
               proposal.age = 0;
               proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("evaluate");
+              proposal.status = status_evaluate;
               proposal.current_payout += payout_amount;
             });
 
@@ -190,31 +278,35 @@ void proposals::onperiod() {
               proposal.age = age;
               if (age == num_cycles) {
                 proposal.executed = true;
-                proposal.status = name("passed");
-                proposal.stage = name("done");
+                proposal.status = status_passed;
+                proposal.stage = stage_done;
               }
               proposal.current_payout += payout_amount;
             });
           }
 
         } else {
-          if (pitr->status != name("evaluate")) {
+          if (pitr->status != status_evaluate) {
             burn(pitr->staked);
           }
 
           props.modify(pitr, _self, [&](auto& proposal) {
               proposal.executed = false;
               proposal.staked = asset(0, seeds_symbol);
-              proposal.status = name("rejected");
-              proposal.stage = name("done");
+              proposal.status = status_rejected;
+              proposal.stage = stage_done;
           });
         }
+
+        size_change(prop_active_size, -1);
+      
       }
 
-      if (pitr->stage == name("staged") && is_enough_stake(pitr->staked, pitr->quantity) ) {
+      if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
         props.modify(pitr, _self, [&](auto& proposal) {
-          proposal.stage = name("active");
+          proposal.stage = stage_active;
         });
+        size_change(prop_active_size, 1);
       }
 
       pitr++;
@@ -269,21 +361,20 @@ void proposals::updatevoice(uint64_t start) {
   //eosio::multi_index<"cspoints"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
   
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
+  voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
-  while (vitr != voice.end() && count < batch_size.value) {
+  while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
+      uint64_t points = 0;
       if (csitr != cspoints.end()) {
-        voice.modify(vitr, _self, [&](auto& item) {
-          item.balance = csitr->rank;
-        });
-      } else {
-        voice.modify(vitr, _self, [&](auto& item) {
-          item.balance = 0;
-        });
+        points = csitr -> rank;
       }
+
+      set_voice(vitr -> account, points, ""_n);
+
       vitr++;
       count++;
   }
@@ -312,8 +403,8 @@ void proposals::updateactive(uint64_t start) {
   require_auth(get_self());
 
   auto aitr = start == 0 ? actives.begin() : actives.find(start);
-  uint64_t batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.").value;
-  uint64_t moon_cycle_sec = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.").value;
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t moon_cycle_sec = config_get(name("mooncyclesec"));
   uint64_t count = 0;
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
@@ -338,18 +429,18 @@ void proposals::updateactive(uint64_t start) {
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(name("active.sz").value, _self);
+    tx.send(name("active1sz").value, _self);
   }
 }
 
 uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config.get(name("mooncyclesec").value, "The mooncyclesec parameter has not been initialized yet.");
-  return moon_cycle.value / 2; // Using half moon cycles for now
+  auto moon_cycle = config_get(name("mooncyclesec"));
+  return moon_cycle / 2; // Using half moon cycles for now
 }
 
 uint64_t proposals::get_voice_decay_period_sec() {
-  auto voice_decay_period = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.");
-  return voice_decay_period.value;
+  auto voice_decay_period = config_get(name("propdecaysec"));
+  return voice_decay_period;
 }
 
 void proposals::decayvoices() {
@@ -358,8 +449,8 @@ void proposals::decayvoices() {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
   uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
-  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t decay_time = config_get(name("decaytime"));
+  uint64_t decay_sec = config_get(name("propdecaysec"));
 
   if ((c.t_onperiod < now)
       && (now - c.t_onperiod >= decay_time)
@@ -367,24 +458,36 @@ void proposals::decayvoices() {
   ) {
     c.t_voicedecay = now;
     cycle.set(c, get_self());
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-    decayvoice(0, batch_size.value);
+    uint64_t batch_size = config_get(name("batchsize"));
+    decayvoice(0, batch_size);
   }
 }
 
 void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
-  auto percentage_decay = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.");
-  check(percentage_decay.value <= 100, "Voice decay parameter can not be more than 100%.");
+
+  voice_tables voice_alliance(get_self(), alliance_type.value);
+
+  uint64_t percentage_decay = config_get(name("vdecayprntge"));
+  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
   uint64_t count = 0;
 
-  double multiplier = (100.0 - (double)percentage_decay.value) / 100.0;
+  double multiplier = (100.0 - (double)percentage_decay) / 100.0;
 
   while (vitr != voice.end() && count < chunksize) {
+    auto vaitr = voice_alliance.find(vitr -> account.value);
+
     voice.modify(vitr, _self, [&](auto & v){
       v.balance *= multiplier;
     });
+
+    if (vaitr != voice_alliance.end()) {
+      voice_alliance.modify(vaitr, _self, [&](auto & va){
+        va.balance *= multiplier;
+      });
+    }
+
     vitr++;
     count++;
   }
@@ -396,6 +499,43 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
         get_self(),
         "decayvoice"_n,
         std::make_tuple(next_value, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
+void proposals::migratevoice(uint64_t start) {
+  require_auth(get_self());
+
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+  uint64_t chunksize = 200;
+  uint64_t count = 0;
+
+  voice_tables voice_alliance(get_self(), alliance_type.value);
+
+  while (vitr != voice.end() && count < chunksize) {
+    auto vaitr = voice_alliance.find(vitr -> account.value);
+    if (vaitr == voice_alliance.end()) {
+      voice_alliance.emplace(_self, [&](auto & voice){
+        voice.account = vitr -> account;
+        voice.balance = vitr -> balance;
+      });
+    }
+    vitr++;
+    count++;
+  }
+
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr -> account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "migratevoice"_n,
+        std::make_tuple(next_value)
     );
 
     transaction tx;
@@ -445,10 +585,10 @@ void proposals::createx(
   require_auth(creator);
 
   check_user(creator);
-
+  
   check_percentages(pay_percentages);
 
-  check(fund == bankaccts::milestone || fund == bankaccts::alliances || fund == bankaccts::campaigns, 
+  check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
 
   if (fund == bankaccts::milestone) { // Milestone Seeds
@@ -485,8 +625,8 @@ void proposals::createx(
       proposal.image = image;
       proposal.url = url;
       proposal.creation_date = eosio::current_time_point().sec_since_epoch();
-      proposal.status = name("open");
-      proposal.stage = name("staged");
+      proposal.status = status_open;
+      proposal.stage = stage_staged;
       proposal.fund = fund;
       proposal.pay_percentages = pay_percentages;
       proposal.passed_cycle = 0;
@@ -555,7 +695,7 @@ void proposals::cancel(uint64_t id) {
   check(pitr != props.end(), "Proposal not found");
 
   require_auth(pitr->creator);
-  check(pitr->status == name("open"), "Proposal state is not open, it can no longer be cancelled");
+  check(pitr->status == status_open, "Proposal state is not open, it can no longer be cancelled");
   
   refund_staked(pitr->creator, pitr->staked);
 
@@ -584,11 +724,12 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
       auto pitr = props.find(id);
       check(pitr != props.end(), "no proposal");
-      check(from == pitr->creator, "only the creator can stake into a proposal");
+      // now, other people can stake for other people - code change 2020-11-13
+      //check(from == pitr->creator, "only the creator can stake into a proposal");
 
-      auto prop_max = config.get(name("propmaxstake").value, "The propmaxstake parameter has not been initialized yet.");
-      check((pitr -> staked + quantity) <= asset(prop_max.value, seeds_symbol), 
-        "The staked value can not be greater than " + std::to_string(prop_max.value / 10000) + " Seeds");
+      uint64_t prop_max = cap_stake(pitr->fund);
+      check((pitr -> staked + quantity) <= asset(prop_max, seeds_symbol), 
+        "The staked value can not be greater than " + std::to_string(prop_max / 10000) + " Seeds");
 
       props.modify(pitr, _self, [&](auto& proposal) {
           proposal.staked += quantity;
@@ -599,24 +740,24 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 }
 
 void proposals::erasepartpts(uint64_t active_proposals) {
-  auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.");
-  auto reward_points = config.get(name("voterep1.ind").value, "The voterep1.ind parameter has not been initialized yet.");
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t reward_points = config_get(name("voterep1.ind"));
 
   uint64_t counter = 0;
   auto pitr = participants.begin();
-  while (pitr != participants.end() && counter < batch_size.value) {
+  while (pitr != participants.end() && counter < batch_size) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(pitr -> account, reward_points.value)
+        std::make_tuple(pitr -> account, reward_points)
       ).send();
     }
     counter += 1;
     pitr = participants.erase(pitr);
   }
 
-  if (counter == batch_size.value) {
+  if (counter == batch_size) {
     transaction trx_erase_participants{};
     trx_erase_participants.actions.emplace_back(
       permission_level(_self, "active"_n),
@@ -639,7 +780,7 @@ bool proposals::revert_vote (name voter, uint64_t id) {
   auto voteitr = votes.find(voter.value);
 
   if (voteitr != votes.end()) {
-    check(pitr->status == name("evaluate"), "Proposal is not in evaluate state");
+    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
     check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
 
     props.modify(pitr, _self, [&](auto& proposal) {
@@ -662,16 +803,12 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   check(pitr != props.end(), "Proposal not found");
   check(pitr->executed == false, "Proposal was already executed");
 
-  check(pitr->stage == name("active"), "not active stage");
+  check(pitr->stage == stage_active, "not active stage");
 
   if (is_new) {
-    check(pitr->status == name("open"), "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
+    check(pitr->status == status_open, "the user " + voter.to_string() + " can not vote for this proposal, as the proposal is in evaluate state");
   }
 
-  auto vitr = voice.find(voter.value);
-  check(vitr != voice.end(), "User does not have voice");
-  check(vitr->balance >= amount, "voice balance exceeded");
-  
   votes_tables votes(get_self(), id);
   auto voteitr = votes.find(voter.value);
 
@@ -684,18 +821,21 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
       proposal.total += amount;
       proposal.favour += amount;
     });
-    voice.modify(vitr, _self, [&](auto& voice) {
-      voice.balance -= amount;
-    });
   } else if (option == distrust) {
     props.modify(pitr, _self, [&](auto& proposal) {
       proposal.total += amount;
       proposal.against += amount;
     });
-    voice.modify(vitr, _self, [&](auto& voice) {
-      voice.balance -= amount;
-    });
   }
+
+  name scope;
+  name fund_type = get_type(pitr -> fund);
+  if (fund_type == alliance_type) {
+    scope = alliance_type;
+  } else {
+    scope = get_self();
+  }
+  voice_change(voter, amount, true, scope);
   
   votes.emplace(_self, [&](auto& vote) {
     vote.account = voter;
@@ -709,14 +849,14 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   });
 
   if (is_new) {
-    auto rep = config.get(name("voterep2.ind").value, "The voterep2.ind parameter has not been initialized yet.");
+    auto rep = config_get(name("voterep2.ind"));
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
       // add reputation for entering in the table
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, rep.value)
+        std::make_tuple(voter, rep)
       ).send();
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
@@ -739,10 +879,16 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   auto aitr = actives.find(voter.value);
-  check(aitr != actives.end(), "the user does not have an entry in the actives table");
-  actives.modify(aitr, _self, [&](auto & a){
-    a.timestamp = current_time_point().sec_since_epoch();
-  });
+  if (aitr == actives.end()) {
+    actives.emplace(_self, [&](auto& item) {
+      item.account = voter;
+      item.timestamp = current_time_point().sec_since_epoch();
+    });
+  } else {
+    actives.modify(aitr, _self, [&](auto & item){
+      item.timestamp = current_time_point().sec_since_epoch();
+    });
+  }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -758,11 +904,73 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true);
 }
 
-void proposals::addvoice(name user, uint64_t amount)
-{
-    require_auth(_self);
+void proposals::addvoice(name user, uint64_t amount) {
+  require_auth(_self);
+  voice_change(user, amount, false, ""_n);
+}
+
+void proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
+  if (scope == ""_n) {
+    voice_tables voice_alliance(get_self(), alliance_type.value);
 
     auto vitr = voice.find(user.value);
+    auto vaitr = voice_alliance.find(user.value);
+
+    if (vitr == voice.end() && vaitr == voice_alliance.end()) {
+      check(!reduce, "user can not have negative voice balance");
+      voice.emplace(_self, [&](auto & voice) {
+        voice.account = user;
+        voice.balance = amount;
+      });
+      voice_alliance.emplace(_self, [&](auto & voice){
+        voice.account = user;
+        voice.balance = amount;
+      });
+    } else if (vitr != voice.end() && vaitr != voice_alliance.end()) {
+      if (reduce) {
+        check(amount <= vitr -> balance && amount <= vaitr -> balance, "voice balance exceeded");
+      }
+      voice.modify(vitr, _self, [&](auto& voice) {
+        if (reduce) {
+          voice.balance -= amount;
+        } else {
+          voice.balance += amount;
+        }
+      });
+      voice_alliance.modify(vaitr, _self, [&](auto & voice){
+        if (reduce) {
+          voice.balance -= amount;
+        } else {
+          voice.balance += amount;
+        }
+      });
+    }
+  } else {
+    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    
+    voice_tables voices(get_self(), scope.value);
+    auto vitr = voices.find(user.value);
+    check(vitr != voices.end(), "user does not have voice");
+
+    if (reduce) {
+      check(amount <= vitr -> balance, "voice balance exceeded");
+    }
+    voices.modify(vitr, _self, [&](auto & voice){
+      if (reduce) {
+        voice.balance -= amount;
+      } else {
+        voice.balance += amount;
+      }
+    });
+  }
+}
+
+void proposals::set_voice (name user, uint64_t amount, name scope) {
+  if (scope == ""_n) {
+    voice_tables voice_alliance(get_self(), alliance_type.value);
+
+    auto vitr = voice.find(user.value);
+    auto vaitr = voice_alliance.find(user.value);
 
     if (vitr == voice.end()) {
         voice.emplace(_self, [&](auto& voice) {
@@ -771,32 +979,61 @@ void proposals::addvoice(name user, uint64_t amount)
         });
         size_change("active.sz"_n, 1);
     } else {
-        voice.modify(vitr, _self, [&](auto& voice) {
-            voice.balance += amount;
-        });
+      voice.modify(vitr, _self, [&](auto& voice) {
+        voice.balance = amount;
+      });
     }
+
+    if (vaitr == voice.end()) {
+      voice_alliance.emplace(_self, [&](auto & voice){
+        voice.account = user;
+        voice.balance = amount;
+      });
+    } else {
+      voice_alliance.modify(vaitr, _self, [&](auto & voice){
+        voice.balance = amount;
+      });
+    }
+
+  } else {
+    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    
+    voice_tables voices(get_self(), scope.value);
+    auto vitr = voices.find(user.value);
+    check(vitr != voices.end(), "user does not have a voice entry");
+
+    voices.modify(vitr, _self, [&](auto & voice){
+      voice.balance = amount;
+    });
+  }
 }
 
-void proposals::changetrust(name user, bool trust)
-{
+void proposals::erase_voice (name user) {
+  require_auth(get_self());
+  
+  voice_tables voice_alliance(get_self(), alliance_type.value);
+  
+  auto vitr = voice.find(user.value);
+  auto vaitr = voice_alliance.find(user.value);
+
+  voice.erase(vitr);
+  voice_alliance.erase(vaitr);
+}
+
+void proposals::changetrust(name user, bool trust) {
     require_auth(get_self());
 
     auto vitr = voice.find(user.value);
 
     if (vitr == voice.end() && trust) {
-        voice.emplace(_self, [&](auto& voice) {
-            voice.account = user;
-            voice.balance = 0;
-        });
-        size_change("active.sz"_n, 1);
+      set_voice(user, 0, ""_n);
     } else if (vitr != voice.end() && !trust) {
-        voice.erase(vitr);
-        size_change("active.sz"_n, -1);
+      erase_voice(user);
+      size_change("active.sz"_n, -1);
     }
 }
 
-void proposals::deposit(asset quantity)
-{
+void proposals::deposit(asset quantity) {
   utils::check_asset(quantity);
 
   auto token_account = contracts::token;
@@ -809,13 +1046,14 @@ void proposals::deposit(asset quantity)
 void proposals::refund_staked(name beneficiary, asset quantity) {
   withdraw(beneficiary, quantity, contracts::bank, "");
 }
+
 void proposals::change_rep(name beneficiary, bool passed) {
   if (passed) {
-    auto reward_points = config.get(name("proppass.rep").value, "The proppass.rep parameter has not been initialized yet.");
+    auto reward_points = config_get(name("proppass.rep"));
     action(
       permission_level{contracts::accounts, "active"_n},
       contracts::accounts, "addrep"_n,
-      std::make_tuple(beneficiary, reward_points.value)
+      std::make_tuple(beneficiary, reward_points)
     ).send();
 
   }
@@ -905,9 +1143,9 @@ void proposals::addactive(name account) {
 uint64_t proposals::calculate_decay(uint64_t voice) {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
   
-  uint64_t decay_percentage = config.get(name("vdecayprntge").value, "The vdecayprntge parameter has not been initialized yet.").value;
-  uint64_t decay_time = config.get(name("decaytime").value, "The decaytime parameter has not been initialized yet.").value;
-  uint64_t decay_sec = config.get(name("propdecaysec").value, "The propdecaysec parameter has not been initialized yet.").value;
+  uint64_t decay_percentage = config_get(name("vdecayprntge"));
+  uint64_t decay_time = config_get(name("decaytime"));
+  uint64_t decay_sec = config_get(name("propdecaysec"));
   uint64_t temp = c.t_onperiod + decay_time;
 
   check(decay_percentage <= 100, "The decay percentage could not be grater than 100%");
@@ -932,18 +1170,8 @@ void proposals::recover_voice(name account) {
     voice_amount = calculate_decay(csitr -> rank);
   }
 
-  auto vitr = voice.find(account.value);
-  if (vitr == voice.end()) {
-    voice.emplace(_self, [&](auto & v){
-      v.account = account;
-      v.balance = voice_amount;
-    });
-    size_change("active.sz"_n, 1);
-  } else {
-    voice.modify(vitr, _self, [&](auto & v){
-      v.balance = voice_amount;
-    });
-  }
+  set_voice(account, voice_amount, ""_n);
+
 }
 
 void proposals::removeactive(name account) {
@@ -970,12 +1198,26 @@ void proposals::demote_citizen(name account) {
 }
 
 void proposals::size_change(name id, int64_t delta) {
-  action(
-    permission_level(contracts::accounts, "active"_n),
-    contracts::accounts,
-    "changesize"_n,
-    std::make_tuple(id, delta)
-  ).send();
+  size_tables sizes(get_self(), get_self().value);
+
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    check(delta >= 0, "can't add negagtive size");
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
 }
 
 void proposals::testvdecay(uint64_t timestamp) {
@@ -983,4 +1225,49 @@ void proposals::testvdecay(uint64_t timestamp) {
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
   c.t_voicedecay = timestamp;
   cycle.set(c, get_self());
+}
+
+void proposals::testsetvoice(name user, uint64_t amount) {
+  require_auth(get_self());
+  set_voice(user, amount, ""_n);
+}
+
+name proposals::get_type (name fund) {
+  if (fund == bankaccts::alliances) {
+    return alliance_type;
+  } else if (fund == bankaccts::campaigns || bankaccts::milestone) {
+    return campaign_type;
+  }
+  return "none"_n;
+}
+
+ACTION proposals::initnumprop() {
+  require_auth(get_self());
+
+  uint64_t total_proposals = 0;
+
+  auto pitr = props.rbegin();
+  while(pitr != props.rend()) {
+    if (pitr->status == status_open && pitr->stage == stage_active) {
+      total_proposals++;
+    }
+    if (pitr->status != status_open) {
+      break;
+    }
+    pitr++;
+  }
+
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.find(prop_active_size.value);
+
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = prop_active_size;
+      item.size = total_proposals;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = total_proposals;
+    });
+  }
 }

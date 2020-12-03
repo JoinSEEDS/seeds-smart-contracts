@@ -7,6 +7,7 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/price_history_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -23,8 +24,10 @@ CONTRACT accounts : public contract {
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
+          pricehistory(contracts::exchange, contracts::exchange.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
+          accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value)
           {}
 
@@ -37,8 +40,6 @@ CONTRACT accounts : public contract {
 
       ACTION makecitizen(name user);
       ACTION cancitizen(name user);
-
-      ACTION genesis(name user);
 
       ACTION update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests);
 
@@ -145,6 +146,10 @@ CONTRACT accounts : public contract {
 
       DEFINE_CBS_TABLE_MULTI_INDEX
 
+      DEFINE_PRICE_HISTORY_TABLE
+
+      DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
+
       TABLE ref_table {
         name referrer;
         name invited;
@@ -199,6 +204,14 @@ CONTRACT accounts : public contract {
     > balance_tables;
     balance_tables balances;
 
+    struct [[eosio::table]] account {
+      asset    balance;
+
+      uint64_t primary_key()const { return balance.symbol.code().raw(); }
+    };
+    typedef eosio::multi_index< "accounts"_n, account > token_accts;
+    token_accts accts; 
+
     cbs_tables cbs;
     ref_tables refs;
     req_vouch_tables reqvouch;
@@ -207,6 +220,8 @@ CONTRACT accounts : public contract {
     size_tables sizes;
 
     config_tables config;
+
+    price_history_tables pricehistory;
 
     // From history contract
     TABLE transaction_table {
@@ -240,7 +255,7 @@ CONTRACT accounts : public contract {
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
-(subrep)(testsetrep)(testsetrs)(testcitizen)(genesis)(testresident)(testvisitor)(testremove)(testsetcbs)
+(subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 (demotecitizn)

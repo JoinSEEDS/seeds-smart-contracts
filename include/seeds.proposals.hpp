@@ -27,9 +27,7 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
-          config(contracts::settings, contracts::settings.value),
-          users(contracts::accounts, contracts::accounts.value),
-          sizes(contracts::accounts, contracts::accounts.value)
+          users(contracts::accounts, contracts::accounts.value)
           {}
 
       ACTION reset();
@@ -78,17 +76,37 @@ CONTRACT proposals : public contract {
 
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
+      ACTION testquorum(uint64_t total_proposals);
+
       ACTION testvdecay(uint64_t timestamp);
 
+      ACTION migratevoice(uint64_t start);
+
+      ACTION testsetvoice(name user, uint64_t amount);
       ACTION initsz();
+
+      ACTION initactives();
+
+      ACTION initnumprop();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
+      name prop_active_size = "prop.act.sz"_n;
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
+
+      name status_open = name("open");        // 1 - open: can be cancelled, edited
+      name status_evaluate = name("evaluate");
+      name status_passed = name("passed");
+      name status_rejected = name("rejected");
+
+      // stages
+      name stage_staged = name("staged"); // 1 staged: can be cancelled, edited
+      name stage_active = name("active"); // 2 active: can be voted on, can't be edited; open or evaluate status
+      name stage_done = name("done");     // 3 done: can't be edited or voted on
 
       std::vector<uint64_t> default_step_distribution = {
         25,  // initial payout
@@ -97,12 +115,16 @@ CONTRACT proposals : public contract {
         25  // cycle 3
       };
 
+      name alliance_type = "alliance"_n;
+      name campaign_type = "campaign"_n;
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
-      bool is_enough_stake(asset staked, asset quantity);
-      uint64_t min_stake(asset quantity);
+      bool is_enough_stake(asset staked, asset quantity, name fund);
+      uint64_t min_stake(asset quantity, name fund);
+      uint64_t cap_stake(name fund);
       void update_min_stake(uint64_t prop_id);
 
       void check_user(name account);
@@ -116,21 +138,32 @@ CONTRACT proposals : public contract {
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
-      void size_change(name id, int64_t delta);
       uint64_t get_size(name id);
+      void size_change(name id, int64_t delta);
+
+      uint64_t get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
+      name get_type (name fund);
+      void voice_change (name user, uint64_t amount, bool reduce, name scope);
+      void set_voice (name user, uint64_t amount, name scope);
+      void erase_voice (name user);
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
 
-      DEFINE_CONFIG_TABLE
+      uint64_t config_get(name key) {
+        DEFINE_CONFIG_TABLE
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
+        config_tables config(contracts::settings, contracts::settings.value);
         
-      DEFINE_CONFIG_TABLE_MULTI_INDEX
-
-      DEFINE_SIZE_TABLE
-
-      DEFINE_SIZE_TABLE_MULTI_INDEX
+        auto citr = config.find(key.value);
+          if (citr == config.end()) { 
+          // only create the error message string in error case for efficiency
+          eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+        }
+        return citr->value;
+      }
 
       TABLE proposal_table {
           uint64_t id;
@@ -210,6 +243,7 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return account.value; }
       };
     
+
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
       const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
@@ -224,7 +258,9 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
 
-    config_tables config;
+    DEFINE_SIZE_TABLE
+    DEFINE_SIZE_TABLE_MULTI_INDEX
+
     proposal_tables props;
     participant_tables participants;
     user_tables users;
@@ -233,7 +269,6 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
-    size_tables sizes;
 
 };
 
@@ -244,7 +279,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
-        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz))
+        (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop)
+        (migratevoice)(testsetvoice))
       }
   }
 }

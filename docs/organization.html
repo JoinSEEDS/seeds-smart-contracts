@@ -1,0 +1,364 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
+  <div id="target"><h1>Smartcontract documentation for organization</h1>
+<p><comment type="main">
+Organizations are an essential part of SEEDS, enabling regeneration to take place in the many contexts the new society will need.
+
+They are covered on the SEEDS COnstitution, Part 2, Section 1 **Organization Accounts**.
+
+A new Organization can be created by pushing the `create` action, after doing the `deposit` (from onboarding contract) for the sponsoring amount.
+
+Organizations can get **Reputable** and **Regenerative** status, if they meet the Constitution requisites in terms of
+Contribution Scores and Regen Scores, this is started using the `makeregen` and `makereptable` actions.
+
+The Org owner can add people invoking the `addmember` action, and remove using the `removemember` action.
+
+The owner / manager can also change member roles using the `changerole` action.
+
+Another very important aspect of Organization are their APPs, that can be used to track usage and allow the Org to get more bonus.
+
+To create an APP, the manager / owner calls `registerapp` (and then `banapp` to remove).
+Each daily use by the APP must call the `appuse` action to inform that.
+
+
+
+</comment></p>
+<h2>Actions</h2>
+<ul>
+<li><strong>addcbpoints</strong> / <a href="#addcbpoints">addcbpoints</a> <comment type="action" name="addcbpoints">Adds Contribution points to the Org score.</comment></li>
+<li><strong>addmember</strong> / <a href="#addmember">addmember</a> <comment type="action" name="addmember">Adds a member to the Organization</comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen">Adds Regenerative score to the Organization.</comment></li>
+<li><strong>appuse</strong> / <a href="#appuse">appuse</a> <comment type="action" name="appuse">Called to indicate daily Org APP usage.</comment></li>
+<li><strong>banapp</strong> / <a href="#banapp">banapp</a> <comment type="action" name="banapp">Bans an APP from the Organization.</comment></li>
+<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> <comment type="action" name="changeowner">Let's the Org owner pass it along to some other account.</comment></li>
+<li><strong>changerole</strong> / <a href="#changerole">changerole</a> <comment type="action" name="changerole">Change the role for an Org member.</comment></li>
+<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> <comment type="action" name="cleandau"></comment>Cleans the DAU from a batch of Org APPs.</li>
+<li><strong>cleandaus</strong> / <a href="#cleandaus">cleandaus</a> <comment type="action" name="cleandaus">Batch cleans the DAU from all Org apps.</comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create">Creates a new Organization, proving the sponsor has allocated enough funds</comment></li>
+<li><strong>destroy</strong> / <a href="#destroy">destroy</a> <comment type="action" name="destroy">Destroys an Organization, called by the owner.</comment></li>
+<li><strong>makeregen</strong> / <a href="#makeregen">makeregen</a> <comment type="action" name="makeregen">Converts and Org status to Regenerative if all pre-requisites are met.</comment></li>
+<li><strong>makereptable</strong> / <a href="#makereptable">makereptable</a> <comment type="action" name="makereptable">Converts and Org status to Reputable if all pre-requisites are met.</comment></li>
+<li><strong>rankcbsorg</strong> / <a href="#rankcbsorg">rankcbsorg</a> <comment type="action" name="rankcbsorg">Ranks a batch or Orgs in terms of Contribution score.</comment></li>
+<li><strong>rankcbsorgs</strong> / <a href="#rankcbsorgs">rankcbsorgs</a> <comment type="action" name="rankcbsorgs">Batch ranks all Orgs based on Contribution score.</comment></li>
+<li><strong>rankregen</strong> / <a href="#rankregen">rankregen</a> <comment type="action" name="rankregen">Ranks a batch or Orgs in terms of Regenerative score.</comment></li>
+<li><strong>rankregens</strong> / <a href="#rankregens">rankregens</a> <comment type="action" name="rankregens">Batch ranks all Orgs based on Regenerative score.</comment></li>
+<li><strong>refund</strong> / <a href="#refund">refund</a> <comment type="action" name="refund">Refunds the Org creation fees.</comment></li>
+<li><strong>registerapp</strong> / <a href="#registerapp">registerapp</a> <comment type="action" name="registerapp">Registers a new APP to the Org.</comment></li>
+<li><strong>removemember</strong> / <a href="#removemember">removemember</a> <comment type="action" name="removemember">Removes a member from the Org.</comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>scoreorgs</strong> / <a href="#scoreorgs">scoreorgs</a> <comment type="action" name="scoreorgs">Called periodically to calculate Org scores.</comment></li>
+<li><strong>scoretrxs</strong> / <a href="#scoretrxs">scoretrxs</a> <comment type="action" name="scoretrxs">Called to recalculate Org transaction scores.</comment></li>
+<li><strong>subcbpoints</strong> / <a href="#subcbpoints">subcbpoints</a> <comment type="action" name="subcbpoints">Subtracts Contribution points from the Org score.</comment></li>
+<li><strong>subregen</strong> / <a href="#subregen">subregen</a> <comment type="action" name="subregen">Subtracts Regenerative points from the Org score.</comment></li>
+<li><strong>testregen</strong> / <a href="#testregen">testregen</a> <comment type="action" name="testregen">Converts the org to Regenerative, used only for testing.</comment></li>
+<li><strong>testreptable</strong> / <a href="#testreptable">testreptable</a> <comment type="action" name="testreptable">Converts the org to Reputable, used only for testing.</comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>apps</strong> / <a href="#app_table">app_table</a> (i64) <comment type="table" name="apps"></comment></li>
+<li><strong>avgvotes</strong> / <a href="#avg_vote_table">avg_vote_table</a> (i64) <comment type="table" name="avgvotes"></comment></li>
+<li><strong>cbsorgs</strong> / <a href="#cbs_organization_table">cbs_organization_table</a> (i64) <comment type="table" name="cbsorgs"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
+<li><strong>dauhistory</strong> / <a href="#dau_history_table">dau_history_table</a> (i64) <comment type="table" name="dauhistory"></comment></li>
+<li><strong>daus</strong> / <a href="#dau_table">dau_table</a> (i64) <comment type="table" name="daus"></comment></li>
+<li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) <comment type="table" name="members"></comment></li>
+<li><strong>organization</strong> / <a href="#organization_table">organization_table</a> (i64) <comment type="table" name="organization"></comment></li>
+<li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) <comment type="table" name="orgtx"></comment></li>
+<li><strong>refs</strong> / <a href="#ref_table">ref_table</a> (i64) <comment type="table" name="refs"></comment></li>
+<li><strong>regenscores</strong> / <a href="#regen_score_table">regen_score_table</a> (i64) <comment type="table" name="regenscores"></comment></li>
+<li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsors_table">sponsors_table</a> (i64) <comment type="table" name="sponsors"></comment></li>
+<li><strong>votes</strong> / <a href="#vote_table">vote_table</a> (i64) <comment type="table" name="votes"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="addcbpoints"> addcbpoints </h3>
+<ul>
+<li>organization / name</li>
+<li>cbscore / uint32</li>
+</ul>
+<h3 id="addmember"> addmember </h3>
+<ul>
+<li>organization / name</li>
+<li>owner / name</li>
+<li>account / name</li>
+<li>role / name</li>
+</ul>
+<h3 id="addregen"> addregen </h3>
+<ul>
+<li>organization / name</li>
+<li>account / name</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="app_table"> app_table </h3>
+<ul>
+<li>app_name / name</li>
+<li>org_name / name</li>
+<li>app_long_name / string</li>
+<li>is_banned / bool</li>
+<li>number_of_uses / uint64</li>
+</ul>
+<h3 id="appuse"> appuse </h3>
+<ul>
+<li>appname / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="avg_vote_table"> avg_vote_table </h3>
+<ul>
+<li>org_name / name</li>
+<li>total_sum / int64</li>
+<li>num_votes / uint64</li>
+<li>average / int64</li>
+</ul>
+<h3 id="banapp"> banapp </h3>
+<ul>
+<li>appname / name</li>
+</ul>
+<h3 id="cbs_organization_table"> cbs_organization_table </h3>
+<ul>
+<li>org_name / name</li>
+<li>community_building_score / uint32</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="changeowner"> changeowner </h3>
+<ul>
+<li>organization / name</li>
+<li>owner / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="changerole"> changerole </h3>
+<ul>
+<li>organization / name</li>
+<li>owner / name</li>
+<li>account / name</li>
+<li>new_role / name</li>
+</ul>
+<h3 id="cleandau"> cleandau </h3>
+<ul>
+<li>appname / name</li>
+<li>timestamp / uint64</li>
+<li>start / uint64</li>
+</ul>
+<h3 id="cleandaus"> cleandaus </h3>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="create"> create </h3>
+<ul>
+<li>sponsor / name</li>
+<li>orgaccount / name</li>
+<li>orgfullname / string</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="dau_history_table"> dau_history_table </h3>
+<ul>
+<li>dau_history_id / uint64</li>
+<li>account / name</li>
+<li>date / uint64</li>
+<li>number_app_uses / uint64</li>
+</ul>
+<h3 id="dau_table"> dau_table </h3>
+<ul>
+<li>account / name</li>
+<li>date / uint64</li>
+<li>number_app_uses / uint64</li>
+</ul>
+<h3 id="destroy"> destroy </h3>
+<ul>
+<li>orgname / name</li>
+<li>sponsor / name</li>
+</ul>
+<h3 id="makeregen"> makeregen </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="makereptable"> makereptable </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="members_table"> members_table </h3>
+<ul>
+<li>account / name</li>
+<li>role / name</li>
+</ul>
+<h3 id="org_tx_table"> org_tx_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>other / name</li>
+<li>in / bool</li>
+<li>quantity / asset</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="organization_table"> organization_table </h3>
+<ul>
+<li>org_name / name</li>
+<li>owner / name</li>
+<li>status / uint64</li>
+<li>regen / int64</li>
+<li>reputation / uint64</li>
+<li>voice / uint64</li>
+<li>planted / asset</li>
+</ul>
+<h3 id="rankcbsorg"> rankcbsorg </h3>
+<ul>
+<li>start / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="rankcbsorgs"> rankcbsorgs </h3>
+<h3 id="rankregen"> rankregen </h3>
+<ul>
+<li>start / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="rankregens"> rankregens </h3>
+<h3 id="ref_table"> ref_table </h3>
+<ul>
+<li>referrer / name</li>
+<li>invited / name</li>
+</ul>
+<h3 id="refund"> refund </h3>
+<ul>
+<li>beneficiary / name</li>
+<li>quantity / asset</li>
+</ul>
+<h3 id="regen_score_table"> regen_score_table </h3>
+<ul>
+<li>org_name / name</li>
+<li>regen_avg / int64</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="registerapp"> registerapp </h3>
+<ul>
+<li>owner / name</li>
+<li>organization / name</li>
+<li>appname / name</li>
+<li>applongname / string</li>
+</ul>
+<h3 id="removemember"> removemember </h3>
+<ul>
+<li>organization / name</li>
+<li>owner / name</li>
+<li>account / name</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="scoreorgs"> scoreorgs </h3>
+<ul>
+<li>next / name</li>
+</ul>
+<h3 id="scoretrxs"> scoretrxs </h3>
+<h3 id="size_table"> size_table </h3>
+<ul>
+<li>id / name</li>
+<li>size / uint64</li>
+</ul>
+<h3 id="sponsors_table"> sponsors_table </h3>
+<ul>
+<li>account / name</li>
+<li>balance / asset</li>
+</ul>
+<h3 id="subcbpoints"> subcbpoints </h3>
+<ul>
+<li>organization / name</li>
+<li>cbscore / uint32</li>
+</ul>
+<h3 id="subregen"> subregen </h3>
+<ul>
+<li>organization / name</li>
+<li>account / name</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="testregen"> testregen </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="testreptable"> testreptable </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="vote_table"> vote_table </h3>
+<ul>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+<li>regen_points / int64</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main"></comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

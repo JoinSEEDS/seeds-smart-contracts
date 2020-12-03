@@ -1,5 +1,6 @@
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
+#include <eosio/symbol.hpp>
 #include <eosio/transaction.hpp>
 #include <harvest_table.hpp>
 
@@ -425,10 +426,24 @@ void accounts::update(name user, name type, string nickname, string image, strin
 
 void accounts::send_reward(name beneficiary, asset quantity)
 {
+  // Check balance - if the balance runs out, the rewards run out too.
+  token_accts accts(contracts::token, bankaccts::referrals.value);
+  const auto& acc = accts.get(symbol("SEEDS", 4).code().raw());
+  auto rem_balance = acc.balance;
+  if (quantity > rem_balance) {
+    // Should not fail in case not enough balance
+    // check(false, ("DEBUG: not enough balance on "+bankaccts::referrals.to_string()+" = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
+    return;
+  }
 
-  // TODO: Check balance - if the balance runs out, the rewards run out too.
+  // Checks the current SEEDS price from tlosto.seeds table
+  auto lastprice = pricehistory.rbegin()->seeds_usd;
+  auto initialprice = pricehistory.begin()->seeds_usd;
+  float rate = (float)lastprice.amount / (float) initialprice.amount;
+  asset adjusted_qty(quantity.amount*rate, symbol("SEEDS", 4));
+  // check(false, ("DEBUG: lastprice="+lastprice.to_string()+", rate="+std::to_string(rate)+", qty="+quantity.to_string()+", adj="+adjusted_qty.to_string()).c_str());
 
-  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
+  send_to_escrow(bankaccts::referrals, beneficiary, adjusted_qty, "referral reward");
 }
 
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
@@ -642,16 +657,6 @@ void accounts::testcitizen(name user)
   add_active(user);
 }
 
-void accounts::genesis(name user) // Remove this after Golive
-{ 
-  require_auth(_self);
-
-  testresident(user);
-  
-  testcitizen(user);
-
-}
-
 // return number of transactions outgoing, until a limit
 uint32_t accounts::num_transactions(name account, uint32_t limit) {
   transaction_tables transactions(contracts::history, account.value);
@@ -681,7 +686,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -730,7 +735,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = (current * 100) / total;
+    uint64_t rank = utils::rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;

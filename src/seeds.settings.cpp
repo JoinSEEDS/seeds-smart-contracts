@@ -4,9 +4,18 @@ void settings::reset() {
   require_auth(_self);
 
   // config
-  confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "Minimum proposals stake threshold (in Seeds)", high_impact); 
-  confwithdesc(name("propmaxstake"), uint64_t(11111) * uint64_t(10000), "Max proposals stake 11,111 threshold (in Seeds)", high_impact);
-  confwithdesc(name("propstakeper"), 5, "Proposal funding fee in % - 5%", high_impact); 
+  confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "[Legacy] ]Minimum proposals stake threshold (in Seeds)", high_impact); 
+  confwithdesc(name("propmaxstake"), uint64_t(75000) * uint64_t(10000), "[Legacy] Max proposals stake 11,111 threshold (in Seeds)", high_impact);
+  confwithdesc(name("propstakeper"), 3, "[Legacy] Proposal funding fee in % - 3%", high_impact);
+
+  confwithdesc(name("prop.cmp.cap"), uint64_t(75000) * uint64_t(10000), "Campains proposals cap stake", high_impact);
+  confwithdesc(name("prop.al.cap"), uint64_t(15000) * uint64_t(10000), "Alliance proposals cap stake", high_impact);
+
+  confwithdesc(name("prop.cmp.min"), uint64_t(555) * uint64_t(10000), "Campains proposals minimum stake", high_impact);
+  confwithdesc(name("prop.al.min"), uint64_t(555) * uint64_t(10000), "Alliance proposals minimum stake", high_impact);
+
+  confwithdesc(name("prop.cmp.pct"), uint64_t(2.5 * 10000), "Campains proposals funding fee in % - 2.5% [x 10,000 for 4 digits of precision]", high_impact);
+  confwithdesc(name("prop.al.pct"), uint64_t(1 * 10000), "Alliance proposals funding fee in % - 1% [x 10,000 for 4 digits of precision]", high_impact);
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
   
@@ -22,7 +31,12 @@ void settings::reset() {
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
-  confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact);
+  confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
+
+  confwithdesc(name("quorum.base"), 90, "Quorum base percentage = 90% / number of proposals.", high_impact);
+  confwithdesc(name("quor.min.pct"), 5, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quor.max.pct"), 20, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
+
   confwithdesc(name("propvoice"), 77, "Voice base per period", high_impact); // voice base per period
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
@@ -70,13 +84,13 @@ void settings::reset() {
   // =====================================
   // Resident
   confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   // min planted 50 Seeds
-  confwithdesc(name("res.tx"), 10, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
+  confwithdesc(name("res.tx"), 1, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
   confwithdesc(name("res.referred"), 1, "Minimum number of referrals made to become a Resident", high_impact);         // min referred 1 other user
   confwithdesc(name("res.rep.pt"), 50, "Minimum reputation points to become a Resident", high_impact);          // min rep points
 
   // Citizen
   confwithdesc(name("cit.plant"), 200 * 10000, "Minimum planted amount to become a Citizen (in Seeds)", high_impact);  // min planted 200 Seeds
-  confwithdesc(name("cit.tx"), 10, "Minimum transactions to become a Citizen", high_impact);              // min 10 transactions
+  confwithdesc(name("cit.tx"), 5, "Minimum transactions to become a Citizen", high_impact);              // min 10 transactions
   confwithdesc(name("cit.referred"), 3, "Minimum number of referrals made to become a Citizen", high_impact);         // min referred 3 other users
   confwithdesc(name("cit.ref.res"), 1, "Minimum residents or citizens referred to become a Citizen", high_impact);          // min referred 1 resident or citizen
   confwithdesc(name("cit.rep.sc"), 50, "Minimum reputation score to become a Citizen (not points)", high_impact);          // min reputation score (not points)

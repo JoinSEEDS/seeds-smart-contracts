@@ -4,6 +4,7 @@
 #include <eosio/singleton.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
+#include <tables/price_history_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -120,13 +121,9 @@ CONTRACT exchange : public contract {
       uint64_t primary_key()const { return id; }
     };
 
-    TABLE price_history_table {
-      uint64_t id;
-      asset seeds_usd;
-      time_point date;
+    DEFINE_PRICE_HISTORY_TABLE
 
-      uint64_t primary_key()const { return id; }
-    };
+    DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
 
     TABLE flags_table { 
         name param; 
@@ -145,8 +142,6 @@ CONTRACT exchange : public contract {
     typedef singleton<"price"_n, price_table> price_tables;
     typedef eosio::multi_index<"price"_n, price_table> dump_for_price;
     
-    typedef eosio::multi_index<"pricehistory"_n, price_history_table> price_history_tables;
-
     typedef multi_index<"dailystats"_n, stattable> stattables;
     
     typedef multi_index<"rounds"_n, round_table> round_tables;
