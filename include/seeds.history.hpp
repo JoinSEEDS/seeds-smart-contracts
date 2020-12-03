@@ -187,4 +187,5 @@ EOSIO_DISPATCH(history,
   (addreputable)(addregen)
   (numtrx)
   (orgtxpoints)(orgtxpt)
+  (migrate)
   );
