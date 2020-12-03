@@ -3,9 +3,9 @@
 void guardians::reset() {
     require_auth(get_self());
 
-    auto gitr = guardians.begin();
-    while (gitr != guardians.end()) {
-        gitr = guardians.erase(gitr);
+    auto gitr = guards.begin();
+    while (gitr != guards.end()) {
+        gitr = guards.erase(gitr);
     }
 
     auto ritr = recovers.begin();
@@ -17,20 +17,19 @@ void guardians::reset() {
 void guardians::init(name user_account, vector<name> guardian_accounts) {
     require_auth(user_account);
     
-    auto gitr = guardians.find(user_account.value);
+    auto gitr = guards.find(user_account.value);
 
-    assert(gitr == guardians.end(),
-        "account " + user_account.to_string() + " already have guardians");
+    check(gitr == guards.end(), "account " + user_account.to_string() + " already have guardians");
 
-    assert(guardian_accounts.size() == 3,
-        "provided " + guardian_accounts.size() + " guardians, but needed only 3 guardians");
+    check(guardian_accounts.size() == 3,
+        "provided " + to_string(guardian_accounts.size()) + " guardians, but needed only 3 guardians");
 
     for (std::size_t i = 0; i < guardian_accounts.size(); ++i) {
-        assert(is_seeds_user(guardian_accounts[i]),
+        check(is_seeds_user(guardian_accounts[i]),
             "guardian " + guardian_accounts[i].to_string() + " is not a seeds user");
     }
 
-    guardians.emplace(get_self(), [&](auto& item) {
+    guards.emplace(get_self(), [&](auto& item) {
         item.account = user_account;
         item.guardians = guardian_accounts;
     });
@@ -39,12 +38,12 @@ void guardians::init(name user_account, vector<name> guardian_accounts) {
 void guardians::cancel(name user_account) {
     require_auth(user_account);
 
-    auto gitr = guardians.find(user_account.value);
+    auto gitr = guards.find(user_account.value);
 
-    assert(gitr != guardians.end(),
-        "account " + user_account.to_string() + " does not have guardians");
+    check(gitr != guards.end(),
+        "account " + user_account.to_string() + " does not have guards");
 
-    guardians.erase(gitr);
+    guards.erase(gitr);
 
     auto ritr = recovers.find(user_account.value);
 
@@ -56,9 +55,9 @@ void guardians::cancel(name user_account) {
 void guardians::recover(name guardian_account, name user_account, string new_public_key) {
     require_auth(guardian_account);
 
-    auto gitr = guardians.find(user_account.value);
+    auto gitr = guards.find(user_account.value);
 
-    assert(gitr != guardians.end(),
+    check(gitr != guards.end(),
         "account " + user_account.to_string() + " does not have guardians");
 
     bool is_user_guardian = false;
@@ -69,7 +68,7 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
         }
     }
 
-    assert(is_user_guardian == true,
+    check(is_user_guardian == true,
         "account " + guardian_account.to_string() +
         " is not a guardian for " + user_account.to_string());
 
@@ -78,7 +77,7 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
     if (ritr == recovers.end()) {
         recovers.emplace(get_self(), [&](auto& item) {
             item.account = user_account;
-            item.guardians = vector(guardian_account);
+            item.guardians = vector{guardian_account};
             item.public_key = new_public_key;
         });
     } else {
@@ -91,15 +90,15 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
                 }
             }
 
-            assert (is_guardian_recovering == false,
+            check (is_guardian_recovering == false,
                 "guardian " + guardian_account.to_string() + " already recovering " + user_account.to_string());        
 
-            recovers.modify(get_self(), [&](auto& item) {
-                item.guardians = vector(item.guardians, guardian_account);
+            recovers.modify(ritr, get_self(), [&](auto& item) {
+                item.guardians.push_back(guardian_account);
             });          
         } else {
-            recovers.modify(get_self(), [&](auto& item) {
-                item.guardians = vector(guardian_account);
+            recovers.modify(ritr, get_self(), [&](auto& item) {
+                item.guardians = vector{guardian_account};
                 item.public_key = new_public_key;
             });
         }
@@ -115,11 +114,8 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
     } 
 }
 
-void change_account_permission(account user_account, string public_key) {
-    authority newauth;
-    newauth.threshold = 1;
-    key_weight kweight = {key: public_key, weight: 1};
-    newauth.keys.emplace_back(kweight);
+void guardians::change_account_permission(name user_account, string public_key) {
+    authority newauth = keystring_authority(public_key);
     
     action(
         permission_level{get_self(), "owner"_n},
@@ -128,7 +124,7 @@ void change_account_permission(account user_account, string public_key) {
             user_account,
             "active"_n,
             "owner"_n,
-            newauth,
+            newauth
         )
     ).send();
 }
