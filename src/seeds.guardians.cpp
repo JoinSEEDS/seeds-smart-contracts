@@ -109,8 +109,10 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
 
     if ((required_guardians == 3 && signed_guardians >= 2)
         || (required_guardians > 3 && signed_guardians >= 3)) {
-
+        
+        recovers.erase(ritr);
         change_account_permission(user_account, new_public_key);
+
     } 
 }
 
@@ -118,12 +120,22 @@ void guardians::change_account_permission(name user_account, string public_key) 
     authority newauth = keystring_authority(public_key);
     
     action(
-        permission_level{get_self(), "owner"_n},
+        permission_level{user_account, "owner"_n},
         "eosio"_n, "updateauth"_n,
         make_tuple(
             user_account,
             "active"_n,
             "owner"_n,
+            newauth
+        )
+    ).send();
+    action(
+        permission_level{user_account, "owner"_n},
+        "eosio"_n, "updateauth"_n,
+        make_tuple(
+            user_account,
+            "owner"_n,
+            ""_n,
             newauth
         )
     ).send();
