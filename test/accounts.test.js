@@ -707,14 +707,14 @@ describe('Proportional rewards', async assert => {
   console.log("user becomes resident")
   await contracts.accounts.testresident(invited, { authorization: `${accounts}@active` })
 
-  const expected_reward1 = await setting_in_seeds("refrwd1.ind") * 0.9680538;
+  const expected_reward1 = await setting_in_seeds("refrwd1.ind"); // check formula
 
   await checkBalances("after resident", expected_reward1.toFixed(4))
 
   console.log("user becomes citizen")
   await contracts.accounts.testcitizen(invited, { authorization: `${accounts}@active` })
 
-  const expected_reward2 = await setting_in_seeds("refrwd2.ind") * 0.9680538;
+  const expected_reward2 = await setting_in_seeds("refrwd2.ind"); // check formula
 
   await checkBalances("after resident", expected_reward2.toFixed(4))
 
