@@ -28,7 +28,8 @@ CONTRACT accounts : public contract {
           accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value),
           residents(contracts::history, contracts::history.value),
-          citizens(contracts::history, contracts::history.value)
+          citizens(contracts::history, contracts::history.value),
+          history_sizes(contracts::history, contracts::history.value)
           {}
 
       ACTION reset();
@@ -254,6 +255,7 @@ CONTRACT accounts : public contract {
     rep_tables rep;
     size_tables sizes;
 
+    size_tables history_sizes;
     resident_tables residents;
     citizen_tables citizens;
 

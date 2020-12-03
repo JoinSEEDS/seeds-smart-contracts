@@ -283,7 +283,11 @@ void accounts::refreward(name account, name new_status) {
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
     auto user_type = uitr->type;
-    auto num_users = is_citizen ? std::distance(citizens.cbegin(),citizens.cend()) : std::distance(residents.cbegin(),residents.cend());
+
+    // gets number of residents or citizens from the History size table
+    auto size_id = is_citizen ? "citizens.sz"_n : "residents.sz"_n;
+    auto sitr = history_sizes.find(size_id.value);
+    auto num_users = (sitr == sizes.end()) ? 0 : sitr->size;
 
     if (user_type == "organisation"_n) 
     {
