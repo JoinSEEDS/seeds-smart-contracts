@@ -1,8 +1,9 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
 const { equals } = require("ramda")
+const { parse } = require("commander")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, owner, proposals } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, global } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -835,20 +836,27 @@ describe('Mint Rate and Harvest', async assert => {
     return
   }
 
+  let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
   const contracts = await Promise.all([
     eos.contract(token),
     eos.contract(accounts),
     eos.contract(harvest),
     eos.contract(settings),
-    eos.contract(history)
-  ]).then(([token, accounts, harvest, settings, history]) => ({
-    token, accounts, harvest, settings, history
+    eos.contract(history),
+    eos.contract(organization),
+    eos.contract(bioregion)
+  ]).then(([token, accounts, harvest, settings, history, organization, bioregion]) => ({
+    token, accounts, harvest, settings, history, organization, bioregion
   }))
 
   const day = getBeginningOfDayInSeconds()
   const secondsPerDay =  86400
   const moonCycle = secondsPerDay * 29 + parseInt(secondsPerDay / 2)
   const previousDay = (new Date((day - 3 * moonCycle) * 1000).setUTCHours(0,0,0,0)) / 1000
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
 
   console.log('reset history')
   await contracts.history.reset(history, { authorization: `${history}@active` })
@@ -860,8 +868,26 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+  console.log('reset orgs')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('reset bios')
+  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+
   console.log('reset weekly')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('configure percentages')
+  const percentageForUsers = 0.3
+  const percentageForOrgs = 0.2
+  const percentageForBios = 0.3
+  const percentageForGlobal = 0.2
+
+  await contracts.settings.configure('hrvst.users', parseInt(percentageForUsers*1000000), { authorization: `${settings}@active` })
+  await contracts.settings.configure('hrvst.orgs', parseInt(percentageForOrgs*1000000), { authorization: `${settings}@active` })
+  await contracts.settings.configure('hrvst.bios', parseInt(percentageForBios*1000000), { authorization: `${settings}@active` })
+  await contracts.settings.configure('hrvst.global', parseInt(percentageForGlobal*1000000), { authorization: `${settings}@active` })
+
 
   console.log('update circulaing supply')
   await contracts.token.updatecirc({ authorization: `${token}@active` })
@@ -871,32 +897,101 @@ describe('Mint Rate and Harvest', async assert => {
   await sleep(100)
   await contracts.harvest.calcmqevs({ authorization: `${harvest}@active` })
 
-  const csBefore = await getTableRows({
-    code: harvest,
-    scope: harvest,
-    table: 'cspoints',
-    json: true,
-  })
-  console.log(csBefore)
+  const getTestBalance = async (user) => {
+    const balance = await eos.getCurrencyBalance(names.token, user, 'TESTS')
+    return Number.parseFloat(balance[0]) || 0
+  }
 
-  let users = [firstuser, seconduser, thirduser, fourthuser]
+  const checkHarvestValues = (bucket, ranks, totalAmount, actualValues) => {
+
+    const totalRank = ranks.reduce((acc, curr) => acc + curr)
+    const fragmentSeeds = totalAmount / totalRank
+    const expectedSeeds = ranks.map(rank => {
+      const temp = rank * fragmentSeeds
+      return parseFloat(temp.toFixed(4))
+    })
+
+    const adjustedActualValues = actualValues.map(seeds => parseFloat(seeds.toFixed(4)))
+    const assertBalances = adjustedActualValues.map((balance, index) => {
+      if (isNaN(balance)) {
+        if (isNaN(expectedSeeds[index]) || expectedSeeds[index] == 0) {
+          return true
+        }
+        return false
+      }
+      if (Math.abs(balance - expectedSeeds[index]) <= 0.0002) { return true }
+      return false
+    })
+
+    console.log('expected:', expectedSeeds)
+    console.log('actual:', adjustedActualValues)
+
+    assert({
+      given: `harvest distributed for ${bucket}`,
+      should: 'have the correct balances',
+      expected: new Array(ranks.length).fill(true),
+      actual: assertBalances
+    })
+    
+  }
+
+  console.log('add users')
+  const users = [firstuser, seconduser, thirduser, fourthuser]
   for (let index = 0; index < users.length; index++) {
     const user = users[index]
     await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` })
-    await contracts.harvest.testcspoints(user, index * 33,{ authorization: `${harvest}@active` })
+    await contracts.harvest.testcspoints(user, (index+1) * 33, { authorization: `${harvest}@active` })
   }
   await sleep(100)
+
+  console.log('add orgs')
+  const orgs = ['firstorg', 'secondorg', 'thirdorg']
+  for (let index = 0; index < orgs.length; index++) {
+    const org = orgs[index]
+    await contracts.token.transfer(firstuser, organization, '200.0000 SEEDS', 'initial supply', { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, org, `${org} name`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
+  }
+
+  console.log('add bioregions')
+  const keypair = await createKeypair();
+  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const bios = ['bio1.bdc', 'bio2.bdc']
+  for (let index = 0; index < bios.length; index++) {
+    const bio = bios[index]
+    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.bioregion.create(
+      users[index], 
+      bio, 
+      'test bio region',
+      '{lat:0.0111,lon:1.3232}', 
+      1.1, 
+      1.23, 
+      keypair.public, 
+      { authorization: `${users[index]}@active` })
+  }
 
   await contracts.harvest.rankcss({ authorization: `${harvest}@active` })
   await sleep(100)
 
-  const csAfter = await getTableRows({
+  // ----------------------------------------- //
+  const csTable = await getTableRows({
     code: harvest,
     scope: harvest,
     table: 'cspoints',
     json: true,
   })
-  console.log(csAfter)
+  console.log(csTable)
+
+  const bioregions = await getTableRows({
+    code: bioregion,
+    scope: bioregion,
+    table: 'bioregions',
+    json: true,
+  })
+  console.log(bioregions)
+  // ----------------------------------------- //
+
 
   const mqevsBefore = await getTableRows({
     code: harvest,
@@ -916,35 +1011,51 @@ describe('Mint Rate and Harvest', async assert => {
 
   await contracts.harvest.calcmintrate({ authorization: `${harvest}@active` })
 
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+
   const mintRateTable = await getTableRows({
     code: harvest,
     scope: harvest,
     table: 'mintrate',
     json: true,
   })
-
   delete mintRateTable.rows[0].timestamp
 
-  const getTestBalance = async (user) => {
-    const balance = await eos.getCurrencyBalance(names.token, user, 'THSEEDS')
-    return Number.parseFloat(balance[0])
-  }
-
-  await contracts.token.updatecirc({ authorization: `${token}@active` })
-
-  // await contracts.token.create(owner, '1500000000.0000 THSEEDS', { authorization: `${token}@active` })
+  const mintRate = mintRateTable.rows[0].mint_rate / 10000.0
+  console.log('mint rate:', mintRate)
+  
+  const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
+  const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
+  const bioBalancesBefore = await Promise.all(bios.map(bio => getTestBalance(bio)))
+  const globalBalanceBefore = await getTestBalance(global)
 
   await contracts.harvest.runharvest({ authorization: `${harvest}@active` })
+  await sleep(6000)
 
-  const thirduserBalance = await getTestBalance(thirduser)
-  console.log('balance thirduser:', thirduserBalance)
+  const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
+  const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
+  const bioBalancesAfter = await Promise.all(bios.map(bio => getTestBalance(bio)))
+  const globalBalanceAfter = await getTestBalance(global)
 
-  const firstuserBalance = await getTestBalance(firstuser)
-  console.log('balance firstuser:', firstuserBalance)
+  const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
+  const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index])
+  const biosHarvest = bioBalancesAfter.map((seeds, index) => seeds - bioBalancesBefore[index])
+  const globalHarvest = globalBalanceAfter - globalBalanceBefore
+
+  console.log('users:', userHarvest)
+  console.log('orgs:', orgsHarvest)
+  console.log('bios:', biosHarvest)
+  console.log('global:', globalHarvest)
+
+  console.log('check expected values')
+  checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
+  checkHarvestValues('orgs', csTable.rows.filter(row => orgs.includes(row.account)).map(row => row.rank), mintRate * percentageForOrgs, orgsHarvest)
+  checkHarvestValues('bios', new Array(bios.length).fill(1), mintRate * percentageForBios, biosHarvest)
+  checkHarvestValues('global', [1], mintRate * percentageForGlobal, [globalHarvest])
 
   const stats = await getTableRows({
     code: token,
-    scope: 'THSEEDS',
+    scope: 'TESTS',
     table: 'stat',
     json: true
   })

@@ -145,6 +145,7 @@ const accountsMetadata = (network) => {
       ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      global: account('gdho.seeds'),
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -152,6 +153,7 @@ const accountsMetadata = (network) => {
       proposals: contract('funds.seeds', 'proposals'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
+      testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
@@ -271,6 +273,9 @@ var permissions = [{
 }, {
   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
   actor: `${accounts.accounts.account}@active`
+}, {
+  target: `${accounts.global.account}@active`,
+  actor: `${accounts.harvest.account}@active`
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
@@ -577,7 +582,14 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   action: 'calcmintrate'
 }, {
-  target: `${accounts.owner.account}@active`,
+  target: `${accounts.token.account}@minttst`,
+  key: activePublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.token.account}@minttst`,
+  action: 'minttest'
+}, { 
+  target: `${accounts.token.account}@minttst`,
   actor: `${accounts.harvest.account}@active`
 }]
 

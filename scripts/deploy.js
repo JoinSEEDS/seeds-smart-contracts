@@ -442,6 +442,10 @@ const initContracts = async () => {
   await deploy(accounts.token)
   await createCoins(accounts.token)
 
+  if (accounts.testtoken) {
+    await createCoins(accounts.testtoken)
+  }
+
   const accountNames = Object.keys(accounts)
   for (let current = 0; current < accountNames.length; current++) {
     const accountName = accountNames[current]

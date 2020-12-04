@@ -23,7 +23,6 @@ namespace contracts {
   name exchange = "tlosto.seeds"_n;
   name escrow = "escrow.seeds"_n;
   name bioregion = "bio.seeds"_n;
-  name owner = "owner"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;
@@ -32,4 +31,6 @@ namespace bankaccts {
   name referrals = "refer.seeds"_n;
 
   name hyphabank = "seeds.hypha"_n;
+
+  name global = "gdho.seeds"_n;
 }

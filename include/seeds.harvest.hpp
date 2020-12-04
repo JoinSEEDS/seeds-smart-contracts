@@ -39,7 +39,8 @@ CONTRACT harvest : public contract {
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value),
-        circulating(contracts::token, contracts::token.value)
+        circulating(contracts::token, contracts::token.value),
+        bioregions(contracts::bioregion, contracts::bioregion.value)
         {}
         
     ACTION reset();
@@ -97,7 +98,7 @@ CONTRACT harvest : public contract {
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
-    symbol test_symbol = symbol("THSEEDS", 4);
+    symbol test_symbol = symbol("TESTS", 4);
     uint64_t ONE_WEEK = 604800;
 
     name planted_size = "planted.sz"_n;
@@ -119,7 +120,7 @@ CONTRACT harvest : public contract {
     void add_planted(name account, asset quantity);
     void sub_planted(name account, asset quantity);
     void change_total(bool add, asset quantity);
-    void calc_contribution_score(name account);
+    void calc_contribution_score(name account, name type);
 
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
@@ -127,6 +128,7 @@ CONTRACT harvest : public contract {
 
     uint64_t config_get(name key);
     void send_distribute_harvest (name key, asset amount);
+    void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
 
     // Contract Tables
 
@@ -295,6 +297,29 @@ CONTRACT harvest : public contract {
     };
 
     typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
+    
+    // From bioregions contract
+    TABLE bioregion_table {
+      name id;
+      name founder;
+      name status; // "active" "inactive"
+      string description;
+      string locationjson; // json description of the area
+      float latitude;
+      float longitude;
+      uint64_t members_count;
+      time_point created_at = current_block_time().to_time_point();
+
+      uint64_t primary_key() const { return id.value; }
+      uint64_t by_status() const { return status.value; }
+      uint64_t by_count() const { return members_count; }
+    };
+
+    typedef eosio::multi_index <"bioregions"_n, bioregion_table,
+      indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
+      indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
+    > bioregion_tables;
+
 
     // -----------------------------------------
 
@@ -320,6 +345,7 @@ CONTRACT harvest : public contract {
     rep_tables rep;
     total_tables total;
     circulating_supply_tables circulating;
+    bioregion_tables bioregions;
 
 };
 

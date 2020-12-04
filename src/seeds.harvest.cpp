@@ -267,7 +267,8 @@ ACTION harvest::updatetxpt(name account) {
 
 ACTION harvest::updatecs(name account) {
   require_auth(account);
-  calc_contribution_score(account);
+  auto uitr = users.get(account.value, "user not found");
+  calc_contribution_score(account, uitr.type);
 }
 
 ACTION harvest::updtotal() { // remove when balances are retired
@@ -562,7 +563,7 @@ void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    calc_contribution_score(uitr->account);
+    calc_contribution_score(uitr->account, uitr->type);
     count++;
     uitr++;
   }
@@ -586,7 +587,7 @@ void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 }
 
 // [PS+RT+CB X Rep = Total Contribution Score]
-void harvest::calc_contribution_score(name account) {
+void harvest::calc_contribution_score(name account, name type) {
   uint64_t planted_score = 0;
   uint64_t transactions_score = 0;
   uint64_t community_building_score = 0;
@@ -595,8 +596,14 @@ void harvest::calc_contribution_score(name account) {
   auto pitr = planted.find(account.value);
   if (pitr != planted.end()) planted_score = pitr->rank;
 
-  auto titr = txpoints.find(account.value);
-  if (titr != txpoints.end()) transactions_score = titr->rank;
+  if (type == "organisation"_n) {
+    tx_points_tables orgtxpoints(get_self(), "org"_n.value);
+    auto titr = orgtxpoints.find(account.value);
+    if (titr != orgtxpoints.end()) transactions_score = titr->rank;
+  } else {
+    auto titr = txpoints.find(account.value);
+    if (titr != txpoints.end()) transactions_score = titr->rank;
+  }
 
   auto citr = cbs.find(account.value);
   if (citr != cbs.end()) community_building_score = citr->rank;
@@ -629,6 +636,7 @@ void harvest::calc_contribution_score(name account) {
 
 void harvest::rankcss() {
   size_set(sum_rank_users, 0);
+  size_set(sum_rank_orgs, 0);
   rankcs(0, 0, 200);
 }
 
@@ -642,7 +650,8 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   auto cs_by_points = cspoints.get_index<"bycspoints"_n>();
   auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
   uint64_t count = 0;
-  uint64_t sum_rank = 0;
+  uint64_t sum_rank_u = 0;
+  uint64_t sum_rank_o = 0;
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -652,15 +661,22 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
       item.rank = rank;
     });
 
-    sum_rank += rank;
+    auto uitr = users.find(citr -> account.value);
+    if (uitr -> type != "organisation"_n) {
+      sum_rank_u += rank;
+    } else {
+      sum_rank_o += rank;
+    }
 
     current++;
     count++;
     citr++;
   }
 
-  size_change(sum_rank_users, int64_t(sum_rank));
-  print("sum rank = ", sum_rank, "\n");
+  size_change(sum_rank_users, int64_t(sum_rank_u));
+  size_change(sum_rank_orgs, int64_t(sum_rank_o));
+  
+  // print("sum rank users = ", sum_rank, "\n");
 
   if (citr == cs_by_points.end()) {
     // Done.
@@ -680,7 +696,6 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
     tx.send(next_value, _self);
     
   }
-
 
 }
 
@@ -1006,13 +1021,17 @@ void harvest::send_distribute_harvest (name key, asset amount) {
     key,
     std::make_tuple(uint64_t(0), config_get("batchsize"_n), amount)
   );
-  next_execution.send();
 
-  // transaction tx;
-  // tx.actions.emplace_back(next_execution);
-  // tx.delay_sec = 1;
-  // tx.send(key.value, _self);
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(key.value, _self);
 
+}
+
+void harvest::withdraw_aux (name sender, name beneficiary, asset quantity, string memo) {
+  token::transfer_action t_action{contracts::token, { sender, "active"_n }};
+  t_action.send(sender, beneficiary, quantity, memo);
 }
 
 void harvest::runharvest() {
@@ -1021,12 +1040,15 @@ void harvest::runharvest() {
   auto mitr = mintrate.begin();
   check(mitr != mintrate.end(), "mint rate table is empty");
 
+  if (mitr -> mint_rate <= 0) { return; }
+
   asset quantity = asset(mitr -> mint_rate, test_symbol);
+  string memo = "harvest";
 
   print("mint rate:", quantity, "\n");
 
-  token::issue_action i_action{contracts::token, { contracts::owner, "active"_n }};
-  i_action.send(contracts::owner, quantity, "harvest");
+  token::issue_action_test t_issue{contracts::token, { contracts::token, "minttst"_n }};
+  t_issue.send(get_self(), quantity, memo);
 
   double users_percentage = config_get("hrvst.users"_n) / 1000000.0;
   double bios_percentage = config_get("hrvst.bios"_n) / 1000000.0;
@@ -1042,6 +1064,8 @@ void harvest::runharvest() {
   send_distribute_harvest("disthvstbios"_n, asset(mitr -> mint_rate * bios_percentage, test_symbol));
   send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
 
+  withdraw_aux(get_self(), bankaccts::global, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
+
 }
 
 void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amount) {
@@ -1051,22 +1075,18 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
   uint64_t count = 0;
 
   uint64_t sum_rank = get_size(sum_rank_users);
-  check(sum_rank > 0, "the suma rank for users must be greater than zero");
+  check(sum_rank > 0, "the sum rank for users must be greater than zero");
 
-  double fragment_seeds = total_amount.amount / double(get_size(sum_rank_users));
+  double fragment_seeds = total_amount.amount / double(sum_rank);
   
-  print("-------------- users --------------\n");
-
-  print("fragment seeds = ", fragment_seeds, "\n");
-
   while (csitr != cspoints.end() && count < chunksize) {
 
     auto uitr = users.find(csitr -> account.value);
     if (uitr != users.end() && uitr -> type != "organisation"_n && csitr -> rank > 0) {
-      print("user:", csitr -> account, ", rank:", csitr -> rank, ", amount for that rank = ", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+
+      print("user:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
     
-      token::transfer_action t_action{contracts::token, { contracts::owner, "active"_n }};
-      t_action.send(contracts::owner, csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
     }
 
     csitr++;
@@ -1084,15 +1104,84 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(csitr -> account.value, _self);
+    tx.send(sum_rank_users.value, _self);
   }
 
 }
 
 void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
+
+  auto bitr = start == 0 ? bioregions.begin() : bioregions.find(start);
+
+  uint64_t number_bioregions = distance(bioregions.begin(), bioregions.end());
+  uint64_t count = 0;
+
+  check(number_bioregions > 0, "number of bioregions must be greater than zero");
+  double fragment_seeds = total_amount.amount / double(number_bioregions);
+
+  while (bitr != bioregions.end() && count < chunksize) {
+
+    // for the moment, all bioregions have rank 1
+    print("bio:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
+    withdraw_aux(get_self(), name(bitr -> id), asset(fragment_seeds, test_symbol), "harvest");
+
+    bitr++;
+    count++;
+  }
+
+  if (bitr != bioregions.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstbios"_n,
+      std::make_tuple(bitr -> id, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sum_rank_bios.value, _self);
+  }
+
 }
 
 void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  uint64_t count = 0;
+
+  uint64_t sum_rank = get_size(sum_rank_orgs);
+  check(sum_rank > 0, "the sum rank for organizations must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(sum_rank);
+  
+  while (csitr != cspoints.end() && count < chunksize) {
+
+    auto uitr = users.find(csitr -> account.value);
+    if (uitr != users.end() && uitr -> type == "organisation"_n && csitr -> rank > 0) {
+
+      print("org:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+    
+    }
+
+    csitr++;
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstorgs"_n,
+      std::make_tuple(csitr -> account.value, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sum_rank_orgs.value, _self);
+  }
 }

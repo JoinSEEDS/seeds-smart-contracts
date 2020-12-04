@@ -405,6 +405,38 @@ uint64_t token::balance_for( const name& owner ) {
 }
 
 
+void token::minttest (const name& to, const asset& quantity, const string& memo) {
+
+  require_auth(get_self());
+
+  auto sym = quantity.symbol;
+  check( sym.is_valid(), "TESTS: invalid symbol name" );
+  check( memo.size() <= 256, "TESTS: memo has more than 256 bytes" );
+
+  // test tokens only
+  check( sym == test_symbol, "TEST: invalid symbol" );
+
+  stats statstable( get_self(), sym.code().raw() );
+  auto existing = statstable.find( sym.code().raw() );
+  check( existing != statstable.end(), "TESTS: token with symbol does not exist, create token before issue" );
+  const auto& st = *existing;
+  
+  // check( to == st.issuer, "TESTS: tokens can only be issued to issuer account" );
+
+  check( quantity.is_valid(), "TESTS: invalid quantity" );
+  check( quantity.amount > 0, "TESTS: must issue positive quantity" );
+
+  check( quantity.symbol == st.supply.symbol, "TESTS: symbol precision mismatch" );
+
+  statstable.modify( st, same_payer, [&]( auto& s ) {
+      s.supply += quantity;
+  });
+
+  add_balance( to, quantity, _self );
+
+}
+
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minttest) )
