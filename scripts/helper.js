@@ -542,10 +542,10 @@ var permissions = [{
   action: 'cleandaus'
 }, { 
   target: `${accounts.organization.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
+  actor: `${accounts.scheduler.account}@eosio.code`
 }, {
   target: `${accounts.organization.account}@active`,
-  actor: `${accounts.accounts.account}@active`
+  actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.organization.account}@execute`,
   action: 'scoretrxs'
