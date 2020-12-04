@@ -158,22 +158,22 @@ void settings::reset() {
   confwithdesc(name("minrwd2.amb"), 6 * 10000, "Minimum reward for abmassador of referring org when user becomes citizen", high_impact);
 
   // reward decay for individual referrer when user becomes resident  
-  confwithdesc(name("decrwd1.ind"), 110000, "Reward decay for individual referrer when user becomes resident", high_impact);
+  confwithdesc(name("decrwd1.ind"), 110000 * 10000, "Reward decay for individual referrer when user becomes resident", high_impact);
 
   // min reward decay for individual referrer when user becomes citizen  
-  confwithdesc(name("decrwd2.ind"), 75000, "Reward decay for individual referrer when user becomes citizen", high_impact);
+  confwithdesc(name("decrwd2.ind"), 75000 * 10000, "Reward decay for individual referrer when user becomes citizen", high_impact);
 
   // reward decay for org when user becomes resident
-  confwithdesc(name("decrwd1.org"), 88000, "Reward decay for org when user becomes resident", high_impact);
+  confwithdesc(name("decrwd1.org"), 88000 * 10000, "Reward decay for org when user becomes resident", high_impact);
 
   // reward decay for org when user becomes citizen
-  confwithdesc(name("decrwd2.org"), 60000, "Reward decay for org when user becomes citizen", high_impact);
+  confwithdesc(name("decrwd2.org"), 60000 * 10000, "Reward decay for org when user becomes citizen", high_impact);
 
   // reward decay for ambassador of referring org when user becomes resident
-  confwithdesc(name("decrwd1.amb"), 22000, "Reward decay for ambassador of referring org when user becomes resident", high_impact);
+  confwithdesc(name("decrwd1.amb"), 22000 * 10000, "Reward decay for ambassador of referring org when user becomes resident", high_impact);
 
   // reward decay for abmassador of referring org when user becomes citizen
-  confwithdesc(name("decrwd2.amb"), 15000, "Reward decay for abmassador of referring org when user becomes citizen", high_impact);
+  confwithdesc(name("decrwd2.amb"), 15000 * 10000, "Reward decay for abmassador of referring org when user becomes citizen", high_impact);
 
 
   // Maximum number of points a user can gain from others vouching for them

@@ -242,7 +242,7 @@ name accounts::find_referrer(name account) {
 }
 
 uint64_t calc_decaying_rewards(int num, int min, int max, int decay) {
-  auto res = min + (max-min) * exp(-1*num/decay);
+  auto res = round(min + (max-min) * exp(-1*(num+1)/double(decay)));
   // check(false, ("DEBUG: calc rewards res="+std::to_string(res)+ ", num="+std::to_string(num)+
   //  ", min="+std::to_string(min)+", max= "+std::to_string(max)+", decay= "+std::to_string(decay)));
 
@@ -301,6 +301,9 @@ void accounts::refreward(name account, name new_status) {
       auto org_seeds_reward = calc_decaying_rewards(num_users, min_org, max_org, dec_org);
       asset org_quantity(org_seeds_reward, seeds_symbol);
 
+      // send reward to org
+      send_reward(referrer, org_quantity);
+
       name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
       name min_amb_reward_param = is_citizen ? min_ambassador_seeds_reward_citizen : min_ambassador_seeds_reward_resident;
       name dec_amb_reward_param = is_citizen ? dec_ambassador_seeds_reward_citizen : dec_ambassador_seeds_reward_resident;
@@ -310,9 +313,6 @@ void accounts::refreward(name account, name new_status) {
 
       auto amb_seeds_reward = calc_decaying_rewards(num_users, min_amb, max_amb, dec_amb);
       asset amb_quantity(amb_seeds_reward, seeds_symbol);
-
-      // send reward to org
-      send_reward(referrer, org_quantity);
 
       // send reward to ambassador if we have one
       name org_owner = find_referrer(referrer);
