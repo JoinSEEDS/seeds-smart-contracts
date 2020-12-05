@@ -285,13 +285,10 @@ describe('accounts', async assert => {
   assert({
     given: 'invited user',
     should: 'have row in table',
-    actual: refs,
+    actual: refs.rows[0],
     expected: {
-      rows: [{
-        referrer: firstuser,
-        invited: seconduser
-      }],
-      more: false
+      referrer: firstuser,
+      invited: seconduser
     }
   })
 
@@ -383,13 +380,13 @@ describe('vouching', async assert => {
   await contract.requestvouch(thirduser, firstuser,{ authorization: `${thirduser}@active` })
   await contract.requestvouch(seconduser, firstuser,{ authorization: `${seconduser}@active` })
 
-  checkReps([0, 0, 0], "init", "be empty XX")
+  await checkReps([0, 0, 0], "init", "be empty XX")
 
   console.log('vouch for user')
   await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
   await contract.vouch(firstuser, thirduser, { authorization: `${firstuser}@active` })
 
-  checkReps([0, 20, 20], "after vouching", "get rep bonus for being vouched")
+  await checkReps([0, 20, 20], "after vouching", "get rep bonus for being vouched")
 
   var cantVouchTwice = true
   try {
@@ -406,22 +403,22 @@ describe('vouching', async assert => {
 
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
-  checkReps([1, 20, 20], "after user is resident", "sponsor gets rep bonus for sponsoring resident")
+  await checkReps([1, 20, 20], "after user is resident", "sponsor gets rep bonus for sponsoring resident")
 
   await contract.vouch(seconduser, thirduser,{ authorization: `${seconduser}@active` })
-  checkReps([1, 20, 30], "resident vouch", "rep bonus")
+  await checkReps([1, 20, 30], "resident vouch", "rep bonus")
 
   await contract.testresident(thirduser, { authorization: `${accounts}@active` })
-  checkReps([2, 21, 30], "after user is resident", "all sponsors gets rep bonus")
+  await checkReps([2, 21, 30], "after user is resident", "all sponsors gets rep bonus")
 
   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
-  checkReps([3, 22, 30], "after user is citizen", "all sponsors gets rep bonus")
+  await checkReps([3, 22, 30], "after user is citizen", "all sponsors gets rep bonus")
 
   console.log("set max vouch to 3")
   await settingscontract.configure("maxvouch", 3, { authorization: `${settings}@active` })
   await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
-  checkReps([3, 22, 30, 3], "max vouch reached", "can still vouch")
+  await checkReps([3, 22, 30, 3], "max vouch reached", "can still vouch")
   let maxVouchExceeded = false
   try {
     await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
@@ -500,7 +497,7 @@ describe('vouching with reputation', async assert => {
   console.log('test citizen')
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
-  checkReps([], "init", "be empty")
+  await checkReps([], "init", "be empty")
 
   console.log('vouch for user')
   await contract.testsetrs(firstuser, 25, { authorization: `${accounts}@active` })
@@ -512,11 +509,13 @@ describe('vouching with reputation', async assert => {
   await contract.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser, { authorization: `${firstuser}@active` })
 
-  checkReps([0, 10, 30, 40], "after vouching", "get rep bonus for being vouched")
+  await checkReps([0, 10, 30, 40], "after vouching", "get rep bonus for being vouched")
 
 })
 
 describe('Ambassador and Org rewards', async assert => {
+
+  console.log('Ambassador and Org rewards =====')
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")

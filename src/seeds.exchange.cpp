@@ -6,8 +6,8 @@ void exchange::reset() {
 
   config.remove();
 
-  asset citizen_limit =  asset(uint64_t(2600000000), seeds_symbol);
-  asset resident_limit =  asset(uint64_t(2600000000), seeds_symbol);
+  asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
+  asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
   asset visitor_limit =  asset(26000 * 10000, seeds_symbol);
 
   asset tlos_per_usd =  asset(0.03 * 10000, seeds_symbol);
@@ -130,8 +130,10 @@ void exchange::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol
   if (sitr != dailystats.end()) {
     seeds_purchased = sitr->seeds_purchased;
   }
+  
+  uint64_t price_volatility_leeway = seeds_limit.amount / 20; // 5% leeway
 
-  check(seeds_limit.amount >= seeds_purchased + seeds_amount, 
+  check( (seeds_limit.amount + price_volatility_leeway) >= seeds_purchased + seeds_amount, 
    "account: " + buyer.to_string() + 
    " symbol: " + paymentSymbol + 
    " tx_id: " + memo + 
