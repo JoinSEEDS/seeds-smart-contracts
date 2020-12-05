@@ -13,3 +13,4 @@ package-lock.json
 .vscode/c_cpp_properties.json
 secrets_generated/
 scripts/attest.js
+create_owner.sh
