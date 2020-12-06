@@ -30,6 +30,7 @@ public:
 private:
     void change_account_permission(name user_account, string public_key);
     bool is_seeds_user(name account);
+    authority guardian_key_authority(string key_str);
 
     TABLE guardians_table
     {

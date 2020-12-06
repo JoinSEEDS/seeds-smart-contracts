@@ -118,8 +118,10 @@ describe('guardians', async assert => {
   try {
     await contracts.guardians.cancel(firstuser, { authorization: `${firstuser}@active` })
   } catch (err) {
-    console.log("expected error "+ err)
+    //console.log("expected error "+ err)
   }
+
+  console.log('reset back to normal dev key')
 
   const dev_pubkey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
   await contracts.guardians.recover(seconduser, firstuser, dev_pubkey, { authorization: `${seconduser}@active` })
