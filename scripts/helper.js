@@ -162,6 +162,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -191,6 +192,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -229,6 +231,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
