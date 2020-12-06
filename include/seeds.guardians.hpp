@@ -1,4 +1,5 @@
 #include <eosio/eosio.hpp>
+#include <eosio/system.hpp>
 #include <tables/user_table.hpp>
 #include <abieos_numeric.hpp>
 #include <contracts.hpp>
@@ -21,11 +22,13 @@ public:
 
     ACTION reset();
 
-    ACTION init(name user_account, vector<name> guardian_accounts);
+    ACTION init(name user_account, vector<name> guardian_accounts, uint64_t time_delay_sec);
 
     ACTION cancel(name user_account);
 
     ACTION recover(name guardian_account, name user_account, string new_public_key);
+    
+    ACTION claim(name user_account);
 
 private:
     void change_account_permission(name user_account, string public_key);
@@ -36,6 +39,7 @@ private:
     {
         name account;
         vector<name> guardians;
+        uint64_t time_delay_sec;
 
         uint64_t primary_key() const { return account.value; }
     };
@@ -45,6 +49,7 @@ private:
         name account;
         vector<name> guardians;
         string public_key;
+        uint64_t complete_timestamp;
 
         uint64_t primary_key() const { return account.value; }
     };
@@ -56,4 +61,4 @@ private:
     recovery_tables recovers;
 };
 
-EOSIO_DISPATCH(guardians, (reset)(init)(cancel)(recover));
+EOSIO_DISPATCH(guardians, (reset)(init)(cancel)(recover)(claim));

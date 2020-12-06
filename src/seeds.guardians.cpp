@@ -17,17 +17,17 @@ void guardians::reset()
     }
 }
 
-void guardians::init(name user_account, vector<name> guardian_accounts)
+void guardians::init(name user_account, vector<name> guardian_accounts, uint64_t time_delay_sec)
 {
     require_auth(user_account);
 
     auto gitr = guards.find(user_account.value);
 
-    check(gitr == guards.end(), "account " + user_account.to_string() + " already have guardians");
+    check(gitr == guards.end(), "account " + user_account.to_string() + " already has guardians");
 
-    check(guardian_accounts.size() == 3,
-          "provided " + to_string(guardian_accounts.size()) + " guardians, but needed only 3 guardians");
-
+    check(guardian_accounts.size() >= 3,
+          "provided " + to_string(guardian_accounts.size()) + " guardians, but needed at least 3 guardians");
+    
     for (std::size_t i = 0; i < guardian_accounts.size(); ++i)
     {
         check(is_seeds_user(guardian_accounts[i]),
@@ -37,6 +37,7 @@ void guardians::init(name user_account, vector<name> guardian_accounts)
     guards.emplace(get_self(), [&](auto &item) {
         item.account = user_account;
         item.guardians = guardian_accounts;
+        item.time_delay_sec = time_delay_sec;
     });
 }
 
@@ -90,6 +91,7 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
             item.account = user_account;
             item.guardians = vector{guardian_account};
             item.public_key = new_public_key;
+            item.complete_timestamp = 0;
         });
     }
     else
@@ -115,9 +117,12 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
         }
         else
         {
+            check(ritr -> complete_timestamp == 0, "recovery complete, waiting for claim - can't change key now");
+
             recovers.modify(ritr, get_self(), [&](auto &item) {
                 item.guardians = vector{guardian_account};
                 item.public_key = new_public_key;
+                item.complete_timestamp = 0;
             });
         }
     }
@@ -127,10 +132,28 @@ void guardians::recover(name guardian_account, name user_account, string new_pub
 
     if ((required_guardians == 3 && signed_guardians >= 2) || (required_guardians > 3 && signed_guardians >= 3))
     {
-
-        recovers.erase(ritr);
-        change_account_permission(user_account, new_public_key);
+        recovers.modify(ritr, get_self(), [&](auto &item) {
+            item.complete_timestamp = eosio::current_time_point().sec_since_epoch();
+        });
     }
+}
+
+void guardians::claim(name user_account) {
+    auto now = eosio::current_time_point().sec_since_epoch();
+    auto gitr = guards.find(user_account.value);
+    auto ritr = recovers.find(user_account.value);
+
+    check(gitr != guards.end(), "no guardians for user " + user_account.to_string());
+    check(ritr != recovers.end(), "no active recovery for user " + user_account.to_string());
+    check(ritr -> complete_timestamp > 0, "recovery not complete for user " + user_account.to_string());
+    check(ritr -> complete_timestamp + gitr->time_delay_sec <= now, 
+        "Need to wait another " + 
+        std::to_string(ritr -> complete_timestamp + gitr->time_delay_sec - now) + 
+        " seconds until you can claim");
+    
+    recovers.erase(ritr);
+    change_account_permission(user_account, ritr -> public_key);
+
 }
 
 void guardians::change_account_permission(name user_account, string public_key)

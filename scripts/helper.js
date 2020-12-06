@@ -384,6 +384,13 @@ var permissions = [{
   target: `${accounts.onboarding.account}@application`,
   action: 'accept'
 }, {
+  target: `${accounts.guardians.account}@application`,
+  key: applicationPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.guardians.account}@application`,
+  action: 'claim'
+}, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.token.account}@active`
 }, {
