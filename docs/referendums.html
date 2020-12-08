@@ -1,0 +1,190 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
+  <div id="target"><h1>Smartcontract documentation for referendums</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li><strong>addvoice</strong> / <a href="#addvoice">addvoice</a> <comment type="action" name="addvoice"></comment></li>
+<li><strong>against</strong> / <a href="#against">against</a> <comment type="action" name="against"></comment></li>
+<li><strong>cancelvote</strong> / <a href="#cancelvote">cancelvote</a> <comment type="action" name="cancelvote"></comment></li>
+<li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create"></comment></li>
+<li><strong>favour</strong> / <a href="#favour">favour</a> <comment type="action" name="favour"></comment></li>
+<li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> <comment type="action" name="onperiod"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>stake</strong> / <a href="#stake">stake</a> <comment type="action" name="stake"></comment></li>
+<li><strong>update</strong> / <a href="#update">update</a> <comment type="action" name="update"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>balances</strong> / <a href="#balance_table">balance_table</a> (i64) <comment type="table" name="balances"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
+<li><strong>referendums</strong> / <a href="#referendum_table">referendum_table</a> (i64) <comment type="table" name="referendums"></comment></li>
+<li><strong>voters</strong> / <a href="#voter_table">voter_table</a> (i64) <comment type="table" name="voters"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="addvoice"> addvoice </h3>
+<ul>
+<li>account / name</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="against"> against </h3>
+<ul>
+<li>voter / name</li>
+<li>referendum_id / uint64</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="balance_table"> balance_table </h3>
+<ul>
+<li>account / name</li>
+<li>stake / asset</li>
+<li>voice / uint64</li>
+</ul>
+<h3 id="cancelvote"> cancelvote </h3>
+<ul>
+<li>voter / name</li>
+<li>referendum_id / uint64</li>
+</ul>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="create"> create </h3>
+<ul>
+<li>creator / name</li>
+<li>setting_name / name</li>
+<li>setting_value / uint64</li>
+<li>title / string</li>
+<li>summary / string</li>
+<li>description / string</li>
+<li>image / string</li>
+<li>url / string</li>
+</ul>
+<h3 id="favour"> favour </h3>
+<ul>
+<li>voter / name</li>
+<li>referendum_id / uint64</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="onperiod"> onperiod </h3>
+<h3 id="referendum_table"> referendum_table </h3>
+<ul>
+<li>referendum_id / uint64</li>
+<li>created_at / uint64</li>
+<li>setting_value / uint64</li>
+<li>favour / uint64</li>
+<li>against / uint64</li>
+<li>setting_name / name</li>
+<li>creator / name</li>
+<li>staked / asset</li>
+<li>title / string</li>
+<li>summary / string</li>
+<li>description / string</li>
+<li>image / string</li>
+<li>url / string</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="stake"> stake </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="update"> update </h3>
+<ul>
+<li>creator / name</li>
+<li>setting_name / name</li>
+<li>setting_value / uint64</li>
+<li>title / string</li>
+<li>summary / string</li>
+<li>description / string</li>
+<li>image / string</li>
+<li>url / string</li>
+</ul>
+<h3 id="voter_table"> voter_table </h3>
+<ul>
+<li>account / name</li>
+<li>referendum_id / uint64</li>
+<li>amount / uint64</li>
+<li>favoured / bool</li>
+<li>canceled / bool</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main"></comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

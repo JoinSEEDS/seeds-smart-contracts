@@ -51,6 +51,10 @@ void history::reset(name account) {
   while (toitr != totals.end()) {
     toitr = totals.erase(toitr);
   }
+  auto sitr = sizes.begin();
+  while (sitr != sizes.end()) {
+    sitr = sizes.erase(sitr);
+  }
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -71,6 +75,7 @@ void history::addresident(name account) {
     user.account = account;
     user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+  size_change("reidents.sz"_n, 1);
 }
 
 void history::addcitizen(name account) {
@@ -83,6 +88,7 @@ void history::addcitizen(name account) {
     user.account = account;
     user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+  size_change("citizens.sz"_n, 1);
 }
 
 void history::addreputable(name organization) {
@@ -97,6 +103,7 @@ void history::addreputable(name organization) {
     org.organization = organization;
     org.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+  size_change("reptables.sz"_n, 1);
 }
 
 void history::addregen(name organization) {
@@ -111,6 +118,7 @@ void history::addregen(name organization) {
     org.organization = organization;
     org.timestamp = eosio::current_time_point().sec_since_epoch();
   });
+  size_change("regens.sz"_n, 1);
 }
 
 void history::historyentry(name account, string action, uint64_t amount, string meta) {
@@ -299,9 +307,86 @@ void history::orgtxpt(name org, uint128_t start_val, uint64_t chunksize, uint64_
     uint128_t next_value = tx_other_itr->by_other();
     fire_orgtx_calc(org, next_value, chunksize, running_total);
   }
+}
 
+// CAUTION: this will iterate on all citizens, residents and orgs
+void history::migrate() {
+  require_auth(get_self());
   
+  uint32_t count = 0;
+  auto ctr = citizens.begin();
+  while(ctr != citizens.end()) {
+    ctr++;
+    count++;
+  }
+  size_set("citizens.sz"_n, count);
 
+  count = 0;
+  auto rtr = residents.begin();
+  while(rtr != residents.end()) {
+    rtr++;
+    count++;
+  }
+  size_set("residents.sz"_n, count);
+
+  count = 0;
+  auto reptr = reputables.begin();
+  while(reptr != reputables.end()) {
+    reptr++;
+    count++;
+  }
+  size_set("reptables.sz"_n, count);
+
+  count = 0;
+  auto regtr = regens.begin();
+  while(regtr != regens.end()) {
+    regtr++;
+    count++;
+  }
+  size_set("regens.sz"_n, count);
+}
+
+void history::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+void history::size_set(name id, uint64_t newsize) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = newsize;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
+
+uint64_t history::get_size(name id) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    return 0;
+  } else {
+    return sitr->size;
+  }
 }
 
 void history::fire_orgtx_calc(name org, uint128_t next_value, uint64_t chunksize, uint64_t running_total) {

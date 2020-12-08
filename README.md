@@ -91,3 +91,25 @@ command = compile | deploy | test | run
 example: 
 ./scripts/seeds.js run harvest => compiles seeds.harvest.cpp, deploys it, runs unit tests
 ```
+
+### generate contract documentation
+
+This command will generate html automatically based on the contract ABI files.
+
+The <comment> tags inside the documents will be left untouched, even when they are regenerated.
+
+
+This will generate docs only for the `accounts` contract.
+```
+./scripts/seeds.js docsgen accounts:
+```
+
+This will generate all contracts:
+```
+./scripts/seeds.js docsgen all
+```
+
+This will regenerate the index.html file:
+```
+./scripts/seeds.js docsgen index
+```
