@@ -148,13 +148,13 @@ void history::trxentry(name from, name to, asset quantity) {
   int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
   int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
 
-  double from_trx_multiplier = (
+  double from_capped_amount = (
     from_is_organization ? 
     std::min(max_transaction_points_organizations, quantity.amount) : 
     std::min(max_transaction_points_individuals, quantity.amount)
   ) / 10000.0;
   
-  double to_trx_multiplier = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
+  double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
   transactions.emplace(_self, [&](auto & transaction){
     transaction.id = transaction_id;
@@ -162,8 +162,8 @@ void history::trxentry(name from, name to, asset quantity) {
     transaction.to = to;
     transaction.volume = quantity.amount;
     transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
-    transaction.from_points = uint64_t(ceil(from_trx_multiplier * utils::get_rep_multiplier(to)));
-    transaction.to_points = uint64_t(ceil(to_trx_multiplier * utils::get_rep_multiplier(from)));
+    transaction.from_points = uint64_t(ceil(from_capped_amount * utils::get_rep_multiplier(to)));
+    transaction.to_points = to_is_organization ? uint64_t(ceil(to_capped_amount * utils::get_rep_multiplier(from))) : 0;
     transaction.timestamp = timestamp;
   });
 

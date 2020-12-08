@@ -70,7 +70,6 @@ ACTION scheduler::reset() {
         name("org.clndaus"),
         name("org.rankregn"),
         name("org.rankcbs"),
-        name("org.scortrxs"),
 
         name("hrvst.orgtxs"),
 
@@ -78,6 +77,8 @@ ACTION scheduler::reset() {
 
         name("forum.rank"),
         name("forum.giverp"),
+
+        name("hrvst.qevs"),
     };
     
     std::vector<name> operations_v = {
@@ -97,7 +98,6 @@ ACTION scheduler::reset() {
         name("cleandaus"),
         name("rankregens"),
         name("rankcbsorgs"),
-        name("scoretrxs"),
 
         name("rankorgtxs"),
 
@@ -105,6 +105,8 @@ ACTION scheduler::reset() {
 
         name("rankforums"),
         name("givereps"),
+
+        name("calcmqevs"),
     };
 
     std::vector<name> contracts_v = {
@@ -124,7 +126,6 @@ ACTION scheduler::reset() {
         contracts::organization,
         contracts::organization,
         contracts::organization,
-        contracts::organization,
 
         contracts::harvest,
 
@@ -132,6 +133,8 @@ ACTION scheduler::reset() {
 
         contracts::forum,
         contracts::forum,
+
+        contracts::harvest,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -151,7 +154,6 @@ ACTION scheduler::reset() {
         utils::seconds_per_day / 2,
         utils::seconds_per_day,
         utils::seconds_per_day,
-        utils::seconds_per_day,
 
         utils::seconds_per_day,
 
@@ -159,6 +161,8 @@ ACTION scheduler::reset() {
         
         utils::moon_cycle / 4,
         utils::moon_cycle / 4,
+
+        utils::seconds_per_day,
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -180,7 +184,6 @@ ACTION scheduler::reset() {
         now,
         now,
         now,
-        now,
 
         now,
 
@@ -188,6 +191,8 @@ ACTION scheduler::reset() {
 
         now,
         now - utils::seconds_per_hour,
+
+        now,
     };
 
     int i = 0;

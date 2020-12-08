@@ -27,7 +27,7 @@ CONTRACT accounts : public contract {
           config(contracts::settings, contracts::settings.value),
           accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value),
-          totals(contracts::history, contracts::history.value)
+          totals(contracts::history, contracts::history.value),
           residents(contracts::history, contracts::history.value),
           citizens(contracts::history, contracts::history.value),
           history_sizes(contracts::history, contracts::history.value)
