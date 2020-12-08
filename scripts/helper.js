@@ -164,6 +164,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -193,6 +194,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -231,6 +233,7 @@ const accountsMetadata = (network) => {
       organization: contract('orgs.seeds', 'organization'),
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
+      guardians: contract('guard.seeds', 'guardians'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -385,6 +388,13 @@ var permissions = [{
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'accept'
+}, {
+  target: `${accounts.guardians.account}@application`,
+  key: applicationPublicKey,
+  parent: 'active'
+}, {
+  target: `${accounts.guardians.account}@application`,
+  action: 'claim'
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.token.account}@active`
@@ -590,7 +600,12 @@ var permissions = [{
   action: 'minttest'
 }, { 
   target: `${accounts.token.account}@minttst`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.harvest.account}@active`,
+  actor: `${accounts.organization.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

@@ -225,10 +225,17 @@ void proposals::onperiod() {
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
         name prop_type = get_type(pitr->fund);
         bool is_alliance_type = prop_type == alliance_type;
         bool is_campaign_type = prop_type == campaign_type;
+
+        bool valid_quorum = false;
+
+        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+          valid_quorum = true;
+        } else { // in open status, quorum is calculated
+          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+        }
 
         if (passed && valid_quorum) {
 

@@ -49,6 +49,18 @@ const setting_in_seeds = async (key) => {
   return value.rows[0].value / 10000
 }
 
+const get_settings = async (key) => {
+  const value = await eos.getTableRows({
+    code: settings,
+    scope: settings,
+    table: 'config',
+    lower_bound: key,
+    upper_bound: key,
+    json: true,
+  })
+  return value.rows[0].value
+}
+
 describe('accounts', async assert => {
 
   if (!isLocal()) {
@@ -285,13 +297,10 @@ describe('accounts', async assert => {
   assert({
     given: 'invited user',
     should: 'have row in table',
-    actual: refs,
+    actual: refs.rows[0],
     expected: {
-      rows: [{
-        referrer: firstuser,
-        invited: seconduser
-      }],
-      more: false
+      referrer: firstuser,
+      invited: seconduser
     }
   })
 
@@ -383,13 +392,13 @@ describe('vouching', async assert => {
   await contract.requestvouch(thirduser, firstuser,{ authorization: `${thirduser}@active` })
   await contract.requestvouch(seconduser, firstuser,{ authorization: `${seconduser}@active` })
 
-  checkReps([0, 0, 0], "init", "be empty XX")
+  await checkReps([0, 0, 0], "init", "be empty XX")
 
   console.log('vouch for user')
   await contract.vouch(firstuser, seconduser, { authorization: `${firstuser}@active` })
   await contract.vouch(firstuser, thirduser, { authorization: `${firstuser}@active` })
 
-  checkReps([0, 20, 20], "after vouching", "get rep bonus for being vouched")
+  await checkReps([0, 20, 20], "after vouching", "get rep bonus for being vouched")
 
   var cantVouchTwice = true
   try {
@@ -406,22 +415,22 @@ describe('vouching', async assert => {
 
   console.log('test resident')
   await contract.testresident(seconduser, { authorization: `${accounts}@active` })
-  checkReps([1, 20, 20], "after user is resident", "sponsor gets rep bonus for sponsoring resident")
+  await checkReps([1, 20, 20], "after user is resident", "sponsor gets rep bonus for sponsoring resident")
 
   await contract.vouch(seconduser, thirduser,{ authorization: `${seconduser}@active` })
-  checkReps([1, 20, 30], "resident vouch", "rep bonus")
+  await checkReps([1, 20, 30], "resident vouch", "rep bonus")
 
   await contract.testresident(thirduser, { authorization: `${accounts}@active` })
-  checkReps([2, 21, 30], "after user is resident", "all sponsors gets rep bonus")
+  await checkReps([2, 21, 30], "after user is resident", "all sponsors gets rep bonus")
 
   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
-  checkReps([3, 22, 30], "after user is citizen", "all sponsors gets rep bonus")
+  await checkReps([3, 22, 30], "after user is citizen", "all sponsors gets rep bonus")
 
   console.log("set max vouch to 3")
   await settingscontract.configure("maxvouch", 3, { authorization: `${settings}@active` })
   await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
-  checkReps([3, 22, 30, 3], "max vouch reached", "can still vouch")
+  await checkReps([3, 22, 30, 3], "max vouch reached", "can still vouch")
   let maxVouchExceeded = false
   try {
     await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
@@ -500,7 +509,7 @@ describe('vouching with reputation', async assert => {
   console.log('test citizen')
   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
-  checkReps([], "init", "be empty")
+  await checkReps([], "init", "be empty")
 
   console.log('vouch for user')
   await contract.testsetrs(firstuser, 25, { authorization: `${accounts}@active` })
@@ -512,11 +521,13 @@ describe('vouching with reputation', async assert => {
   await contract.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser, { authorization: `${firstuser}@active` })
 
-  checkReps([0, 10, 30, 40], "after vouching", "get rep bonus for being vouched")
+  await checkReps([0, 10, 30, 40], "after vouching", "get rep bonus for being vouched")
 
 })
 
 describe('Ambassador and Org rewards', async assert => {
+
+  console.log('Ambassador and Org rewards =====')
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -644,7 +655,7 @@ describe('Proportional rewards', async assert => {
     return
   }
 
-  const contracts = await initContracts({ settings, accounts, organization, exchange, token, onboarding, escrow })
+  const contracts = await initContracts({ settings, accounts, organization, exchange, token, onboarding, escrow, history })
 
   console.log('reset contracts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -652,6 +663,7 @@ describe('Proportional rewards', async assert => {
   await contracts.organization.reset({ authorization: `${organization}@active` })
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
   await contracts.exchange.reset({ authorization: `${exchange}@active` })
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
 
   console.log("set exchange price")
   await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
@@ -704,19 +716,26 @@ describe('Proportional rewards', async assert => {
     })
   }
 
+  console.log("change settings")
+  await contracts.settings.configure("refrwd1.ind", 3000*10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("minrwd1.ind", 20*10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("decrwd1.ind", 1, { authorization: `${settings}@active` })
+
+  await contracts.settings.configure("refrwd2.ind", 3000*10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("minrwd2.ind", 20*10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("decrwd2.ind", 1, { authorization: `${settings}@active` })
+
   console.log("user becomes resident")
   await contracts.accounts.testresident(invited, { authorization: `${accounts}@active` })
-
-  const expected_reward1 = await setting_in_seeds("refrwd1.ind") * 0.9680538;
+  const expected_reward1 = 1116.2807 // calculated using the decay formula
 
   await checkBalances("after resident", expected_reward1.toFixed(4))
 
   console.log("user becomes citizen")
   await contracts.accounts.testcitizen(invited, { authorization: `${accounts}@active` })
+  const expected_reward2 = 1116.2807 // calculated using the decay formula
 
-  const expected_reward2 = await setting_in_seeds("refrwd2.ind") * 0.9680538;
-
-  await checkBalances("after resident", expected_reward2.toFixed(4))
+  await checkBalances("after citizen", expected_reward2.toFixed(4))
 
 })
 

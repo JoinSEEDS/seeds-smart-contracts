@@ -973,16 +973,20 @@ void harvest::calcmintrate () {
   auto previous_day_temp = eosio::time_point_sec((day - (3 * utils::moon_cycle)) / 86400 * 86400);
   uint64_t previous_day = previous_day_temp.utc_seconds;
 
-  auto current_qev_itr = monthlyqevs.get(day, "no monthly qev found");
-  auto previous_qev_itr = monthlyqevs.get(previous_day, "no previous monthly qev found");
+  auto current_qev_itr = monthlyqevs.find(day);
+  auto previous_qev_itr = monthlyqevs.find(previous_day);
 
-  double volume_growth = double(current_qev_itr.qualifying_volume - previous_qev_itr.qualifying_volume) / previous_qev_itr.qualifying_volume;
+  if (current_qev_itr == monthlyqevs.end() || previous_qev_itr == monthlyqevs.end()) { return; }
 
-  int64_t target_supply = (1.0 + volume_growth) * previous_qev_itr.circulating_supply;
+  double volume_growth = double(current_qev_itr -> qualifying_volume - previous_qev_itr -> qualifying_volume) / previous_qev_itr -> qualifying_volume;
 
-  int64_t delta = target_supply - current_qev_itr.circulating_supply;
+  int64_t target_supply = (1.0 + volume_growth) * previous_qev_itr -> circulating_supply;
+
+  int64_t delta = target_supply - current_qev_itr -> circulating_supply;
 
   double mint_rate = delta / 708.0;
+
+  if (mint_rate < 0) { mint_rate = 0; }
 
   auto mitr = mintrate.begin();
   if (mitr != mintrate.end()) {

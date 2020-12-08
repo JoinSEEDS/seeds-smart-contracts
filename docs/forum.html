@@ -1,0 +1,248 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
+  <div id="target"><h1>Smartcontract documentation for forum</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li><strong>createcomt</strong> / <a href="#createcomt">createcomt</a> <comment type="action" name="createcomt"></comment></li>
+<li><strong>createpost</strong> / <a href="#createpost">createpost</a> <comment type="action" name="createpost"></comment></li>
+<li><strong>deleteactive</strong> / <a href="#deleteactive">deleteactive</a> <comment type="action" name="deleteactive"></comment></li>
+<li><strong>delteactives</strong> / <a href="#delteactives">delteactives</a> <comment type="action" name="delteactives"></comment></li>
+<li><strong>downvotecomt</strong> / <a href="#downvotecomt">downvotecomt</a> <comment type="action" name="downvotecomt"></comment></li>
+<li><strong>downvotepost</strong> / <a href="#downvotepost">downvotepost</a> <comment type="action" name="downvotepost"></comment></li>
+<li><strong>giverep</strong> / <a href="#giverep">giverep</a> <comment type="action" name="giverep"></comment></li>
+<li><strong>givereps</strong> / <a href="#givereps">givereps</a> <comment type="action" name="givereps"></comment></li>
+<li><strong>newday</strong> / <a href="#newday">newday</a> <comment type="action" name="newday"></comment></li>
+<li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> <comment type="action" name="onperiod"></comment></li>
+<li><strong>rankforum</strong> / <a href="#rankforum">rankforum</a> <comment type="action" name="rankforum"></comment></li>
+<li><strong>rankforums</strong> / <a href="#rankforums">rankforums</a> <comment type="action" name="rankforums"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>testapoints</strong> / <a href="#testapoints">testapoints</a> <comment type="action" name="testapoints"></comment></li>
+<li><strong>testsize</strong> / <a href="#testsize">testsize</a> <comment type="action" name="testsize"></comment></li>
+<li><strong>upvotecomt</strong> / <a href="#upvotecomt">upvotecomt</a> <comment type="action" name="upvotecomt"></comment></li>
+<li><strong>upvotepost</strong> / <a href="#upvotepost">upvotepost</a> <comment type="action" name="upvotepost"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>actives</strong> / <a href="#active_table">active_table</a> (i64) <comment type="table" name="actives"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
+<li><strong>forumrep</strong> / <a href="#forum_rep_table">forum_rep_table</a> (i64) <comment type="table" name="forumrep"></comment></li>
+<li><strong>operations</strong> / <a href="#operations_table">operations_table</a> (i64) <comment type="table" name="operations"></comment></li>
+<li><strong>postcomment</strong> / <a href="#postcomment_table">postcomment_table</a> (i64) <comment type="table" name="postcomment"></comment></li>
+<li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
+<li><strong>vote</strong> / <a href="#vote_table">vote_table</a> (i64) <comment type="table" name="vote"></comment></li>
+<li><strong>votepower</strong> / <a href="#vote_power_table">vote_power_table</a> (i64) <comment type="table" name="votepower"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="active_table"> active_table </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="createcomt"> createcomt </h3>
+<ul>
+<li>account / name</li>
+<li>post_id / uint64</li>
+<li>backend_id / uint64</li>
+<li>url / string</li>
+<li>body / string</li>
+</ul>
+<h3 id="createpost"> createpost </h3>
+<ul>
+<li>account / name</li>
+<li>backend_id / uint64</li>
+<li>url / string</li>
+<li>body / string</li>
+</ul>
+<h3 id="deleteactive"> deleteactive </h3>
+<ul>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="delteactives"> delteactives </h3>
+<h3 id="downvotecomt"> downvotecomt </h3>
+<ul>
+<li>account / name</li>
+<li>post_id / uint64</li>
+<li>comment_id / uint64</li>
+</ul>
+<h3 id="downvotepost"> downvotepost </h3>
+<ul>
+<li>account / name</li>
+<li>id / uint64</li>
+</ul>
+<h3 id="forum_rep_table"> forum_rep_table </h3>
+<ul>
+<li>account / name</li>
+<li>reputation / int64</li>
+<li>rank / uint64</li>
+</ul>
+<h3 id="giverep"> giverep </h3>
+<ul>
+<li>start / uint64</li>
+<li>chunksize / uint64</li>
+<li>available_points / uint64</li>
+</ul>
+<h3 id="givereps"> givereps </h3>
+<h3 id="newday"> newday </h3>
+<h3 id="onperiod"> onperiod </h3>
+<h3 id="operations_table"> operations_table </h3>
+<ul>
+<li>operation / name</li>
+<li>contract / name</li>
+<li>period / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="postcomment_table"> postcomment_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>parent_id / uint64</li>
+<li>backend_id / uint64</li>
+<li>author_name_account / name</li>
+<li>url / string</li>
+<li>body_content / string</li>
+<li>timestamp / uint64</li>
+<li>reputation / int64</li>
+</ul>
+<h3 id="rankforum"> rankforum </h3>
+<ul>
+<li>start / uint64</li>
+<li>chunksize / uint64</li>
+<li>chunk / uint64</li>
+</ul>
+<h3 id="rankforums"> rankforums </h3>
+<h3 id="reset"> reset </h3>
+<h3 id="size_table"> size_table </h3>
+<ul>
+<li>id / name</li>
+<li>size / uint64</li>
+</ul>
+<h3 id="testapoints"> testapoints </h3>
+<h3 id="testsize"> testsize </h3>
+<ul>
+<li>id / name</li>
+<li>size / uint64</li>
+</ul>
+<h3 id="upvotecomt"> upvotecomt </h3>
+<ul>
+<li>account / name</li>
+<li>post_id / uint64</li>
+<li>comment_id / uint64</li>
+</ul>
+<h3 id="upvotepost"> upvotepost </h3>
+<ul>
+<li>account / name</li>
+<li>id / uint64</li>
+</ul>
+<h3 id="user_table"> user_table </h3>
+<ul>
+<li>account / name</li>
+<li>status / name</li>
+<li>type / name</li>
+<li>nickname / string</li>
+<li>image / string</li>
+<li>story / string</li>
+<li>roles / string</li>
+<li>skills / string</li>
+<li>interests / string</li>
+<li>reputation / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="vote_power_table"> vote_power_table </h3>
+<ul>
+<li>account / name</li>
+<li>num_votes / uint32</li>
+<li>points_left / int64</li>
+<li>max_points / int64</li>
+</ul>
+<h3 id="vote_table"> vote_table </h3>
+<ul>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+<li>author / name</li>
+<li>post_id / uint64</li>
+<li>comment_id / uint64</li>
+<li>points / int64</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main"></comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

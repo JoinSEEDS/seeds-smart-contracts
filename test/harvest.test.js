@@ -549,7 +549,7 @@ describe("harvest transaction score", async assert => {
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
   console.log("More than 26 transactions. Expected tx points: "+ expectedScore)
-  for(let i = 0; i < 1; i++) {
+  for(let i = 0; i < 40; i++) {
     // 40 transactions
     // rep multiplier 2nd user: 1.5
     // vulume: 1

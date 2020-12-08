@@ -129,22 +129,61 @@ void settings::reset() {
   confwithdesc(name("voterep2.ind"), 1, "Reputation points for entering in the participants table", high_impact);
 
   // reward for individual referrer when user becomes resident  
-  confwithdesc(name("refrwd1.ind"), 750 * 10000, "Reward for individual referrer when user becomes resident", high_impact); // 1000 SEEDS
+  confwithdesc(name("refrwd1.ind"), 750 * 10000, "Reward for individual referrer when user becomes resident", high_impact);
 
   // reward for individual referrer when user becomes citizen  
-  confwithdesc(name("refrwd2.ind"), 1250 * 10000, "Reward for individual referrer when user becomes citizen", high_impact); // 1500 SEEDS
+  confwithdesc(name("refrwd2.ind"), 1250 * 10000, "Reward for individual referrer when user becomes citizen", high_impact);
 
   // reward for org when user becomes resident
-  confwithdesc(name("refrwd1.org"), 640 * 10000, "Reward for org when user becomes resident", high_impact);  // 800 SEEDS
+  confwithdesc(name("refrwd1.org"), 640 * 10000, "Reward for org when user becomes resident", high_impact);
 
   // reward for org when user becomes citizen
-  confwithdesc(name("refrwd2.org"), 960 * 10000, "Reward for org when user becomes citizen", high_impact); // 1200 SEEDS
+  confwithdesc(name("refrwd2.org"), 960 * 10000, "Reward for org when user becomes citizen", high_impact);
 
   // reward for ambassador of referring org when user becomes resident
-  confwithdesc(name("refrwd1.amb"), 150 * 10000, "Reward for ambassador of referring org when user becomes resident", high_impact);  // 200 SEEDS
+  confwithdesc(name("refrwd1.amb"), 150 * 10000, "Reward for ambassador of referring org when user becomes resident", high_impact);
 
   // reward for abmassador of referring org when user becomes citizen
-  confwithdesc(name("refrwd2.amb"), 250 * 10000, "Reward for abmassador of referring org when user becomes citizen", high_impact);  // 300 SEEDS
+  confwithdesc(name("refrwd2.amb"), 250 * 10000, "Reward for abmassador of referring org when user becomes citizen", high_impact);
+
+  // Degrading SEEDS rewards for referrals
+
+  // min reward for individual referrer when user becomes resident  
+  confwithdesc(name("minrwd1.ind"), 20 * 10000, "Minimum reward for individual referrer when user becomes resident", high_impact);
+
+  // min reward for individual referrer when user becomes citizen  
+  confwithdesc(name("minrwd2.ind"), 30 * 10000, "Minimum reward for individual referrer when user becomes citizen", high_impact);
+
+  // min reward for org when user becomes resident
+  confwithdesc(name("minrwd1.org"), 16 * 10000, "Minimum reward for org when user becomes resident", high_impact);
+
+  // min reward for org when user becomes citizen
+  confwithdesc(name("minrwd2.org"), 24 * 10000, "Minimum reward for org when user becomes citizen", high_impact);
+
+  // min reward for ambassador of referring org when user becomes resident
+  confwithdesc(name("minrwd1.amb"), 4 * 10000, "Minimum reward for ambassador of referring org when user becomes resident", high_impact);
+
+  // min reward for abmassador of referring org when user becomes citizen
+  confwithdesc(name("minrwd2.amb"), 6 * 10000, "Minimum reward for abmassador of referring org when user becomes citizen", high_impact);
+
+  // reward decay for individual referrer when user becomes resident  
+  confwithdesc(name("decrwd1.ind"), 110000 * 10000, "Reward decay for individual referrer when user becomes resident", high_impact);
+
+  // min reward decay for individual referrer when user becomes citizen  
+  confwithdesc(name("decrwd2.ind"), 75000 * 10000, "Reward decay for individual referrer when user becomes citizen", high_impact);
+
+  // reward decay for org when user becomes resident
+  confwithdesc(name("decrwd1.org"), 88000 * 10000, "Reward decay for org when user becomes resident", high_impact);
+
+  // reward decay for org when user becomes citizen
+  confwithdesc(name("decrwd2.org"), 60000 * 10000, "Reward decay for org when user becomes citizen", high_impact);
+
+  // reward decay for ambassador of referring org when user becomes resident
+  confwithdesc(name("decrwd1.amb"), 22000 * 10000, "Reward decay for ambassador of referring org when user becomes resident", high_impact);
+
+  // reward decay for abmassador of referring org when user becomes citizen
+  confwithdesc(name("decrwd2.amb"), 15000 * 10000, "Reward decay for abmassador of referring org when user becomes citizen", high_impact);
+
 
   // Maximum number of points a user can gain from others vouching for them
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);
