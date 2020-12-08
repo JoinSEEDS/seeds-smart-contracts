@@ -50,6 +50,15 @@ void proposals::reset() {
     sitr = sizes.erase(sitr);
   }
 
+  name scopes[] = { get_self(), alliance_type };
+  for (int i = 0; i < 2; i++) {
+    delegate_trust_tables deltrusts(get_self(), (scopes[i]).value);
+    auto ditr = deltrusts.begin();
+    while (ditr != deltrusts.end()) {
+      ditr = deltrusts.erase(ditr);
+    }
+  }
+
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
@@ -795,8 +804,7 @@ bool proposals::revert_vote (name voter, uint64_t id) {
   return false;
 }
 
-void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new) {
-  require_auth(voter);
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_mimic) {
   check_citizen(voter);
 
   auto pitr = props.find(id);
@@ -835,7 +843,8 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   } else {
     scope = get_self();
   }
-  voice_change(voter, amount, true, scope);
+
+  double percenetage_used = voice_change(voter, amount, true, scope);
   
   votes.emplace(_self, [&](auto& vote) {
     vote.account = voter;
@@ -848,15 +857,22 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     vote.proposal_id = id;
   });
 
+  if (!is_mimic) {
+    check(!is_trust_delegated(voter, scope), "voice is delegated, user can not vote by itself");
+  }
+
+  send_mimic_delegatee_vote(voter, scope, id, percenetage_used, option);
+
   if (is_new) {
     auto rep = config_get(name("voterep2.ind"));
+    double rep_multiplier = is_mimic ? config_get(name("votedel.mul")) / 100.0 : 1.0;
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
       // add reputation for entering in the table
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, rep)
+        std::make_tuple(voter, uint64_t(rep * rep_multiplier))
       ).send();
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
@@ -892,16 +908,19 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, trust, true);
+  require_auth(voter);
+  vote_aux(voter, id, amount, trust, true, false);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
+  require_auth(voter);
   bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted);
+  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
-  vote_aux(voter, id, (uint64_t)0, abstain, true);
+  require_auth(voter);
+  vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
 void proposals::addvoice(name user, uint64_t amount) {
@@ -909,7 +928,9 @@ void proposals::addvoice(name user, uint64_t amount) {
   voice_change(user, amount, false, ""_n);
 }
 
-void proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
+double proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
+  double percentage_used = 0.0;
+
   if (scope == ""_n) {
     voice_tables voice_alliance(get_self(), alliance_type.value);
 
@@ -929,6 +950,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
     } else if (vitr != voice.end() && vaitr != voice_alliance.end()) {
       if (reduce) {
         check(amount <= vitr -> balance && amount <= vaitr -> balance, "voice balance exceeded");
+        percentage_used = amount / double(vitr -> balance);
       }
       voice.modify(vitr, _self, [&](auto& voice) {
         if (reduce) {
@@ -946,7 +968,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
       });
     }
   } else {
-    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    check_voice_scope(scope);
     
     voice_tables voices(get_self(), scope.value);
     auto vitr = voices.find(user.value);
@@ -954,6 +976,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
 
     if (reduce) {
       check(amount <= vitr -> balance, "voice balance exceeded");
+      percentage_used = amount / double(vitr -> balance);
     }
     voices.modify(vitr, _self, [&](auto & voice){
       if (reduce) {
@@ -963,6 +986,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
       }
     });
   }
+  return percentage_used;
 }
 
 void proposals::set_voice (name user, uint64_t amount, name scope) {
@@ -996,7 +1020,7 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
     }
 
   } else {
-    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    check_voice_scope(scope);
     
     voice_tables voices(get_self(), scope.value);
     auto vitr = voices.find(user.value);
@@ -1270,4 +1294,132 @@ ACTION proposals::initnumprop() {
       item.size = total_proposals;
     });
   }
+}
+
+void proposals::check_voice_scope (name scope) {
+  check(scope == _self || scope == alliance_type, "invalid scope for voice");
+}
+
+bool proposals::is_trust_delegated (name account, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(account.value);
+  return ditr != deltrusts.end();
+}
+
+ACTION proposals::delgatetrust (name delegator, name delegatee, name scope) {
+
+  require_auth(delegator);
+  check_voice_scope(scope);
+
+  voice_tables voice(get_self(), scope.value);
+  auto vitr = voice.find(delegator.value);
+  check(vitr != voice.end(), "delegatee does not have voice");
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(delegator.value);
+
+  if (ditr != deltrusts.end()) {
+    deltrusts.modify(ditr, _self, [&](auto & item){
+      item.delegatee = delegatee;
+      item.weight = 1.0;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    deltrusts.emplace(_self, [&](auto & item){
+      item.delegator = delegator;
+      item.delegatee = delegatee;
+      item.weight = 1.0;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
+
+}
+
+void proposals::send_mimic_delegatee_vote (name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option) {
+
+  uint64_t batch_size = config_get("batchsize"_n);
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+
+  auto ditr = deltrusts_by_delegatee.find(delegatee.value);
+
+  if (ditr != deltrusts_by_delegatee.end()) {
+    action mimic_action(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicvote"_n,
+      std::make_tuple(delegatee, scope, proposal_id, percentage_used, option, batch_size)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(mimic_action);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::mimicvote (name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+
+  check_voice_scope(scope);
+  voice_tables voices(get_self(), scope.value);
+
+  auto ditr = deltrusts_by_delegatee.find(delegatee.value);
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+    auto vitr = voices.find(voter.value);
+
+    if (option == trust) {
+      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, trust, true, true);
+    } else if (option == distrust) {
+      bool vote_reverted = revert_vote(voter, proposal_id);
+      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, distrust, !vote_reverted, true);
+    } else if (option == abstain) {
+      vote_aux(voter, proposal_id, uint64_t(0), abstain, true, true);
+    }
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicvote"_n,
+      std::make_tuple(delegatee, scope, proposal_id, percentage_used, option, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::cncldeltrst (name delegator, name scope) {
+  check_voice_scope(scope);
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(delegator.value);
+
+  check(ditr != deltrusts.end(), "delegator not found");
+
+  if (!has_auth(ditr -> delegatee)) {
+    require_auth(delegator);
+  } else {
+    require_auth(ditr -> delegatee);
+  }
+
+  deltrusts.erase(ditr);
 }
