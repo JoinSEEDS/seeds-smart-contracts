@@ -804,7 +804,7 @@ bool proposals::revert_vote (name voter, uint64_t id) {
   return false;
 }
 
-void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_mimic) {
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
   auto pitr = props.find(id);
@@ -857,7 +857,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     vote.proposal_id = id;
   });
 
-  if (!is_mimic) {
+  if (!is_delegated) {
     check(!is_trust_delegated(voter, scope), "voice is delegated, user can not vote by itself");
   }
 
@@ -865,7 +865,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
 
   if (is_new) {
     auto rep = config_get(name("voterep2.ind"));
-    double rep_multiplier = is_mimic ? config_get(name("votedel.mul")) / 100.0 : 1.0;
+    double rep_multiplier = is_delegated ? config_get(name("votedel.mul")) / 100.0 : 1.0;
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
       // add reputation for entering in the table
@@ -1306,7 +1306,7 @@ bool proposals::is_trust_delegated (name account, name scope) {
   return ditr != deltrusts.end();
 }
 
-ACTION proposals::delgatetrust (name delegator, name delegatee, name scope) {
+ACTION proposals::delegate (name delegator, name delegatee, name scope) {
 
   require_auth(delegator);
   check_voice_scope(scope);
@@ -1340,16 +1340,17 @@ void proposals::send_mimic_delegatee_vote (name delegatee, name scope, uint64_t 
   uint64_t batch_size = config_get("batchsize"_n);
 
   delegate_trust_tables deltrusts(get_self(), scope.value);
-  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
 
-  auto ditr = deltrusts_by_delegatee.find(delegatee.value);
+  uint128_t id = uint128_t(delegatee.value) << 64;
+  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(id);
 
-  if (ditr != deltrusts_by_delegatee.end()) {
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
     action mimic_action(
       permission_level{get_self(), "active"_n},
       get_self(),
       "mimicvote"_n,
-      std::make_tuple(delegatee, scope, proposal_id, percentage_used, option, batch_size)
+      std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, batch_size)
     );
 
     transaction tx;
@@ -1360,20 +1361,22 @@ void proposals::send_mimic_delegatee_vote (name delegatee, name scope, uint64_t 
 
 }
 
-ACTION proposals::mimicvote (name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize) {
+ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize) {
 
   require_auth(get_self());
 
   delegate_trust_tables deltrusts(get_self(), scope.value);
-  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
 
   check_voice_scope(scope);
   voice_tables voices(get_self(), scope.value);
 
-  auto ditr = deltrusts_by_delegatee.find(delegatee.value);
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator.value;
+
+  auto ditr = deltrusts_by_delegatee_delegator.find(id);
   uint64_t count = 0;
 
-  while (ditr != deltrusts_by_delegatee.end() && ditr -> delegatee == delegatee && count < chunksize) {
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
 
     name voter = ditr -> delegator;
     auto vitr = voices.find(voter.value);
@@ -1391,12 +1394,12 @@ ACTION proposals::mimicvote (name delegatee, name scope, uint64_t proposal_id, d
     count++;
   }
 
-  if (ditr != deltrusts_by_delegatee.end() && ditr -> delegatee == delegatee) {
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "mimicvote"_n,
-      std::make_tuple(delegatee, scope, proposal_id, percentage_used, option, chunksize)
+      std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, chunksize)
     );
 
     transaction tx;
@@ -1407,7 +1410,7 @@ ACTION proposals::mimicvote (name delegatee, name scope, uint64_t proposal_id, d
 
 }
 
-ACTION proposals::cncldeltrst (name delegator, name scope) {
+ACTION proposals::undelegate (name delegator, name scope) {
   check_voice_scope(scope);
 
   delegate_trust_tables deltrusts(get_self(), scope.value);
