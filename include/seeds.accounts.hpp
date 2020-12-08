@@ -7,7 +7,6 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
-#include <tables/price_history_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -24,12 +23,14 @@ CONTRACT accounts : public contract {
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
-          pricehistory(contracts::exchange, contracts::exchange.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
           accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value),
           totals(contracts::history, contracts::history.value)
+          residents(contracts::history, contracts::history.value),
+          citizens(contracts::history, contracts::history.value),
+          history_sizes(contracts::history, contracts::history.value)
           {}
 
       ACTION reset();
@@ -93,12 +94,24 @@ CONTRACT accounts : public contract {
 
       const name individual_seeds_reward_resident = "refrwd1.ind"_n;
       const name individual_seeds_reward_citizen = "refrwd2.ind"_n;
+      const name min_individual_seeds_reward_resident = "minrwd1.ind"_n;
+      const name min_individual_seeds_reward_citizen = "minrwd2.ind"_n;
+      const name dec_individual_seeds_reward_resident = "decrwd1.ind"_n;
+      const name dec_individual_seeds_reward_citizen = "decrwd2.ind"_n;
 
       const name org_seeds_reward_resident = "refrwd1.org"_n;
       const name org_seeds_reward_citizen = "refrwd2.org"_n;
+      const name min_org_seeds_reward_resident = "minrwd1.org"_n;
+      const name min_org_seeds_reward_citizen = "minrwd2.org"_n;
+      const name dec_org_seeds_reward_resident = "decrwd1.org"_n;
+      const name dec_org_seeds_reward_citizen = "decrwd2.org"_n;
 
       const name ambassador_seeds_reward_resident = "refrwd1.amb"_n;
       const name ambassador_seeds_reward_citizen = "refrwd2.amb"_n;
+      const name min_ambassador_seeds_reward_resident = "minrwd1.amb"_n;
+      const name min_ambassador_seeds_reward_citizen = "minrwd2.amb"_n;
+      const name dec_ambassador_seeds_reward_resident = "decrwd1.amb"_n;
+      const name dec_ambassador_seeds_reward_citizen = "decrwd2.amb"_n;
 
       const name max_vouch_points = "maxvouch"_n;
 
@@ -147,10 +160,6 @@ CONTRACT accounts : public contract {
 
       DEFINE_CBS_TABLE_MULTI_INDEX
 
-      DEFINE_PRICE_HISTORY_TABLE
-
-      DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
-
       TABLE ref_table {
         name referrer;
         name invited;
@@ -182,6 +191,33 @@ CONTRACT accounts : public contract {
     DEFINE_CONFIG_TABLE
 
     DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+      // Borrowed from histry.seeds contract
+      TABLE citizen_table {
+        uint64_t id;
+        name account;
+        uint64_t timestamp;
+        
+        uint64_t primary_key()const { return id; }
+        uint64_t by_account()const { return account.value; }
+      };
+      TABLE resident_table {
+        uint64_t id;
+        name account;
+        uint64_t timestamp;
+        
+        uint64_t primary_key()const { return id; }
+        uint64_t by_account()const { return account.value; }
+      };
+      typedef eosio::multi_index<"citizens"_n, citizen_table,
+        indexed_by<"byaccount"_n,
+        const_mem_fun<citizen_table, uint64_t, &citizen_table::by_account>>
+      > citizen_tables;
+      typedef eosio::multi_index<"residents"_n, resident_table, 
+        indexed_by<"byaccount"_n,
+        const_mem_fun<resident_table, uint64_t, &resident_table::by_account>>
+      > resident_tables;
+      // END from histry.seeds contract
 
     typedef eosio::multi_index<"refs"_n, ref_table,
       indexed_by<"byreferrer"_n,const_mem_fun<ref_table, uint64_t, &ref_table::by_referrer>>
@@ -220,9 +256,11 @@ CONTRACT accounts : public contract {
     rep_tables rep;
     size_tables sizes;
 
-    config_tables config;
+    size_tables history_sizes;
+    resident_tables residents;
+    citizen_tables citizens;
 
-    price_history_tables pricehistory;
+    config_tables config;
 
     // From history contract
     TABLE totals_table {

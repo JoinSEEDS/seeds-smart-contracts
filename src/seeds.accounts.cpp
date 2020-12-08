@@ -4,6 +4,7 @@
 #include <eosio/symbol.hpp>
 #include <eosio/transaction.hpp>
 #include <harvest_table.hpp>
+#include <math.h>
 
 void accounts::reset() {
   require_auth(_self);
@@ -241,6 +242,14 @@ name accounts::find_referrer(name account) {
   return not_found;
 }
 
+uint64_t calc_decaying_rewards(int num, int min, int max, int decay) {
+  auto res = round(min + (max-min) * exp(-1*(num+1)/double(decay)));
+  // check(false, ("DEBUG: calc rewards res="+std::to_string(res)+ ", num="+std::to_string(num)+
+  //  ", min="+std::to_string(min)+", max= "+std::to_string(max)+", decay= "+std::to_string(decay)));
+
+  return uint64_t(res);
+}
+
 void accounts::refreward(name account, name new_status) {
   check_user(account);
 
@@ -276,18 +285,35 @@ void accounts::refreward(name account, name new_status) {
   if (uitr != users.end()) {
     auto user_type = uitr->type;
 
+    // gets number of residents or citizens from the History size table
+    auto size_id = is_citizen ? "citizens.sz"_n : "residents.sz"_n;
+    auto sitr = history_sizes.find(size_id.value);
+    auto num_users = (sitr == sizes.end()) ? 0 : sitr->size;
+
     if (user_type == "organisation"_n) 
     {
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
-      auto org_seeds_reward = config_get(org_reward_param);
-      asset org_quantity(org_seeds_reward, seeds_symbol);
+      name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
+      name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
+      auto max_org = config_get(org_reward_param);
+      auto min_org = config_get(min_org_reward_param);
+      auto dec_org = config_get(dec_org_reward_param);
 
-      name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
-      auto amb_seeds_reward = config_get(amb_reward_param);
-      asset amb_quantity(amb_seeds_reward, seeds_symbol);
+      auto org_seeds_reward = calc_decaying_rewards(num_users, min_org, max_org, dec_org);
+      asset org_quantity(org_seeds_reward, seeds_symbol);
 
       // send reward to org
       send_reward(referrer, org_quantity);
+
+      name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
+      name min_amb_reward_param = is_citizen ? min_ambassador_seeds_reward_citizen : min_ambassador_seeds_reward_resident;
+      name dec_amb_reward_param = is_citizen ? dec_ambassador_seeds_reward_citizen : dec_ambassador_seeds_reward_resident;
+      auto max_amb = config_get(amb_reward_param);
+      auto min_amb = config_get(min_amb_reward_param);
+      auto dec_amb = config_get(dec_amb_reward_param);
+
+      auto amb_seeds_reward = calc_decaying_rewards(num_users, min_amb, max_amb, dec_amb);
+      asset amb_quantity(amb_seeds_reward, seeds_symbol);
 
       // send reward to ambassador if we have one
       name org_owner = find_referrer(referrer);
@@ -314,7 +340,13 @@ void accounts::refreward(name account, name new_status) {
       auto rep_points = config_get(reputation_reward_param);
 
       name seed_reward_param = is_citizen ? individual_seeds_reward_citizen : individual_seeds_reward_resident;
-      auto seeds_reward = config_get(seed_reward_param);
+      name min_seed_reward_param = is_citizen ? min_individual_seeds_reward_citizen : min_individual_seeds_reward_resident;
+      name dec_seed_reward_param = is_citizen ? dec_individual_seeds_reward_citizen : dec_individual_seeds_reward_resident;
+      auto max = config_get(seed_reward_param);
+      auto min = config_get(min_seed_reward_param);
+      auto dec = config_get(dec_seed_reward_param);
+
+      auto seeds_reward = calc_decaying_rewards(num_users, min, max, dec);
       asset quantity(seeds_reward, seeds_symbol);
 
       send_addrep(referrer, rep_points);
@@ -437,14 +469,7 @@ void accounts::send_reward(name beneficiary, asset quantity)
     return;
   }
 
-  // Checks the current SEEDS price from tlosto.seeds table
-  auto lastprice = pricehistory.rbegin()->seeds_usd;
-  auto initialprice = pricehistory.begin()->seeds_usd;
-  float rate = (float)lastprice.amount / (float) initialprice.amount;
-  asset adjusted_qty(quantity.amount*rate, symbol("SEEDS", 4));
-  // check(false, ("DEBUG: lastprice="+lastprice.to_string()+", rate="+std::to_string(rate)+", qty="+quantity.to_string()+", adj="+adjusted_qty.to_string()).c_str());
-
-  send_to_escrow(bankaccts::referrals, beneficiary, adjusted_qty, "referral reward");
+  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
 }
 
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
