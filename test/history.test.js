@@ -108,7 +108,7 @@ describe('make a transaction entry', async assert => {
       volume: 10 * 10000,
       qualifying_volume: 10 * 10000,
       from_points: 10,
-      to_points: 3
+      to_points: 0
     }
   })
 
@@ -370,7 +370,7 @@ describe('individual transactions', async assert => {
         volume: 4000000,
         qualifying_volume: 4000000,
         from_points: 396,
-        to_points: 9
+        to_points: 0
       },
       {
         id: 3,
@@ -379,7 +379,7 @@ describe('individual transactions', async assert => {
         volume: 7500000,
         qualifying_volume: 7500000,
         from_points: 16,
-        to_points: 16
+        to_points: 0
       },
       {
         id: 4,
@@ -388,7 +388,7 @@ describe('individual transactions', async assert => {
         volume: 2000000,
         qualifying_volume: 2000000,
         from_points: 5,
-        to_points: 5
+        to_points: 0
       },
       {
         id: 5,
@@ -397,7 +397,7 @@ describe('individual transactions', async assert => {
         volume: 2000000,
         qualifying_volume: 2000000,
         from_points: 5,
-        to_points: 5
+        to_points: 0
       },
       {
         id: 6,
@@ -406,7 +406,7 @@ describe('individual transactions', async assert => {
         volume: 2550000,
         qualifying_volume: 2550000,
         from_points: 510,
-        to_points: 6
+        to_points: 0
       },
       {
         id: 7,
@@ -415,7 +415,7 @@ describe('individual transactions', async assert => {
         volume: 3000000,
         qualifying_volume: 3000000,
         from_points: 600,
-        to_points: 7
+        to_points: 0
       },
       {
         id: 8,
@@ -424,7 +424,7 @@ describe('individual transactions', async assert => {
         volume: 100000,
         qualifying_volume: 100000,
         from_points: 1,
-        to_points: 20
+        to_points: 0
       }
     ]
   })
@@ -643,7 +643,7 @@ describe('org transaction entry', async assert => {
         volume: 20000,
         qualifying_volume: 20000,
         from_points: 1,
-        to_points: 3
+        to_points: 0
       },
       {
         id: 4,
@@ -652,7 +652,7 @@ describe('org transaction entry', async assert => {
         volume: 30000,
         qualifying_volume: 30000,
         from_points: 1,
-        to_points: 4
+        to_points: 0
       },
       {
         id: 7,
@@ -661,7 +661,7 @@ describe('org transaction entry', async assert => {
         volume: 10000,
         qualifying_volume: 10000,
         from_points: 1,
-        to_points: 2
+        to_points: 0
       },
       {
         id: 8,
@@ -670,7 +670,7 @@ describe('org transaction entry', async assert => {
         volume: 50000,
         qualifying_volume: 50000,
         from_points: 2,
-        to_points: 7
+        to_points: 0
       },
       {
         id: 9,

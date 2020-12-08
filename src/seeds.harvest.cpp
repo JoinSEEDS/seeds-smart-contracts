@@ -940,6 +940,8 @@ void harvest::calcmintrate () {
 
   double mint_rate = delta / 708.0;
 
+  if (mint_rate < 0) { mint_rate = 0; }
+
   auto mitr = mintrate.begin();
   if (mitr != mintrate.end()) {
     mintrate.modify(mitr, _self, [&](auto & item){

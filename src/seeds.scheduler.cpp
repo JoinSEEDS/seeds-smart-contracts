@@ -70,7 +70,6 @@ ACTION scheduler::reset() {
         name("org.clndaus"),
         name("org.rankregn"),
         name("org.rankcbs"),
-        name("org.scortrxs"),
 
         name("hrvst.orgtxs"),
 
@@ -79,7 +78,7 @@ ACTION scheduler::reset() {
         name("forum.rank"),
         name("forum.giverp"),
 
-        name("hrvst.mqev"),
+        name("hrvst.qevs"),
         name("hrvst.mintr"),
     };
     
@@ -100,7 +99,6 @@ ACTION scheduler::reset() {
         name("cleandaus"),
         name("rankregens"),
         name("rankcbsorgs"),
-        name("scoretrxs"),
 
         name("rankorgtxs"),
 
@@ -127,7 +125,6 @@ ACTION scheduler::reset() {
         contracts::harvest,
         contracts::harvest,
 
-        contracts::organization,
         contracts::organization,
         contracts::organization,
         contracts::organization,
@@ -160,7 +157,6 @@ ACTION scheduler::reset() {
         utils::seconds_per_day / 2,
         utils::seconds_per_day,
         utils::seconds_per_day,
-        utils::seconds_per_day,
 
         utils::seconds_per_day,
 
@@ -189,7 +185,6 @@ ACTION scheduler::reset() {
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
 
-        now,
         now,
         now,
         now,
