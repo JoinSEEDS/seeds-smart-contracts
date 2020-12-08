@@ -3,6 +3,7 @@
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
 #include <tables/config_table.hpp>
+#include <tables/size_table.hpp>
 
 #include <contracts.hpp>
 #include <tables/user_table.hpp>
@@ -19,6 +20,7 @@ CONTRACT history : public contract {
         history(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
           users(contracts::accounts, contracts::accounts.value),
+          sizes(receiver, receiver.value),
           residents(receiver, receiver.value),
           citizens(receiver, receiver.value),
           reputables(receiver, receiver.value),
@@ -48,11 +50,16 @@ CONTRACT history : public contract {
 
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
 
+        ACTION migrate();
+
 
     private:
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
       uint64_t config_get(name key);
+      void size_change(name id, int delta);
+      void size_set(name id, uint64_t newsize);
+      uint64_t get_size(name id);
       void fire_orgtx_calc(name organization, uint128_t start_val, uint64_t chunksize, uint64_t running_total);
       bool clean_old_tx(name org, uint64_t chunksize);
       void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
@@ -239,12 +246,17 @@ CONTRACT history : public contract {
       
       DEFINE_USER_TABLE_MULTI_INDEX
 
+      DEFINE_SIZE_TABLE
+
+      DEFINE_SIZE_TABLE_MULTI_INDEX
+
       user_tables users;
       resident_tables residents;
       citizen_tables citizens;
       reputable_tables reputables;
       regenerative_tables regens;
       totals_tables totals;
+      size_tables sizes;
 };
 
 EOSIO_DISPATCH(history, 
@@ -255,4 +267,5 @@ EOSIO_DISPATCH(history,
   (numtrx)
   (deldailytrx)(savepoints)
   (testtotalqev)
+  (migrate)
 );

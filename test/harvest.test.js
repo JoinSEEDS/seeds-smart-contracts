@@ -889,6 +889,7 @@ describe('Mint Rate', async assert => {
     table: 'mintrate',
     json: true,
   })
+  console.log(mintRateTable)
 
   delete mintRateTable.rows[0].timestamp
 

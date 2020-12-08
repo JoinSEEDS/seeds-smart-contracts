@@ -1,0 +1,215 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
+  <div id="target"><h1>Smartcontract documentation for history</h1>
+<p><comment type="main"></comment></p>
+<h2>Actions</h2>
+<ul>
+<li><strong>addcitizen</strong> / <a href="#addcitizen">addcitizen</a> <comment type="action" name="addcitizen"></comment></li>
+<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen"></comment></li>
+<li><strong>addreputable</strong> / <a href="#addreputable">addreputable</a> <comment type="action" name="addreputable"></comment></li>
+<li><strong>addresident</strong> / <a href="#addresident">addresident</a> <comment type="action" name="addresident"></comment></li>
+<li><strong>historyentry</strong> / <a href="#historyentry">historyentry</a> <comment type="action" name="historyentry"></comment></li>
+<li><strong>numtrx</strong> / <a href="#numtrx">numtrx</a> <comment type="action" name="numtrx"></comment></li>
+<li><strong>orgtxpoints</strong> / <a href="#orgtxpoints">orgtxpoints</a> <comment type="action" name="orgtxpoints"></comment></li>
+<li><strong>orgtxpt</strong> / <a href="#orgtxpt">orgtxpt</a> <comment type="action" name="orgtxpt"></comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>trxentry</strong> / <a href="#trxentry">trxentry</a> <comment type="action" name="trxentry"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>citizens</strong> / <a href="#citizen_table">citizen_table</a> (i64) <comment type="table" name="citizens"></comment></li>
+<li><strong>history</strong> / <a href="#history_table">history_table</a> (i64) <comment type="table" name="history"></comment></li>
+<li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) <comment type="table" name="orgtx"></comment></li>
+<li><strong>regens</strong> / <a href="#regenerative_table">regenerative_table</a> (i64) <comment type="table" name="regens"></comment></li>
+<li><strong>reputables</strong> / <a href="#reputable_table">reputable_table</a> (i64) <comment type="table" name="reputables"></comment></li>
+<li><strong>residents</strong> / <a href="#resident_table">resident_table</a> (i64) <comment type="table" name="residents"></comment></li>
+<li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) <comment type="table" name="transactions"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="addcitizen"> addcitizen </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="addregen"> addregen </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="addreputable"> addreputable </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="addresident"> addresident </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="citizen_table"> citizen_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="history_table"> history_table </h3>
+<ul>
+<li>history_id / uint64</li>
+<li>account / name</li>
+<li>action / string</li>
+<li>amount / uint64</li>
+<li>meta / string</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="historyentry"> historyentry </h3>
+<ul>
+<li>account / name</li>
+<li>action / string</li>
+<li>amount / uint64</li>
+<li>meta / string</li>
+</ul>
+<h3 id="numtrx"> numtrx </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="org_tx_table"> org_tx_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>other / name</li>
+<li>in / bool</li>
+<li>quantity / asset</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="orgtxpoints"> orgtxpoints </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="orgtxpt"> orgtxpt </h3>
+<ul>
+<li>organization / name</li>
+<li>start_val / uint128</li>
+<li>chunksize / uint64</li>
+<li>running_total / uint64</li>
+</ul>
+<h3 id="regenerative_table"> regenerative_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>organization / name</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="reputable_table"> reputable_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>organization / name</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<ul>
+<li>account / name</li>
+</ul>
+<h3 id="resident_table"> resident_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="transaction_table"> transaction_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="trxentry"> trxentry </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+</ul>
+<h3 id="user_table"> user_table </h3>
+<ul>
+<li>account / name</li>
+<li>status / name</li>
+<li>type / name</li>
+<li>nickname / string</li>
+<li>image / string</li>
+<li>story / string</li>
+<li>roles / string</li>
+<li>skills / string</li>
+<li>interests / string</li>
+<li>reputation / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main"></comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>

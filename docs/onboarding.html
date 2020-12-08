@@ -1,0 +1,195 @@
+<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.6/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.28.1/commonmark.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+<script>
+$(function() {
+  var reader = new commonmark.Parser();
+  var writer = new commonmark.HtmlRenderer();
+
+  $('#target comment').each(function(i, elem) {
+    var parsed = reader.parse($(this).text()); 
+    var result = writer.render(parsed);
+    $(this).html(result);
+  });
+ });
+</script>
+
+</head><body>
+  <div id="target"><h1>Smartcontract documentation for onboarding</h1>
+<p><comment type="main">
+  The onboarding contract is responsible for managing the invitations for ambassadors, bioregions and organizations.
+
+  Here&apos;s the process for ambassadors invitations:
+
+  - to initiate an invitation, push action `invite` with paramenters `[sponsor, transfer_quantity, sow_quantity, invite_hash]`
+  - the receiving user then pushes action `accept` with parameters `[account, invite_secret=invite_hash, publicKey]`
+
+</comment></p>
+<h2>Actions</h2>
+<ul>
+<li><strong>accept</strong> / <a href="#accept">accept</a> <comment type="action" name="accept">Accepts an invitation invite using already existing account or creating new account, based on provided `invite_secret`.</comment></li>
+<li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> <comment type="action" name="acceptexist">Accepts an invitation using existing account.</comment></li>
+<li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> <comment type="action" name="acceptnew">Accepts an invitation creating a new account.</comment></li>
+<li><strong>cancel</strong> / <a href="#cancel">cancel</a> <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
+<li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> <comment type="action" name="cleanup">Cleanup very old invites</comment></li>
+<li><strong>createbio</strong> / <a href="#createbio">createbio</a> <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
+<li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit">Deposit funds using another account as sponsor account</comment></li>
+<li><strong>invite</strong> / <a href="#invite">invite</a> <comment type="action" name="invite">Creates an invitation, specifying the `sponsor`, `transfer_quantity`, `sow_quantity`(planted amount) and the unique `invite_hash`</comment></li>
+<li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> <comment type="action" name="invitefor">Invite in the name of the referer account.</comment></li>
+<li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
+<li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+</ul>
+<h2>Events</h2>
+<h2>Tables</h2>
+<ul>
+<li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) <comment type="table" name="invites">Table holding the invitations.</comment></li>
+<li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) <comment type="table" name="referrers">Table with the referrer for each invitation.</comment></li>
+<li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) <comment type="table" name="sponsors">Table for storing the deposit sponsors and the balance they commited.</comment></li>
+</ul>
+<h2>ABI Extensions</h2>
+<h2>Structs</h2>
+<h3 id="accept"> accept </h3>
+<ul>
+<li>account / name</li>
+<li>invite_secret / checksum256</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="acceptexist"> acceptexist </h3>
+<ul>
+<li>account / name</li>
+<li>invite_secret / checksum256</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="acceptnew"> acceptnew </h3>
+<ul>
+<li>account / name</li>
+<li>invite_secret / checksum256</li>
+<li>publicKey / string</li>
+<li>fullname / string</li>
+</ul>
+<h3 id="cancel"> cancel </h3>
+<ul>
+<li>sponsor / name</li>
+<li>invite_hash / checksum256</li>
+</ul>
+<h3 id="cleanup"> cleanup </h3>
+<ul>
+<li>start_id / uint64</li>
+<li>max_id / uint64</li>
+<li>batch_size / uint64</li>
+</ul>
+<h3 id="createbio"> createbio </h3>
+<ul>
+<li>sponsor / name</li>
+<li>bioregion / name</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="deposit"> deposit </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="invite"> invite </h3>
+<ul>
+<li>sponsor / name</li>
+<li>transfer_quantity / asset</li>
+<li>sow_quantity / asset</li>
+<li>invite_hash / checksum256</li>
+</ul>
+<h3 id="invite_table"> invite_table </h3>
+<ul>
+<li>invite_id / uint64</li>
+<li>transfer_quantity / asset</li>
+<li>sow_quantity / asset</li>
+<li>sponsor / name</li>
+<li>account / name</li>
+<li>invite_hash / checksum256</li>
+<li>invite_secret / checksum256</li>
+</ul>
+<h3 id="invitefor"> invitefor </h3>
+<ul>
+<li>sponsor / name</li>
+<li>referrer / name</li>
+<li>transfer_quantity / asset</li>
+<li>sow_quantity / asset</li>
+<li>invite_hash / checksum256</li>
+</ul>
+<h3 id="onboardorg"> onboardorg </h3>
+<ul>
+<li>sponsor / name</li>
+<li>account / name</li>
+<li>fullname / string</li>
+<li>publicKey / string</li>
+</ul>
+<h3 id="referrer_table"> referrer_table </h3>
+<ul>
+<li>invite_id / uint64</li>
+<li>referrer / name</li>
+</ul>
+<h3 id="reset"> reset </h3>
+<h3 id="sponsor_table"> sponsor_table </h3>
+<ul>
+<li>account / name</li>
+<li>balance / asset</li>
+</ul>
+</div>
+  <script id="template" type="x-tmpl-handlebars">
+# Smartcontract documentation for {{ file }}
+
+<comment type="main"></comment>
+
+{{#if types}}
+## Types
+{{/if}}
+{{#each types}}
+  {{ name }}
+{{/each}}
+
+## Actions
+
+{{#each actions}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="action" name="{{name}}"></comment>
+{{/each}}
+
+## Events
+
+{{#each events}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) <comment type="event" name="{{name}}"></comment>
+{{/each}}
+
+## Tables
+
+{{#each tables}}
+  - **{{ name }}** / [{{ type }}](#{{ type }}) ({{ index_type }}) <comment type="table" name="{{name}}"></comment>
+{{/each}}
+
+## ABI Extensions
+
+{{#each abi_extensions}}
+  - {{ name }}
+{{/each}}
+
+## Structs
+
+{{#each structs}}
+<h3 id={{ name }}> {{ name }} {{#if base}}( {{base}} ){{/if}}</h3>
+  
+  {{#each fields}}
+  - {{ name }} / {{ type }}
+  {{/each}}
+{{/each}}
+
+  </script>
+
+</body></html>
