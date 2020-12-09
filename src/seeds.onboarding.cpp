@@ -60,6 +60,14 @@ void onboarding::transfer_seeds(name account, asset quantity, string memo) {
   ).send();
 }
 
+void onboarding::make_guardian(name protectable_account, name guardian_account) {
+  action(
+    permission_level{_self, "active"_n},
+    contracts::guardians, "protectby"_n,
+    make_tuple(protectable_account, guardian_account)
+  ).send();
+}
+
 void onboarding::plant_seeds(asset quantity) {
   string memo("");
 
@@ -139,6 +147,10 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   plant_seeds(sow_quantity);
   sow_seeds(account, sow_quantity);
 
+  auto gitr = guardinvites.find(invite_hash);
+  if (gitr != guards.end()) {
+    make_guardian(gitr->sponsor, account);
+  }
 }
 
 ACTION onboarding::onboardorg(name sponsor, name account, string fullname, string publicKey) {
@@ -225,15 +237,19 @@ void onboarding::deposit(name from, name to, asset quantity, string memo) {
   }
 }
 
+void onboarding::inviteguard(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash, true);
+}
+
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
-  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash);
+  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash, false);
 }
 
 void onboarding::invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
-  _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash);
+  _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash, false);
 }
 
-void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, bool makeguardian) {
   require_auth(sponsor);
 
   asset total_quantity = asset(transfer_quantity.amount + sow_quantity.amount, seeds_symbol);
@@ -269,6 +285,13 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
     referrers.emplace(get_self(), [&](auto& item) {
       item.invite_id = key;
       item.referrer = referrer;
+    });
+  }
+
+  if (makeguardian == true) {
+    guardinvites.emplace(get_self(), [&](auto& item) {
+      item.invite_hash = invite_hash;
+      item.sponsor = sponsor;
     });
   }
 }

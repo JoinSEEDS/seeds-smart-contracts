@@ -4,377 +4,196 @@ void guardians::reset()
 {
     require_auth(get_self());
 
-    auto gitr = guards.begin();
-    while (gitr != guards.end())
-    {
-        gitr = guards.erase(gitr);
-    }
+    auto pitr = protectables.begin();
+    while (pitr != pitr->end()) {
+        clear_guardians(protectable_account);
+        clear_approvals(protectable_account);
 
-    auto ritr = recovers.begin();
-    while (ritr != recovers.end())
-    {
-        ritr = recovers.erase(ritr);
+        pitr = protectables.erase(pitr);
     }
 }
 
-void guardians::setup(name protectable_account, checksum256 invite_hash) {
+void guardians::setup(name protectable_account, uint64_t claim_delay_sec, checksum256 guardian_invite_hash) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
+    auto pitr = protectables.find(protectable_account.value);
 
-    if (aitr == accts.end()) {
-        accts.emplace(protectable_account, get_self(), [&](auto &item) {
+    if (pitr == protectables.end()) {
+        protectables.emplace(get_self(), [&](auto &item) {
             item.account = protectable_account;
-            item.status = "setup"_n;
-            item.invite_hash = invite_hash;
+            item.current_status = status::setup;
+            item.claim_delay_sec = claim_delay_sec;
+            item.guardian_invite_hash = guardian_invite_hash;
         });
     } else {
-        check(aitr->status == "cancelled", "cancel before init");
+        require_status(protectable_account, status::active);
+
+        protectables.modify(pitr, get_self(), [&](auto &item) {
+            item.current_status = status::setup;
+            item.claim_delay_sec = claim_delay_sec;
+            item.guardian_invite_hash = guardian_invite_hash;
+        });
     }
 }
 
-void guardians::join(name guardian_account, name protectable_account, checksum256 invite_hash, string optional_public_key) {
+void guardians::protect(name guardian_account, name protectable_account, checksum256 guardian_invite_secret) {
     require_auth(guardian_account);
 
-    if (!is_seeds_user(guardian_account)) {
-        create_account(guardian_account, optional_public_key);
-    }
+    auto guardian_invite_secret_bytes = invite_secret.extract_as_byte_array();
+    checksum256 guardian_invite_hash = sha256((const char*)guardian_invite_secret_bytes.data(), guardian_invite_secret_bytes.size());
 
-    auto aitr = accts.find(protectable_account.value);
+    auto pitr = protectables.find(protectable_account.value);
+    check (pitr->guardian_invite_hash == guardian_invite_hash, "required secret for " + to_string(pitr->guardian_invite_hash) + " but provided for " + to_string(guardian_invite_hash));
 
-    check (aitr != accts.end(), "account not found");
-    check (aitr->status == "setup"_n, "account is not setup stage");
-    
-    auto _invite_secret = invite_secret.extract_as_byte_array();
-    checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
+    require_status(protectable_account, status::setup);
 
-    check(aitr->invite_hash == invite_hash, "incorrect password");
+    add_guardian(protectable_account, guardian_account);
+}
 
-    guardian_table guards(get_self(), protectable_account.value);
-    
-    check(guards.find(guardian_account.value) == guards.end());
-    check(distance(guards.begin(), guards.end()) < max_guardians, "too many guardians");
+void guardians::protectby(name protectable_account, name guardian_account) {
+    require_auth(get_self());
 
-    guards.emplace(get_self(), [&](auto &item) {
-        item.account = guardian_account;
-    });
+    auto pitr = protectables.find(protectable_account.value);
+
+    if (pitr->current_status != status::setup) return;
+
+    add_guardian(protectable_account, guardian_account);
 }
 
 void guardians::activate(name protectable_account) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
+    auto pitr = protectables.find(protectable_account.value);
 
-    check (aitr != accts.end(), "account not found");
-    check(aitr->status == "setup"_n, "account not setup stage ");
+    require_status(protectable_account, status::setup);
 
-    guardian_table guards(get_self(), protectable_account.value);
+    guardian_tables guards(get_self(), protectable_account.value);
+    int current_guardians = distance(guards.begin(), guards.end());
+    check(current_guardians >= min_guardians, "required minimum number of " + to_string(min_guardians) + " but joined only " + to_string(current_guardians) + " guardians");
 
-    check(distance(guards.begin(), guards.end()) >= min_guardians, "not enough guardians");
-
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "active"_n;
+    protectables.modify(pitr, get_self(), [&](auto& item) {
+        item.current_status = status::active;
     });
 }
 
 void guardians::pause(name protectable_account) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
+    require_status(protectable_account, status::active);
 
-    check (aitr != accts.end(), "account not found");
-    check (aitr->status == "active"_n, "account not active stage");
-
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "paused";
+    auto pitr = protectables.find(protectable_account.value);
+    protectables.modify(pitr, get_self(), [&](auto &item) {
+        item.current_status = status::paused;
     });
 }
 
 void guardians::unpause(name protectable_account) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
+    require_status(protectable_account, status::paused);
 
-    check (aitr != accts.end(), "account not found");
-    check (aitr->status == "paused"_n, "account not paused");
-
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "active";
+    auto pitr = protectables.find(protectable_account.value);
+    protectables.modify(pitr, get_self(), [&](auto& item) {
+        item.current_status = status::active;
     });
 }
 
 void guardians::deleteguards(name protectable_account) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
+    auto pitr = protectables.find(protectable_account.value);
 
-    check(aitr != accts.end(), "account not found");
-    check(aitr->status == "paused"_n, "account not paused");
+    require_status(protectable_account, status::paused);
 
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        accts.status = "initial"_n;
-    });
-
-    auto gitr = guards.begin();
-    while (gitr != guards.end()) {
-        gitr = guards.erase(gitr);
-    }
+    clear_guardians(protectable_account);
 }
 
-void guardians::newrecover(name guardian_account, name protectable_account, string new_public_key) {
+void guardians::newrecovery(name guardian_account, name protectable_account, string new_public_key) {
     require_auth(guardian_account);
 
-    guardian_table guards(get_self(), protectable_account.value);
-    check(guards.find(guardian_account.value) != guards.end(), guardian_account.to_string() + " is not a guardian for " + protectable_account.to_string());
+    require_status(protectable_account, status::active);
 
-    recover_table recovers(get_self(), protectable_account.value);
-    check(recovers.begin() == recovers.end(), " already in recovery ");
+    require_guardian(protectable_account, guardian_account);
 
-    auto aitr = accts.find(protectable_account.value);
-    check(aitr->status == "active"_n, " not active status");
+    approve_recovery(protectable_account, guardian_account);
 
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "recovery";
-        item.proposed_public_key = new_public_key
-    });
-
-    recovers.emplace(get_self(), [&](auto &item) {
-        item.account = guardian_account;
+    auto pitr = protectables.find(protectable_account.value);
+    protectables.modify(pitr, get_self(), [&](auto &item) {
+        item.current_status = status::recovery;
+        item.proposed_public_key = new_public_key;
     });
 }
 
-void guardians::confrecover(name guardian_account, name protectable_account, string new_public_key) {
+void guardians::yesrecovery(name guardian_account, name protectable_account) {
     require_auth(guardian_account);
 
-    guardian_table guards(get_self(), protectable_account.value);
-    check(guards.find(guardian_account.value) != guards.end(), guardian_account.to_string() + " is not a guardian for " + protectable_account.to_string());
+    require_status(protectable_account, status::recovery);
 
-    recover_table recovers(get_self(), protectable_account.value);
-    check(recovers.find(guardian_account.value) == recovers.end(), " already voted ");
+    require_guardian(protectable_account, guardian_account);
 
-    auto aitr = accts.find(protectable_account.value);
-    check(aitr->status == "recovery"_n, " not in recovery process ");
-    check(aitr->proposed_public_key == new_public_key, " different public key, first cancel and then make new proposal");
-
-    recovers.emplace(get_self(), [&](auto &item) {
-        item.account = guardian_account;
-    });
+    approve_recovery(protectable_account, guardian_account);
 
     int guardians_number = distance(guards.begin(), guards.end());
-    int approvals_number = distance(recovers.begin(), recovers.end());
+    int approvals_number = distance(approvals.begin(), approvals.end());
     bool quorum_reached = (chosen - approved) * quorum_percent < 100;
 
     if (quorum_reached) {
-        accts.modify(aitr, get_self(), [&](auto &item) {
-            item.status = "complete"_n;
+        auto pitr = protectables.find(protectable_account.value);
+        protectables.modify(pitr, get_self(), [&](auto &item) {
+            item.status = status::complete;
             item.complete_timestamp = eosio::current_time_point().sec_since_epoch();
-        })
+        });
     }
 }
 
-void guardians::cancrecover(name guardian_account, name protectable_account) {
+void guardians::norecovery(name guardian_account, name protectable_account) {
     require_auth(guardian_account);
 
-    auto aitr = accts.find(protectable_account.value);
-    check(aitr->status == "recovery"_n, "not in recovery");
+    require_status(protectable_account, status::recovery);
 
-    guardian_table guards(get_self(), protectable_account.value);
-    check(guards.find(guardian_account.value) != guards.end(), "not a guardian account");
+    require_guardian(guardian_account);
 
-    recover_table recovers(get_self(), protectable_account.value);
-    
-    auto ritr = recovers.begin();
-    while (ritr != recovers.end()) {
-        ritr = recovers.erase(ritr);
-    }
+    clear_approvals(protectable_account);
+
+    auto pitr = protectables.find(protectable_account.value);
+    protectables.modify(pitr, get_self(), [&](auto item) {
+        item.status = status::active;
+    });
 }
 
-void guardians::stoprecover(name protectable_account) {
+void guardians::stoprecovery(name protectable_account) {
     require_auth(protectable_account);
 
-    auto aitr = accts.find(protectable_account.value);
-    check(aitr->status == "recovery"_n, "not in recovery");
+    require_status(protectable_account, status::recovery);
 
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "active";
+    clear_approvals();
+
+    auto pitr = protectables.find(protectable_account.value);
+    protectables.modify(pitr, get_self(), [&](auto item) {
+        item.status = status::active;
     });
-
-    recover_table recover(get_self(), protectable_account);
-
-    auto ritr = recover.begin();
-    while(ritr != recover.end()) {
-        ritr = recover.erase(ritr);
-    }
-}
-
-void guardians::recover(name guardian_account, name protectable_account, string new_public_key) {
-    require_auth(guardian_account);
-
-    guardian_table guards(get_self(), protectable_account.value);
-
-    check(guards.find(guardian_account.value) != guards.end(), "is not guardian for protectable account");
-
-    recover_table recovers(get_self(), protectable_account.value);
-
-    auto aitr = accts.find(protectable_account.value);
-
-    check (aitr->status == "active"_n || aitr->status == "recovery"_n, "not possible in this stage");
-
-    if (aitr->status == "active"_n) {
-        accts.modify(aitr, get_self(), [&](auto &item) {
-            item.status = "recovery";
-            item.proposed_public_key = new_public_key;
-        });
-
-        recovers.emplace(get_self(), [&](auto &item) {
-            item.account = guardian_account;
-        });
-    } else if (aitr->status == "recovery"_n) {
-        if (recovers.find(guardian_account.value) == recovers.end()) {
-            recovers.emplace(get_self(), [&](auto &item) {
-                item.account = guardian_account;
-            });
-
-            int chosen = distance(guards.begin(), guards.end());
-            int approved = restores(recovers.begin(), recovers.end());
-
-            if ((chosen - approved) * quorum_percent  / 100 < 1) {
-                accts.modify(aitr, get_self(), [&](auto &item) {
-                    item.status = "complete"_n;
-                    item.complete_timestamp = eosio::current_time_point().sec_since_epoch();
-                });
-            }
-        } else {
-            accts.modify(aitr, get_self(), [&](auto &item) {
-                item.proposed_public_key = new_public_key;
-            });
-
-            auto ritr = recovers.begin();
-            while (ritr != recovers.end()) {
-                ritr = recovers.erase(ritr);
-            }
-
-            recovers.emplace(get_self(), [&](auto &item) {
-                item.account = guardian_account;
-            })
-        }
-    }
 }
 
 void guardians::claim(name protectable_account) {
-    auto aitr = accts.find(protectable_account.value);
-    check (aitr->status == "complete"_n, " account not ready to be claimed ");
+    require_auth(get_self());
 
-    check (ritr->complete_timestamp + aitr->time_delay_sec <= eosio::current_time_point().sec_since_epoch(), " please wait..." );
+    require_status(protectable_account, status::complete);
 
-    accts.modify(aitr, get_self(), [&](auto &item) {
-        item.status = "active"_n;
+    auto pitr = protectables.find(protectable_account.value);
+
+    auto now = eosio::current_time_point().sec_since_epoch();
+    auto then = pitr->complete_timestamp + pitr->time_delay_sec;
+
+    check (then <= now, " need to wait another " + to_string(then - now) + " seconds until account can be claimed");
+
+    change_account_permission(protectable_account, pitr->proposed_public_key);
+
+    protectables.modify(pitr, get_self(), [&](auto &item) {
+        item.current_status = status::active;
     });
 
-    auto ritr = recovers.begin();
-    while (ritr != recovers.end()) {
-        ritr = recovers.erase(ritr);
-    }
-
-    change_account_permission(protectable_account, aitr->proposed_public_key);
+    clear_approvals(protectable_account);
 }
-
-// void guardians::claim(name user_account) {
-//     auto now = eosio::current_time_point().sec_since_epoch();
-//     auto gitr = guards.find(user_account.value);
-//     auto ritr = recovers.find(user_account.value);
-
-//     check(gitr != guards.end(), "no guardians for user " + user_account.to_string());
-//     check(ritr != recovers.end(), "no active recovery for user " + user_account.to_string());
-//     check(ritr -> complete_timestamp > 0, "recovery not complete for user " + user_account.to_string());
-//     check(ritr -> complete_timestamp + gitr->time_delay_sec <= now, 
-//         "Need to wait another " + 
-//         std::to_string(ritr -> complete_timestamp + gitr->time_delay_sec - now) + 
-//         " seconds until you can claim");
-    
-//     recovers.erase(ritr);
-//     change_account_permission(user_account, ritr -> public_key);
-
-// }
-
-// void guardians::recover(name guardian_account, name user_account, string new_public_key)
-// {
-//     require_auth(guardian_account);
-
-//     auto gitr = guards.find(user_account.value);
-
-//     check(gitr != guards.end(),
-//           "account " + user_account.to_string() + " does not have guardians");
-
-//     bool is_user_guardian = false;
-
-//     for (std::size_t i = 0; i < gitr->guardians.size(); ++i)
-//     {
-//         if (gitr->guardians[i] == guardian_account)
-//         {
-//             is_user_guardian = true;
-//         }
-//     }
-
-//     check(is_user_guardian == true,
-//           "account " + guardian_account.to_string() +
-//               " is not a guardian for " + user_account.to_string());
-
-//     auto ritr = recovers.find(user_account.value);
-
-//     if (ritr == recovers.end())
-//     {
-//         recovers.emplace(get_self(), [&](auto &item) {
-//             item.account = user_account;
-//             item.guardians = vector{guardian_account};
-//             item.public_key = new_public_key;
-//             item.complete_timestamp = 0;
-//         });
-//     }
-//     else
-//     {
-//         if (ritr->public_key.compare(new_public_key) == 0)
-//         {
-//             bool is_guardian_recovering = false;
-
-//             for (std::size_t i = 0; i < ritr->guardians.size(); ++i)
-//             {
-//                 if (ritr->guardians[i] == guardian_account)
-//                 {
-//                     is_guardian_recovering = true;
-//                 }
-//             }
-
-//             check(is_guardian_recovering == false,
-//                   "guardian " + guardian_account.to_string() + " already recovering " + user_account.to_string());
-
-//             recovers.modify(ritr, get_self(), [&](auto &item) {
-//                 item.guardians.push_back(guardian_account);
-//             });
-//         }
-//         else
-//         {
-//             check(ritr -> complete_timestamp == 0, "recovery complete, waiting for claim - can't change key now");
-
-//             recovers.modify(ritr, get_self(), [&](auto &item) {
-//                 item.guardians = vector{guardian_account};
-//                 item.public_key = new_public_key;
-//                 item.complete_timestamp = 0;
-//             });
-//         }
-//     }
-
-//     int required_guardians = gitr->guardians.size();
-//     int signed_guardians = ritr->guardians.size();
-
-//     if ((required_guardians == 3 && signed_guardians >= 2) || (required_guardians > 3 && signed_guardians >= 3))
-//     {
-//         recovers.modify(ritr, get_self(), [&](auto &item) {
-//             item.complete_timestamp = eosio::current_time_point().sec_since_epoch();
-//         });
-//     }
-// }
-
 
 void guardians::change_account_permission(name user_account, string public_key)
 {
@@ -432,4 +251,57 @@ authority guardians::guardian_key_authority(string key_str)
     ret_authority.waits = {};
 
     return ret_authority;
+}
+
+void guardians::clear_guardians(name protectable_account) {
+    guardian_tables guards(get_self(), protectable_account.value);
+
+    auto gitr = guards.begin();
+    while (gitr != gitr->end()) {
+        gitr = guardians.erase(gitr);
+    }
+}
+
+void guardians::clear_approvals(name protectable_account) {
+    approval_tables approvals(get_self(), protectable_account.value);
+    auto ritr = approvals.begin();
+    while (ritr != approvals.end()) {
+        ritr = approvals.erase(ritr);
+    }    
+}
+
+void guardians::add_guardian(name protectable_account, name guardian_account) {
+    guardian_tables guards(get_self(), protectable_account.value);
+    
+    check (guards.find(guardian_account.value) == guards.end(), "already guardian for protectable account")
+    check (distance(guards.begin(), guards.end()) < max_guardians, "maximum guardians reached for protectable account");
+
+    guards.emplace(get_self(), [&](auto &item) {
+        item.account = guardian_account;
+    });    
+}
+
+void guardians::approve_recovery(name protectable_account, name guardian_account) {
+    approval_tables approvals(get_self(), protectable_account.value);
+
+    check (approvals.find(guardian_account.value) == approvals.end(), 
+        "recovery of " + protectable_account.to_string() + " already approved by " + guardian_account.to_string());
+
+    approvals.emplace(get_self(), [&](auto &item) {
+        item.account = guardian_account;
+    });
+}
+
+void guardians::require_status(name protectable_account, status required_status) {
+    auto pitr = protectables.find(protectable_account.value);
+
+    check (pitr != protectables.end(), 
+        "required status of " + protectable_account.to_string() + " is " + to_string(required_status) + " but account has not been initialized yet");
+    check (pitr->current_status == required_status, 
+        "required status of " + protectable_account.to_string() + " is " + to_string(required_status) + " but current status is " + to_string(pitr->current_status));
+}
+
+void guardians::require_guardian(name protectable_account, name guardian_account) {
+    guardian_table guards(get_self(), protectable_account.value);
+    check (guards.find(guardian_account.value) != guards.end(), guardian_account.to_string() + " is not a guardian for " + protectable_account.to_string());
 }

@@ -18,6 +18,7 @@ CONTRACT onboarding : public contract {
     using contract::contract;
     onboarding(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
+        guardinvites(receiver, receiver.value),
         sponsors(receiver, receiver.value),
         referrers(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value)
@@ -27,6 +28,7 @@ CONTRACT onboarding : public contract {
     ACTION deposit(name from, name to, asset quantity, string memo);
     ACTION invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
+    ACTION inviteguard(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
@@ -52,6 +54,12 @@ CONTRACT onboarding : public contract {
     void invitevouch(name sponsor, name account);
     void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
     void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
+
+    TABLE guardian_invite_table {
+      checksum256 invite_hash;
+      name sponsor;
+      checksum256 primary_key()const { return guardian_invite_hash; }
+    }
 
     TABLE invite_table {
       uint64_t invite_id;
@@ -90,6 +98,7 @@ CONTRACT onboarding : public contract {
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
     typedef multi_index<"referrers"_n, referrer_table> referrer_tables;
+    typedef multi_index<"guardinvites"_n, guardian_invite_table> guardian_invite_tables;
 
     typedef eosio::multi_index<"users"_n, tables::user_table,
       indexed_by<"byreputation"_n,
@@ -99,7 +108,7 @@ CONTRACT onboarding : public contract {
     sponsor_tables sponsors;
     user_tables users;
     referrer_tables referrers;
-
+    guardian_invite_tables guardinvites;
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
@@ -107,7 +116,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(inviteguard)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup))
       }
   }
 }

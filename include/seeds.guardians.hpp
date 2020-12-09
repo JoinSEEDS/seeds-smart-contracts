@@ -9,11 +9,13 @@ using namespace eosio;
 using namespace std;
 using namespace abieos;
 
-// * scoping by account
-// status field
-// auto account creation for guardians
-// invites by link
-// restore by link
+enum class status : name {
+    setup = "setup"_n,
+    active = "active"_n,
+    paused = "paused"_n,
+    recovery = "recovery"_n,
+    complete = "complete"_n,
+};
 
 CONTRACT guardians : public contract
 {
@@ -21,66 +23,67 @@ public:
     using contract::contract;
     guardians(name receiver, name code, datastream<const char *> ds)
         : contract(receiver, code, ds),
-          guards(receiver, receiver.value),
-          recovers(receiver, receiver.value)
+          protectables(receiver, receiver.value)
     {
     }
 
     ACTION reset();
-
-    ACTION init(name protectable_account, checksum256 invite_hash);
-
-    ACTION join(name guardian_account, checksum256 invite_secret);
-
+    ACTION setup(name protectable_account, uint64_t claim_delay_sec, checksum256 guardian_invite_hash);
+    ACTION protect(name guardian_account, name protectable_account, checksum256 guardian_invite_secret);
+    ACTION protectby(name protectable_account, name guardian_account);
     ACTION activate(name protectable_account);
-
-    ACTION cancel(name protectable_account);
-
-    ACTION recover(name guardian_account, name protectable_account, string new_public_key);
-
+    ACTION pause(name protectable_account);
+    ACTION unpause(name protectable_account);
+    ACTION deleteguards(name protectable_account);
+    ACTION newrecovery(name guardian_account, name protectable_account, string new_public_key);
+    ACTION yesrecovery(name guardian_account, name protectable_account);
+    ACTION norecovery(name guardian_account, name protectable_account);
+    ACTION stoprecovery(name protectable_account);
     ACTION claim(name protectable_account);
-
-    ACTION init(name user_account, vector<name> guardian_accounts, uint64_t time_delay_sec);
-
-    ACTION cancel(name user_account);
-
-    ACTION recover(name guardian_account, name user_account, string new_public_key);
-    
-    ACTION claim(name user_account);
 
 private:
     int min_guardians = 3;
     int max_guardians = 5;
     int quorum_percent = 60;
 
+    void clear_guardians(name protectable_account);
+    void clear_approvals(name protectable_account);
+    void require_guardian(name protectable_account, name guardian_account);
+    void approve_recovery(name protectable_account, name guardian_account);
+    void require_status(name protectable_account, status required_status)
+    void add_guardian(name protectable_account, name guardian_account);
     void change_account_permission(name user_account, string public_key);
     bool is_seeds_user(name account);
     authority guardian_key_authority(string key_str);
 
+    TABLE protectable_table
+    {
+        name account;
+        name current_status;
+        checksum256 guardian_invite_hash;
+        string proposed_public_key;
+        uint64_t claim_delay_sec;
+
+        uint64_t primary_key() const { return account.value; }
+    }
+
     TABLE guardians_table
     {
         name account;
-        vector<name> guardians;
-        uint64_t time_delay_sec;
-
         uint64_t primary_key() const { return account.value; }
     };
 
-    TABLE recovery_table
+    TABLE approval_table
     {
         name account;
-        vector<name> guardians;
-        string public_key;
-        uint64_t complete_timestamp;
-
         uint64_t primary_key() const { return account.value; }
     };
 
-    typedef eosio::multi_index<"guards"_n, guardians_table> guardians_tables;
-    typedef eosio::multi_index<"recovers"_n, recovery_table> recovery_tables;
+    typedef eosio::multi_index<"protectables"_n, protectable_table> protectable_tables;
+    typedef eosio::multi_index<"guards"_n, guardians_table> guardian_tables;
+    typedef eosio::multi_index<"approvals"_n, approval_table> approval_tables;
 
-    guardians_tables guards;
-    recovery_tables recovers;
+    protectable_tables protectables;
 };
 
-EOSIO_DISPATCH(guardians, (reset)(init)(cancel)(recover)(claim));
+EOSIO_DISPATCH(guardians, (reset)(setup)(protect)(protectby)(activate)(pause)(unpause)(deleteguards)(newrecovery)(yesrecovery)(norecovery)(stoprecovery)(claim));
