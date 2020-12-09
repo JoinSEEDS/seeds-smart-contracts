@@ -44,8 +44,6 @@ CONTRACT history : public contract {
 
         ACTION addregen(name organization);
 
-        ACTION deldailytrx(uint64_t day);
-
         ACTION savepoints(uint64_t id, uint64_t timestamp);
 
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
@@ -73,7 +71,6 @@ CONTRACT history : public contract {
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
       void adjust_transactions(uint64_t id, uint64_t timestamp);
-      void save_from_metrics(name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
 
       TABLE citizen_table {
         uint64_t id;
@@ -150,72 +147,6 @@ CONTRACT history : public contract {
         uint128_t by_other() const { return (uint128_t(other.value) << 64) + id; }
       };
 
-      // new tables ----------------------
-
-      TABLE daily_transactions_table { // scoped by beginning_of_day_in_seconds
-        uint64_t id;
-        name from;
-        name to;
-        uint64_t volume;
-        uint64_t qualifying_volume;
-        uint64_t from_points;
-        uint64_t to_points;
-        uint64_t timestamp;
-        uint64_t primary_key() const { return id; }
-        uint64_t by_from() const { return from.value; }
-        uint64_t by_to() const { return to.value; }
-        uint64_t by_timestamp() const { return timestamp; }
-        uint128_t by_from_to() const { return (uint128_t(from.value) << 64) + to.value; }
-      };
-
-      TABLE transaction_points_table { // scoped by account
-        uint64_t timestamp;
-        uint64_t points;
-        uint64_t primary_key() const { return timestamp; }
-        uint64_t by_points() const { return points; }
-      };
-
-      TABLE qev_table { // scoped by account
-        uint64_t timestamp;
-        uint64_t qualifying_volume;
-        uint64_t primary_key() const { return timestamp; }
-        uint64_t by_volume() const { return qualifying_volume; }
-      };
-
-      TABLE totals_table {
-        name account;
-        uint64_t total_volume;
-        uint64_t total_number_of_transactions;
-        uint64_t total_incoming_from_rep_orgs;
-        uint64_t total_outgoing_to_rep_orgs;
-        uint64_t primary_key() const { return account.value; }
-      };
-
-      typedef eosio::multi_index<"dailytrxs"_n, daily_transactions_table,
-        indexed_by<"byfrom"_n,
-        const_mem_fun<daily_transactions_table, uint64_t, &daily_transactions_table::by_from>>,
-        indexed_by<"byto"_n,
-        const_mem_fun<daily_transactions_table, uint64_t, &daily_transactions_table::by_to>>,
-        indexed_by<"bytimestamp"_n,
-        const_mem_fun<daily_transactions_table, uint64_t, &daily_transactions_table::by_timestamp>>,
-        indexed_by<"byfromto"_n,
-        const_mem_fun<daily_transactions_table, uint128_t, &daily_transactions_table::by_from_to>>
-      > daily_transactions_tables;
-
-      typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
-        indexed_by<"bypoints"_n,
-        const_mem_fun<transaction_points_table, uint64_t, &transaction_points_table::by_points>>
-      > transaction_points_tables;
-
-      typedef eosio::multi_index<"qevs"_n, qev_table,
-        indexed_by<"byvolume"_n,
-        const_mem_fun<qev_table, uint64_t, &qev_table::by_volume>>
-      > qev_tables;
-
-      typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
-
-      // ---------------------------------
-
       typedef eosio::multi_index<"orgtx"_n, org_tx_table,
         indexed_by<"bytimestamp"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_timestamp>>,
         indexed_by<"byquantity"_n,const_mem_fun<org_tx_table, uint64_t, &org_tx_table::by_quantity>>,
@@ -227,8 +158,6 @@ CONTRACT history : public contract {
         indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
         indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
       > transaction_tables;
-
-      // --------------------------------------------------- //
 
       TABLE daily_transactions_table { // scoped by beginning_of_day_in_seconds
         uint64_t id;
@@ -336,7 +265,7 @@ CONTRACT history : public contract {
 };
 
 EOSIO_DISPATCH(history, 
-  (reset)(deldailytrx)
+  (reset)
   (historyentry)(trxentry)
   (addcitizen)(addresident)
   (addreputable)(addregen)

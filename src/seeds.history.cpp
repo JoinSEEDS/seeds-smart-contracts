@@ -35,18 +35,6 @@ void history::reset(name account) {
     ritr = residents.erase(ritr);
   }
 
-  transaction_points_tables trx_points(get_self(), account.value);
-  auto tpitr = trx_points.begin();
-  while (tpitr != trx_points.end()) {
-    tpitr = trx_points.erase(tpitr);
-  }
-
-  qev_tables qevs(get_self(), account.value);
-  auto qitr = qevs.begin();
-  while (qitr != qevs.end()) {
-    qitr = qevs.erase(qitr);
-  }
-
   auto toitr = totals.begin();
   while (toitr != totals.end()) {
     toitr = totals.erase(toitr);
@@ -693,49 +681,6 @@ void history::adjust_transactions (uint64_t id, uint64_t timestamp) {
   }
 }
 
-void history::save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day) {
-  transaction_points_tables trx_points_from(get_self(), from.value);
-  qev_tables qevs(get_self(), from.value);
-  qev_tables qevs_total(get_self(), get_self().value);
-  
-  auto trx_itr = trx_points_from.find(day);
-  auto qev_itr = qevs.find(day);
-  auto qev_total_itr = qevs_total.find(day);
-  
-  if (trx_itr != trx_points_from.end()) {
-    trx_points_from.modify(trx_itr, _self, [&](auto & item){
-      item.points += from_points;
-    });
-  } else {
-    trx_points_from.emplace(_self, [&](auto & item){
-      item.timestamp = day;
-      item.points = from_points;
-    });
-  }
-  
-  if (qev_itr != qevs.end()) {
-    qevs.modify(qev_itr, _self, [&](auto & item){
-      item.qualifying_volume += qualifying_volume;
-    });
-  } else {
-    qevs.emplace(_self, [&](auto & item){
-      item.timestamp = day;
-      item.qualifying_volume = qualifying_volume;
-    });
-  }
-  
-  if (qev_total_itr != qevs_total.end()) {
-    qevs_total.modify(qev_total_itr, _self, [&](auto & item){
-      item.qualifying_volume += qualifying_volume;
-    });
-  } else {
-    qevs_total.emplace(_self, [&](auto & item){
-      item.timestamp = day;
-      item.qualifying_volume = qualifying_volume;
-    });
-  }
-}
-
 void history::testentry(name from, name to, asset quantity, uint64_t timestamp) {
   require_auth(get_self());
   
@@ -777,6 +722,9 @@ void history::testentry(name from, name to, asset quantity, uint64_t timestamp) 
         item.quantity = quantity;
         item.timestamp = timestamp;
       });
+  } 
+}
+
 void history::testtotalqev (uint64_t numdays, uint64_t volume) {
   require_auth(get_self());
 
