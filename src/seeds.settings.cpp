@@ -228,6 +228,24 @@ void settings::configure(name param, uint64_t value) {
   }
 }
 
+void settings::conffloat(name param, double value) {
+  require_auth(get_self());
+
+  auto citr = configfloat.find(param.value);
+
+  if (citr == configfloat.end()) {
+    configfloat.emplace(_self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+    });
+  } else {
+    configfloat.modify(citr, _self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+    });
+  }
+}
+
 void settings::confwithdesc(name param, uint64_t value, string description, name impact) {
   require_auth(get_self());
 
@@ -242,6 +260,28 @@ void settings::confwithdesc(name param, uint64_t value, string description, name
     });
   } else {
     config.modify(citr, _self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+      item.description = description;
+      item.impact = impact;
+    });
+  }
+}
+
+void settings::conffloatdsc(name param, double value, string description, name impact) {
+  require_auth(get_self());
+
+  auto citr = configfloat.find(param.value);
+
+  if (citr == configfloat.end()) {
+    configfloat.emplace(_self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+      item.description = description;
+      item.impact = impact;
+    });
+  } else {
+    configfloat.modify(citr, _self, [&](auto& item) {
       item.param = param;
       item.value = value;
       item.description = description;
