@@ -818,13 +818,6 @@ describe('make resident', async assert => {
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
   }
 
-  const hist = await eos.getTableRows({
-    code: history,
-    scope: history,
-    table: 'transactions',
-    json: true,
-  })
-
   console.log('add referral')
   await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })
   console.log('update reputation')

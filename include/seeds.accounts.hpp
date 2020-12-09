@@ -27,6 +27,7 @@ CONTRACT accounts : public contract {
           config(contracts::settings, contracts::settings.value),
           accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value),
+          totals(contracts::history, contracts::history.value),
           residents(contracts::history, contracts::history.value),
           citizens(contracts::history, contracts::history.value),
           history_sizes(contracts::history, contracts::history.value)
@@ -262,23 +263,17 @@ CONTRACT accounts : public contract {
     config_tables config;
 
     // From history contract
-    TABLE transaction_table {
-       uint64_t id;
-       name to;
-       asset quantity;
-       uint64_t timestamp;
+    TABLE totals_table {
+      name account;
+      uint64_t total_volume;
+      uint64_t total_number_of_transactions;
+      uint64_t total_incoming_from_rep_orgs;
+      uint64_t total_outgoing_to_rep_orgs;
 
-       uint64_t primary_key() const { return id; }
-       uint64_t by_timestamp() const { return timestamp; }
-       uint64_t by_to() const { return to.value; }
-       uint64_t by_quantity() const { return quantity.amount; }
+      uint64_t primary_key() const { return account.value; }
     };
-
-    typedef eosio::multi_index<"transactions"_n, transaction_table,
-      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-    > transaction_tables;
+    typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
+    totals_tables totals;
 
     // From proposals contract
     TABLE active_table {
@@ -290,6 +285,7 @@ CONTRACT accounts : public contract {
     };
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
     active_tables actives;
+
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)

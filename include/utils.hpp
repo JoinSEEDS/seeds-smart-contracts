@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/system.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 

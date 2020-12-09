@@ -41,6 +41,11 @@ void harvest::reset() {
     pitr = planted.erase(pitr);
   }
 
+  auto qitr = monthlyqevs.begin();
+  while (qitr != monthlyqevs.end()) {
+    qitr = monthlyqevs.erase(qitr);
+  }
+
   total.remove();
 
   init_balance(_self);
@@ -255,7 +260,8 @@ void harvest::runharvest() {
 
 ACTION harvest::updatetxpt(name account) {
   require_auth(get_self());
-  calc_transaction_points(account);
+  auto uitr = users.get(account.value, "user not found");
+  calc_transaction_points(account, uitr.type);
 }
 
 ACTION harvest::updatecs(name account) {
@@ -352,98 +358,51 @@ ACTION harvest::calctotal(uint64_t startval) {
 
 // Calculate Transaction Points for a single account
 // Returns count of iterations
-uint32_t harvest::calc_transaction_points(name account) {
-  auto three_moon_cycles = moon_cycle * 3;
-  auto now = eosio::current_time_point().sec_since_epoch();
-  auto cutoffdate = now - three_moon_cycles;
+uint32_t harvest::calc_transaction_points(name account, name type) {
+  uint64_t three_moon_cycles = utils::moon_cycle * 3;
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+  uint64_t cutoffdate = now - three_moon_cycles;
 
-  // get all transactions for this account
-  transaction_tables transactions(contracts::history, account.value);
+  transaction_points_tables transactions(contracts::history, account.value);
 
-  auto transactions_by_to = transactions.get_index<"byto"_n>();
-  auto tx_to_itr = transactions_by_to.rbegin();
+  uint64_t count = 0;
+  uint64_t total_points = 0;
 
-  double result = 0;
+  auto titr = transactions.rbegin();
+  while (titr != transactions.rend() && titr -> timestamp >= cutoffdate) {
 
-  uint64_t max_quantity = 1777; // get this from settings // TODO verify this number
-  uint64_t max_number_of_transactions = 26;
+    total_points += titr -> points;
 
-  name      current_to = name("");
-  uint64_t  current_num = 0;
-  double    current_rep_multiplier = 0.0;
-
-  uint64_t  count = 0;
-  uint64_t  limit = 200;
-    
-  //print("start " + account.to_string());
-
-  while(tx_to_itr != transactions_by_to.rend() && count < limit) {
-
-    if (tx_to_itr->timestamp < cutoffdate) {
-      //print("date trigger ");
-
-      // remove old transactions
-      //tx_to_itr = transactions_by_to.erase(tx_to_itr);
-      
-      //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
-      //tx_to_itr = std::reverse_iterator(it);            
-    } else {
-
-      // update "to"
-      if (current_to != tx_to_itr->to) {
-        current_to = tx_to_itr->to;
-        current_num = 0;
-        current_rep_multiplier = get_rep_multiplier(current_to);
-      } else {
-        current_num++;
-      }
-
-      if (current_num < max_number_of_transactions) {
-        uint64_t volume = tx_to_itr->quantity.amount;
-
-        // limit max volume
-        if (volume > max_quantity * 10000) {
-              //print("max limit "+std::to_string(max_quantity * 10000));
-          volume = max_quantity * 10000;
-        }
-
-        // multiply by receiver reputation
-        double points = (double(volume) / 10000.0) * current_rep_multiplier;
-        
-        result += points;
-
-      } 
-
-    }
-    tx_to_itr++;
+    titr++;
     count++;
   }
 
-  // enter into transaction points table
-  auto titr = txpoints.find(account.value);
-  uint64_t points = ceil(result);
-
-  if (titr == txpoints.end()) {
-    if (points > 0) {
-      txpoints.emplace(_self, [&](auto& entry) {
-        entry.account = account;
-        entry.points = (uint64_t) ceil(result);
-      });
-      size_change(tx_points_size, 1);
-    }
+  if (type == name("organisation")) {
+    setorgtxpt(account, total_points);
   } else {
-    if (points > 0) {
-      txpoints.modify(titr, _self, [&](auto& entry) {
-        entry.points = points; 
-      });
+    auto tx_points_itr = txpoints.find(account.value);
+
+    if (tx_points_itr == txpoints.end()) {
+      if (total_points > 0) {
+        txpoints.emplace(_self, [&](auto& entry) {
+          entry.account = account;
+          entry.points = total_points;
+        });
+        size_change(tx_points_size, 1);
+      }
     } else {
-      txpoints.erase(titr);
-      size_change(tx_points_size, -1);
+      if (total_points > 0) {
+        txpoints.modify(tx_points_itr, _self, [&](auto& entry) {
+          entry.points = total_points; 
+        });
+      } else {
+        txpoints.erase(tx_points_itr);
+        size_change(tx_points_size, -1);
+      }
     }
   }
 
   return count;
-
 }
 
 void harvest::calctrxpts() {
@@ -460,7 +419,7 @@ void harvest::calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize) 
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    uint32_t num = calc_transaction_points(uitr->account);
+    uint32_t num = calc_transaction_points(uitr->account, uitr->type);
     count += 1 + num;
     uitr++;
   }
@@ -905,3 +864,39 @@ ACTION harvest::setorgtxpt(name organization, uint64_t tx_points) {
   } 
 
 }
+
+void harvest::calcmqevs () {
+  require_auth(get_self());
+  
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  uint64_t cutoff = day - utils::moon_cycle;
+  
+  qev_tables qevs(contracts::history, contracts::history.value);
+  check(qevs.begin() != qevs.end(), "The qevs table for " + contracts::history.to_string() + " is empty");
+
+  auto qitr = qevs.rbegin();
+  uint64_t total_volume = 0;
+
+  while (qitr != qevs.rend() && qitr -> timestamp >= cutoff) {
+    total_volume += qitr -> qualifying_volume;
+    qitr++;
+  }
+
+  circulating_supply_table c = circulating.get();
+
+  auto mqitr = monthlyqevs.find(day);
+  
+  if (mqitr != monthlyqevs.end()) {
+    monthlyqevs.modify(mqitr, _self, [&](auto & item){
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
+    });
+  } else {
+    monthlyqevs.emplace(_self, [&](auto & item){
+      item.timestamp = day;
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
+    });
+  }
+}
+

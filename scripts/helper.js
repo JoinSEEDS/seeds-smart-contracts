@@ -580,6 +580,12 @@ var permissions = [{
 }, {
   target: `${accounts.forum.account}@execute`,
   action: 'givereps'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcmqevs'
+}, {
+  target: `${accounts.harvest.account}@active`,
+  actor: `${accounts.organization.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

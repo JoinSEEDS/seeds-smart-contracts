@@ -33,10 +33,12 @@ CONTRACT harvest : public contract {
         sizes(receiver, receiver.value),
         total(receiver, receiver.value),
         harveststat(receiver, receiver.value),
+        monthlyqevs(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
-        cbs(contracts::accounts, contracts::accounts.value)
+        cbs(contracts::accounts, contracts::accounts.value),
+        circulating(contracts::token, contracts::token.value)
         {}
         
     ACTION reset();
@@ -82,6 +84,8 @@ CONTRACT harvest : public contract {
 
     ACTION setorgtxpt(name organization, uint64_t tx_points);
 
+    ACTION calcmqevs ();
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     uint64_t ONE_WEEK = 604800;
@@ -97,7 +101,7 @@ CONTRACT harvest : public contract {
     void check_asset(asset quantity);
     void _deposit(asset quantity);
     void _withdraw(name account, asset quantity);
-    uint32_t calc_transaction_points(name account);
+    uint32_t calc_transaction_points(name account, name type);
     double get_rep_multiplier(name account);
     void add_planted(name account, asset quantity);
     void sub_planted(name account, asset quantity);
@@ -202,18 +206,6 @@ CONTRACT harvest : public contract {
     typedef singleton<"total"_n, total_table> total_tables;
     typedef eosio::multi_index<"total"_n, total_table> dump_for_total;
 
-    TABLE transaction_table { // from History contract - scoped by 'from'
-       uint64_t id;
-       name to;
-       asset quantity;
-       uint64_t timestamp;
-
-       uint64_t primary_key() const { return id; }
-       uint64_t by_timestamp() const { return timestamp; }
-       uint64_t by_to() const { return to.value; }
-       uint64_t by_quantity() const { return quantity.amount; }
-    };
-
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
@@ -221,11 +213,63 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-    typedef eosio::multi_index<"transactions"_n, transaction_table,
-      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-    > transaction_tables;
+
+    // new tables ------------------------------
+
+    // From history contract
+    TABLE transaction_points_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t points;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_points() const { return points; }
+    };
+
+    // From history contract
+    TABLE qev_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t qualifying_volume;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    TABLE monthly_qev_table {
+      uint64_t timestamp;
+      uint64_t qualifying_volume;
+      uint64_t circulating_supply;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    // From token contract
+    TABLE circulating_supply_table {
+      uint64_t id;
+      uint64_t total;
+      uint64_t circulating;
+      uint64_t primary_key()const { return id; }
+    };
+
+    typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
+      indexed_by<"bypoints"_n,
+      const_mem_fun<transaction_points_table, uint64_t, &transaction_points_table::by_points>>
+    > transaction_points_tables;
+
+    typedef eosio::multi_index<"qevs"_n, qev_table,
+      indexed_by<"byvolume"_n,
+      const_mem_fun<qev_table, uint64_t, &qev_table::by_volume>>
+    > qev_tables;
+
+    typedef eosio::multi_index<"monthlyqevs"_n, monthly_qev_table,
+      indexed_by<"byvolume"_n,
+      const_mem_fun<monthly_qev_table, uint64_t, &monthly_qev_table::by_volume>>
+    > monthly_qev_tables;
+
+    typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
+    typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+
+    // -----------------------------------------
 
     // Contract Tables
     balance_tables balances;
@@ -233,7 +277,7 @@ CONTRACT harvest : public contract {
     tx_points_tables txpoints;
     cs_points_tables cspoints;
     size_tables sizes;
-    total_tables total;
+    monthly_qev_tables monthlyqevs;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -245,6 +289,8 @@ CONTRACT harvest : public contract {
     user_tables users;
     cbs_tables cbs;
     rep_tables rep;
+    total_tables total;
+    circulating_supply_tables circulating;
 
 };
 
@@ -260,8 +306,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)
-
-          )
+          (calcmqevs)
+        )
       }
   }
 }
