@@ -593,17 +593,13 @@ var permissions = [{
   action: 'calcmintrate'
 }, {
   target: `${accounts.token.account}@minttst`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.token.account}@minttst`,
-  action: 'minttest'
-}, { 
-  target: `${accounts.token.account}@minttst`,
   actor: `${accounts.harvest.account}@eosio.code`,
   parent: 'active',
   type: 'createActorPermission'
 }, {
+  target: `${accounts.token.account}@minttst`,
+  action: 'minttest'
+}, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
 }]
