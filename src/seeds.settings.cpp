@@ -82,6 +82,10 @@ void settings::reset() {
   // =====================================
   // citizenship path 
   // =====================================
+
+  // Visitor
+  confwithdesc(name("vis.plant"), 5 * 10000, "Minimum planted amount to become a Visitor (in Seeds)", high_impact);   // min planted 5 Seeds
+
   // Resident
   confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   // min planted 50 Seeds
   confwithdesc(name("res.tx"), 1, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
