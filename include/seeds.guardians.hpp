@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/system.hpp>
+#include <eosio/crypto.hpp>
 #include <tables/user_table.hpp>
 #include <abieos_numeric.hpp>
 #include <contracts.hpp>
@@ -9,12 +10,12 @@ using namespace eosio;
 using namespace std;
 using namespace abieos;
 
-enum class status : name {
-    setup = "setup"_n,
-    active = "active"_n,
-    paused = "paused"_n,
-    recovery = "recovery"_n,
-    complete = "complete"_n,
+enum class status : uint8_t {
+    setup = 1,
+    active = 2,
+    paused = 3,
+    recovery = 4,
+    complete = 5,
 };
 
 CONTRACT guardians : public contract
@@ -46,11 +47,13 @@ private:
     int max_guardians = 5;
     int quorum_percent = 60;
 
+    string status_to_string(status given_status);
+    string checksum_to_string(const checksum256* d , uint32_t s);
     void clear_guardians(name protectable_account);
     void clear_approvals(name protectable_account);
     void require_guardian(name protectable_account, name guardian_account);
     void approve_recovery(name protectable_account, name guardian_account);
-    void require_status(name protectable_account, status required_status)
+    void require_status(name protectable_account, status required_status);
     void add_guardian(name protectable_account, name guardian_account);
     void change_account_permission(name user_account, string public_key);
     bool is_seeds_user(name account);
@@ -59,13 +62,14 @@ private:
     TABLE protectable_table
     {
         name account;
-        name current_status;
+        status current_status;
         checksum256 guardian_invite_hash;
         string proposed_public_key;
         uint64_t claim_delay_sec;
+        uint64_t complete_timestamp;
 
         uint64_t primary_key() const { return account.value; }
-    }
+    };
 
     TABLE guardians_table
     {
