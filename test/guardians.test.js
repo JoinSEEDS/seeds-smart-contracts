@@ -33,7 +33,7 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
               actor,
               permission: actorRole
             },
-            weight: 1
+            weight: threshold
           }
         ],
         keys: [
