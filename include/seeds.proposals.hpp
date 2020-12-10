@@ -95,6 +95,8 @@ CONTRACT proposals : public contract {
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
       name prop_active_size = "prop.act.sz"_n;
+      name user_active_size = "user.act.sz"_n; 
+      name cycle_vote_power_size = "votepow.sz"_n; 
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
 
