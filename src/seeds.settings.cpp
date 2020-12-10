@@ -106,10 +106,10 @@ void settings::reset() {
   // =====================================
 
   // community buiding points for referrer when user becomes resident
-  confwithdesc(name("refcbp1.ind"), 1, "Community buiding points for referrer when user becomes resident", high_impact);
+  confwithdesc(name("vou.cbp1.ind"), 1, "Community buiding points for voucher when user becomes resident", high_impact);
 
   // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("refcbp2.ind"), 1, "Community buiding points for referrer when user becomes citizen", high_impact);
+  confwithdesc(name("vou.cbp2.ind"), 1, "Community buiding points for voucher when user becomes citizen", high_impact);
 
   // reputation points for referrer when user becomes resident
   confwithdesc(name("refrep1.ind"), 1, "Reputation points for referrer when user becomes resident", high_impact);
@@ -180,6 +180,10 @@ void settings::reset() {
   confwithdesc(name("decrwd2.amb"), 15000 * 10000, "Reward decay for abmassador of referring org when user becomes citizen", high_impact);
 
 
+  // =====================================
+  // vouching rewards 
+  // =====================================
+
   // Maximum number of points a user can gain from others vouching for them
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);
 
@@ -188,6 +192,13 @@ void settings::reset() {
   
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
+
+  // community buiding points for voucher when user becomes resident
+  confwithdesc(name("vou.cbp1.ind"), 2, "Community buiding points for voucher when user becomes resident", high_impact);
+
+  // community buiding points for voucher when user becomes citizen
+  confwithdesc(name("vou.cbp2.ind"), 2, "Community buiding points for voucher when user becomes citizen", high_impact);
+
 
 
   // =====================================
