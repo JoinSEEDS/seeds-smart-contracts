@@ -1181,7 +1181,7 @@ describe('reputation & cbs ranking', async assert => {
 
 })
 
-describe.only('vouching cbp earning', async assert => {
+describe('vouching cbp earning', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
