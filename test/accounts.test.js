@@ -1181,6 +1181,81 @@ describe('reputation & cbs ranking', async assert => {
 
 })
 
+describe.only('vouching cbp earning', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts, onboarding })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
+
+  console.log('seconduser becomes a resident and can vouch')
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('vouch for first user')
+  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
+
+  const vouchTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+
+  console.log("firstuser becomes resident")
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  const expected_cbp_res = await  get_settings("vou.cbp1.ind")
+
+  const cbsAfterResident = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  // console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+
+  assert({
+    given: 'firstuser became resident',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterResident.rows[0].community_building_score,
+    expected: expected_cbp_res
+  })
+
+  console.log("firstuser becomes citizen")
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  const expected_cbp_cit = await get_settings("vou.cbp2.ind")
+
+  const cbsAfterCitizen = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  // console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
+
+  assert({
+    given: 'firstuser became citizen',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterCitizen.rows[0].community_building_score,
+    expected: expected_cbp_res + expected_cbp_cit
+  })
+
+})
+
+
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {
     

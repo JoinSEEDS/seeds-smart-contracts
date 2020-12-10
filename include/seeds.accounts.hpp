@@ -116,6 +116,8 @@ CONTRACT accounts : public contract {
 
       const name resident_vouch_points = "res.vouch"_n;
       const name citizen_vouch_points = "cit.vouch"_n;
+      const name vou_cbp_reward_resident = "vou.cbp1.ind"_n;
+      const name vou_cbp_reward_citizen = "vou.cbp2.ind"_n;
 
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
@@ -142,6 +144,7 @@ CONTRACT accounts : public contract {
       bool check_can_make_citizen(name user);
       uint32_t num_transactions(name account, uint32_t limit);
       void add_active (name user);
+      void add_cbs(name account, int points);
 
       DEFINE_USER_TABLE
 

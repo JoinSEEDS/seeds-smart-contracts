@@ -98,7 +98,6 @@ void accounts::vouch(name sponsor, name account) {
   name account_status = uitra->status;
 
   check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
-
   _vouch(sponsor, account);
 }
 
@@ -214,13 +213,18 @@ void accounts::vouchreward(name account) {
   auto uitr = users.find(account.value);
   name status = uitr->status;
 
-  vouch_tables vouch(get_self(), account.value);
+  // For adding community building points
+  bool is_citizen = status.value == name("citizen").value;
+  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
+  int community_building_points = int(config_get(vou_cbp_param));
 
+  vouch_tables vouch(get_self(), account.value);
   auto vitr = vouch.begin();
 
   while (vitr != vouch.end()) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1);
+    send_addrep(sponsor, 1); // TODO: check if this has to be always 1
+    add_cbs(sponsor, community_building_points);
     vitr++;
   }
 }
@@ -259,25 +263,12 @@ void accounts::refreward(name account, name new_status) {
     return;
   }
 
-  // Add community building point +1
+  // Add community building points
 
   name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
+  int community_building_points = int(config_get(cbp_param));
 
-  auto community_building_points = config_get(cbp_param);
-
-  auto citr = cbs.find(referrer.value);
-  if (citr != cbs.end()) {
-    cbs.modify(citr, _self, [&](auto& item) {
-      item.community_building_score += community_building_points;
-    });
-  } else {
-    cbs.emplace(_self, [&](auto& item) {
-      item.account = referrer;
-      item.community_building_score = community_building_points;
-      item.rank = 0;
-    });
-    size_change("cbs.sz"_n, 1);
-  }
+  add_cbs(referrer, community_building_points);
 
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
@@ -357,6 +348,22 @@ void accounts::refreward(name account, name new_status) {
 
   // if referrer is org, find ambassador and add referral there
 
+}
+
+void accounts::add_cbs(name account, int points) {
+  auto citr = cbs.find(account.value);
+  if (citr != cbs.end()) {
+    cbs.modify(citr, _self, [&](auto& item) {
+      item.community_building_score += points;
+    });
+  } else {
+    cbs.emplace(_self, [&](auto& item) {
+      item.account = account;
+      item.community_building_score = points;
+      item.rank = 0;
+    });
+    size_change("cbs.sz"_n, 1);
+  }
 }
 
 void accounts::addref(name referrer, name invited)
