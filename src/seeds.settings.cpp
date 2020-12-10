@@ -215,6 +215,9 @@ void settings::configure(name param, uint64_t value) {
 
   auto citr = config.find(param.value);
 
+  auto fitr = configfloat.find(param.value);
+  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
       item.param = param;
@@ -233,6 +236,9 @@ void settings::conffloat(name param, double value) {
 
   auto citr = configfloat.find(param.value);
 
+  auto iitr = config.find(param.value);
+  check(iitr == config.end(), "this parameter is defined as an integer");
+
   if (citr == configfloat.end()) {
     configfloat.emplace(_self, [&](auto& item) {
       item.param = param;
@@ -250,6 +256,9 @@ void settings::confwithdesc(name param, uint64_t value, string description, name
   require_auth(get_self());
 
   auto citr = config.find(param.value);
+
+  auto fitr = configfloat.find(param.value);
+  check(fitr == configfloat.end(), "this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
@@ -272,6 +281,9 @@ void settings::conffloatdsc(name param, double value, string description, name i
   require_auth(get_self());
 
   auto citr = configfloat.find(param.value);
+
+  auto iitr = config.find(param.value);
+  check(iitr == config.end(), "this parameter is defined as an integer");
 
   if (citr == configfloat.end()) {
     configfloat.emplace(_self, [&](auto& item) {
