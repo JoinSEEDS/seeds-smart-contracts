@@ -67,8 +67,6 @@ CONTRACT accounts : public contract {
 
       ACTION changesize(name id, int64_t delta);
 
-      ACTION demotecitizn(name user);
-
       ACTION testresident(name user);
       ACTION testcitizen(name user);
       ACTION testvisitor(name user);
@@ -292,5 +290,4 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(punish)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
-(demotecitizn)
 );

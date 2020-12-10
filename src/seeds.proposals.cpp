@@ -1203,16 +1203,6 @@ void proposals::removeactive(name account) {
   }
 }
 
-// TODO: remove permisions
-// void proposals::demote_citizen(name account) {
-//   action(
-//     permission_level(contracts::accounts, "active"_n),
-//     contracts::accounts,
-//     "demotecitizn"_n,
-//     std::make_tuple(account)
-//   ).send();  
-// }
-
 void proposals::size_change(name id, int64_t delta) {
   size_tables sizes(get_self(), get_self().value);
 
