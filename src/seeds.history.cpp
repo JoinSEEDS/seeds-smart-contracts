@@ -39,7 +39,7 @@ void history::reset(name account) {
   while (toitr != totals.end()) {
     toitr = totals.erase(toitr);
   }
-  
+
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
@@ -332,6 +332,7 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
     });
   }
 }
+
 // CAUTION: this will iterate on all citizens, residents and orgs
 void history::migrate() {
   require_auth(get_self());

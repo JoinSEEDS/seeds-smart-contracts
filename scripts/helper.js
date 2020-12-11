@@ -584,6 +584,9 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   action: 'calcmqevs'
 }, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'calcmintrate'
+}, {
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
 }]

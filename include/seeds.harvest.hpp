@@ -34,6 +34,7 @@ CONTRACT harvest : public contract {
         total(receiver, receiver.value),
         harveststat(receiver, receiver.value),
         monthlyqevs(receiver, receiver.value),
+        mintrate(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
@@ -84,7 +85,10 @@ CONTRACT harvest : public contract {
 
     ACTION setorgtxpt(name organization, uint64_t tx_points);
 
-    ACTION calcmqevs ();
+    ACTION calcmqevs();
+
+    ACTION testcalcmqev(uint64_t day, uint64_t total_volume, uint64_t circulating);
+    ACTION calcmintrate();
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -213,9 +217,6 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-
-    // new tables ------------------------------
-
     // From history contract
     TABLE transaction_points_table { // scoped by account
       uint64_t timestamp;
@@ -248,6 +249,7 @@ CONTRACT harvest : public contract {
       uint64_t id;
       uint64_t total;
       uint64_t circulating;
+
       uint64_t primary_key()const { return id; }
     };
 
@@ -269,7 +271,21 @@ CONTRACT harvest : public contract {
     typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
     typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
 
+    // new tables ------------------------------
+
+    TABLE mint_rate_table {
+      uint64_t id;
+      int64_t mint_rate;
+      int64_t volume_growth;
+      uint64_t timestamp;
+
+      uint64_t primary_key() const { return id; }
+    };
+
+    typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
+
     // -----------------------------------------
+
 
     // Contract Tables
     balance_tables balances;
@@ -278,6 +294,7 @@ CONTRACT harvest : public contract {
     cs_points_tables cspoints;
     size_tables sizes;
     monthly_qev_tables monthlyqevs;
+    mint_rate_tables mintrate;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -305,8 +322,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
-          (testclaim)(testupdatecs)
-          (calcmqevs)
+          (testclaim)(testupdatecs)(testcalcmqev)
+          (calcmqevs)(calcmintrate)
         )
       }
   }

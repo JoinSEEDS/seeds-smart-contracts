@@ -268,4 +268,4 @@ EOSIO_DISPATCH(history,
   (deldailytrx)(savepoints)
   (testtotalqev)
   (migrate)
-  );
+);

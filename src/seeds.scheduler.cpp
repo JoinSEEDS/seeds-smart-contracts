@@ -79,6 +79,7 @@ ACTION scheduler::reset() {
         name("forum.giverp"),
 
         name("hrvst.qevs"),
+        name("hrvst.mintr"),
     };
     
     std::vector<name> operations_v = {
@@ -107,6 +108,7 @@ ACTION scheduler::reset() {
         name("givereps"),
 
         name("calcmqevs"),
+        name("calcmintrate"),
     };
 
     std::vector<name> contracts_v = {
@@ -135,6 +137,7 @@ ACTION scheduler::reset() {
         contracts::forum,
 
         contracts::harvest,
+        contracts::harvest,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -162,6 +165,7 @@ ACTION scheduler::reset() {
         utils::moon_cycle / 4,
         utils::moon_cycle / 4,
 
+        utils::seconds_per_day,
         utils::seconds_per_day,
     };
 
@@ -193,6 +197,7 @@ ACTION scheduler::reset() {
         now - utils::seconds_per_hour,
 
         now,
+        now + 600 - utils::seconds_per_hour,
     };
 
     int i = 0;
