@@ -298,27 +298,27 @@ CONTRACT harvest : public contract {
 
     typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
     
-    // From bioregions contract
-    TABLE bioregion_table {
-      name id;
-      name founder;
-      name status; // "active" "inactive"
-      string description;
-      string locationjson; // json description of the area
-      float latitude;
-      float longitude;
-      uint64_t members_count;
-      time_point created_at = current_block_time().to_time_point();
+    // // From bioregions contract
+    // TABLE bioregion_table {
+    //   name id;
+    //   name founder;
+    //   name status; // "active" "inactive"
+    //   string description;
+    //   string locationjson; // json description of the area
+    //   float latitude;
+    //   float longitude;
+    //   uint64_t members_count;
+    //   time_point created_at = current_block_time().to_time_point();
 
-      uint64_t primary_key() const { return id.value; }
-      uint64_t by_status() const { return status.value; }
-      uint64_t by_count() const { return members_count; }
-    };
+    //   uint64_t primary_key() const { return id.value; }
+    //   uint64_t by_status() const { return status.value; }
+    //   uint64_t by_count() const { return members_count; }
+    // };
 
-    typedef eosio::multi_index <"bioregions"_n, bioregion_table,
-      indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
-      indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
-    > bioregion_tables;
+    // typedef eosio::multi_index <"bioregions"_n, bioregion_table,
+    //   indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
+    //   indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
+    // > bioregion_tables;
 
 
     // -----------------------------------------
