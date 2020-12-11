@@ -49,8 +49,9 @@ CONTRACT history : public contract {
         ACTION savepoints(uint64_t id, uint64_t timestamp);
 
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
-
         ACTION migrate();
+        ACTION migrateusers();
+        ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
 
 
     private:
@@ -64,6 +65,10 @@ CONTRACT history : public contract {
       bool clean_old_tx(name org, uint64_t chunksize);
       void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
       void send_update_txpoints (name from);
+      
+      // migration functions
+      void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
+      void adjust_transactions(uint64_t id, uint64_t timestamp);
 
       TABLE citizen_table {
         uint64_t id;

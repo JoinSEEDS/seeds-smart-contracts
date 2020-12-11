@@ -492,3 +492,221 @@ void history::testtotalqev (uint64_t numdays, uint64_t volume) {
 
 }
 
+
+void history::migrateusers () {
+  require_auth(get_self());
+  uint64_t batch_size = config_get("batchsize"_n);
+  migrateuser(0, 0, batch_size);
+}
+
+void history::migrateuser (uint64_t start, uint64_t transaction_id, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+  uint64_t count = 0;
+
+  print("batch: start = ", start, ", transaction_id = ", transaction_id, ", chunksize = ", chunksize, "\n");
+
+  while (uitr != users.end() && count < chunksize) {
+
+    if (uitr -> type != "organisation"_n) {
+      transaction_tables transactions(get_self(), uitr -> account.value);
+      auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
+
+      while (titr != transactions.end() && count < chunksize) {
+
+        save_migration_user_transaction(uitr -> account, titr -> to, titr -> quantity, titr -> timestamp);
+        titr++;
+        count += 5;
+
+        if (titr == transactions.end()) {
+          transaction_id = 0;
+        } else {
+          transaction_id = titr -> id;
+        }
+
+      }
+
+    } else {
+      org_tx_tables transactions(get_self(), uitr -> account.value);
+      auto titr = transaction_id == 0 ? transactions.begin() : transactions.find(transaction_id);
+
+      while (titr != transactions.end() && count < chunksize) {
+        if (!(titr -> in)) {
+          transaction_id = titr -> id;
+          save_migration_user_transaction(uitr -> account, titr -> other, titr -> quantity, titr -> timestamp);
+        }
+        titr++;
+        count += 5;
+
+        if (titr == transactions.end()) {
+          transaction_id = 0;
+        } else {
+          transaction_id = titr -> id;
+        }
+
+      }
+
+    }
+
+    if (transaction_id == 0) {
+      uitr++;
+    }
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migrateuser"_n,
+      std::make_tuple(uitr -> account.value, transaction_id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(get_self().value, _self);
+  } else {
+    print("\n############################ I have FINISHED ############################\n");
+  }
+
+}
+
+void history::save_migration_user_transaction (name from, name to, asset quantity, uint64_t timestamp) {
+
+  auto from_user = users.find(from.value);
+  auto to_user = users.find(to.value);
+
+  auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
+  uint64_t day = date.utc_seconds;
+  daily_transactions_tables transactions(get_self(), day);
+
+  print("saving: from = ", from, ", to = ", to, ", quantity = ", quantity, ", timestamp = ", timestamp, "\n");
+  
+  uint64_t transaction_id = transactions.available_primary_key();
+
+  bool from_is_organization = from_user -> type == "organisation"_n;
+  bool to_is_organization = to_user -> type == "organisation"_n;
+
+  int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
+  int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
+  int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
+
+  double from_trx_multiplier = (
+    from_is_organization ? 
+    std::min(max_transaction_points_organizations, quantity.amount) : 
+    std::min(max_transaction_points_individuals, quantity.amount)
+  ) / 10000.0;
+
+  double to_trx_multiplier = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
+
+  transactions.emplace(_self, [&](auto & transaction){
+    transaction.id = transaction_id;
+    transaction.from = from;
+    transaction.to = to;
+    transaction.volume = quantity.amount;
+    transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
+    transaction.from_points = uint64_t(ceil(from_trx_multiplier * utils::get_rep_multiplier(to)));
+    transaction.to_points = uint64_t(ceil(to_trx_multiplier * utils::get_rep_multiplier(from)));
+    transaction.timestamp = timestamp;
+  });
+
+  auto from_totals_itr = totals.find(from.value);
+
+  if (from_totals_itr != totals.end()) {
+    totals.modify(from_totals_itr, _self, [&](auto & item){
+      item.total_volume += quantity.amount;
+      item.total_number_of_transactions += 1;
+      item.total_outgoing_to_rep_orgs += ( to_is_organization ? 1 : 0 );
+    });
+  } else {
+    totals.emplace(_self, [&](auto & item){
+      item.account = from;
+      item.total_volume += quantity.amount;
+      item.total_number_of_transactions = 1;
+      item.total_incoming_from_rep_orgs = 0;
+      item.total_outgoing_to_rep_orgs = ( to_is_organization ? 1 : 0 );
+    });
+  }
+
+  if (from_is_organization) {
+    auto to_totals_itr = totals.find(to.value);
+    if (to_totals_itr != totals.end()) {
+      totals.modify(to_totals_itr, _self, [&](auto & item){
+        item.total_incoming_from_rep_orgs += 1;
+      });
+    } else {
+      totals.emplace(_self, [&](auto & item){
+        item.account = to;
+        item.total_volume = 0;
+        item.total_number_of_transactions = 0;
+        item.total_incoming_from_rep_orgs = 1;
+        item.total_outgoing_to_rep_orgs = 0;
+      });
+    }
+  }
+
+  adjust_transactions(transaction_id, timestamp);
+}
+
+void history::adjust_transactions (uint64_t id, uint64_t timestamp) {
+
+  auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
+  uint64_t day = date.utc_seconds;
+
+  daily_transactions_tables transactions(get_self(), day);
+  auto transactions_by_from_to = transactions.get_index<"byfromto"_n>();
+  auto titr = transactions.find(id);
+
+  check(titr != transactions.end(), "transaction not found");
+  
+  name from = titr -> from;
+  name to = titr -> to;
+  auto uitr_from = users.find(from.value);
+  auto uitr_to = users.find(to.value);
+  uint64_t max_number_transactions = config_get("htry.trx.max"_n);
+  
+  uint128_t from_to_id = (uint128_t(titr -> from.value) << 64) + titr -> to.value;
+  
+  uint64_t count = 0;
+  auto ft_itr = transactions_by_from_to.find(from_to_id);
+  auto current_itr = ft_itr;
+  
+  while (ft_itr != transactions_by_from_to.end() && 
+      count <= max_number_transactions && 
+      ft_itr -> from == from && ft_itr -> to == to) {
+    if (ft_itr -> volume < current_itr -> volume) {
+      current_itr = ft_itr;
+    }
+    ft_itr++;
+    count++;
+  }
+  
+  int64_t from_points = int64_t(titr -> from_points);
+  int64_t to_points = int64_t(titr -> to_points);
+  int64_t qualifying_volume = int64_t(titr -> qualifying_volume);
+  
+  if (count > max_number_transactions) {
+    from_points -= current_itr -> from_points;
+    to_points -= current_itr -> to_points;
+    qualifying_volume -= current_itr -> qualifying_volume;
+    transactions_by_from_to.erase(current_itr);
+  }
+  
+  save_from_metrics(from, from_points, qualifying_volume, day);
+  
+  if (uitr_to -> type == name("organisation")) {
+    transaction_points_tables trx_points_to(get_self(), to.value);
+    auto trx_itr_to = trx_points_to.find(day);
+    if (trx_itr_to != trx_points_to.end()) {
+      trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
+        item.points += to_points;
+      });
+    } else {
+      trx_points_to.emplace(_self, [&](auto & item){
+        item.timestamp = day;
+        item.points = to_points;
+      });
+    }
+  }
+}
