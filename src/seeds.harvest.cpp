@@ -1048,7 +1048,7 @@ void harvest::runharvest() {
 
   print("mint rate:", quantity, "\n");
 
-  token::issue_action_test t_issue{contracts::token, { contracts::token, "minttst"_n }};
+  token::issue_action_test t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
   t_issue.send(get_self(), quantity, memo);
 
   double users_percentage = config_get("hrvst.users"_n) / 1000000.0;

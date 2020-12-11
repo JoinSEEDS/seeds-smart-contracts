@@ -405,7 +405,7 @@ uint64_t token::balance_for( const name& owner ) {
 }
 
 
-void token::minttest (const name& to, const asset& quantity, const string& memo) {
+void token::mintharvest (const name& to, const asset& quantity, const string& memo) {
 
   require_auth(get_self());
 
@@ -439,4 +439,4 @@ void token::minttest (const name& to, const asset& quantity, const string& memo)
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minttest) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(mintharvest) )

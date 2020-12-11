@@ -223,6 +223,7 @@ const accountsMetadata = (network) => {
       proposals: contract('funds.seeds', 'proposals'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
+      testtoken: token('token.seeds', owner, '0.0000 TESTS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
@@ -592,13 +593,13 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   action: 'calcmintrate'
 }, {
-  target: `${accounts.token.account}@minttst`,
+  target: `${accounts.token.account}@minthrvst`,
   actor: `${accounts.harvest.account}@eosio.code`,
   parent: 'active',
   type: 'createActorPermission'
 }, {
-  target: `${accounts.token.account}@minttst`,
-  action: 'minttest'
+  target: `${accounts.token.account}@minthrvst`,
+  action: 'mintharvest'
 }, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
