@@ -39,13 +39,27 @@ ACTION scheduler::stop() {
 }
 
 ACTION scheduler::reset() {
+    reset_aux(true);
+}
+
+ACTION scheduler::updateops() {
+    reset_aux(false);
+}
+
+void scheduler::reset_aux(bool destructive) {
     require_auth(get_self());
 
     cancel_exec();
 
     auto itr = operations.begin();
     while(itr != operations.end()){
-        itr = operations.erase(itr);
+        if (destructive || !should_preserve_op(itr->id)) {
+            print(" erase "+itr->id.to_string());
+            itr = operations.erase(itr);
+        } else {
+            print(" preserve "+itr->id.to_string());
+            itr++;
+        }
     }
 
     auto titr = test.begin();
@@ -203,14 +217,20 @@ ACTION scheduler::reset() {
     int i = 0;
 
     while(i < operations_v.size()){
-        operations.emplace(_self, [&](auto & noperation){
-            noperation.id = id_v[i];
-            noperation.operation = operations_v[i];
-            noperation.contract = contracts_v[i];
-            noperation.pause = 0;
-            noperation.period = delay_v[i];
-            noperation.timestamp = timestamp_v[i];
-        });
+        auto oitr = operations.find(id_v[i].value);
+        if (oitr == operations.end()) {
+            print(" adding op "+id_v[i].to_string());
+            operations.emplace(_self, [&](auto & noperation){
+                noperation.id = id_v[i];
+                noperation.operation = operations_v[i];
+                noperation.contract = contracts_v[i];
+                noperation.pause = 0;
+                noperation.period = delay_v[i];
+                noperation.timestamp = timestamp_v[i];
+            });
+        } else {
+            print(" skipping op "+id_v[i].to_string());
+        }
         i++;
     }
 }
@@ -443,4 +463,4 @@ void scheduler::exec_op(name id, name contract, name operation) {
 }
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec)(updateops));
