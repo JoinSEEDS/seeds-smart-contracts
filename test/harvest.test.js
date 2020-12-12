@@ -3,7 +3,7 @@ const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLoc
 const { equals } = require("ramda")
 const { parse } = require("commander")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, global } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, globaldho } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -981,7 +981,7 @@ describe('Mint Rate and Harvest', async assert => {
     table: 'cspoints',
     json: true,
   })
-  console.log(csTable)
+  //console.log(csTable)
 
   const bioregions = await getTableRows({
     code: bioregion,
@@ -989,7 +989,7 @@ describe('Mint Rate and Harvest', async assert => {
     table: 'bioregions',
     json: true,
   })
-  console.log(bioregions)
+  //console.log(bioregions)
   // ----------------------------------------- //
 
 
@@ -1027,15 +1027,18 @@ describe('Mint Rate and Harvest', async assert => {
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
   const bioBalancesBefore = await Promise.all(bios.map(bio => getTestBalance(bio)))
-  const globalBalanceBefore = await getTestBalance(global)
+  const globalBalanceBefore = await getTestBalance(globaldho)
 
+  console.log('run harvest')
   await contracts.harvest.runharvest({ authorization: `${harvest}@active` })
-  await sleep(6000)
+  console.log('done harvest')
+
+  await sleep(1000)
 
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
   const bioBalancesAfter = await Promise.all(bios.map(bio => getTestBalance(bio)))
-  const globalBalanceAfter = await getTestBalance(global)
+  const globalBalanceAfter = await getTestBalance(globaldho)
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
   const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index])

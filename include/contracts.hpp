@@ -32,5 +32,5 @@ namespace bankaccts {
 
   name hyphabank = "seeds.hypha"_n;
 
-  name global = "gdho.seeds"_n;
+  name globaldho = "gdho.seeds"_n;
 }

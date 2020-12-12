@@ -1065,7 +1065,7 @@ void harvest::runharvest() {
   send_distribute_harvest("disthvstbios"_n, asset(mitr -> mint_rate * bios_percentage, test_symbol));
   send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
 
-  withdraw_aux(get_self(), bankaccts::global, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
+  withdraw_aux(get_self(), bankaccts::globaldho, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
 
 }
 

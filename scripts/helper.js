@@ -145,7 +145,7 @@ const accountsMetadata = (network) => {
       ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
-      global: account('gdho.seeds'),
+      globaldho: account('gdho.seeds'),
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -177,6 +177,9 @@ const accountsMetadata = (network) => {
       ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      globaldho: account('gdho.seeds'),
+      testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
+
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -201,14 +204,13 @@ const accountsMetadata = (network) => {
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
-
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
       sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
       bdc: account(bdc),
-      // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
+
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -216,6 +218,8 @@ const accountsMetadata = (network) => {
       ambassadorsandreferralsbank: account('refer.seeds',  '120000000.0000 SEEDS'),
       sixthbank: account('bank.seeds',   '300000000.0000 SEEDS'),
       bank: account('system.seeds'),
+      globaldho: account('gdho.seeds'),
+
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
       harvest: contract('harvst.seeds', 'harvest'),
@@ -223,7 +227,7 @@ const accountsMetadata = (network) => {
       proposals: contract('funds.seeds', 'proposals'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
-      testtoken: token('token.seeds', owner, '0.0000 TESTS'),
+      testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
       acctcreator: contract('free.seeds', 'acctcreator'),
@@ -278,7 +282,7 @@ var permissions = [{
   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
   actor: `${accounts.accounts.account}@active`
 }, {
-  target: `${accounts.global.account}@active`,
+  target: `${accounts.globaldho.account}@active`,
   actor: `${accounts.harvest.account}@active`
 }, {
   target: `${accounts.exchange.account}@active`,

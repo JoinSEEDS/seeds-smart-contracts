@@ -8,7 +8,7 @@ const docsgen = require('./docsgen')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
-const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission } = require('./deploy')
+const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -164,11 +164,18 @@ program
     await initAction(comp)
   })
 
-program
+  program
   .command('updatePermissions')
   .description('Update all permissions of all contracts')
   .action(async function() {
     await updatePermissionAction()
+  })
+
+  program
+  .command('createTestTokens')
+  .description('createTestTokens')
+  .action(async function() {
+    createTestToken()
   })
 
 program
