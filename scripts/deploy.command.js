@@ -57,31 +57,73 @@ const source = async (name) => {
 
 const createAccount = async ({ account, publicKey, stakes, creator }) => {
   try {
-    await eos.transaction(async trx => {
-      await trx.newaccount({
-        creator,
-        name: account,
-        owner: publicKey,
-        active: publicKey
-      })
-
-      await trx.buyrambytes({
-        payer: creator,
-        receiver: account,
-        bytes: stakes.ram
-      })
-
-      await trx.delegatebw({
-        from: creator,
-        receiver: account,
-        stake_net_quantity: stakes.net,
-        stake_cpu_quantity: stakes.cpu,
-        transfer: 0
-      })
-    })
+      await eos.transaction({
+        actions: [{
+          account: 'eosio',
+          name: 'newaccount',
+          authorization: [{
+            actor: creator,
+            permission: 'active',
+          }],
+          data: {
+            creator: creator,
+            name: account,
+            owner: {
+              threshold: 1,
+              keys: [{
+                key: publicKey,
+                weight: 1
+              }],
+              accounts: [],
+              waits: []
+            },
+            active: {
+              threshold: 1,
+              keys: [{
+                key: publicKey,
+                weight: 1
+              }],
+              accounts: [],
+              waits: []
+            },
+          },
+        },
+        {
+          account: 'eosio',
+          name: 'buyrambytes',
+          authorization: [{
+            actor: creator,
+            permission: 'active',
+          }],
+          data: {
+            payer: creator,
+            receiver: account,
+            bytes: 8192,
+          },
+        },
+        {
+          account: 'eosio',
+          name: 'delegatebw',
+          authorization: [{
+            actor: creator,
+            permission: 'active',
+          }],
+          data: {
+            from: creator,
+            receiver: account,
+            stake_net_quantity: '2.0000 TLOS',
+            stake_cpu_quantity: '2.0000 TLOS',
+            transfer: false
+          }
+        }
+      ]
+      }, {
+        blocksBehind: 3,
+        expireSeconds: 30,
+      });
     console.log(`${account} created`)
   } catch (err) {
-    if (""+err.indexOf("Account name already exists") != -1) {
+    if ((""+err).indexOf("Account name already exists") != -1) {
       console.error(`account ${account} already created`)
     } else {
       console.error(`create account ${account} error: ` + err)
