@@ -44,16 +44,15 @@ CONTRACT history : public contract {
 
         ACTION addregen(name organization);
 
+        ACTION deldailytrx(uint64_t day);
+
         ACTION savepoints(uint64_t id, uint64_t timestamp);
 
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
-
-        ACTION deldailytrx (uint64_t day);
-
-        ACTION testentry(name from, name to, asset quantity, uint64_t timestamp);
         ACTION migrate();
         ACTION migrateusers();
         ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
+
 
     private:
       void check_user(name account);
@@ -67,10 +66,6 @@ CONTRACT history : public contract {
       void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
       void send_update_txpoints (name from);
       
-      // migration functions
-      void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
-      void adjust_transactions(uint64_t id, uint64_t timestamp);
-
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
       void adjust_transactions(uint64_t id, uint64_t timestamp);
@@ -161,6 +156,8 @@ CONTRACT history : public contract {
         indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
         indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
       > transaction_tables;
+
+      // --------------------------------------------------- //
 
       TABLE daily_transactions_table { // scoped by beginning_of_day_in_seconds
         uint64_t id;
@@ -273,7 +270,6 @@ EOSIO_DISPATCH(history,
   (addcitizen)(addresident)
   (addreputable)(addregen)
   (numtrx)
-  (migrateusers)(migrateuser)(testentry)
   (deldailytrx)(savepoints)
   (testtotalqev)
   (migrateusers)(migrateuser)
