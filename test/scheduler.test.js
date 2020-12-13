@@ -303,9 +303,9 @@ describe('scheduler, organization scores', async assert => {
     await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
     await sleep(200)
 
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-    await sleep(300)
+    //console.log('scheduler reset')
+    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+    //await sleep(300)
 
 })
 
@@ -383,8 +383,8 @@ describe('scheduler, forum', async assert => {
 
     await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+    //console.log('scheduler reset')
+    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
 })
 
@@ -462,8 +462,8 @@ describe('scheduler, harvest', async assert => {
 
     await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
 
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+    //console.log('scheduler reset')
+    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
 })
 

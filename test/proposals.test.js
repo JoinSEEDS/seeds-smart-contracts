@@ -1832,3 +1832,237 @@ describe('Voice scope', async assert => {
   })
 
 })
+
+describe('delegate trust', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('configure voterep2.ind to 2')
+  await contracts.settings.configure('voterep2.ind', 2, { authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const voices = [20, 10, 50, 35]
+  for (let i = 0; i < users.length; i++) {
+    await contracts.accounts.adduser(users[i], `user ${i}`, 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(users[i], { authorization: `${accounts}@active` })
+    await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
+  }
+
+  console.log('create campaign proposal')
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'campaign', 'test campaign', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
+
+  console.log('create alliance proposal')
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
+  
+  console.log('stake')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  
+  console.log('active proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  for (let i = 0; i < users.length; i++) {
+    await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
+  }
+
+  console.log('delegate trust for campaigns')
+  const scopeCampaigns = proposals
+  await contracts.proposals.delegate(seconduser, firstuser, scopeCampaigns, { authorization: `${seconduser}@active` })
+  await contracts.proposals.delegate(thirduser, firstuser, scopeCampaigns, { authorization: `${thirduser}@active` })
+  await contracts.proposals.delegate(fourthuser, thirduser, scopeCampaigns, { authorization: `${fourthuser}@active` })
+
+  console.log('delegate trust for alliances')
+  const scopeAlliance = 'alliance'
+  await contracts.proposals.delegate(seconduser, firstuser, scopeAlliance, { authorization: `${seconduser}@active` })
+  await contracts.proposals.delegate(seconduser, thirduser, scopeAlliance, { authorization: `${seconduser}@active` })
+  await contracts.proposals.delegate(fourthuser, thirduser, scopeAlliance, { authorization: `${fourthuser}@active` })
+
+  const getVoices = async () => {
+    const voiceCampaigns = await eos.getTableRows({
+      code: proposals,
+      scope: scopeCampaigns,
+      table: 'voice',
+      json: true,
+    })
+    const voiceAlliances = await eos.getTableRows({
+      code: proposals,
+      scope: scopeAlliance,
+      table: 'voice',
+      json: true,
+    })
+    return {
+      campaigns: voiceCampaigns.rows,
+      alliances: voiceAlliances.rows
+    }
+  }
+
+  const delegations = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'deltrusts',
+    json: true,
+  })
+
+  console.log('try to vote when voice is deletegated')
+  let noVoteWhenVoiceIsDelegated = true
+  try {
+    await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+    noVoteWhenVoiceIsDelegated = false
+  } catch (err) {
+    console.log('user can not vote when voice is delegated')
+  }
+
+  console.log('vote for campaigns')
+  await contracts.proposals.favour(firstuser, 1, 5, { authorization: `${firstuser}@active` })
+  await sleep(3000)
+
+  console.log('vote for alliances')
+  await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
+  await sleep(3000)
+
+  const usersTable = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true,
+  })
+
+  const reps = usersTable.rows.map(r => r.reputation)
+
+  const voicesAfterVote = await getVoices()
+
+  console.log('pass proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  for (let i = 0; i < users.length; i++) {
+    await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
+  }
+
+  console.log('cancel trust delegation')
+  await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
+  
+  console.log('change opinion')
+  await contracts.proposals.against(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await sleep(3000)
+
+  const voicesAfterOnperiod = await getVoices()
+
+  console.log('cancel trust delegation')
+  await contracts.proposals.undelegate(seconduser, scopeCampaigns, { authorization: `${firstuser}@active` })
+  await contracts.proposals.undelegate(thirduser, scopeCampaigns, { authorization: `${firstuser}@active` })
+
+  const delCampaigns = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'deltrusts',
+    json: true,
+  })
+
+  assert({
+    given: 'trust delegated',
+    should: 'have the correct delegation entries',
+    actual: delegations.rows.map(r => {
+      delete r.timestamp
+      return r
+    }),
+    expected: [
+      {
+        delegator: seconduser,
+        delegatee: firstuser,
+        weight: '1.00000000000000000'
+      },
+      {
+        delegator: thirduser,
+        delegatee: firstuser,
+        weight: '1.00000000000000000'
+      },
+      {
+        delegator: fourthuser,
+        delegatee: thirduser,
+        weight: '1.00000000000000000'
+      }
+    ]
+  })
+
+  assert({
+    given: 'user delegated its voice',
+    should: 'not be able to vote by itself',
+    actual: noVoteWhenVoiceIsDelegated,
+    expected: true
+  })
+
+  assert({
+    given: 'user delegated its voice',
+    should: 'give a user a percentage of the earned reputation',
+    actual: reps,
+    expected: [2, 1, 1, 1]
+  })
+
+  assert({
+    given: 'trust delegated',
+    should: 'decrease the voice of delegators',
+    actual: voicesAfterVote,
+    expected: {
+      campaigns: [
+        { account: firstuser, balance: 15 },
+        { account: seconduser, balance: 8 },
+        { account: thirduser, balance: 38 },
+        { account: fourthuser, balance: 27 }
+      ],
+      alliances: [
+        { account: firstuser, balance: 20 },
+        { account: seconduser, balance: 0 },
+        { account: thirduser, balance: 0 },
+        { account: fourthuser, balance: 0 }
+      ]
+    }
+  })
+
+  assert({
+    given: 'trust delegated and opinion changed',
+    should: 'decrease the voice of delegators',
+    actual: voicesAfterOnperiod,
+    expected: {
+      campaigns: [
+        { account: firstuser, balance: 10 },
+        { account: seconduser, balance: 5 },
+        { account: thirduser, balance: 25 },
+        { account: fourthuser, balance: 35 }
+      ],
+      alliances: [
+        { account: firstuser, balance: 20 },
+        { account: seconduser, balance: 10 },
+        { account: thirduser, balance: 50 },
+        { account: fourthuser, balance: 35 }
+      ]
+    }
+  })
+
+  assert({
+    given: 'trust canceled by delegatee',
+    should: 'cancel trust delegation',
+    actual: delCampaigns.rows,
+    expected: []
+  })
+
+})

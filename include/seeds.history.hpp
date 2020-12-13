@@ -50,11 +50,10 @@ CONTRACT history : public contract {
 
         ACTION deldailytrx (uint64_t day);
 
-        ACTION migrateusers();
-        ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
         ACTION testentry(name from, name to, asset quantity, uint64_t timestamp);
         ACTION migrate();
-
+        ACTION migrateusers();
+        ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
 
     private:
       void check_user(name account);
@@ -67,6 +66,10 @@ CONTRACT history : public contract {
       bool clean_old_tx(name org, uint64_t chunksize);
       void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
       void send_update_txpoints (name from);
+      
+      // migration functions
+      void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
+      void adjust_transactions(uint64_t id, uint64_t timestamp);
 
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
@@ -273,5 +276,6 @@ EOSIO_DISPATCH(history,
   (migrateusers)(migrateuser)(testentry)
   (deldailytrx)(savepoints)
   (testtotalqev)
+  (migrateusers)(migrateuser)
   (migrate)
-  );
+);

@@ -8,7 +8,7 @@ const docsgen = require('./docsgen')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
-const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission } = require('./deploy')
+const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -101,12 +101,16 @@ const batchCallFunc = async (contract, moreContracts, func) => {
   }
 }
 
-const initAction = async () => {
+const initAction = async (compile = true) => {
 
-  for (i=0; i<allContracts.length; i++) {
-    let item = allContracts[i];
-    console.log("compile ... " + item);
-    await compileAction(item);
+  if (compile) {
+    for (i=0; i<allContracts.length; i++) {
+      let item = allContracts[i];
+      console.log("compile ... " + item);
+      await compileAction(item);
+    }
+  } else {
+    console.log("no compile")
   }
 
   await initContracts()
@@ -153,17 +157,25 @@ program
   })
 
 program
-  .command('init')
+  .command('init [compile]')
   .description('Initial creation of all accounts and contracts contract')
-  .action(async function(contract) {
-    await initAction()
+  .action(async function(compile) {
+    var comp = compile != "false" 
+    await initAction(comp)
   })
 
-program
+  program
   .command('updatePermissions')
   .description('Update all permissions of all contracts')
-  .action(async function(contract) {
+  .action(async function() {
     await updatePermissionAction()
+  })
+
+  program
+  .command('createTestTokens')
+  .description('createTestTokens')
+  .action(async function() {
+    createTestToken()
   })
 
 program

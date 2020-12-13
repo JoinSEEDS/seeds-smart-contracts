@@ -21,6 +21,8 @@ CONTRACT scheduler : public contract {
 
         ACTION reset();
 
+        ACTION updateops();
+
         ACTION execute();
 
         // specify start time any time in the future, or use 0 for "now"
@@ -45,7 +47,13 @@ CONTRACT scheduler : public contract {
     private:
         void exec_op(name id, name contract, name action);
         void cancel_exec();
-        
+        void reset_aux(bool destructive);
+        bool should_preserve_op(name op_id) {
+            return 
+                op_id == "exch.period"_n || 
+                op_id == "tokn.resetw"_n;
+        }
+
         TABLE operations_table {
             name id;
             name operation;

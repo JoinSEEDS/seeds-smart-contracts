@@ -59,6 +59,12 @@ void settings::reset() {
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
 
+  // Harvest distribution
+  confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Bioregions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
+  
   // Organizations
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
   confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
@@ -121,6 +127,9 @@ void settings::reset() {
 
   // reputation points for entering in the participants table
   confwithdesc(name("voterep2.ind"), 1, "Reputation points for entering in the participants table", high_impact);
+
+  // percentage of reputation points earned when trust is delegated
+  confwithdesc(name("votedel.mul"), 80, "Percentage of reputation points earned when trust is delegated", high_impact);
 
   // reward for individual referrer when user becomes resident  
   confwithdesc(name("refrwd1.ind"), 750 * 10000, "Reward for individual referrer when user becomes resident", high_impact);

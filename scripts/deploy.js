@@ -324,7 +324,7 @@ const createCoins = async (token) => {
       memo: ''
     }, { authorization: `${issuer}@active` })
     
-    console.log(`coins successfully minted at ${account} (${supply})`)
+    console.log(`coins successfully minted at ${account} with max supply of ${supply}`)
   } catch (err) {
     console.error(`coins already created at ${account}\n* error: ` + err + "\n")
   }
@@ -430,6 +430,10 @@ const updatePermissions = async () => {
   }  
 }
 
+const createTestToken = async () => {
+  await createCoins(accounts.testtoken)
+}
+
 const initContracts = async () => {
   const ownerExists = await isExistingAccount(accounts.owner.account)
 
@@ -441,6 +445,10 @@ const initContracts = async () => {
   await createAccount(accounts.token)
   await deploy(accounts.token)
   await createCoins(accounts.token)
+
+  if (accounts.testtoken) {
+    await createCoins(accounts.testtoken)
+  }
 
   const accountNames = Object.keys(accounts)
   for (let current = 0; current < accountNames.length; current++) {
@@ -463,4 +471,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission }
+module.exports = { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
