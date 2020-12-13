@@ -272,5 +272,6 @@ EOSIO_DISPATCH(history,
   (numtrx)
   (deldailytrx)(savepoints)
   (testtotalqev)
+  (migrateusers)(migrateuser)
   (migrate)
 );
