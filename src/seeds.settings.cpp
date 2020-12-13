@@ -128,6 +128,9 @@ void settings::reset() {
   // reputation points for entering in the participants table
   confwithdesc(name("voterep2.ind"), 1, "Reputation points for entering in the participants table", high_impact);
 
+  // percentage of reputation points earned when trust is delegated
+  confwithdesc(name("votedel.mul"), 80, "Percentage of reputation points earned when trust is delegated", high_impact);
+
   // reward for individual referrer when user becomes resident  
   confwithdesc(name("refrwd1.ind"), 750 * 10000, "Reward for individual referrer when user becomes resident", high_impact);
 
