@@ -1077,7 +1077,6 @@ describe('Mint Rate and Harvest', async assert => {
 
 })
 
-
 describe('bioregions contribution score', async assert => {
 
   if (!isLocal()) {
@@ -1193,9 +1192,8 @@ describe('bioregions contribution score', async assert => {
     should: 'have the correct ranks',
     actual: cspointsBios.rows,
     expected: [
-      { account: 'bio1.bdc', contribution_points: 0, rank: 0 },
-      { account: 'bio2.bdc', contribution_points: 77, rank: 33 },
-      { account: 'bio3.bdc', contribution_points: 117, rank: 66 }
+      { account: 'bio2.bdc', contribution_points: 77, rank: 0 },
+      { account: 'bio3.bdc', contribution_points: 117, rank: 50 }
     ]
   })
 

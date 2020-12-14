@@ -655,15 +655,21 @@ void harvest::add_cs_to_bioregion(name account, uint32_t points) {
 
   auto csitr = biocstemp.find(bitr -> bioregion.value);
   if (csitr == biocstemp.end()) {
-    biocstemp.emplace(_self, [&](auto & item){
-      item.bioregion = bitr -> bioregion;
-      item.points = points;
-    });
-    size_change(cs_bio_size, 1);
+    if (points > 0) {
+      biocstemp.emplace(_self, [&](auto & item){
+        item.bioregion = bitr -> bioregion;
+        item.points = points;
+      });
+      size_change(cs_bio_size, 1);
+    }
   } else {
-    biocstemp.modify(csitr, _self, [&](auto & item){
-      item.points += points;
-    });
+    if (points > 0) {
+      biocstemp.modify(csitr, _self, [&](auto & item){
+        item.points += points;
+      });
+    } else {
+      biocstemp.erase(csitr);
+    }
   }
 }
 
