@@ -182,12 +182,19 @@ uint64_t proposals::get_size(name id) {
 
 void proposals::initsz() {
   require_auth(_self);
-  
+  uint64_t now = current_time_point().sec_since_epoch();
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
+  uint64_t cutoff_date = now - (inact_cycles * prop_cycle_sec);
+
   uint64_t current = get_size(user_active_size);
   int64_t count = 0; 
   auto aitr = actives.begin();
   while(aitr != actives.end()) {
-    if (aitr -> active) {
+    if (aitr -> timestamp >= cutoff_date) {
+      actives.modify(aitr, _self, [&](auto & item){
+        item.active = true;
+      });
       count++;
     }
     aitr++;
