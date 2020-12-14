@@ -51,6 +51,17 @@ void harvest::reset() {
     csitr = cspoints.erase(csitr);
   }
 
+  cs_points_tables biocspoints(get_self(), name("bio").value);
+  auto csbioitr = biocspoints.begin();
+  while (csbioitr != biocspoints.end()) {
+    csbioitr = biocspoints.erase(csbioitr);
+  }
+
+  auto bcsitr = biocstemp.begin();
+  while (bcsitr != biocstemp.end()) {
+    bcsitr = biocstemp.erase(bcsitr);
+  }
+
   total.remove();
 
   init_balance(_self);
@@ -632,6 +643,28 @@ void harvest::calc_contribution_score(name account, name type) {
       size_change(cs_size, -1);
     }
   }
+
+  if (type != "organisation"_n) {
+    add_cs_to_bioregion(account, uint32_t(contribution_points));
+  }
+}
+
+void harvest::add_cs_to_bioregion(name account, uint32_t points) {
+  auto bitr = members.find(account.value);
+  if (bitr == members.end()) { return; }
+
+  auto csitr = biocstemp.find(bitr -> bioregion.value);
+  if (csitr == biocstemp.end()) {
+    biocstemp.emplace(_self, [&](auto & item){
+      item.bioregion = bitr -> bioregion;
+      item.points = points;
+    });
+    size_change(cs_bio_size, 1);
+  } else {
+    biocstemp.modify(csitr, _self, [&](auto & item){
+      item.points += points;
+    });
+  }
 }
 
 void harvest::rankcss() {
@@ -698,6 +731,75 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   }
 
 }
+
+
+void harvest::rankbiocss() {
+  uint64_t batch_size = config_get("batchsize"_n);
+  size_set(sum_rank_bios, 0);
+  rankbiocs(uint64_t(0), uint64_t(0), batch_size);
+}
+
+void harvest::rankbiocs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
+  require_auth(get_self());
+
+  uint64_t total = get_size(cs_bio_size);
+  if (total == 0) return;
+
+  cs_points_tables biocspoints(get_self(), name("bio").value);
+
+  auto bios_by_points = biocstemp.get_index<"bycspoints"_n>();
+  auto bitr = start == 0 ? bios_by_points.begin() : bios_by_points.find(start);
+  
+  uint64_t current = chunk * chunksize;
+  uint64_t count = 0;
+  uint64_t sum_rank_b = 0;
+
+  while (bitr != bios_by_points.end() && count < chunksize) {
+
+    uint64_t rank = utils::rank(current, total);
+
+    auto csitr = biocspoints.find(bitr -> bioregion.value);
+    if (csitr == biocspoints.end()) {
+      biocspoints.emplace(_self, [&](auto & item){
+        item.account = bitr -> bioregion;
+        item.contribution_points = bitr -> points;
+        item.rank = rank;
+      });
+    } else {
+      biocspoints.modify(csitr, _self, [&](auto & item){
+        item.contribution_points = bitr -> points;
+        item.rank = rank;
+      });
+    }
+
+    sum_rank_b += rank;
+
+    bitr = bios_by_points.erase(bitr);
+    count++;
+    current++;
+  }
+
+  size_change(sum_rank_bios, int64_t(sum_rank_b));
+
+  if (bitr != bios_by_points.end()) {
+    uint64_t next_value = bitr -> by_cs_points();
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "rankbiocs"_n,
+      std::make_tuple(next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  } else {
+    size_set(cs_bio_size, 0);
+  }
+
+}
+
 
 void harvest::payforcpu(name account) {
     require_auth(get_self()); // satisfied by payforcpu permission
