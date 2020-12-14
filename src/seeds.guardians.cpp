@@ -1,4 +1,5 @@
 #include <seeds.guardians.hpp>
+#include <set>
 
 void guardians::reset()
 {
@@ -28,10 +29,18 @@ void guardians::init(name user_account, vector<name> guardian_accounts, uint64_t
     check(guardian_accounts.size() >= 3,
           "provided " + to_string(guardian_accounts.size()) + " guardians, but needed at least 3 guardians");
     
+    std::set<name> guardians_set;
+
     for (std::size_t i = 0; i < guardian_accounts.size(); ++i)
     {
-        check(is_seeds_user(guardian_accounts[i]),
-              "guardian " + guardian_accounts[i].to_string() + " is not a seeds user");
+        auto guard = guardian_accounts[i];
+        
+        check(user_account != guard, "user cannot be their own guardiam");
+        
+        check(is_seeds_user(guard), "guardian " + guard.to_string() + " is not a seeds user");
+        
+        check(guardians_set.find(guard) != guardians_set.end(), "duplicate guardian in list");
+        guardians_set.emplace(guard);
     }
 
     guards.emplace(get_self(), [&](auto &item) {
