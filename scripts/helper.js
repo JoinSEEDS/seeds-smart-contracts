@@ -599,6 +599,9 @@ var permissions = [{
 }, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'rankbiocss'
 }]
 
 const isTestnet = chainId == networks.telosTestnet
