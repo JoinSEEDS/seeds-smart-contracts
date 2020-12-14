@@ -187,10 +187,10 @@ void proposals::initsz() {
   int64_t count = 0; 
   auto aitr = actives.begin();
   while(aitr != actives.end()) {
-    aitr++;
     if (aitr -> active) {
       count++;
     }
+    aitr++;
   }
   print("size change "+std::to_string(count));
   size_change(user_active_size, count - current);
