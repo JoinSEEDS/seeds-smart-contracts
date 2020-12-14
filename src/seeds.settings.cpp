@@ -45,6 +45,8 @@ void settings::reset() {
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
+  confwithdesc(name("inact.cyc"), 3, "Number of cycles until a voter is considered inactive and no longer counts towards quorum", high_impact);
+  confwithdesc(name("propcyclesec"), utils::proposal_cycle, "Proposal cycle lengs in seconds", high_impact);
 
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 

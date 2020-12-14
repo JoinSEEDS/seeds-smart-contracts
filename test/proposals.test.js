@@ -1402,7 +1402,7 @@ describe('Stake limits', async assert => {
 
 })
 
-describe('Demote inactive citizens', async assert => {
+describe.only('Active count and vote power', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1436,9 +1436,12 @@ describe('Demote inactive citizens', async assert => {
       table: 'actives',
       json: true,
     })
+
+    console.log("ACTIVES: "+JSON.stringify(actives, null, 2))
+
     assert({
       given: 'test active',
-      should: '',
+      should: 'match expected',
       expected: expectedValues,
       actual: actives.rows.map(r => {
         return {
@@ -1449,39 +1452,31 @@ describe('Demote inactive citizens', async assert => {
     })
   }
 
-  const testActiveSize = async expectedValues => {
+  const testActiveSize = async (active, voteP) => {
     const sizes = await eos.getTableRows({
       code: proposals,
       scope: proposals,
       table: 'sizes',
       json: true,
     })
-    const activeArray = sizes.rows.filter(r => r.id === 'active.sz')
+    const activeArray = sizes.rows.filter(r => r.id === 'user.act.sz')
+    const votePowerSize = sizes.rows.filter(r => r.id === 'votepow.sz')
     const activeSize = activeArray.length > 0 ? activeArray[0].size : 0
+    const votePower = votePowerSize.length > 0 ? votePowerSize[0].size : 0
     assert({
       given: 'test active size',
-      should: '',
-      expected: expectedValues,
+      should: 'match',
+      expected: active,
       actual: activeSize
+    })
+    assert({
+      given: 'vote power size',
+      should: 'match',
+      expected: voteP,
+      actual: votePower
     })
   }
   
-  const testUserStatus = async expectedValues => {
-    const users = await eos.getTableRows({
-      code: accounts,
-      scope: accounts,
-      table: 'users',
-      json: true,
-    })
-    const userStatus = users.rows.map(u => u.status)
-    assert({
-      given: 'test user status',
-      should: 'have the expected status',
-      expected: expectedValues,
-      actual: userStatus
-    })
-  }
-
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
@@ -1492,149 +1487,83 @@ describe('Demote inactive citizens', async assert => {
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
+  const votePower1 = 30
+  const votePower2 = 40
+  const votePower3 = 90
+
+  console.log('set contribution scores')
+  await contracts.harvest.testupdatecs(firstuser, votePower1, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, votePower2, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, votePower3, { authorization: `${harvest}@active` })
+
+  console.log('set propcyclesec to 2 seconds')
+  await contracts.settings.configure('propcyclesec', 2, { authorization: `${settings}@active` })
+
   const now = parseInt(Date.now() / 1000)
 
   const actives = [
     { account: 'seedsuseraaa', active: 1 },
     { account: 'seedsuserbbb', active: 1 },
     { account: 'seedsuserccc', active: 1 }
-  ]
-  const users = [
-    'citizen',
-    'citizen',
-    'citizen',
-    'visitor'
-  ]
+  ]  
 
-  console.log('testActives')
+  console.log('testActives - inital actives')
   await testActives(actives)
-  await testActiveSize(3)
+  await testActiveSize(3, 0)
 
-  await sleep(2000)
-  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await sleep(1000)
 
-  console.log('testActives 2')
-  await testActives(actives)
-  await testActiveSize(3)
-  await testUserStatus(users)
+  const createprop = async () => {
+    console.log('create prop...')
+    await contracts.proposals.createx(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+    await sleep(1000)
+  }
 
-  console.log('createx 2')
-  await contracts.proposals.createx(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await createprop()
 
-  await sleep(8000)
-
-  console.log('favour')
+  console.log('vote')
   await contracts.proposals.favour(seconduser, 1, 5, { authorization: `${seconduser}@active` })
-
-  const activesAfterVote = await eos.getTableRows({
-    code: proposals,
-    scope: proposals,
-    table: 'actives',
-    json: true,
-  })
-  const firstActive = activesAfterVote.rows.filter(a => a.account === firstuser)
-  const secondActive = activesAfterVote.rows.filter(a => a.account === seconduser)
-  
-  console.log('mooncyclesec')
-  await contracts.settings.configure('mooncyclesec', 3, { authorization: `${settings}@active` })
-  await sleep(2000)
-  console.log('onper 1')
-
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(2000)
-  console.log('onper 2')
-
+    
+  console.log('onperiod 1')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
+  await testActives(actives)
+
+  await testActiveSize(3, votePower3 + votePower2 + votePower1)
+
+  console.log('sleep 2 cycle lengths + 1/2 cycle length')
+  await sleep(5000)
+
+  console.log('onperiod 2')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  await sleep(1000)
+
+  console.log('only 1 remoains active')
   actives[0].active = 0
   actives[2].active = 0
   await testActives(actives)
-  await testActiveSize(1)
-  users[0] = 'resident'
-  users[2] = 'resident'
-  console.log('testUserStatus 2')
+  await testActiveSize(1, votePower2)
+  
+  console.log('vote on prop to become active again')
+  await createprop()
+  await contracts.proposals.favour(firstuser, 2, 5, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 2, 1, { authorization: `${seconduser}@active` })
 
-  await testUserStatus(users)
-
-  console.log('user comes back from resident')
-  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
   actives[0].active = 1
   actives[2].active = 0
-  await testActives(actives)
-  await testActiveSize(2)
-  users[0] = 'citizen'
-  users[2] = 'resident'
-  await testUserStatus(users)
 
-  await sleep(2000)
+  await testActives(actives)
+  await testActiveSize(2, 0) // it's 0 here because cycle ran before the votes and everyone was out of active
+
+  console.log("run props")
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
-  actives[0].active = 0
-  actives[2].active = 0
+  await sleep(2000)
+
   await testActives(actives)
-  await testActiveSize(1)
-  users[0] = 'resident'
-  users[2] = 'resident'
-  await testUserStatus(users)
-
-  console.log("set decay to 2 seconds")
-  await contracts.settings.configure('decaytime', 2, { authorization: `${settings}@active` })
-  
-  console.log("give contribution score and voice to users")
-  await contracts.harvest.testupdatecs(firstuser, 50, { authorization: `${harvest}@active` })
-  await contracts.harvest.testupdatecs(thirduser, 80, { authorization: `${harvest}@active` })
-
-  console.log("user 1 comes back to citizen from being demoted")
-  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-
-  console.log("manually set voice decay time to now")
-  await contracts.proposals.testvdecay(parseInt(Date.now() / 1000), { authorization: `${proposals}@active` })
-  await contracts.settings.configure('propdecaysec', 1, { authorization: `${settings}@active` })
-
-  console.log("user 3 comes back to citizen from being demoted")
-  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
-  
-  const voiceFirstUser = await eos.getTableRows({
-    code: proposals,
-    scope: proposals,
-    table: 'voice',
-    json: true,
-  })
-  const voiceAllianceFirstUser = await eos.getTableRows({
-    code: proposals,
-    scope: proposals,
-    table: 'voice',
-    json: true,
-  })
-
-  assert({
-    given: 'voted',
-    should: 'update active timestamp',
-    expected: true,
-    actual: (secondActive[0].timestamp > now + 6) && (Math.abs(firstActive[0].timestamp - now) <= 1)
-  })
-
-  assert({
-    given: 'voice for campaigns recovered',
-    should: 'have the correct amount of voice',
-    expected: [
-      { account: 'seedsuseraaa', balance: 50 },
-      { account: 'seedsuserccc', balance: 57 }
-    ],
-    actual: voiceFirstUser.rows.filter(r => r.account == firstuser || r.account == thirduser)
-  })
-
-  assert({
-    given: 'voice for alliances recovered',
-    should: 'have the correct amount of voice',
-    expected: [
-      { account: 'seedsuseraaa', balance: 50 },
-      { account: 'seedsuserccc', balance: 57 }
-    ],
-    actual: voiceAllianceFirstUser.rows.filter(r => r.account == firstuser || r.account == thirduser)
-  })
+  await testActiveSize(2, votePower2 + votePower1)
 
 })
 

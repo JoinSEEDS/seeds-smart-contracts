@@ -46,7 +46,7 @@ const setting_in_seeds = async (key) => {
     upper_bound: key,
     json: true,
   })
-  return value.rows[0].value / 10000
+  return Math.round(value.rows[0].value / 10000) // not entirely correct but works for now
 }
 
 const get_settings = async (key) => {

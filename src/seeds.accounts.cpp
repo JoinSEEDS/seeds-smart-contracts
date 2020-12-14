@@ -630,14 +630,6 @@ bool accounts::check_can_make_citizen(name user) {
     return true;
 }
 
-void accounts::demotecitizn (name user) {
-  require_auth(get_self());
-  auto uitr = users.find(user.value);
-  check(uitr != users.end(), "User not found");
-  check(uitr -> status == "citizen"_n, "The user must be a citizen");
-  updatestatus(user, "resident"_n);
-}
-
 void accounts::add_active (name user) {
   action(
     permission_level(contracts::proposals, "active"_n),

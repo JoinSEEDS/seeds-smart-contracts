@@ -20,7 +20,6 @@ void proposals::reset() {
   auto voiceitr = voice.begin();
   while (voiceitr != voice.end()) {
     voiceitr = voice.erase(voiceitr);
-    size_change("active.sz"_n, -1);
   }
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
@@ -184,15 +183,17 @@ uint64_t proposals::get_size(name id) {
 void proposals::initsz() {
   require_auth(_self);
   
-  uint64_t current = get_size("active.sz"_n);
+  uint64_t current = get_size(user_active_size);
   int64_t count = 0; 
-  auto vitr = voice.begin();
-  while(vitr != voice.end()) {
-    vitr++;
-    count++;
+  auto aitr = actives.begin();
+  while(aitr != actives.end()) {
+    aitr++;
+    if (aitr -> active) {
+      count++;
+    }
   }
   print("size change "+std::to_string(count));
-  size_change("active.sz"_n, count - current);
+  size_change(user_active_size, count - current);
 }
 
 void proposals::initactives() {
@@ -220,7 +221,7 @@ void proposals::onperiod() {
     uint64_t prop_majority = config_get(name("propmajority"));
 
     uint64_t number_active_proposals = get_size(prop_active_size);
-    uint64_t total_eligible_voters = get_size("active.sz"_n);
+    uint64_t total_eligible_voters = get_size(user_active_size);
     uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
@@ -352,7 +353,7 @@ void proposals::onperiod() {
       std::make_tuple()
     );
     // trx_demote_inactives.delay_sec = 5;
-    trx_demote_inactives.send(name("active.sz").value, _self);
+    trx_demote_inactives.send(user_active_size.value, _self);
 
     update_cycle();
 }
@@ -373,8 +374,15 @@ void proposals::updatevoice(uint64_t start) {
   voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
+
+  if (start == 0) {
+      size_set(cycle_vote_power_size, 0);
+  }
+
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
+  uint64_t total_points = 0;
+  
   while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
       uint64_t points = 0;
@@ -384,9 +392,13 @@ void proposals::updatevoice(uint64_t start) {
 
       set_voice(vitr -> account, points, ""_n);
 
+      total_points += points;
       vitr++;
       count++;
   }
+  
+  size_change(cycle_vote_power_size, total_points);
+
   if (vitr != voice.end()) {
     uint64_t next_value = vitr->account.value;
     action next_execution(
@@ -413,11 +425,12 @@ void proposals::updateactive(uint64_t start) {
 
   auto aitr = start == 0 ? actives.begin() : actives.find(start);
   uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t moon_cycle_sec = config_get(name("mooncyclesec"));
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
   uint64_t count = 0;
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-  uint64_t three_moon_cycles = c.t_onperiod - (3 * moon_cycle_sec);
+  uint64_t three_moon_cycles = c.t_onperiod - (inact_cycles * prop_cycle_sec);
 
   while (aitr != actives.end() && count < batch_size) {
     if (aitr -> timestamp < three_moon_cycles) {
@@ -898,10 +911,16 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (aitr == actives.end()) {
     actives.emplace(_self, [&](auto& item) {
       item.account = voter;
+      item.active = true;
       item.timestamp = current_time_point().sec_since_epoch();
     });
+    size_change(user_active_size, 1);
   } else {
     actives.modify(aitr, _self, [&](auto & item){
+      if (!item.active) {
+        item.active = true;
+        size_change(user_active_size, 1);
+      }
       item.timestamp = current_time_point().sec_since_epoch();
     });
   }
@@ -1001,7 +1020,6 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
             voice.account = user;
             voice.balance = amount;
         });
-        size_change("active.sz"_n, 1);
     } else {
       voice.modify(vitr, _self, [&](auto& voice) {
         voice.balance = amount;
@@ -1050,10 +1068,10 @@ void proposals::changetrust(name user, bool trust) {
     auto vitr = voice.find(user.value);
 
     if (vitr == voice.end() && trust) {
-      set_voice(user, 0, ""_n);
+      recover_voice(user); // Issue 
+      //set_voice(user, 0, ""_n);
     } else if (vitr != voice.end() && !trust) {
       erase_voice(user);
-      size_change("active.sz"_n, -1);
     }
 }
 
@@ -1153,6 +1171,7 @@ void proposals::addactive(name account) {
       actives.modify(aitr, _self, [&](auto & a){
         a.active = true;
       });
+      size_change(user_active_size, 1);
       recover_voice(account);
     }
   } else {
@@ -1161,6 +1180,8 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
+    size_change(user_active_size, 1);
+    recover_voice(account);
   }
 }
 
@@ -1196,6 +1217,8 @@ void proposals::recover_voice(name account) {
 
   set_voice(account, voice_amount, ""_n);
 
+  size_change(cycle_vote_power_size, voice_amount);
+
 }
 
 void proposals::removeactive(name account) {
@@ -1207,18 +1230,14 @@ void proposals::removeactive(name account) {
       actives.modify(aitr, _self, [&](auto & a){
         a.active = false;
       });
-      demote_citizen(account);
+      size_change(user_active_size, -1);
     }
-  }
-}
+    auto vitr = voice.find(account.value);
+    if (vitr != voice.end()) { 
+      size_change(cycle_vote_power_size, -vitr->balance);
+    }
 
-void proposals::demote_citizen(name account) {
-  action(
-    permission_level(contracts::accounts, "active"_n),
-    contracts::accounts,
-    "demotecitizn"_n,
-    std::make_tuple(account)
-  ).send();  
+  }
 }
 
 void proposals::size_change(name id, int64_t delta) {
@@ -1240,6 +1259,22 @@ void proposals::size_change(name id, int64_t delta) {
     }
     sizes.modify(sitr, _self, [&](auto& item) {
       item.size = newsize;
+    });
+  }
+}
+
+void proposals::size_set(name id, int64_t value) {
+  size_tables sizes(get_self(), get_self().value);
+
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = value;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = value;
     });
   }
 }
