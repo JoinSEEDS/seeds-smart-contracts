@@ -1234,7 +1234,6 @@ void proposals::removeactive(name account) {
     }
     auto vitr = voice.find(account.value);
     if (vitr != voice.end()) { 
-      print("user "+account.to_string() + " inactive, removing balance "+std::to_string(vitr->balance));
       size_change(cycle_vote_power_size, -vitr->balance);
     }
 
