@@ -425,11 +425,12 @@ void proposals::updateactive(uint64_t start) {
 
   auto aitr = start == 0 ? actives.begin() : actives.find(start);
   uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t moon_cycle_sec = config_get(name("mooncyclesec"));
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
   uint64_t count = 0;
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-  uint64_t three_moon_cycles = c.t_onperiod - (3 * moon_cycle_sec);
+  uint64_t three_moon_cycles = c.t_onperiod - (inact_cycles * prop_cycle_sec);
 
   while (aitr != actives.end() && count < batch_size) {
     if (aitr -> timestamp < three_moon_cycles) {
@@ -910,10 +911,16 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (aitr == actives.end()) {
     actives.emplace(_self, [&](auto& item) {
       item.account = voter;
+      item.active = true;
       item.timestamp = current_time_point().sec_since_epoch();
     });
+    size_change(user_active_size, 1);
   } else {
     actives.modify(aitr, _self, [&](auto & item){
+      if (!item.active) {
+        item.active = true;
+        size_change(user_active_size, 1);
+      }
       item.timestamp = current_time_point().sec_since_epoch();
     });
   }
@@ -1174,6 +1181,7 @@ void proposals::addactive(name account) {
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
     size_change(user_active_size, 1);
+    recover_voice(account);
   }
 }
 
@@ -1224,6 +1232,12 @@ void proposals::removeactive(name account) {
       });
       size_change(user_active_size, -1);
     }
+    auto vitr = voice.find(account.value);
+    if (vitr != voice.end()) { 
+      print("user "+account.to_string() + " inactive, removing balance "+std::to_string(vitr->balance));
+      size_change(cycle_vote_power_size, -vitr->balance);
+    }
+
   }
 }
 
