@@ -46,7 +46,7 @@ const setting_in_seeds = async (key) => {
     upper_bound: key,
     json: true,
   })
-  return value.rows[0].value / 10000
+  return Math.round(value.rows[0].value / 10000) // not entirely correct but works for now
 }
 
 const get_settings = async (key) => {
@@ -817,13 +817,6 @@ describe('make resident', async assert => {
   for (var i=0; i<10; i++) {
     await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', 'memo'+i, { authorization: `${firstuser}@active` })
   }
-
-  const hist = await eos.getTableRows({
-    code: history,
-    scope: history,
-    table: 'transactions',
-    json: true,
-  })
 
   console.log('add referral')
   await contracts.accounts.addref(firstuser, seconduser, { authorization: `${accounts}@api` })

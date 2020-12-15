@@ -20,7 +20,6 @@ void proposals::reset() {
   auto voiceitr = voice.begin();
   while (voiceitr != voice.end()) {
     voiceitr = voice.erase(voiceitr);
-    size_change("active.sz"_n, -1);
   }
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
@@ -48,6 +47,15 @@ void proposals::reset() {
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
+  }
+
+  name scopes[] = { get_self(), alliance_type };
+  for (int i = 0; i < 2; i++) {
+    delegate_trust_tables deltrusts(get_self(), (scopes[i]).value);
+    auto ditr = deltrusts.begin();
+    while (ditr != deltrusts.end()) {
+      ditr = deltrusts.erase(ditr);
+    }
   }
 
 }
@@ -174,16 +182,25 @@ uint64_t proposals::get_size(name id) {
 
 void proposals::initsz() {
   require_auth(_self);
-  
-  uint64_t current = get_size("active.sz"_n);
+  uint64_t now = current_time_point().sec_since_epoch();
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
+  uint64_t cutoff_date = now - (inact_cycles * prop_cycle_sec);
+
+  uint64_t current = get_size(user_active_size);
   int64_t count = 0; 
-  auto vitr = voice.begin();
-  while(vitr != voice.end()) {
-    vitr++;
-    count++;
+  auto aitr = actives.begin();
+  while(aitr != actives.end()) {
+    if (aitr -> timestamp >= cutoff_date) {
+      actives.modify(aitr, _self, [&](auto & item){
+        item.active = true;
+      });
+      count++;
+    }
+    aitr++;
   }
   print("size change "+std::to_string(count));
-  size_change("active.sz"_n, count - current);
+  size_change(user_active_size, count - current);
 }
 
 void proposals::initactives() {
@@ -211,7 +228,7 @@ void proposals::onperiod() {
     uint64_t prop_majority = config_get(name("propmajority"));
 
     uint64_t number_active_proposals = get_size(prop_active_size);
-    uint64_t total_eligible_voters = get_size("active.sz"_n);
+    uint64_t total_eligible_voters = get_size(user_active_size);
     uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
@@ -343,7 +360,7 @@ void proposals::onperiod() {
       std::make_tuple()
     );
     // trx_demote_inactives.delay_sec = 5;
-    trx_demote_inactives.send(name("active.sz").value, _self);
+    trx_demote_inactives.send(user_active_size.value, _self);
 
     update_cycle();
 }
@@ -364,8 +381,15 @@ void proposals::updatevoice(uint64_t start) {
   voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
+
+  if (start == 0) {
+      size_set(cycle_vote_power_size, 0);
+  }
+
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
+  uint64_t total_points = 0;
+  
   while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
       uint64_t points = 0;
@@ -375,9 +399,13 @@ void proposals::updatevoice(uint64_t start) {
 
       set_voice(vitr -> account, points, ""_n);
 
+      total_points += points;
       vitr++;
       count++;
   }
+  
+  size_change(cycle_vote_power_size, total_points);
+
   if (vitr != voice.end()) {
     uint64_t next_value = vitr->account.value;
     action next_execution(
@@ -404,11 +432,12 @@ void proposals::updateactive(uint64_t start) {
 
   auto aitr = start == 0 ? actives.begin() : actives.find(start);
   uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t moon_cycle_sec = config_get(name("mooncyclesec"));
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
   uint64_t count = 0;
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-  uint64_t three_moon_cycles = c.t_onperiod - (3 * moon_cycle_sec);
+  uint64_t three_moon_cycles = c.t_onperiod - (inact_cycles * prop_cycle_sec);
 
   while (aitr != actives.end() && count < batch_size) {
     if (aitr -> timestamp < three_moon_cycles) {
@@ -795,8 +824,7 @@ bool proposals::revert_vote (name voter, uint64_t id) {
   return false;
 }
 
-void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new) {
-  require_auth(voter);
+void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
   auto pitr = props.find(id);
@@ -835,7 +863,8 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   } else {
     scope = get_self();
   }
-  voice_change(voter, amount, true, scope);
+
+  double percenetage_used = voice_change(voter, amount, true, scope);
   
   votes.emplace(_self, [&](auto& vote) {
     vote.account = voter;
@@ -848,15 +877,22 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     vote.proposal_id = id;
   });
 
+  if (!is_delegated) {
+    check(!is_trust_delegated(voter, scope), "voice is delegated, user can not vote by itself");
+  }
+
+  send_mimic_delegatee_vote(voter, scope, id, percenetage_used, option);
+
   if (is_new) {
     auto rep = config_get(name("voterep2.ind"));
+    double rep_multiplier = is_delegated ? config_get(name("votedel.mul")) / 100.0 : 1.0;
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
       // add reputation for entering in the table
       action(
         permission_level{contracts::accounts, "active"_n},
         contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, rep)
+        std::make_tuple(voter, uint64_t(rep * rep_multiplier))
       ).send();
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
@@ -882,26 +918,35 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (aitr == actives.end()) {
     actives.emplace(_self, [&](auto& item) {
       item.account = voter;
+      item.active = true;
       item.timestamp = current_time_point().sec_since_epoch();
     });
+    size_change(user_active_size, 1);
   } else {
     actives.modify(aitr, _self, [&](auto & item){
+      if (!item.active) {
+        item.active = true;
+        size_change(user_active_size, 1);
+      }
       item.timestamp = current_time_point().sec_since_epoch();
     });
   }
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
-  vote_aux(voter, id, amount, trust, true);
+  require_auth(voter);
+  vote_aux(voter, id, amount, trust, true, false);
 }
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
+  require_auth(voter);
   bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted);
+  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
-  vote_aux(voter, id, (uint64_t)0, abstain, true);
+  require_auth(voter);
+  vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
 void proposals::addvoice(name user, uint64_t amount) {
@@ -909,7 +954,9 @@ void proposals::addvoice(name user, uint64_t amount) {
   voice_change(user, amount, false, ""_n);
 }
 
-void proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
+double proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
+  double percentage_used = 0.0;
+
   if (scope == ""_n) {
     voice_tables voice_alliance(get_self(), alliance_type.value);
 
@@ -929,6 +976,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
     } else if (vitr != voice.end() && vaitr != voice_alliance.end()) {
       if (reduce) {
         check(amount <= vitr -> balance && amount <= vaitr -> balance, "voice balance exceeded");
+        percentage_used = amount / double(vitr -> balance);
       }
       voice.modify(vitr, _self, [&](auto& voice) {
         if (reduce) {
@@ -946,7 +994,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
       });
     }
   } else {
-    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    check_voice_scope(scope);
     
     voice_tables voices(get_self(), scope.value);
     auto vitr = voices.find(user.value);
@@ -954,6 +1002,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
 
     if (reduce) {
       check(amount <= vitr -> balance, "voice balance exceeded");
+      percentage_used = amount / double(vitr -> balance);
     }
     voices.modify(vitr, _self, [&](auto & voice){
       if (reduce) {
@@ -963,6 +1012,7 @@ void proposals::voice_change (name user, uint64_t amount, bool reduce, name scop
       }
     });
   }
+  return percentage_used;
 }
 
 void proposals::set_voice (name user, uint64_t amount, name scope) {
@@ -977,7 +1027,6 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
             voice.account = user;
             voice.balance = amount;
         });
-        size_change("active.sz"_n, 1);
     } else {
       voice.modify(vitr, _self, [&](auto& voice) {
         voice.balance = amount;
@@ -996,7 +1045,7 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
     }
 
   } else {
-    check(scope == _self || scope == alliance_type, "invalid scope for voice");
+    check_voice_scope(scope);
     
     voice_tables voices(get_self(), scope.value);
     auto vitr = voices.find(user.value);
@@ -1026,10 +1075,10 @@ void proposals::changetrust(name user, bool trust) {
     auto vitr = voice.find(user.value);
 
     if (vitr == voice.end() && trust) {
-      set_voice(user, 0, ""_n);
+      recover_voice(user); // Issue 
+      //set_voice(user, 0, ""_n);
     } else if (vitr != voice.end() && !trust) {
       erase_voice(user);
-      size_change("active.sz"_n, -1);
     }
 }
 
@@ -1129,6 +1178,7 @@ void proposals::addactive(name account) {
       actives.modify(aitr, _self, [&](auto & a){
         a.active = true;
       });
+      size_change(user_active_size, 1);
       recover_voice(account);
     }
   } else {
@@ -1137,6 +1187,8 @@ void proposals::addactive(name account) {
       a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
+    size_change(user_active_size, 1);
+    recover_voice(account);
   }
 }
 
@@ -1172,6 +1224,8 @@ void proposals::recover_voice(name account) {
 
   set_voice(account, voice_amount, ""_n);
 
+  size_change(cycle_vote_power_size, voice_amount);
+
 }
 
 void proposals::removeactive(name account) {
@@ -1183,18 +1237,14 @@ void proposals::removeactive(name account) {
       actives.modify(aitr, _self, [&](auto & a){
         a.active = false;
       });
-      demote_citizen(account);
+      size_change(user_active_size, -1);
     }
-  }
-}
+    auto vitr = voice.find(account.value);
+    if (vitr != voice.end()) { 
+      size_change(cycle_vote_power_size, -vitr->balance);
+    }
 
-void proposals::demote_citizen(name account) {
-  action(
-    permission_level(contracts::accounts, "active"_n),
-    contracts::accounts,
-    "demotecitizn"_n,
-    std::make_tuple(account)
-  ).send();  
+  }
 }
 
 void proposals::size_change(name id, int64_t delta) {
@@ -1216,6 +1266,22 @@ void proposals::size_change(name id, int64_t delta) {
     }
     sizes.modify(sitr, _self, [&](auto& item) {
       item.size = newsize;
+    });
+  }
+}
+
+void proposals::size_set(name id, int64_t value) {
+  size_tables sizes(get_self(), get_self().value);
+
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = value;
+    });
+  } else {
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = value;
     });
   }
 }
@@ -1270,4 +1336,135 @@ ACTION proposals::initnumprop() {
       item.size = total_proposals;
     });
   }
+}
+
+void proposals::check_voice_scope (name scope) {
+  check(scope == _self || scope == alliance_type, "invalid scope for voice");
+}
+
+bool proposals::is_trust_delegated (name account, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(account.value);
+  return ditr != deltrusts.end();
+}
+
+ACTION proposals::delegate (name delegator, name delegatee, name scope) {
+
+  require_auth(delegator);
+  check_voice_scope(scope);
+
+  voice_tables voice(get_self(), scope.value);
+  auto vitr = voice.find(delegator.value);
+  check(vitr != voice.end(), "delegatee does not have voice");
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(delegator.value);
+
+  if (ditr != deltrusts.end()) {
+    deltrusts.modify(ditr, _self, [&](auto & item){
+      item.delegatee = delegatee;
+      item.weight = 1.0;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    deltrusts.emplace(_self, [&](auto & item){
+      item.delegator = delegator;
+      item.delegatee = delegatee;
+      item.weight = 1.0;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
+
+}
+
+void proposals::send_mimic_delegatee_vote (name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option) {
+
+  uint64_t batch_size = config_get("batchsize"_n);
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  uint128_t id = uint128_t(delegatee.value) << 64;
+  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(id);
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action mimic_action(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicvote"_n,
+      std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, batch_size)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(mimic_action);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  check_voice_scope(scope);
+  voice_tables voices(get_self(), scope.value);
+
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator.value;
+
+  auto ditr = deltrusts_by_delegatee_delegator.find(id);
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+    auto vitr = voices.find(voter.value);
+
+    if (option == trust) {
+      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, trust, true, true);
+    } else if (option == distrust) {
+      bool vote_reverted = revert_vote(voter, proposal_id);
+      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, distrust, !vote_reverted, true);
+    } else if (option == abstain) {
+      vote_aux(voter, proposal_id, uint64_t(0), abstain, true, true);
+    }
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicvote"_n,
+      std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::undelegate (name delegator, name scope) {
+  check_voice_scope(scope);
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto ditr = deltrusts.find(delegator.value);
+
+  check(ditr != deltrusts.end(), "delegator not found");
+
+  if (!has_auth(ditr -> delegatee)) {
+    require_auth(delegator);
+  } else {
+    require_auth(ditr -> delegatee);
+  }
+
+  deltrusts.erase(ditr);
 }

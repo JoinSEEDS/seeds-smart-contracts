@@ -33,10 +33,14 @@ CONTRACT harvest : public contract {
         sizes(receiver, receiver.value),
         total(receiver, receiver.value),
         harveststat(receiver, receiver.value),
+        monthlyqevs(receiver, receiver.value),
+        mintrate(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
-        cbs(contracts::accounts, contracts::accounts.value)
+        cbs(contracts::accounts, contracts::accounts.value),
+        circulating(contracts::token, contracts::token.value),
+        bioregions(contracts::bioregion, contracts::bioregion.value)
         {}
         
     ACTION reset();
@@ -77,19 +81,33 @@ CONTRACT harvest : public contract {
 
     ACTION testclaim(name from, uint64_t request_id, uint64_t sec_rewind);
     ACTION testupdatecs(name account, uint64_t contribution_score);
+    ACTION testcspoints(name account, uint64_t contribution_points);
     
     ACTION updtotal(); // MIGRATION ACTION
 
     ACTION setorgtxpt(name organization, uint64_t tx_points);
 
+    ACTION calcmqevs();
+
+    ACTION testcalcmqev(uint64_t day, uint64_t total_volume, uint64_t circulating);
+    ACTION calcmintrate();
+
+    ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstbios(uint64_t start, uint64_t chunksize, asset total_amount);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
+    symbol test_symbol = symbol("TESTS", 4);
     uint64_t ONE_WEEK = 604800;
 
     name planted_size = "planted.sz"_n;
     name tx_points_size = "txpt.sz"_n;
     name org_tx_points_size = "org.tx.sz"_n;
     name cs_size = "cs.sz"_n;
+    name sum_rank_users = "usr.rnk.sz"_n;
+    name sum_rank_orgs = "org.rnk.sz"_n;
+    name sum_rank_bios = "bio.rnk.sz"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
@@ -97,16 +115,20 @@ CONTRACT harvest : public contract {
     void check_asset(asset quantity);
     void _deposit(asset quantity);
     void _withdraw(name account, asset quantity);
-    uint32_t calc_transaction_points(name account);
+    uint32_t calc_transaction_points(name account, name type);
     double get_rep_multiplier(name account);
     void add_planted(name account, asset quantity);
     void sub_planted(name account, asset quantity);
     void change_total(bool add, asset quantity);
-    void calc_contribution_score(name account);
+    void calc_contribution_score(name account, name type);
 
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
     uint64_t get_size(name id);
+
+    uint64_t config_get(name key);
+    void send_distribute_harvest (name key, asset amount);
+    void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
 
     // Contract Tables
 
@@ -192,6 +214,27 @@ CONTRACT harvest : public contract {
 
     DEFINE_CBS_TABLE_MULTI_INDEX
 
+    TABLE bioregion_table {
+        name id;
+        name founder;
+        name status; // "active" "inactive"
+        string description;
+        string locationjson; // json description of the area
+        float latitude;
+        float longitude;
+        uint64_t members_count;
+        time_point created_at = current_block_time().to_time_point();
+
+        uint64_t primary_key() const { return id.value; }
+        uint64_t by_status() const { return status.value; }
+        uint64_t by_count() const { return members_count; }
+    };
+
+    typedef eosio::multi_index <"bioregions"_n, bioregion_table,
+        indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
+        indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
+    > bioregion_tables;
+
 
     TABLE total_table {
       uint64_t id;
@@ -202,18 +245,6 @@ CONTRACT harvest : public contract {
     typedef singleton<"total"_n, total_table> total_tables;
     typedef eosio::multi_index<"total"_n, total_table> dump_for_total;
 
-    TABLE transaction_table { // from History contract - scoped by 'from'
-       uint64_t id;
-       name to;
-       asset quantity;
-       uint64_t timestamp;
-
-       uint64_t primary_key() const { return id; }
-       uint64_t by_timestamp() const { return timestamp; }
-       uint64_t by_to() const { return to.value; }
-       uint64_t by_quantity() const { return quantity.amount; }
-    };
-
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
     typedef eosio::multi_index<"balances"_n, balance_table,
@@ -221,11 +252,98 @@ CONTRACT harvest : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
 
-    typedef eosio::multi_index<"transactions"_n, transaction_table,
-      indexed_by<"bytimestamp"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_timestamp>>,
-      indexed_by<"byquantity"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_quantity>>,
-      indexed_by<"byto"_n,const_mem_fun<transaction_table, uint64_t, &transaction_table::by_to>>
-    > transaction_tables;
+    // From history contract
+    TABLE transaction_points_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t points;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_points() const { return points; }
+    };
+
+    // From history contract
+    TABLE qev_table { // scoped by account
+      uint64_t timestamp;
+      uint64_t qualifying_volume;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    TABLE monthly_qev_table {
+      uint64_t timestamp;
+      uint64_t qualifying_volume;
+      uint64_t circulating_supply;
+
+      uint64_t primary_key() const { return timestamp; }
+      uint64_t by_volume() const { return qualifying_volume; }
+    };
+
+    // From token contract
+    TABLE circulating_supply_table {
+      uint64_t id;
+      uint64_t total;
+      uint64_t circulating;
+
+      uint64_t primary_key()const { return id; }
+    };
+
+    typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
+      indexed_by<"bypoints"_n,
+      const_mem_fun<transaction_points_table, uint64_t, &transaction_points_table::by_points>>
+    > transaction_points_tables;
+
+    typedef eosio::multi_index<"qevs"_n, qev_table,
+      indexed_by<"byvolume"_n,
+      const_mem_fun<qev_table, uint64_t, &qev_table::by_volume>>
+    > qev_tables;
+
+    typedef eosio::multi_index<"monthlyqevs"_n, monthly_qev_table,
+      indexed_by<"byvolume"_n,
+      const_mem_fun<monthly_qev_table, uint64_t, &monthly_qev_table::by_volume>>
+    > monthly_qev_tables;
+
+    typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
+    typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+
+    // new tables ------------------------------
+
+    TABLE mint_rate_table {
+      uint64_t id;
+      int64_t mint_rate;
+      int64_t volume_growth;
+      uint64_t timestamp;
+
+      uint64_t primary_key() const { return id; }
+    };
+
+    typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
+    
+    // // From bioregions contract
+    // TABLE bioregion_table {
+    //   name id;
+    //   name founder;
+    //   name status; // "active" "inactive"
+    //   string description;
+    //   string locationjson; // json description of the area
+    //   float latitude;
+    //   float longitude;
+    //   uint64_t members_count;
+    //   time_point created_at = current_block_time().to_time_point();
+
+    //   uint64_t primary_key() const { return id.value; }
+    //   uint64_t by_status() const { return status.value; }
+    //   uint64_t by_count() const { return members_count; }
+    // };
+
+    // typedef eosio::multi_index <"bioregions"_n, bioregion_table,
+    //   indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
+    //   indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
+    // > bioregion_tables;
+
+
+    // -----------------------------------------
+
 
     // Contract Tables
     balance_tables balances;
@@ -233,7 +351,8 @@ CONTRACT harvest : public contract {
     tx_points_tables txpoints;
     cs_points_tables cspoints;
     size_tables sizes;
-    total_tables total;
+    monthly_qev_tables monthlyqevs;
+    mint_rate_tables mintrate;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -245,6 +364,9 @@ CONTRACT harvest : public contract {
     user_tables users;
     cbs_tables cbs;
     rep_tables rep;
+    total_tables total;
+    circulating_supply_tables circulating;
+    bioregion_tables bioregions;
 
 };
 
@@ -254,14 +376,15 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(harvest, 
-          (payforcpu)(reset)(runharvest)
+          (payforcpu)(reset)
           (unplant)(claimrefund)(cancelrefund)(sow)
           (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
-          (testclaim)(testupdatecs)
-
-          )
+          (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
+          (calcmqevs)(calcmintrate)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstbios)
+        )
       }
   }
 }

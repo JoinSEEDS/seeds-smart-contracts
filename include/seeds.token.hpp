@@ -180,6 +180,8 @@ namespace eosio {
 
          ACTION updatecirc();
 
+         ACTION minttst(const name& to, const asset& quantity, const string& memo);
+
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &token::retire>;
@@ -187,8 +189,11 @@ namespace eosio {
          using transfer_action = eosio::action_wrapper<"transfer"_n, &token::transfer>;
          using open_action = eosio::action_wrapper<"open"_n, &token::open>;
          using close_action = eosio::action_wrapper<"close"_n, &token::close>;
+         using issue_action_test = eosio::action_wrapper<"minttst"_n, &token::minttst>;
+
       private:
           symbol seeds_symbol = symbol("SEEDS", 4);
+          symbol test_symbol = symbol("TESTS", 4);
 
          DEFINE_CONFIG_TABLE
 
