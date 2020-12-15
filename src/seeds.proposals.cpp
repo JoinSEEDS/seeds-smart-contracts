@@ -263,6 +263,8 @@ void proposals::onperiod() {
 
     uint64_t number_active_proposals = get_size(prop_active_size);
     uint64_t total_eligible_voters = get_size(user_active_size);
+    check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
+    
     uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
