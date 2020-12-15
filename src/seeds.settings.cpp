@@ -210,6 +210,12 @@ void settings::reset() {
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
   confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", high_impact);
 
+  // =====================================
+  // transaction multipliers
+  // =====================================
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
+  conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
+
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
