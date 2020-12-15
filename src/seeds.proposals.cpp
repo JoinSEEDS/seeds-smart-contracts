@@ -182,43 +182,77 @@ uint64_t proposals::get_size(name id) {
 
 void proposals::initsz() {
   require_auth(_self);
-  uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
-  uint64_t inact_cycles = config_get(name("inact.cyc"));
-  uint64_t cutoff_date = now - (inact_cycles * prop_cycle_sec);
 
-  uint64_t current = get_size(user_active_size);
+  uint64_t cutoff_date = active_cutoff_date();
+
   int64_t count = 0; 
   auto aitr = actives.begin();
   while(aitr != actives.end()) {
     if (aitr -> timestamp >= cutoff_date) {
-      actives.modify(aitr, _self, [&](auto & item){
-        item.active = true;
-      });
       count++;
     }
     aitr++;
   }
   print("size change "+std::to_string(count));
-  size_change(user_active_size, count - current);
+  size_set(user_active_size, count);
 }
 
-void proposals::initactives() {
+void proposals::calcvotepow() {
   require_auth(_self);
   
+  // remove unused size
+  size_tables sizes(get_self(), get_self().value);
+  auto sitr = sizes.find("active.sz"_n.value);
+  if (sitr != sizes.end()) {
+    sizes.erase(sitr);
+  }
+  DEFINE_CS_POINTS_TABLE
+  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
+
+  cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
+  uint64_t cutoff_date = active_cutoff_date();
+  uint64_t vote_power = 0;
+  uint64_t voice_size = 0;
+
   auto vitr = voice.begin();
   while(vitr != voice.end()) {
-    auto aitr = actives.find(vitr->account.value);
-    if (aitr == actives.end()) {
-      actives.emplace(_self, [&](auto & item){
-        item.account = vitr->account;
-        item.active = true;
-        item.timestamp = eosio::current_time_point().sec_since_epoch();
-      });
+    if (is_active(vitr->account, cutoff_date)) {
+      auto csitr = cspoints.find(vitr->account.value);
+      uint64_t points = 0;
+      if (csitr != cspoints.end()) {
+        points = csitr -> rank;
+      }
+
+      vote_power += points;
+      print("| active: " + 
+        vitr->account.to_string() +
+        " pt: " + std::to_string(points) + " " 
+        " total: " + std::to_string(vote_power) + " " 
+      );
+    } else {
+      print(" inactive: "+vitr->account.to_string() + " ");
     }
+    voice_size++;
     vitr++;
   }
+
+  size_set(cycle_vote_power_size, vote_power);
+  size_set("voice.sz"_n, voice_size);
+
 }
+
+uint64_t proposals::active_cutoff_date() {
+  uint64_t now = current_time_point().sec_since_epoch();
+  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
+  uint64_t inact_cycles = config_get(name("inact.cyc"));
+  return now - (inact_cycles * prop_cycle_sec);
+}
+
+bool proposals::is_active(name account, uint64_t cutoff_date) {
+  auto aitr = actives.find(account.value);
+  return aitr != actives.end() && aitr->timestamp > cutoff_date;
+}
+
 
 void proposals::onperiod() {
     require_auth(_self);
@@ -342,26 +376,6 @@ void proposals::onperiod() {
     // trx_erase_participants.delay_sec = 5;
     trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
 
-    // transaction trx{};
-    // trx.actions.emplace_back(
-    //   permission_level(_self, "active"_n),
-    //   _self,
-    //   "onperiod"_n,
-    //   std::make_tuple()
-    // );
-    // trx.delay_sec = get_cycle_period_sec(); 
-    // trx.send(eosio::current_time_point().sec_since_epoch(), _self);
-
-    transaction trx_demote_inactives{};
-    trx_demote_inactives.actions.emplace_back(
-      permission_level(_self, "active"_n),
-      _self,
-      "updateactivs"_n,
-      std::make_tuple()
-    );
-    // trx_demote_inactives.delay_sec = 5;
-    trx_demote_inactives.send(user_active_size.value, _self);
-
     update_cycle();
 }
 
@@ -375,8 +389,9 @@ void proposals::updatevoice(uint64_t start) {
   
   DEFINE_CS_POINTS_TABLE
   DEFINE_CS_POINTS_TABLE_MULTI_INDEX
-  //eosio::multi_index<"cspoints"_n, harvest_table> harveststat(contracts::harvest, contracts::harvest.value);
   
+  uint64_t cutoff_date = active_cutoff_date();
+
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
   voice_tables voice_alliance(get_self(), alliance_type.value);
 
@@ -384,11 +399,13 @@ void proposals::updatevoice(uint64_t start) {
 
   if (start == 0) {
       size_set(cycle_vote_power_size, 0);
+      size_set(user_active_size, 0);
   }
 
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
-  uint64_t total_points = 0;
+  uint64_t vote_power = 0;
+  uint64_t active_users = 0;
   
   while (vitr != voice.end() && count < batch_size) {
       auto csitr = cspoints.find(vitr->account.value);
@@ -399,12 +416,17 @@ void proposals::updatevoice(uint64_t start) {
 
       set_voice(vitr -> account, points, ""_n);
 
-      total_points += points;
+      if (is_active(vitr -> account, cutoff_date)) {
+        vote_power += points;
+        active_users++;
+      }
+
       vitr++;
       count++;
   }
   
-  size_change(cycle_vote_power_size, total_points);
+  size_change(cycle_vote_power_size, vote_power);
+  size_change(user_active_size, active_users);
 
   if (vitr != voice.end()) {
     uint64_t next_value = vitr->account.value;
@@ -419,46 +441,6 @@ void proposals::updatevoice(uint64_t start) {
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(next_value, _self);
-  }
-}
-
-void proposals::updateactivs() {
-  require_auth(get_self());
-  updateactive(0);
-}
-
-void proposals::updateactive(uint64_t start) {
-  require_auth(get_self());
-
-  auto aitr = start == 0 ? actives.begin() : actives.find(start);
-  uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
-  uint64_t inact_cycles = config_get(name("inact.cyc"));
-  uint64_t count = 0;
-
-  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-  uint64_t three_moon_cycles = c.t_onperiod - (inact_cycles * prop_cycle_sec);
-
-  while (aitr != actives.end() && count < batch_size) {
-    if (aitr -> timestamp < three_moon_cycles) {
-      removeactive(aitr -> account);
-    }
-    aitr++;
-    count++;
-  }
-  if (aitr != actives.end()) {
-    uint64_t next_value = aitr->account.value;
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "updateactive"_n,
-        std::make_tuple(next_value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(name("active1sz").value, _self);
   }
 }
 
@@ -918,16 +900,11 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (aitr == actives.end()) {
     actives.emplace(_self, [&](auto& item) {
       item.account = voter;
-      item.active = true;
       item.timestamp = current_time_point().sec_since_epoch();
     });
     size_change(user_active_size, 1);
   } else {
     actives.modify(aitr, _self, [&](auto & item){
-      if (!item.active) {
-        item.active = true;
-        size_change(user_active_size, 1);
-      }
       item.timestamp = current_time_point().sec_since_epoch();
     });
   }
@@ -969,6 +946,7 @@ double proposals::voice_change (name user, uint64_t amount, bool reduce, name sc
         voice.account = user;
         voice.balance = amount;
       });
+      size_change("voice.sz"_n, 1);
       voice_alliance.emplace(_self, [&](auto & voice){
         voice.account = user;
         voice.balance = amount;
@@ -1027,6 +1005,7 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
             voice.account = user;
             voice.balance = amount;
         });
+        size_change("voice.sz"_n, 1);
     } else {
       voice.modify(vitr, _self, [&](auto& voice) {
         voice.balance = amount;
@@ -1066,6 +1045,8 @@ void proposals::erase_voice (name user) {
   auto vaitr = voice_alliance.find(user.value);
 
   voice.erase(vitr);
+  size_change("voice.sz"_n, -1);
+
   voice_alliance.erase(vaitr);
 }
 
@@ -1173,18 +1154,9 @@ void proposals::addactive(name account) {
   require_auth(get_self());
 
   auto aitr = actives.find(account.value);
-  if (aitr != actives.end()) {
-    if (!(aitr -> active)) {
-      actives.modify(aitr, _self, [&](auto & a){
-        a.active = true;
-      });
-      size_change(user_active_size, 1);
-      recover_voice(account);
-    }
-  } else {
+  if (aitr == actives.end()) {
     actives.emplace(_self, [&](auto & a){
       a.account = account;
-      a.active = true;
       a.timestamp = eosio::current_time_point().sec_since_epoch();
     });
     size_change(user_active_size, 1);
@@ -1226,25 +1198,6 @@ void proposals::recover_voice(name account) {
 
   size_change(cycle_vote_power_size, voice_amount);
 
-}
-
-void proposals::removeactive(name account) {
-  require_auth(get_self());
-
-  auto aitr = actives.find(account.value);
-  if (aitr != actives.end()) {
-    if (aitr -> active) {
-      actives.modify(aitr, _self, [&](auto & a){
-        a.active = false;
-      });
-      size_change(user_active_size, -1);
-    }
-    auto vitr = voice.find(account.value);
-    if (vitr != voice.end()) { 
-      size_change(cycle_vote_power_size, -vitr->balance);
-    }
-
-  }
 }
 
 void proposals::size_change(name id, int64_t delta) {
