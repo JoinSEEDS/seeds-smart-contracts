@@ -300,7 +300,7 @@ CONTRACT harvest : public contract {
       uint32_t points;
 
       uint64_t primary_key()const { return bioregion.value; }
-      uint64_t by_cs_points()const { return uint64_t(points); }
+      uint64_t by_cs_points() const { return (uint64_t(points) << 32) +  ( (bioregion.value <<32) >> 32) ; }
     };
 
     typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
