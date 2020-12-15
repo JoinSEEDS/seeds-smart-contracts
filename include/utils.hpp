@@ -1,5 +1,6 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/system.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 
@@ -88,6 +89,12 @@ namespace utils {
 
     return size.get("users.sz"_n.value, "users size unknown").size;
 
+  }
+
+  uint64_t get_beginning_of_day_in_seconds() {
+    auto sec = eosio::current_time_point().sec_since_epoch();
+    auto date = eosio::time_point_sec(sec / 86400 * 86400);
+    return date.utc_seconds;
   }
 
 }

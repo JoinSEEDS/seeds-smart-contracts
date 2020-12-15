@@ -57,7 +57,6 @@ const source = async (name) => {
 
 const createAccount = async ({ account, publicKey, stakes, creator }) => {
   try {
-    console.log(`creating ${account}`)
     await eos.transaction(async trx => {
       await trx.newaccount({
         creator,
@@ -82,7 +81,11 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
     })
     console.log(`${account} created`)
   } catch (err) {
-    console.error(`account ${account} already created`, err)
+    if (""+err.indexOf("Account name already exists") != -1) {
+      console.error(`account ${account} already created`)
+    } else {
+      console.error(`create account ${account} error: ` + err)
+    }
   }
 }
 

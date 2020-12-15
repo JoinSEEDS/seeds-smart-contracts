@@ -1,5 +1,6 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/system.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>

@@ -26,7 +26,8 @@ CONTRACT organization : public contract {
               refs(contracts::accounts, contracts::accounts.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
-              config(contracts::settings, contracts::settings.value)
+              config(contracts::settings, contracts::settings.value),
+              totals(contracts::history, contracts::history.value)
               {}
         
         
@@ -203,6 +204,19 @@ CONTRACT organization : public contract {
         DEFINE_SIZE_TABLE_MULTI_INDEX
 
 
+        TABLE totals_table {
+            name account;
+            uint64_t total_volume;
+            uint64_t total_number_of_transactions;
+            uint64_t total_incoming_from_rep_orgs;
+            uint64_t total_outgoing_to_rep_orgs;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+
+        typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
+
+
         TABLE app_table {
             name app_name;
             name org_name;
@@ -295,6 +309,7 @@ CONTRACT organization : public contract {
         balance_tables balances;
         ref_tables refs;
         avg_vote_tables avgvotes;
+        totals_tables totals;
 
         const name min_planted = "org.minplant"_n;
         const name regen_score_size = "rs.sz"_n;
@@ -326,7 +341,7 @@ CONTRACT organization : public contract {
         uint64_t get_regen_score(name organization);
         void history_add_regenerative(name organization);
         void history_add_reputable(name organization);
-        uint64_t count_transactions(name organization, uint64_t limit);
+        uint64_t count_transactions(name organization);
 };
 
 

@@ -592,29 +592,14 @@ uint64_t organization::count_refs(name organization, uint32_t check_num_resident
     }
 }
 
-uint64_t organization::count_transactions(name organization, uint64_t limit) {
-    org_tx_tables transactions(contracts::history, organization.value);
-    auto transactions_by_date = transactions.get_index<"bytimestamp"_n>();
-    auto titr = transactions_by_date.rbegin();
-    uint64_t count = 0;
-    uint64_t t_number = 0;
+uint64_t organization::count_transactions(name organization) {
+    auto totals_itr = totals.find(organization.value);
 
-    while (titr != transactions_by_date.rend() && count < limit) {
-        auto other = titr -> other;
-        auto uitr = users.find(other.value);
-        if (uitr -> status == name("citizen")) {
-            t_number += 1;
-        } else if (uitr -> type == name("organisation")) {
-            auto oitr = organizations.find(other.value);
-            if (oitr -> status == reputable_org || oitr -> status == regenerative_org) {
-                t_number += 1;
-            }
-        }
-        count++;
-        titr++;
+    if (totals_itr == totals.end()) {
+        return 0;
     }
 
-    return t_number;
+    return totals_itr -> total_number_of_transactions;
 }
 
 void organization::check_can_make_reputable(name organization) {
@@ -632,7 +617,7 @@ void organization::check_can_make_reputable(name organization) {
 
     uint64_t invited_users_number = count_refs(organization, min_residents_invited);
     uint64_t regen_score = get_regen_score(organization);
-    uint64_t valid_trxs = count_transactions(organization, 300);
+    uint64_t valid_trxs = count_transactions(organization);
 
     check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
     check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
@@ -657,7 +642,7 @@ void organization::check_can_make_regen(name organization) {
 
     uint64_t invited_users_number = count_refs(organization, min_residents_invited);
     uint64_t regen_score = get_regen_score(organization);
-    uint64_t valid_trxs = count_transactions(organization, 300);
+    uint64_t valid_trxs = count_transactions(organization);
 
     check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
     check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
@@ -874,25 +859,32 @@ ACTION organization::scoretrxs() {
 ACTION organization::scoreorgs(name next) {
     require_auth(get_self());
 
-    auto itr = next == ""_n ? organizations.begin() : organizations.lower_bound(next.value);
-    if(itr != organizations.end()) {
-        action(
-            permission_level{contracts::history, "active"_n},
-            contracts::history, "orgtxpoints"_n,
-            std::make_tuple(itr -> org_name)
-        ).send();
-        itr++;
-        if (itr != organizations.end()) {
-            action next_execution(
-                permission_level{get_self(), "active"_n},
-                get_self(),
-                "scoreorgs"_n,
-                std::make_tuple(itr->org_name)
-            );
-            transaction tx;
-            tx.actions.emplace_back(next_execution);
-            tx.delay_sec = 1; // change this to 1 to test
-            tx.send(next.value+2, _self);
-        }
-    }
+    action(
+        permission_level{contracts::harvest, "active"_n},
+        contracts::harvest,
+        "calctrxpts"_n,
+        std::make_tuple()
+    ).send();
+
+    // auto itr = next == ""_n ? organizations.begin() : organizations.lower_bound(next.value);
+    // if(itr != organizations.end()) {
+    //     action(
+    //         permission_level{contracts::history, "active"_n},
+    //         contracts::history, "orgtxpoints"_n,
+    //         std::make_tuple(itr -> org_name)
+    //     ).send();
+    //     itr++;
+    //     if (itr != organizations.end()) {
+    //         action next_execution(
+    //             permission_level{get_self(), "active"_n},
+    //             get_self(),
+    //             "scoreorgs"_n,
+    //             std::make_tuple(itr->org_name)
+    //         );
+    //         transaction tx;
+    //         tx.actions.emplace_back(next_execution);
+    //         tx.delay_sec = 1; // change this to 1 to test
+    //         tx.send(next.value+2, _self);
+    //     }
+    // }
 }

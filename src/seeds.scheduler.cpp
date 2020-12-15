@@ -39,13 +39,27 @@ ACTION scheduler::stop() {
 }
 
 ACTION scheduler::reset() {
+    reset_aux(true);
+}
+
+ACTION scheduler::updateops() {
+    reset_aux(false);
+}
+
+void scheduler::reset_aux(bool destructive) {
     require_auth(get_self());
 
     cancel_exec();
 
     auto itr = operations.begin();
     while(itr != operations.end()){
-        itr = operations.erase(itr);
+        if (destructive || !should_preserve_op(itr->id)) {
+            print(" erase "+itr->id.to_string());
+            itr = operations.erase(itr);
+        } else {
+            print(" preserve "+itr->id.to_string());
+            itr++;
+        }
     }
 
     auto titr = test.begin();
@@ -70,7 +84,6 @@ ACTION scheduler::reset() {
         name("org.clndaus"),
         name("org.rankregn"),
         name("org.rankcbs"),
-        name("org.scortrxs"),
 
         name("hrvst.orgtxs"),
 
@@ -78,6 +91,9 @@ ACTION scheduler::reset() {
 
         name("forum.rank"),
         name("forum.giverp"),
+
+        name("hrvst.qevs"),
+        name("hrvst.mintr"),
     };
     
     std::vector<name> operations_v = {
@@ -97,7 +113,6 @@ ACTION scheduler::reset() {
         name("cleandaus"),
         name("rankregens"),
         name("rankcbsorgs"),
-        name("scoretrxs"),
 
         name("rankorgtxs"),
 
@@ -105,6 +120,9 @@ ACTION scheduler::reset() {
 
         name("rankforums"),
         name("givereps"),
+
+        name("calcmqevs"),
+        name("calcmintrate"),
     };
 
     std::vector<name> contracts_v = {
@@ -124,7 +142,6 @@ ACTION scheduler::reset() {
         contracts::organization,
         contracts::organization,
         contracts::organization,
-        contracts::organization,
 
         contracts::harvest,
 
@@ -132,6 +149,9 @@ ACTION scheduler::reset() {
 
         contracts::forum,
         contracts::forum,
+
+        contracts::harvest,
+        contracts::harvest,
     };
 
     std::vector<uint64_t> delay_v = {
@@ -151,7 +171,6 @@ ACTION scheduler::reset() {
         utils::seconds_per_day / 2,
         utils::seconds_per_day,
         utils::seconds_per_day,
-        utils::seconds_per_day,
 
         utils::seconds_per_day,
 
@@ -159,6 +178,9 @@ ACTION scheduler::reset() {
         
         utils::moon_cycle / 4,
         utils::moon_cycle / 4,
+
+        utils::seconds_per_day,
+        utils::seconds_per_day,
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -180,7 +202,6 @@ ACTION scheduler::reset() {
         now,
         now,
         now,
-        now,
 
         now,
 
@@ -188,19 +209,28 @@ ACTION scheduler::reset() {
 
         now,
         now - utils::seconds_per_hour,
+
+        now,
+        now + 600 - utils::seconds_per_hour,
     };
 
     int i = 0;
 
     while(i < operations_v.size()){
-        operations.emplace(_self, [&](auto & noperation){
-            noperation.id = id_v[i];
-            noperation.operation = operations_v[i];
-            noperation.contract = contracts_v[i];
-            noperation.pause = 0;
-            noperation.period = delay_v[i];
-            noperation.timestamp = timestamp_v[i];
-        });
+        auto oitr = operations.find(id_v[i].value);
+        if (oitr == operations.end()) {
+            print(" adding op "+id_v[i].to_string());
+            operations.emplace(_self, [&](auto & noperation){
+                noperation.id = id_v[i];
+                noperation.operation = operations_v[i];
+                noperation.contract = contracts_v[i];
+                noperation.pause = 0;
+                noperation.period = delay_v[i];
+                noperation.timestamp = timestamp_v[i];
+            });
+        } else {
+            print(" skipping op "+id_v[i].to_string());
+        }
         i++;
     }
 }
@@ -433,4 +463,4 @@ void scheduler::exec_op(name id, name contract, name operation) {
 }
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec)(updateops));

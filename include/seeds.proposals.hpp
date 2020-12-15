@@ -89,12 +89,20 @@ CONTRACT proposals : public contract {
 
       ACTION initnumprop();
 
+      ACTION delegate(name delegator, name delegatee, name scope);
+
+      ACTION mimicvote(name delegatee, name delegator, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize);
+
+      ACTION undelegate(name delegator, name scope);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
       name distrust = "distrust"_n;
       name abstain = "abstain"_n;
       name prop_active_size = "prop.act.sz"_n;
+      name user_active_size = "user.act.sz"_n; 
+      name cycle_vote_power_size = "votepow.sz"_n; 
       name linear_payout = "linear"_n;
       name stepped_payout = "step"_n;
 
@@ -135,22 +143,26 @@ CONTRACT proposals : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       void burn(asset quantity);
       void update_voice_table();
-      void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new);
+      void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated);
       bool revert_vote (name voter, uint64_t id);
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
+      void size_set(name id, int64_t value);
 
       uint64_t get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
       name get_type (name fund);
-      void voice_change (name user, uint64_t amount, bool reduce, name scope);
+      double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
       void check_percentages(std::vector<uint64_t> pay_percentages);
       asset get_payout_amount(std::vector<uint64_t> pay_percentages, uint64_t age, asset total_amount, asset current_payout);
+      void check_voice_scope(name scope);
+      bool is_trust_delegated(name account, name scope);
+      void send_mimic_delegatee_vote(name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -242,6 +254,17 @@ CONTRACT proposals : public contract {
 
         uint64_t primary_key()const { return account.value; }
       };
+
+      TABLE delegate_trust_table { // scoped by proposal's category (alliance, campaign, etc)
+        name delegator;
+        name delegatee;
+        double weight;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return delegator.value; }
+        uint64_t by_delegatee()const { return delegatee.value; }
+        uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
+      };
     
 
     typedef eosio::multi_index<"props"_n, proposal_table,
@@ -257,6 +280,12 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"cycle"_n, cycle_table> dump_for_cycle;
     typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
+    typedef eosio::multi_index<"deltrusts"_n, delegate_trust_table,
+      indexed_by<"bydelegatee"_n,
+      const_mem_fun<delegate_trust_table, uint64_t, &delegate_trust_table::by_delegatee>>,
+      indexed_by<"byddelegator"_n,
+      const_mem_fun<delegate_trust_table, uint128_t, &delegate_trust_table::by_delegatee_delegator>>
+    > delegate_trust_tables;
 
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
@@ -280,7 +309,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(removeactive)(updateactivs)(updateactive)(testvdecay)(initsz)(initactives)(testquorum)(initnumprop)
-        (migratevoice)(testsetvoice))
+        (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate))
       }
   }
 }

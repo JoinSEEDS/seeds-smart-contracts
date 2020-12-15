@@ -41,6 +41,16 @@ void harvest::reset() {
     pitr = planted.erase(pitr);
   }
 
+  auto qitr = monthlyqevs.begin();
+  while (qitr != monthlyqevs.end()) {
+    qitr = monthlyqevs.erase(qitr);
+  }
+
+  auto csitr = cspoints.begin();
+  while (csitr != cspoints.end()) {
+    csitr = cspoints.erase(csitr);
+  }
+
   total.remove();
 
   init_balance(_self);
@@ -249,18 +259,16 @@ void harvest::unplant(name from, asset quantity) {
 
 }
 
-void harvest::runharvest() {
-  require_auth(get_self());
-}
-
 ACTION harvest::updatetxpt(name account) {
   require_auth(get_self());
-  calc_transaction_points(account);
+  auto uitr = users.get(account.value, "user not found");
+  calc_transaction_points(account, uitr.type);
 }
 
 ACTION harvest::updatecs(name account) {
   require_auth(account);
-  calc_contribution_score(account);
+  auto uitr = users.get(account.value, "user not found");
+  calc_contribution_score(account, uitr.type);
 }
 
 ACTION harvest::updtotal() { // remove when balances are retired
@@ -352,98 +360,51 @@ ACTION harvest::calctotal(uint64_t startval) {
 
 // Calculate Transaction Points for a single account
 // Returns count of iterations
-uint32_t harvest::calc_transaction_points(name account) {
-  auto three_moon_cycles = moon_cycle * 3;
-  auto now = eosio::current_time_point().sec_since_epoch();
-  auto cutoffdate = now - three_moon_cycles;
+uint32_t harvest::calc_transaction_points(name account, name type) {
+  uint64_t three_moon_cycles = utils::moon_cycle * 3;
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+  uint64_t cutoffdate = now - three_moon_cycles;
 
-  // get all transactions for this account
-  transaction_tables transactions(contracts::history, account.value);
+  transaction_points_tables transactions(contracts::history, account.value);
 
-  auto transactions_by_to = transactions.get_index<"byto"_n>();
-  auto tx_to_itr = transactions_by_to.rbegin();
+  uint64_t count = 0;
+  uint64_t total_points = 0;
 
-  double result = 0;
+  auto titr = transactions.rbegin();
+  while (titr != transactions.rend() && titr -> timestamp >= cutoffdate) {
 
-  uint64_t max_quantity = 1777; // get this from settings // TODO verify this number
-  uint64_t max_number_of_transactions = 26;
+    total_points += titr -> points;
 
-  name      current_to = name("");
-  uint64_t  current_num = 0;
-  double    current_rep_multiplier = 0.0;
-
-  uint64_t  count = 0;
-  uint64_t  limit = 200;
-    
-  //print("start " + account.to_string());
-
-  while(tx_to_itr != transactions_by_to.rend() && count < limit) {
-
-    if (tx_to_itr->timestamp < cutoffdate) {
-      //print("date trigger ");
-
-      // remove old transactions
-      //tx_to_itr = transactions_by_to.erase(tx_to_itr);
-      
-      //auto it = transactions_by_to.erase(--tx_to_itr.base());// TODO add test for this
-      //tx_to_itr = std::reverse_iterator(it);            
-    } else {
-
-      // update "to"
-      if (current_to != tx_to_itr->to) {
-        current_to = tx_to_itr->to;
-        current_num = 0;
-        current_rep_multiplier = get_rep_multiplier(current_to);
-      } else {
-        current_num++;
-      }
-
-      if (current_num < max_number_of_transactions) {
-        uint64_t volume = tx_to_itr->quantity.amount;
-
-        // limit max volume
-        if (volume > max_quantity * 10000) {
-              //print("max limit "+std::to_string(max_quantity * 10000));
-          volume = max_quantity * 10000;
-        }
-
-        // multiply by receiver reputation
-        double points = (double(volume) / 10000.0) * current_rep_multiplier;
-        
-        result += points;
-
-      } 
-
-    }
-    tx_to_itr++;
+    titr++;
     count++;
   }
 
-  // enter into transaction points table
-  auto titr = txpoints.find(account.value);
-  uint64_t points = ceil(result);
-
-  if (titr == txpoints.end()) {
-    if (points > 0) {
-      txpoints.emplace(_self, [&](auto& entry) {
-        entry.account = account;
-        entry.points = (uint64_t) ceil(result);
-      });
-      size_change(tx_points_size, 1);
-    }
+  if (type == name("organisation")) {
+    setorgtxpt(account, total_points);
   } else {
-    if (points > 0) {
-      txpoints.modify(titr, _self, [&](auto& entry) {
-        entry.points = points; 
-      });
+    auto tx_points_itr = txpoints.find(account.value);
+
+    if (tx_points_itr == txpoints.end()) {
+      if (total_points > 0) {
+        txpoints.emplace(_self, [&](auto& entry) {
+          entry.account = account;
+          entry.points = total_points;
+        });
+        size_change(tx_points_size, 1);
+      }
     } else {
-      txpoints.erase(titr);
-      size_change(tx_points_size, -1);
+      if (total_points > 0) {
+        txpoints.modify(tx_points_itr, _self, [&](auto& entry) {
+          entry.points = total_points; 
+        });
+      } else {
+        txpoints.erase(tx_points_itr);
+        size_change(tx_points_size, -1);
+      }
     }
   }
 
   return count;
-
 }
 
 void harvest::calctrxpts() {
@@ -460,7 +421,7 @@ void harvest::calctrxpt(uint64_t start_val, uint64_t chunk, uint64_t chunksize) 
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    uint32_t num = calc_transaction_points(uitr->account);
+    uint32_t num = calc_transaction_points(uitr->account, uitr->type);
     count += 1 + num;
     uitr++;
   }
@@ -602,7 +563,7 @@ void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   uint64_t count = 0;
 
   while (uitr != users.end() && count < chunksize) {
-    calc_contribution_score(uitr->account);
+    calc_contribution_score(uitr->account, uitr->type);
     count++;
     uitr++;
   }
@@ -626,7 +587,7 @@ void harvest::calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 }
 
 // [PS+RT+CB X Rep = Total Contribution Score]
-void harvest::calc_contribution_score(name account) {
+void harvest::calc_contribution_score(name account, name type) {
   uint64_t planted_score = 0;
   uint64_t transactions_score = 0;
   uint64_t community_building_score = 0;
@@ -635,8 +596,14 @@ void harvest::calc_contribution_score(name account) {
   auto pitr = planted.find(account.value);
   if (pitr != planted.end()) planted_score = pitr->rank;
 
-  auto titr = txpoints.find(account.value);
-  if (titr != txpoints.end()) transactions_score = titr->rank;
+  if (type == "organisation"_n) {
+    tx_points_tables orgtxpoints(get_self(), "org"_n.value);
+    auto titr = orgtxpoints.find(account.value);
+    if (titr != orgtxpoints.end()) transactions_score = titr->rank;
+  } else {
+    auto titr = txpoints.find(account.value);
+    if (titr != txpoints.end()) transactions_score = titr->rank;
+  }
 
   auto citr = cbs.find(account.value);
   if (citr != cbs.end()) community_building_score = citr->rank;
@@ -668,6 +635,8 @@ void harvest::calc_contribution_score(name account) {
 }
 
 void harvest::rankcss() {
+  size_set(sum_rank_users, 0);
+  size_set(sum_rank_orgs, 0);
   rankcs(0, 0, 200);
 }
 
@@ -681,6 +650,8 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
   auto cs_by_points = cspoints.get_index<"bycspoints"_n>();
   auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
   uint64_t count = 0;
+  uint64_t sum_rank_u = 0;
+  uint64_t sum_rank_o = 0;
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -690,10 +661,22 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
       item.rank = rank;
     });
 
+    auto uitr = users.find(citr -> account.value);
+    if (uitr -> type != "organisation"_n) {
+      sum_rank_u += rank;
+    } else {
+      sum_rank_o += rank;
+    }
+
     current++;
     count++;
     citr++;
   }
+
+  size_change(sum_rank_users, int64_t(sum_rank_u));
+  size_change(sum_rank_orgs, int64_t(sum_rank_o));
+  
+  // print("sum rank users = ", sum_rank, "\n");
 
   if (citr == cs_by_points.end()) {
     // Done.
@@ -713,7 +696,6 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
     tx.send(next_value, _self);
     
   }
-
 
 }
 
@@ -787,6 +769,29 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
     ritr++;
   }
   
+}
+
+void harvest::testcspoints(name account, uint64_t contribution_points) {
+  require_auth(get_self());
+  auto csitr = cspoints.find(account.value);
+  if (csitr == cspoints.end()) {
+    if (contribution_points > 0) {
+      cspoints.emplace(_self, [&](auto& item) {
+        item.account = account;
+        item.contribution_points = contribution_points;
+      });
+      size_change(cs_size, 1);
+    }
+  } else {
+    if (contribution_points > 0) {
+      cspoints.modify(csitr, _self, [&](auto& item) {
+        item.contribution_points = contribution_points;
+      });
+    } else {
+      cspoints.erase(csitr);
+      size_change(cs_size, -1);
+    }
+  }
 }
 
 void harvest::testupdatecs(name account, uint64_t contribution_score) {
@@ -904,4 +909,280 @@ ACTION harvest::setorgtxpt(name organization, uint64_t tx_points) {
     }
   } 
 
+}
+
+void harvest::calcmqevs () {
+  require_auth(get_self());
+  
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  uint64_t cutoff = day - utils::moon_cycle;
+  
+  qev_tables qevs(contracts::history, contracts::history.value);
+  check(qevs.begin() != qevs.end(), "The qevs table for " + contracts::history.to_string() + " is empty");
+
+  auto qitr = qevs.rbegin();
+  uint64_t total_volume = 0;
+
+  while (qitr != qevs.rend() && qitr -> timestamp >= cutoff) {
+    total_volume += qitr -> qualifying_volume;
+    qitr++;
+  }
+
+  circulating_supply_table c = circulating.get();
+
+  auto mqitr = monthlyqevs.find(day);
+  
+  if (mqitr != monthlyqevs.end()) {
+    monthlyqevs.modify(mqitr, _self, [&](auto & item){
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
+    });
+  } else {
+    monthlyqevs.emplace(_self, [&](auto & item){
+      item.timestamp = day;
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = c.circulating;
+    });
+  }
+}
+
+void harvest::testcalcmqev (uint64_t day, uint64_t total_volume, uint64_t circulating) {
+  require_auth(get_self());
+  
+  auto mqitr = monthlyqevs.find(day);
+  
+  if (mqitr != monthlyqevs.end()) {
+    monthlyqevs.modify(mqitr, _self, [&](auto & item){
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = circulating;
+    });
+  } else {
+    monthlyqevs.emplace(_self, [&](auto & item){
+      item.timestamp = day;
+      item.qualifying_volume = total_volume;
+      item.circulating_supply = circulating;
+    });
+  }
+}
+
+
+void harvest::calcmintrate () {
+  require_auth(get_self());
+
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  auto previous_day_temp = eosio::time_point_sec((day - (3 * utils::moon_cycle)) / 86400 * 86400);
+  uint64_t previous_day = previous_day_temp.utc_seconds;
+
+  auto current_qev_itr = monthlyqevs.find(day);
+  auto previous_qev_itr = monthlyqevs.find(previous_day);
+
+  if (current_qev_itr == monthlyqevs.end() || previous_qev_itr == monthlyqevs.end()) { return; }
+
+  double volume_growth = double(current_qev_itr -> qualifying_volume - previous_qev_itr -> qualifying_volume) / previous_qev_itr -> qualifying_volume;
+
+  int64_t target_supply = (1.0 + volume_growth) * previous_qev_itr -> circulating_supply;
+
+  int64_t delta = target_supply - current_qev_itr -> circulating_supply;
+
+  double mint_rate = delta / 708.0;
+
+  auto mitr = mintrate.begin();
+  if (mitr != mintrate.end()) {
+    mintrate.modify(mitr, _self, [&](auto & item){
+      item.mint_rate = mint_rate;
+      item.volume_growth = volume_growth * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  } else {
+    mintrate.emplace(_self, [&](auto & item){
+      item.id = mintrate.available_primary_key();
+      item.mint_rate = mint_rate;
+      item.volume_growth = volume_growth * 10000;
+      item.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+  }
+
+}
+
+uint64_t harvest::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+void harvest::send_distribute_harvest (name key, asset amount) {
+
+  cancel_deferred(key.value);
+
+  action next_execution(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    key,
+    std::make_tuple(uint64_t(0), config_get("batchsize"_n), amount)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(key.value, _self);
+
+}
+
+void harvest::withdraw_aux (name sender, name beneficiary, asset quantity, string memo) {
+  token::transfer_action t_action{contracts::token, { sender, "active"_n }};
+  t_action.send(sender, beneficiary, quantity, memo);
+}
+
+void harvest::runharvest() {
+  require_auth(get_self());
+
+  auto mitr = mintrate.begin();
+  check(mitr != mintrate.end(), "mint rate table is empty");
+
+  if (mitr -> mint_rate <= 0) { return; }
+
+  asset quantity = asset(mitr -> mint_rate, test_symbol);
+  string memo = "harvest";
+
+  print("mint rate:", quantity, "\n");
+
+  token::issue_action_test t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
+  t_issue.send(get_self(), quantity, memo);
+
+  double users_percentage = config_get("hrvst.users"_n) / 1000000.0;
+  double bios_percentage = config_get("hrvst.bios"_n) / 1000000.0;
+  double orgs_percentage = config_get("hrvst.orgs"_n) / 1000000.0;
+  double global_percentage = config_get("hrvst.global"_n) / 1000000.0;
+
+  print("amount for users: ", asset(mitr -> mint_rate * users_percentage, test_symbol), "\n");
+  print("amount for bios: ", asset(mitr -> mint_rate * bios_percentage, test_symbol), "\n");
+  print("amount for orgs: ", asset(mitr -> mint_rate * orgs_percentage, test_symbol), "\n");
+  print("amount for global: ", asset(mitr -> mint_rate * global_percentage, test_symbol), "\n");
+
+  send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
+  send_distribute_harvest("disthvstbios"_n, asset(mitr -> mint_rate * bios_percentage, test_symbol));
+  send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
+
+  withdraw_aux(get_self(), bankaccts::globaldho, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
+
+}
+
+void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  uint64_t count = 0;
+
+  uint64_t sum_rank = get_size(sum_rank_users);
+  check(sum_rank > 0, "the sum rank for users must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(sum_rank);
+  
+  while (csitr != cspoints.end() && count < chunksize) {
+
+    auto uitr = users.find(csitr -> account.value);
+    if (uitr != users.end() && uitr -> type != "organisation"_n && csitr -> rank > 0) {
+
+      print("user:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+    
+    }
+
+    csitr++;
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstusrs"_n,
+      std::make_tuple(csitr -> account.value, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sum_rank_users.value, _self);
+  }
+
+}
+
+void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+
+  auto bitr = start == 0 ? bioregions.begin() : bioregions.find(start);
+
+  uint64_t number_bioregions = distance(bioregions.begin(), bioregions.end());
+  uint64_t count = 0;
+
+  check(number_bioregions > 0, "number of bioregions must be greater than zero");
+  double fragment_seeds = total_amount.amount / double(number_bioregions);
+
+  while (bitr != bioregions.end() && count < chunksize) {
+
+    // for the moment, all bioregions have rank 1
+    print("bio:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
+    withdraw_aux(get_self(), name(bitr -> id), asset(fragment_seeds, test_symbol), "harvest");
+
+    bitr++;
+    count++;
+  }
+
+  if (bitr != bioregions.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstbios"_n,
+      std::make_tuple(bitr -> id, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sum_rank_bios.value, _self);
+  }
+
+}
+
+void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  uint64_t count = 0;
+
+  uint64_t sum_rank = get_size(sum_rank_orgs);
+  check(sum_rank > 0, "the sum rank for organizations must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(sum_rank);
+  
+  while (csitr != cspoints.end() && count < chunksize) {
+
+    auto uitr = users.find(csitr -> account.value);
+    if (uitr != users.end() && uitr -> type == "organisation"_n && csitr -> rank > 0) {
+
+      print("org:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+    
+    }
+
+    csitr++;
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "disthvstorgs"_n,
+      std::make_tuple(csitr -> account.value, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sum_rank_orgs.value, _self);
+  }
 }

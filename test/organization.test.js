@@ -3,9 +3,14 @@ const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLoc
 const { equals } = require("ramda")
 const { asset } = require("eosjs/lib/schema")
 
-const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history } = names
+const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history, exchange } = names
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
+function getBeginningOfDayInSeconds () {
+    const now = new Date()
+    return now.setUTCHours(0, 0, 0, 0) / 1000
+}  
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -633,6 +638,21 @@ describe('organization scores', async assert => {
     console.log('harvest reset')
     await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
+    const org1 = 'testorg1'
+    const org2 = 'testorg2'
+    const org3 = 'testorg3'
+    const org4 = 'testorg4'
+    const org5 = 'testorg5'
+
+    const orgs = [ org1, org2, org3, org4, org5 ]
+    const users1 = [ firstuser, seconduser, thirduser ]
+    
+    orgs.map(async org => { await contracts.history.reset(org, { authorization: `${history}@active` }) })
+    users1.map( async user => { await contracts.history.reset(user, { authorization: `${history}@active` }) })
+
+    const day = getBeginningOfDayInSeconds()
+    await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+
     console.log('join users')
     await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
@@ -643,15 +663,13 @@ describe('organization scores', async assert => {
     await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
     await contracts.accounts.addrep(thirduser, 1000, { authorization: `${accounts}@active` })
 
+    await contracts.accounts.testsetrs(firstuser, 66, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(seconduser, 33, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(thirduser, 0, { authorization: `${accounts}@active` })
+    
     console.log('create balance')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
     await contracts.token.transfer(seconduser, organization, "600.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
-
-    const org1 = 'testorg1'
-    const org2 = 'testorg2'
-    const org3 = 'testorg3'
-    const org4 = 'testorg4'
-    const org5 = 'testorg5'
 
     console.log('create organizations')
     await contracts.organization.create(firstuser, org1, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
@@ -686,42 +704,46 @@ describe('organization scores', async assert => {
     await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
     await sleep(200)
 
-    await contracts.history.reset(org1, { authorization: `${history}@active` })
-    await contracts.history.reset(org2, { authorization: `${history}@active` })
-    await contracts.history.reset(org3, { authorization: `${history}@active` })
-    await contracts.history.reset(org4, { authorization: `${history}@active` })
-    await contracts.history.reset(org5, { authorization: `${history}@active` })
-
     console.log('transfer volume of seeds')
-    await contracts.token.transfer(firstuser, org1, "150.0000 SEEDS", "Test supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(org1, firstuser, "50.0000 SEEDS", "Test supply", { authorization: `${org1}@active` })
-    await contracts.token.transfer(org1, seconduser, "50.0000 SEEDS", "Test supply", { authorization: `${org1}@active` })
-    await contracts.token.transfer(org1, thirduser, "50.0000 SEEDS", "Test supply", { authorization: `${org1}@active` })
+    const transfer = async (from, to, amount) => {
+        await contracts.token.transfer(from, to, `${amount}.0000 SEEDS`, "Test supply", { authorization: `${from}@active` })
+        await sleep(3000)
+    }
 
-    await contracts.token.transfer(firstuser, org2, "300.0000 SEEDS", "Test supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(org2, firstuser, "100.0000 SEEDS", "Test supply", { authorization: `${org2}@active` })
-    await contracts.token.transfer(org2, seconduser, "100.0000 SEEDS", "Test supply", { authorization: `${org2}@active` })
-    await contracts.token.transfer(org2, thirduser, "100.0000 SEEDS", "Test supply", { authorization: `${org2}@active` })
+    await transfer(firstuser, org1, 150)
+    await transfer(org1, firstuser, 50)
+    await transfer(org1, seconduser, 50)
+    await transfer(org1, thirduser, 50)
 
-    await contracts.token.transfer(firstuser, org3, "600.0000 SEEDS", "Test supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(org3, firstuser, "200.0000 SEEDS", "Test supply", { authorization: `${org3}@active` })
-    await contracts.token.transfer(org3, seconduser, "200.0000 SEEDS", "Test supply", { authorization: `${org3}@active` })
-    await contracts.token.transfer(org3, thirduser, "200.0000 SEEDS", "Test supply", { authorization: `${org3}@active` })
+    await transfer(firstuser, org2, 300)
+    await transfer(org2, firstuser, 100)
+    await transfer(org2, seconduser, 100)
+    await transfer(org2, thirduser, 100)
 
-    await contracts.token.transfer(firstuser, org4, "800.0000 SEEDS", "Test supply", { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(org4, firstuser, "200.0000 SEEDS", "Test supply", { authorization: `${org4}@active` })
-    await contracts.token.transfer(org4, seconduser, "300.0000 SEEDS", "Test supply", { authorization: `${org4}@active` })
-    await contracts.token.transfer(org4, thirduser, "300.0000 SEEDS", "Test supply", { authorization: `${org4}@active` })
+    await transfer(firstuser, org3, 600)
+    await transfer(org3, firstuser, 200)
+    await transfer(org3, seconduser, 200)
+    await transfer(org3, thirduser, 200)
 
-    await contracts.token.transfer(seconduser, org5, "1000.0000 SEEDS", "Test supply", { authorization: `${seconduser}@active` })
-    await contracts.token.transfer(org5, firstuser, "600.0000 SEEDS", "Test supply", { authorization: `${org5}@active` })
-    await contracts.token.transfer(org5, seconduser, "200.0000 SEEDS", "Test supply", { authorization: `${org5}@active` })
-    await contracts.token.transfer(org5, thirduser, "200.0000 SEEDS", "Test supply", { authorization: `${org5}@active` })    
-    
-    await sleep(200)
+    await transfer(firstuser, org4, 800)
+    await transfer(org4, firstuser, 200)
+    await transfer(org4, seconduser, 300)
+    await transfer(org4, thirduser, 300)
 
-    let txt = await contracts.organization.scoreorgs("", { authorization: `${organization}@active` })
-    await sleep(16000)
+    await transfer(seconduser, org5, 1000)
+    await transfer(org5, firstuser, 600)
+    await transfer(org5, seconduser, 200)
+    await transfer(org5, thirduser, 200)
+
+    // let txt = await contracts.organization.scoreorgs("", { authorization: `${organization}@active` })
+    await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
+    await sleep(100)
+
+    await contracts.organization.rankregens({ authorization: `${organization}@active` })
+    await contracts.organization.rankcbsorgs({ authorization: `${organization}@active` })
+    await contracts.harvest.rankorgtxs({ authorization: `${harvest}@active` })
+
+    await sleep(5000)
 
     const orgTxScore = await getTableRows({
         code: harvest,
@@ -730,12 +752,6 @@ describe('organization scores', async assert => {
         json: true
     })
     console.log('prro:', orgTxScore)
-
-    await contracts.organization.rankregens({ authorization: `${organization}@active` })
-    await contracts.organization.rankcbsorgs({ authorization: `${organization}@active` })
-    await contracts.harvest.rankorgtxs({ authorization: `${harvest}@active` })
-
-    await sleep(5000)
 
     const regenScores = await getTableRows({
         code: organization,
@@ -774,6 +790,23 @@ describe('organization scores', async assert => {
         json: true
     })
 
+    const getTransactionPoints = async (users) => {
+        const trx = []
+        for (const user of users) {
+            const trxPoints = await getTableRows({
+                code: history,
+                scope: user,
+                table: 'trxpoints',
+                json: true
+            })
+            trx.push(trxPoints.rows)
+        }
+        return trx
+    }
+
+    console.log(await getTransactionPoints([org1, org2, org3, org4, org5]))
+
+
     assert({
         given: 'regen scores calculated',
         should: 'rank the orgs properly',
@@ -806,11 +839,11 @@ describe('organization scores', async assert => {
         should: 'rank thr orgs properly',
         actual: txRanks.rows,
         expected: [
-            { account: org1, points: 299, rank: 0 },
-            { account: org2, points: 599, rank: 20 },
-            { account: org3, points: 1199, rank: 40 },
-            { account: org4, points: 1532, rank: 60 },
-            { account: org5, points: 1599, rank: 80 }
+            { account: org1, points: 301, rank: 0 },
+            { account: org2, points: 601, rank: 20 },
+            { account: org3, points: 1201, rank: 40 },
+            { account: org4, points: 1534, rank: 60 },
+            { account: org5, points: 1601, rank: 80 }
         ]
     })
     console.log('trxs', txRanks.rows)
@@ -905,13 +938,18 @@ describe('organization status', async assert => {
         eos.contract(accounts),
         eos.contract(settings),
         eos.contract(harvest),
-        eos.contract(history)
-    ]).then(([organization, token, accounts, settings, harvest, history]) => ({
-        organization, token, accounts, settings, harvest, history
+        eos.contract(history),
+        eos.contract(exchange)
+    ]).then(([organization, token, accounts, settings, harvest, history, exchange]) => ({
+        organization, token, accounts, settings, harvest, history, exchange
     }))
 
     console.log('reset token stats')
     await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+    console.log('reset exchange')
+    await contracts.exchange.reset({ authorization: `${exchange}@active` })
+    await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
     console.log('configure')
     //await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -964,6 +1002,8 @@ describe('organization status', async assert => {
         hasLessTransactions = true
     }
 
+    console.log('test reputable')
+
     await contracts.organization.testregen(org1, { authorization: `${organization}@active` })
     await contracts.organization.testreptable(org3, { authorization: `${organization}@active` })
 
@@ -979,12 +1019,7 @@ describe('organization status', async assert => {
     await contracts.token.transfer(org2, org3, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
     await sleep(300)
 
-    const trx = await getTableRows({
-        code: history,
-        scope: org2,
-        table: 'transactions',
-        json: true
-    })
+    console.log('make reputable')
 
     await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
 
@@ -997,6 +1032,8 @@ describe('organization status', async assert => {
 
     await contracts.settings.configure('rgen.resref', 1, { authorization: `${settings}@active` })
     await contracts.settings.configure('rgen.refrred', 3, { authorization: `${settings}@active` })
+
+    console.log('make regen')
 
     await contracts.organization.makeregen(org2, { authorization: `${organization}@active` })
 
@@ -1063,10 +1100,12 @@ describe('organization status', async assert => {
 
 })
 
-describe('transaction points', async assert => {
+/* describe('transaction points', async assert => {
     const contracts = await initContracts({ settings, history, accounts, organization, token, harvest })
     let firstorg = 'testorg1'
     let secondorg = 'testorg2'
+
+    const day = getBeginningOfDayInSeconds()
 
     console.log('settings reset')
     await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -1088,6 +1127,7 @@ describe('transaction points', async assert => {
     await contracts.history.reset(seconduser, { authorization: `${history}@active` })
     await contracts.history.reset(firstorg, { authorization: `${history}@active` })
     await contracts.history.reset(secondorg, { authorization: `${history}@active` })
+    await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
   
     console.log('join users')
     await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
@@ -1115,6 +1155,7 @@ describe('transaction points', async assert => {
     console.log('make transfers')
     const transfer = async (a, b, amount) => {
         await contracts.token.transfer(a, b, amount, Math.random().toString(36).substring(7), { authorization: `${a}@active` })
+        await sleep(2000)
     }
     
     await transfer(firstuser, firstorg, "10.0000 SEEDS")
@@ -1123,42 +1164,44 @@ describe('transaction points', async assert => {
     await transfer(firstorg, seconduser, "13.0000 SEEDS")
     await transfer(seconduser, firstorg, "7.0000 SEEDS")
     
-    const orgTx1 = await getTableRows({
-        code: history,
-        scope: firstorg,
-        table: 'orgtx',
-        json: true
-    })
+    // const orgTx1 = await getTableRows({
+    //     code: history,
+    //     scope: firstorg,
+    //     table: 'orgtx',
+    //     json: true
+    // })
 
-    const orgTx2 = await getTableRows({
-        code: history,
-        scope: secondorg,
-        table: 'orgtx',
-        json: true
-    })
+    // const orgTx2 = await getTableRows({
+    //     code: history,
+    //     scope: secondorg,
+    //     table: 'orgtx',
+    //     json: true
+    // })
 
-    const userTx1 = await getTableRows({
-        code: history,
-        scope: firstuser,
-        table: 'transactions',
-        json: true
-    })
-    const userTx2 = await getTableRows({
-        code: history,
-        scope: seconduser,
-        table: 'transactions',
-        json: true
-    })
+    // const userTx1 = await getTableRows({
+    //     code: history,
+    //     scope: firstuser,
+    //     table: 'transactions',
+    //     json: true
+    // })
+    // const userTx2 = await getTableRows({
+    //     code: history,
+    //     scope: seconduser,
+    //     table: 'transactions',
+    //     json: true
+    // })
 
-    console.log("org1 tx "+JSON.stringify(orgTx1, null, 2))
-    console.log("org2 tx "+JSON.stringify(orgTx2, null, 2))
-    console.log("user1 tx "+JSON.stringify(userTx1, null, 2))
-    console.log("user2 tx "+JSON.stringify(userTx2, null, 2))
+    // console.log("org1 tx "+JSON.stringify(orgTx1, null, 2))
+    // console.log("org2 tx "+JSON.stringify(orgTx2, null, 2))
+    // console.log("user1 tx "+JSON.stringify(userTx1, null, 2))
+    // console.log("user2 tx "+JSON.stringify(userTx2, null, 2))
 
-    let t1 = await contracts.history.orgtxpt(firstorg, 0, 200, 0, { authorization: `${history}@active` })
-    printConsole(t1)
+    // let t1 = await contracts.history.orgtxpt(firstorg, 0, 200, 0, { authorization: `${history}@active` })
+    // printConsole(t1)
 
-    let txt = await contracts.organization.scoreorgs(firstorg, { authorization: `${organization}@active` })
+    await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
+
+    // let txt = await contracts.organization.scoreorgs(firstorg, { authorization: `${organization}@active` })
 
     let checkTxPoints = async () => {
         const txpoints = await getTableRows({
@@ -1171,11 +1214,20 @@ describe('transaction points', async assert => {
         console.log("harvest txpoints "+JSON.stringify(txpoints, null, 2))
     
     }
+
+    const trxPoints = await getTableRows({
+        code: history,
+        scope: firstorg,
+        table: 'trxpoints',
+        json: true
+    })
+    console.log(trxPoints)
+
     await checkTxPoints()
 
-    await contracts.organization.scoreorgs(secondorg, { authorization: `${organization}@active` })
+    // await contracts.organization.scoreorgs(secondorg, { authorization: `${organization}@active` })
 
-    await checkTxPoints()
+    // await checkTxPoints()
 
 })
 
@@ -1189,3 +1241,4 @@ const printConsole = (objResult) => {
         }
     }
 }
+ */
