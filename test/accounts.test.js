@@ -177,13 +177,6 @@ describe('accounts', async assert => {
 
   console.log('test resident')
 
-  const cbScore1 = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'cbs',
-    json: true,
-  })
-
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -208,13 +201,6 @@ describe('accounts', async assert => {
     code: accounts,
     scope: accounts,
     table: 'users',
-    json: true,
-  })
-
-  const cbScore2 = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'cbs',
     json: true,
   })
 
@@ -263,7 +249,7 @@ describe('accounts', async assert => {
     })
   }
 
-  await checkEscrow("referred became resudent", 0, firstuser, "refrwd1.ind")
+  await checkEscrow("referred became resident", 0, firstuser, "refrwd1.ind")
   await checkEscrow("referred became citizen", 1, firstuser, "refrwd2.ind")
 
   assert({
@@ -271,20 +257,6 @@ describe('accounts', async assert => {
     should: 'have correct values',
     actual: users.rows.map(({ reputation }) => reputation),
     expected: [101, 0, 0]
-  })
-
-  assert({
-    given: 'invited became resudent',
-    should: 'have community building score',
-    actual: cbScore1.rows.map(({ community_building_score }) => community_building_score),
-    expected: [1]
-  })
-
-  assert({
-    given: 'invited became citizen',
-    should: 'have community building score',
-    actual: cbScore2.rows.map(({ community_building_score }) => community_building_score),
-    expected: [2]
   })
 
   assert({
@@ -1173,6 +1145,81 @@ describe('reputation & cbs ranking', async assert => {
   })
 
 })
+
+describe('vouching cbp earning', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts, onboarding })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
+
+  console.log('seconduser becomes a resident and can vouch')
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('vouch for first user')
+  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
+
+  const vouchTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+
+  console.log("firstuser becomes resident")
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  const expected_cbp_res = await  get_settings("vou.cbp1.ind")
+
+  const cbsAfterResident = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  // console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+
+  assert({
+    given: 'firstuser became resident',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterResident.rows[0].community_building_score,
+    expected: expected_cbp_res
+  })
+
+  console.log("firstuser becomes citizen")
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  const expected_cbp_cit = await get_settings("vou.cbp2.ind")
+
+  const cbsAfterCitizen = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  // console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
+
+  assert({
+    given: 'firstuser became citizen',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterCitizen.rows[0].community_building_score,
+    expected: expected_cbp_res + expected_cbp_cit
+  })
+
+})
+
 
 // TODO: Test punish
 const invite = async (sponsor, totalAmount, debug = false) => {

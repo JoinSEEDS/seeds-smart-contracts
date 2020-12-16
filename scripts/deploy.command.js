@@ -9,10 +9,8 @@ const deploy = async (name) => {
     let account = accounts[name]
     console.log(`deploy ${account.name}`)
     let contractName = account.name
-
+    
     await createAccount(account)
-
-    console.log("createAccount ", JSON.stringify(account.account));
 
     if (!code)
       throw new Error('code not found')
@@ -81,10 +79,11 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
     })
     console.log(`${account} created`)
   } catch (err) {
-    if (""+err.indexOf("Account name already exists") != -1) {
+    if ((""+err).indexOf("Account name already exists") != -1) {
       console.error(`account ${account} already created`)
     } else {
-      console.error(`create account ${account} error: ` + err)
+      console.error(`account ${account} create error` + err)
+      throw err
     }
   }
 }
