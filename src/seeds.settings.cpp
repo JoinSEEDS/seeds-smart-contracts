@@ -93,6 +93,10 @@ void settings::reset() {
   // =====================================
   // citizenship path 
   // =====================================
+
+  // Visitor
+  confwithdesc(name("vis.plant"), 5 * 10000, "Minimum planted amount to become a Visitor (in Seeds)", high_impact);   // min planted 5 Seeds
+
   // Resident
   confwithdesc(name("res.plant"), 50 * 10000, "Minimum planted amount to become a Resident (in Seeds)", high_impact);   // min planted 50 Seeds
   confwithdesc(name("res.tx"), 1, "Minimum number of transactions to become a Resident", high_impact);              // min 10 transactions
@@ -111,12 +115,6 @@ void settings::reset() {
   // =====================================
   // referral rewards 
   // =====================================
-
-  // community buiding points for referrer when user becomes resident
-  confwithdesc(name("refcbp1.ind"), 1, "Community buiding points for referrer when user becomes resident", high_impact);
-
-  // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("refcbp2.ind"), 1, "Community buiding points for referrer when user becomes citizen", high_impact);
 
   // reputation points for referrer when user becomes resident
   confwithdesc(name("refrep1.ind"), 1, "Reputation points for referrer when user becomes resident", high_impact);
@@ -190,6 +188,10 @@ void settings::reset() {
   confwithdesc(name("decrwd2.amb"), 15000 * 10000, "Reward decay for abmassador of referring org when user becomes citizen", high_impact);
 
 
+  // =====================================
+  // vouching rewards 
+  // =====================================
+
   // Maximum number of points a user can gain from others vouching for them
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);
 
@@ -198,6 +200,13 @@ void settings::reset() {
   
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
+
+  // community buiding points for voucher when user becomes resident
+  confwithdesc(name("vou.cbp1.ind"), 2, "Community buiding points for voucher when user becomes resident", high_impact);
+
+  // community buiding points for voucher when user becomes citizen
+  confwithdesc(name("vou.cbp2.ind"), 2, "Community buiding points for voucher when user becomes citizen", high_impact);
+
 
 
   // =====================================
@@ -229,6 +238,9 @@ void settings::configure(name param, uint64_t value) {
 
   auto citr = config.find(param.value);
 
+  auto fitr = configfloat.find(param.value);
+  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
       item.param = param;
@@ -242,10 +254,34 @@ void settings::configure(name param, uint64_t value) {
   }
 }
 
+void settings::conffloat(name param, double value) {
+  require_auth(get_self());
+
+  auto citr = configfloat.find(param.value);
+
+  auto iitr = config.find(param.value);
+  check(iitr == config.end(), "this parameter is defined as an integer");
+
+  if (citr == configfloat.end()) {
+    configfloat.emplace(_self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+    });
+  } else {
+    configfloat.modify(citr, _self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+    });
+  }
+}
+
 void settings::confwithdesc(name param, uint64_t value, string description, name impact) {
   require_auth(get_self());
 
   auto citr = config.find(param.value);
+
+  auto fitr = configfloat.find(param.value);
+  check(fitr == configfloat.end(), "this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
@@ -256,6 +292,31 @@ void settings::confwithdesc(name param, uint64_t value, string description, name
     });
   } else {
     config.modify(citr, _self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+      item.description = description;
+      item.impact = impact;
+    });
+  }
+}
+
+void settings::conffloatdsc(name param, double value, string description, name impact) {
+  require_auth(get_self());
+
+  auto citr = configfloat.find(param.value);
+
+  auto iitr = config.find(param.value);
+  check(iitr == config.end(), "this parameter is defined as an integer");
+
+  if (citr == configfloat.end()) {
+    configfloat.emplace(_self, [&](auto& item) {
+      item.param = param;
+      item.value = value;
+      item.description = description;
+      item.impact = impact;
+    });
+  } else {
+    configfloat.modify(citr, _self, [&](auto& item) {
       item.param = param;
       item.value = value;
       item.description = description;

@@ -80,6 +80,7 @@ void scheduler::reset_aux(bool destructive) {
         name("hrvst.calccs"), // after the above 4
         name("hrvst.rankcs"), 
         name("hrvst.calctx"), // 24h
+        name("hrvst.biocs"),
 
         name("org.clndaus"),
         name("org.rankregn"),
@@ -109,6 +110,7 @@ void scheduler::reset_aux(bool destructive) {
         name("calccss"),
         name("rankcss"),
         name("calctrxpts"),
+        name("rankbiocss"),
 
         name("cleandaus"),
         name("rankregens"),
@@ -135,6 +137,7 @@ void scheduler::reset_aux(bool destructive) {
         contracts::harvest,
         contracts::harvest,
 
+        contracts::harvest,
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
@@ -167,6 +170,7 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_day,
+        utils::seconds_per_day,
 
         utils::seconds_per_day / 2,
         utils::seconds_per_day,
@@ -198,6 +202,7 @@ void scheduler::reset_aux(bool destructive) {
         now + 300 - utils::seconds_per_hour, // kicks off 5 minutes later
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
+        now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
 
         now,
         now,
