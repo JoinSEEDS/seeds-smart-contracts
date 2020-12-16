@@ -4,6 +4,7 @@
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -14,6 +15,7 @@ CONTRACT settings : public contract {
       settings(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
           config(receiver, receiver.value),
+          configfloat(receiver, receiver.value),
           contracts(receiver, receiver.value)
           {}
 
@@ -22,6 +24,10 @@ CONTRACT settings : public contract {
       ACTION confwithdesc(name param, uint64_t value, string description, name impact);
 
       ACTION configure(name param, uint64_t value);
+
+      ACTION conffloat(name param, double value);
+
+      ACTION conffloatdsc(name param, double value, string description, name impact);
 
       ACTION setcontract(name contract, name account);
 
@@ -34,7 +40,12 @@ CONTRACT settings : public contract {
         
       DEFINE_CONFIG_TABLE_MULTI_INDEX
 
+      DEFINE_CONFIG_FLOAT_TABLE
+
+      DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
+
       config_tables config;
+      config_float_tables configfloat;
 
       /*
       * Information for clients as to where to find our contracts
@@ -58,4 +69,4 @@ CONTRACT settings : public contract {
 
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(confwithdesc));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(confwithdesc)(conffloat)(conffloatdsc));
