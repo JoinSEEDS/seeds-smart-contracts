@@ -108,7 +108,7 @@ const deploy = async ({ name, account }) => {
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
     let errStr = "" + err
-    if (errStr.includes("contract is already running this version of code")) {
+    if (errStr.toLowerCase().includes("contract is already running this version")) {
       console.log(`${name} deployed to ${account} already`)
     } else {
       console.error(`error deploying account ${name} \n* error: ` + err + `\n`)

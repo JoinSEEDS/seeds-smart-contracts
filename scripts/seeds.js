@@ -3,9 +3,9 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal, names, accounts, allContracts, allContractNames, allBankAccountNames } = require('./helper')
+const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAccountNames } = require('./helper')
 const docsgen = require('./docsgen')
-const { harvest } = names
+const { settings, scheduler } = names
 
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
@@ -121,6 +121,41 @@ const updatePermissionAction = async () => {
   await updatePermissions()
 }
 
+const updateSettingsAction = async () => {
+  console.log(`UPDATE Settings on ${settings}`)
+  const name = "settings"
+  
+  await deployAction(name)
+
+  const contract = await eos.contract(settings)
+
+  console.log(`reset settings`)
+
+  await contract.reset({ authorization: `${settings}@active` })
+
+  console.log(`Success: Settings reset: ${settings}`)
+}
+
+const updateSchedulerAction = async () => {
+  console.log(`UPDATE Scheduler on ${scheduler}`)
+  const name = "scheduler"
+
+  await deployAction(name)
+
+  const contract = await eos.contract(scheduler)
+
+  console.log(`${scheduler} stop`)
+  await contract.stop({ authorization: `${scheduler}@active` })
+
+  console.log(`${scheduler} updateops`)
+  await contract.updateops({ authorization: `${scheduler}@active` })
+
+  console.log(`${scheduler} start`)
+  await contract.start({ authorization: `${scheduler}@active` })
+
+  console.log(`Success: Scheduler was updated and restarted: ${scheduler}`)
+}
+
 program
   .command('compile <contract> [moreContracts...]')
   .description('Compile custom contract')
@@ -169,6 +204,19 @@ program
   .description('Update all permissions of all contracts')
   .action(async function() {
     await updatePermissionAction()
+  })
+
+  program
+  .command('updateSettings')
+  .description('Deploy and reset settings contract')
+  .action(async function() {
+    await updateSettingsAction()
+  })
+  program
+  .command('updateScheduler')
+  .description('Deploy and refresh scheduler: stop, updateops, start')
+  .action(async function() {
+    await updateSchedulerAction()
   })
 
   program
