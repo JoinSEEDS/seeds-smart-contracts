@@ -4,11 +4,15 @@ const Eos = require('eosjs')
 const R = require('ramda')
 const ecc = require('eosjs-ecc')
 
+// Note: For some reason local chain ID is different on docker vs. local install of eosio
+const dockerLocalChainID = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
+const eosioLocalChainID = '8a34ec7df1b8cd06ff4a8abbaa7cc50300823350cadc59ab296cb00d104d2b8f'
+
 const networks = {
   mainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
   jungle: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473',
   kylin: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191',
-  local: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
+  local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
@@ -643,6 +647,15 @@ const config = {
 }
 
 const eos = Eos(config)
+
+setTimeout(async ()=>{
+  let info = await eos.getInfo({})
+  if (info.chain_id != chainId) {
+    console.error("Fix this by setting local chain ID to "+info.chain_id)
+    console.error('Chain ID mismatch, signing will not work - \nactual Chain ID: "+info.chain_id + "\nexpected Chain ID: "+chainId')
+    throw new Error("Chain ID mismatch")
+  }
+})
 
 const getEOSWithEndpoint = (ep) => {
   const config = {
