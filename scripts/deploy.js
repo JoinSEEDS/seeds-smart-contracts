@@ -434,7 +434,7 @@ const createTestToken = async () => {
   await createCoins(accounts.testtoken)
 }
 
-const initContracts = async () => {
+const deployAllContracts = async () => {
   const ownerExists = await isExistingAccount(accounts.owner.account)
 
   if (!ownerExists) {
@@ -471,4 +471,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
+module.exports = { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }

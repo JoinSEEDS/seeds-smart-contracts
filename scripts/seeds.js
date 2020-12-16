@@ -3,12 +3,12 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { isLocal, names, allContracts, allContractNames, allBankAccountNames } = require('./helper')
+const { isLocal, names, accounts, allContracts, allContractNames, allBankAccountNames } = require('./helper')
 const docsgen = require('./docsgen')
 const { harvest } = names
 
 const deploy = require('./deploy.command')
-const { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
+const { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -113,7 +113,7 @@ const initAction = async (compile = true) => {
     console.log("no compile")
   }
 
-  await initContracts()
+  await deployAllContracts()
 
 }
 
