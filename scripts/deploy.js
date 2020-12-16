@@ -108,7 +108,7 @@ const deploy = async ({ name, account }) => {
     console.log(`${name} deployed to ${account}`)
   } catch (err) {
     let errStr = "" + err
-    if (errStr.includes("contract is already running this version of code")) {
+    if (errStr.toLowerCase().includes("contract is already running this version")) {
       console.log(`${name} deployed to ${account} already`)
     } else {
       console.error(`error deploying account ${name} \n* error: ` + err + `\n`)
@@ -434,7 +434,7 @@ const createTestToken = async () => {
   await createCoins(accounts.testtoken)
 }
 
-const initContracts = async () => {
+const deployAllContracts = async () => {
   const ownerExists = await isExistingAccount(accounts.owner.account)
 
   if (!ownerExists) {
@@ -471,4 +471,4 @@ const initContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { initContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
+module.exports = { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
