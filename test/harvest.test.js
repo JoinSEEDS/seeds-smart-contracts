@@ -3,7 +3,7 @@ const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLoc
 const { equals } = require("ramda")
 const { parse } = require("commander")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, globaldho } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, globaldho, fifthuser } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -1073,6 +1073,135 @@ describe('Mint Rate and Harvest', async assert => {
       mint_rate: expectedMintRate,
       volume_growth: parseInt(expectedVolumeGrowth * 10000)
     }]
+  })
+
+})
+
+describe('bioregions contribution score', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
+  const contracts = await Promise.all([
+    eos.contract(token),
+    eos.contract(accounts),
+    eos.contract(harvest),
+    eos.contract(settings),
+    eos.contract(history),
+    eos.contract(organization),
+    eos.contract(bioregion)
+  ]).then(([token, accounts, harvest, settings, history, organization, bioregion]) => ({
+    token, accounts, harvest, settings, history, organization, bioregion
+  }))
+
+  const day = getBeginningOfDayInSeconds()
+  console.log('reset history')
+  await contracts.history.reset(history, { authorization: `${history}@active` })
+  await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset bios')
+  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('join users')
+  const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i]
+    await contracts.accounts.adduser(user, i + ' user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(user, 49, { authorization: `${accounts}@active` })
+    await contracts.history.reset(user, { authorization: `${history}@active` })
+  }
+
+  console.log('add bioregions')
+  const keypair = await createKeypair();
+  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const bios = ['bio1.bdc', 'bio2.bdc', 'bio3.bdc']
+  for (let index = 0; index < bios.length; index++) {
+    const bio = bios[index]
+    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.bioregion.create(
+      users[index], 
+      bio, 
+      'test bio region',
+      '{lat:0.0111,lon:1.3232}', 
+      1.1, 
+      1.23, 
+      keypair.public, 
+      { authorization: `${users[index]}@active` })
+  }
+
+  await contracts.bioregion.join('bio2.bdc', fourthuser,{ authorization: `${fourthuser}@active` })
+  await contracts.bioregion.join('bio3.bdc', fifthuser,{ authorization: `${fifthuser}@active` })
+
+  console.log('transfer')
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i]
+    if (i === 0) {
+      await contracts.token.transfer(user, seconduser, '1000.0000 SEEDS', 'supply', { authorization: `${user}@active` })
+    } else {
+      await contracts.token.transfer(user, firstuser, '1000.0000 SEEDS', 'supply', { authorization: `${user}@active` })
+    }
+    await sleep(2000)
+  }
+
+  console.log('rank transactions')
+  await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
+  await contracts.harvest.ranktxs({ authorization: `${harvest}@active` })
+
+  console.log('calc contribution score')
+  await contracts.harvest.calccss({ authorization: `${harvest}@active` })
+
+  console.log('change max limit transactions')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+  console.log('calc contribution score')
+  await contracts.harvest.rankbiocss({ authorization: `${harvest}@active` })
+  await sleep(5000)
+
+  const cspointsBios = await getTableRows({
+    code: harvest,
+    scope: 'bio',
+    table: 'cspoints',
+    json: true
+  })
+
+  const cspointsBiosTemp = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'biocstemp',
+    json: true
+  })
+
+  assert({
+    given: 'cs for bioregions',
+    should: 'have the correct ranks',
+    actual: cspointsBios.rows,
+    expected: [
+      { account: 'bio2.bdc', contribution_points: 77, rank: 0 },
+      { account: 'bio3.bdc', contribution_points: 117, rank: 50 }
+    ]
+  })
+
+  assert({
+    given: 'cs for bioregions, the table biocstemp',
+    should: 'not have entries',
+    actual: cspointsBiosTemp.rows,
+    expected: []
   })
 
 })
