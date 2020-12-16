@@ -263,13 +263,6 @@ void accounts::refreward(name account, name new_status) {
     return;
   }
 
-  // Add community building points
-
-  name cbp_param = is_citizen ? cbp_reward_citizen : cbp_reward_resident;
-  int community_building_points = int(config_get(cbp_param));
-
-  add_cbs(referrer, community_building_points);
-
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
@@ -313,15 +306,6 @@ void accounts::refreward(name account, name new_status) {
           send_reward(ambassador, amb_quantity);
         }
       }
-
-      // register cbs in the cbsorg table to rank orgs
-      action(
-        permission_level(contracts::organization, "active"_n),
-        contracts::organization,
-        "addcbpoints"_n,
-        std::make_tuple(referrer, community_building_points)
-      ).send();
-
     } 
     else 
     {

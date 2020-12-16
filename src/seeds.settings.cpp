@@ -105,12 +105,6 @@ void settings::reset() {
   // referral rewards 
   // =====================================
 
-  // community buiding points for referrer when user becomes resident
-  confwithdesc(name("vou.cbp1.ind"), 1, "Community buiding points for voucher when user becomes resident", high_impact);
-
-  // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("vou.cbp2.ind"), 1, "Community buiding points for voucher when user becomes citizen", high_impact);
-
   // reputation points for referrer when user becomes resident
   confwithdesc(name("refrep1.ind"), 1, "Reputation points for referrer when user becomes resident", high_impact);
 

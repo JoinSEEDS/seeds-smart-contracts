@@ -177,13 +177,6 @@ describe('accounts', async assert => {
 
   console.log('test resident')
 
-  const cbScore1 = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'cbs',
-    json: true,
-  })
-
   const users = await eos.getTableRows({
     code: accounts,
     scope: accounts,
@@ -208,13 +201,6 @@ describe('accounts', async assert => {
     code: accounts,
     scope: accounts,
     table: 'users',
-    json: true,
-  })
-
-  const cbScore2 = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'cbs',
     json: true,
   })
 
@@ -263,7 +249,7 @@ describe('accounts', async assert => {
     })
   }
 
-  await checkEscrow("referred became resudent", 0, firstuser, "refrwd1.ind")
+  await checkEscrow("referred became resident", 0, firstuser, "refrwd1.ind")
   await checkEscrow("referred became citizen", 1, firstuser, "refrwd2.ind")
 
   assert({
@@ -271,20 +257,6 @@ describe('accounts', async assert => {
     should: 'have correct values',
     actual: users.rows.map(({ reputation }) => reputation),
     expected: [101, 0, 0]
-  })
-
-  assert({
-    given: 'invited became resudent',
-    should: 'have community building score',
-    actual: cbScore1.rows.map(({ community_building_score }) => community_building_score),
-    expected: [1]
-  })
-
-  assert({
-    given: 'invited became citizen',
-    should: 'have community building score',
-    actual: cbScore2.rows.map(({ community_building_score }) => community_building_score),
-    expected: [2]
   })
 
   assert({
