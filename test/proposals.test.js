@@ -1995,3 +1995,49 @@ describe('delegate trust', async assert => {
   })
 
 })
+
+describe('time limit on changing bioregions', assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const voices = [20, 10, 50, 35]
+  for (let i = 0; i < users.length; i++) {
+    await contracts.accounts.adduser(users[i], `user ${i}`, 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(users[i], { authorization: `${accounts}@active` })
+    await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
+  }
+
+  console.log('create alliance proposal')
+  await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
+  
+  console.log('stake')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  console.log('active proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  for (let i = 0; i < users.length; i++) {
+    await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
+  }
+
+})

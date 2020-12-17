@@ -17,6 +17,7 @@ CONTRACT bioregion : public contract {
               bioregions(receiver, receiver.value),
               members(receiver, receiver.value),
               sponsors(receiver, receiver.value),
+              biodelays(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value)
               {}
@@ -123,6 +124,14 @@ CONTRACT bioregion : public contract {
         };
         typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;
 
+        TABLE delay_table {
+            name account;
+            uint64_t delay_finish_timestamp;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+        typedef eosio::multi_index <"biodelays"_n, delay_table> delay_tables;
+
         // External tables
 
         DEFINE_USER_TABLE
@@ -140,6 +149,7 @@ CONTRACT bioregion : public contract {
         bioregion_tables bioregions;
         members_tables members;
         sponsors_tables sponsors;
+        delay_tables biodelays;
 };
 
 

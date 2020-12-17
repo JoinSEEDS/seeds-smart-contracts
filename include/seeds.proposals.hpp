@@ -27,7 +27,8 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
-          users(contracts::accounts, contracts::accounts.value)
+          users(contracts::accounts, contracts::accounts.value),
+          biodelays(contracts::bioregion, contracts::bioregion.value)
           {}
 
       ACTION reset();
@@ -163,6 +164,7 @@ CONTRACT proposals : public contract {
       void check_voice_scope(name scope);
       bool is_trust_delegated(name account, name scope);
       void send_mimic_delegatee_vote(name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option);
+      bool has_changed_bioregions_recently (name account);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -265,7 +267,13 @@ CONTRACT proposals : public contract {
         uint64_t by_delegatee()const { return delegatee.value; }
         uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
       };
-    
+
+      TABLE delay_table {
+        name account;
+        uint64_t delay_finish_timestamp;
+
+        uint64_t primary_key() const { return account.value; }
+      };
 
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
@@ -286,6 +294,7 @@ CONTRACT proposals : public contract {
       indexed_by<"byddelegator"_n,
       const_mem_fun<delegate_trust_table, uint128_t, &delegate_trust_table::by_delegatee_delegator>>
     > delegate_trust_tables;
+    typedef eosio::multi_index <"biodelays"_n, delay_table> delay_tables;
 
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
@@ -298,6 +307,7 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
+    delay_tables biodelays;
 
 };
 

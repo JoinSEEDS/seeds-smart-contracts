@@ -879,6 +879,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
 
   if (!is_delegated) {
     check(!is_trust_delegated(voter, scope), "voice is delegated, user can not vote by itself");
+    check(!has_changed_bioregions_recently(voter), "the user can not vote as it has changed bioregions recently");
   }
 
   send_mimic_delegatee_vote(voter, scope, id, percenetage_used, option);
@@ -1421,15 +1422,17 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
   while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
 
     name voter = ditr -> delegator;
-    auto vitr = voices.find(voter.value);
 
-    if (option == trust) {
-      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, trust, true, true);
-    } else if (option == distrust) {
-      bool vote_reverted = revert_vote(voter, proposal_id);
-      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, distrust, !vote_reverted, true);
-    } else if (option == abstain) {
-      vote_aux(voter, proposal_id, uint64_t(0), abstain, true, true);
+    if (!has_changed_bioregions_recently(voter)) {
+      auto vitr = voices.find(voter.value);
+      if (option == trust) {
+        vote_aux(voter, proposal_id, vitr -> balance * percentage_used, trust, true, true);
+      } else if (option == distrust) {
+        bool vote_reverted = revert_vote(voter, proposal_id);
+        vote_aux(voter, proposal_id, vitr -> balance * percentage_used, distrust, !vote_reverted, true);
+      } else if (option == abstain) {
+        vote_aux(voter, proposal_id, uint64_t(0), abstain, true, true);
+      }
     }
 
     ditr++;
@@ -1467,4 +1470,11 @@ ACTION proposals::undelegate (name delegator, name scope) {
   }
 
   deltrusts.erase(ditr);
+}
+
+bool proposals::has_changed_bioregions_recently (name account) {
+  auto itr = biodelays.find(account.value);
+  if (itr == biodelays.end()) { return false; }
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+  return now < itr -> delay_finish_timestamp;
 }

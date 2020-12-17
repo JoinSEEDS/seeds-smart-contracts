@@ -160,14 +160,28 @@ ACTION bioregion::join(name bioregion, name account) {
     auto mitr = members.find(account.value);
 
     if (mitr != members.end()) {
-        check(false, "user exists TODO allow users to switch");
-    } else {
-        members.emplace(_self, [&](auto & item) {
-            item.bioregion = bioregion;
-            item.account = account;
-        });
-        size_change(bioregion, 1);
+        if (mitr -> bioregion == bioregion) { return; }
+        leave(mitr -> bioregion, account);
     }
+
+    auto ditr = biodelays.find(account.value);
+    if (ditr == biodelays.end()) {
+        biodelays.emplace(_self, [&](auto & item){
+            item.account = account;
+            item.delay_finish_timestamp = 0;
+        });
+    } else {
+        check(false, "remember to update the date");
+        biodelays.modify(ditr, _self, [&](auto & item){
+            item.delay_finish_timestamp = eosio::current_time_point().sec_since_epoch();;
+        });
+    }
+
+    members.emplace(_self, [&](auto & item) {
+        item.bioregion = bioregion;
+        item.account = account;
+    });
+    size_change(bioregion, 1);
 
 }
 
