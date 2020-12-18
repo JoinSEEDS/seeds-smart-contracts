@@ -224,6 +224,7 @@ void proposals::calcvotepow() {
       }
 
       vote_power += points;
+      
       print("| active: " + 
         vitr->account.to_string() +
         " pt: " + std::to_string(points) + " " 
@@ -236,8 +237,8 @@ void proposals::calcvotepow() {
     vitr++;
   }
 
-  size_set(cycle_vote_power_size, vote_power);
-  size_set("voice.sz"_n, voice_size);
+  //size_set(cycle_vote_power_size, vote_power);
+  //size_set("voice.sz"_n, voice_size);
 
 }
 
@@ -1047,9 +1048,16 @@ void proposals::erase_voice (name user) {
   auto vaitr = voice_alliance.find(user.value);
 
   voice.erase(vitr);
-  size_change("voice.sz"_n, -1);
-
   voice_alliance.erase(vaitr);
+
+  size_change("voice.sz"_n, -1);
+  
+  auto aitr = actives.find(user.value);
+  if (aitr != actives.end()) {
+    actives.erase(aitr);
+    size_change(user_active_size, -1);
+  }
+
 }
 
 void proposals::changetrust(name user, bool trust) {

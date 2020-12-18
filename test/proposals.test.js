@@ -1056,8 +1056,6 @@ describe('Proposals Quorum', async assert => {
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
   console.log('deposit stake 3')
   await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
-  console.log('move proposals to active')
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser]
   for (i = 0; i<users.length; i++ ) {
@@ -1066,6 +1064,9 @@ describe('Proposals Quorum', async assert => {
     await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
     await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
   }
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
 
   console.log('vote on first proposal')
   await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
@@ -1244,6 +1245,7 @@ describe('Stake limits', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
   await contracts.proposals.createx(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
