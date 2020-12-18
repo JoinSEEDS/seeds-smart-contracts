@@ -3,6 +3,7 @@
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
 #include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 #include <tables/size_table.hpp>
 
 #include <contracts.hpp>
@@ -25,7 +26,9 @@ CONTRACT history : public contract {
           citizens(receiver, receiver.value),
           reputables(receiver, receiver.value),
           regens(receiver, receiver.value),
-          totals(receiver, receiver.value)
+          totals(receiver, receiver.value),
+          organizations(contracts::organization, contracts::organization.value),
+          members(contracts::bioregion, contracts::bioregion.value)
         {}
 
         ACTION reset(name account);
@@ -55,6 +58,8 @@ CONTRACT history : public contract {
 
 
     private:
+      const uint64_t regenerative_org = 2;
+
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
       uint64_t config_get(name key);
@@ -65,6 +70,8 @@ CONTRACT history : public contract {
       bool clean_old_tx(name org, uint64_t chunksize);
       void save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day);
       void send_update_txpoints (name from);
+      double config_float_get(name key);
+      double get_transaction_multiplier (name account, name other);
       
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
@@ -202,6 +209,27 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return account.value; }
       };
 
+      TABLE organization_table { // from organization contract
+          name org_name;
+          name owner;
+          uint64_t status;
+          int64_t regen;
+          uint64_t reputation;
+          uint64_t voice;
+          asset planted;
+
+          uint64_t primary_key() const { return org_name.value; }
+      };
+
+      TABLE members_table {
+          name bioregion;
+          name account;
+          time_point joined_date = current_block_time().to_time_point();
+
+          uint64_t primary_key() const { return account.value; }
+          uint64_t by_bio() const { return bioregion.value; }
+      };
+
       typedef eosio::multi_index<"citizens"_n, citizen_table,
         indexed_by<"byaccount"_n,
         const_mem_fun<citizen_table, uint64_t, &citizen_table::by_account>>
@@ -246,6 +274,12 @@ CONTRACT history : public contract {
       > qev_tables;
 
       typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
+
+      typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
+
+      typedef eosio::multi_index <"members"_n, members_table,
+        indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
+      > members_tables;
       
       DEFINE_USER_TABLE
       
@@ -262,6 +296,8 @@ CONTRACT history : public contract {
       regenerative_tables regens;
       totals_tables totals;
       size_tables sizes;
+      organization_tables organizations;
+      members_tables members;
 };
 
 EOSIO_DISPATCH(history, 
