@@ -12,6 +12,7 @@
 #include <tables/size_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 #include <tables/cbs_table.hpp>
 #include <tables/cspoints_table.hpp>
 #include <eosio/singleton.hpp>
@@ -37,6 +38,7 @@ CONTRACT harvest : public contract {
         mintrate(receiver, receiver.value),
         biocstemp(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
+        configfloat(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
         rep(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value),
@@ -134,6 +136,7 @@ CONTRACT harvest : public contract {
     uint64_t get_size(name id);
 
     uint64_t config_get(name key);
+    double config_float_get(name key);
     void send_distribute_harvest (name key, asset amount);
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
 
@@ -216,6 +219,10 @@ CONTRACT harvest : public contract {
     DEFINE_CONFIG_TABLE
 
     DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+    DEFINE_CONFIG_FLOAT_TABLE
+
+    DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
     DEFINE_CBS_TABLE
 
@@ -368,6 +375,7 @@ CONTRACT harvest : public contract {
 
     // External Tables
     config_tables config;
+    config_float_tables configfloat;
     user_tables users;
     cbs_tables cbs;
     rep_tables rep;

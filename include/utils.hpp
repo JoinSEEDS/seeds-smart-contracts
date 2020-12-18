@@ -47,6 +47,7 @@ namespace utils {
   }
 
   inline bool is_valid_quorum(uint64_t voters_number, uint64_t quorum, uint64_t total_number) {
+    if (total_number == 0) { return false; }
     uint64_t voted_percentage = voters_number * 100 / total_number;
     return voted_percentage >= quorum;
   }
