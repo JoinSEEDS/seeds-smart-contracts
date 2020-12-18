@@ -372,9 +372,8 @@ ACTION harvest::calctotal(uint64_t startval) {
 // Calculate Transaction Points for a single account
 // Returns count of iterations
 uint32_t harvest::calc_transaction_points(name account, name type) {
-  uint64_t three_moon_cycles = utils::moon_cycle * 3;
   uint64_t now = eosio::current_time_point().sec_since_epoch();
-  uint64_t cutoffdate = now - three_moon_cycles;
+  uint64_t cutoffdate = now - (utils::moon_cycle * config_float_get("cyctrx.trail"_n));
 
   transaction_points_tables transactions(contracts::history, account.value);
 
@@ -1115,6 +1114,14 @@ void harvest::calcmintrate () {
 uint64_t harvest::config_get(name key) {
   auto citr = config.find(key.value);
   if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+double harvest::config_float_get(name key) {
+  auto citr = configfloat.find(key.value);
+  if (citr == configfloat.end()) { 
     check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
   }
   return citr->value;
