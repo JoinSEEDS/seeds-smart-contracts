@@ -1060,13 +1060,18 @@ describe('Proposals Quorum', async assert => {
   let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser]
   for (i = 0; i<users.length; i++ ) {
     let user = users[i]
-    console.log('add voice '+user)
+    console.log('make citizen '+user)
     await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
-    await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
   }
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  for (i = 0; i<users.length; i++ ) {
+    let user = users[i]
+    console.log('add voice '+user)
+    await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
+  }
 
   console.log('vote on first proposal')
   await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
