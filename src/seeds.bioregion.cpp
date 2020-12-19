@@ -164,16 +164,20 @@ ACTION bioregion::join(name bioregion, name account) {
         leave(mitr -> bioregion, account);
     }
 
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+
     auto ditr = biodelays.find(account.value);
     if (ditr == biodelays.end()) {
         biodelays.emplace(_self, [&](auto & item){
             item.account = account;
-            item.delay_finish_timestamp = 0;
+            item.apply_vote_delay = false;
+            item.joined_date_timestamp = now;
         });
     } else {
-        check(false, "remember to update the date");
+        check(ditr -> joined_date_timestamp < (now - config_float_get("bio.vote.del"_n)), "user needs to wait until the delay ends");
         biodelays.modify(ditr, _self, [&](auto & item){
-            item.delay_finish_timestamp = eosio::current_time_point().sec_since_epoch();;
+            item.apply_vote_delay = true;
+            item.joined_date_timestamp = now;
         });
     }
 
@@ -245,6 +249,10 @@ void bioregion::remove_member(name account) {
     
     check(mitr != members.end(), "member not found");
 
+    roles_tables roles(get_self(), mitr -> bioregion.value);
+    auto ritr = roles.find(account.value);
+    check(ritr == roles.end(), "user can not leave bioregion because it has a role");
+
     size_change(mitr->bioregion, -1);
 
     members.erase(mitr);
@@ -310,3 +318,10 @@ void bioregion::size_change(name bioregion, int delta) {
     });
 }
 
+double bioregion::config_float_get(name key) {
+  auto citr = configfloat.find(key.value);
+  if (citr == configfloat.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}

@@ -61,8 +61,6 @@ void settings::reset() {
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
 
-  confwithdesc(name("bio.mem.dlay"), utils::proposal_cycle, "Delay for voting rights when changing bioregion", high_impact);
-
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Bioregions will receive (4 decimals of precision)", high_impact);
@@ -221,6 +219,7 @@ void settings::reset() {
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
   confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", high_impact);
 
+  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
@@ -241,7 +240,7 @@ void settings::configure(name param, uint64_t value) {
   auto citr = config.find(param.value);
 
   auto fitr = configfloat.find(param.value);
-  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+  check(fitr == configfloat.end(), param.to_string() + ", this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
@@ -283,7 +282,7 @@ void settings::confwithdesc(name param, uint64_t value, string description, name
   auto citr = config.find(param.value);
 
   auto fitr = configfloat.find(param.value);
-  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+  check(fitr == configfloat.end(), param.to_string() + ", this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {

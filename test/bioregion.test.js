@@ -119,6 +119,15 @@ describe("Bioregions General", async assert => {
 
   const admin = seconduser
 
+  let delayWorks = true
+  try {
+    await contracts.bioregion.join(bioname, seconduser, { authorization: `${seconduser}@active` })
+    delayWorks = false
+  } catch (err) {}
+
+  console.log('configure bio.vote.del to 0')
+  await contracts.settings.conffloat("bio.vote.del", 0, { authorization: `${settings}@active` })
+
   console.log('add role')
   await contracts.bioregion.join(bioname, seconduser, { authorization: `${seconduser}@active` })
 
@@ -269,7 +278,12 @@ assert({
   expected: true
 })
 
-
+assert({
+  given: 'user left',
+  should: 'have to wait for the delay to end',
+  actual: delayWorks,
+  expected: true
+})
 
 
 })
