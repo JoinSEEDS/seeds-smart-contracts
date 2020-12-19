@@ -213,6 +213,8 @@ void proposals::calcvotepow() {
   uint64_t cutoff_date = active_cutoff_date();
   uint64_t vote_power = 0;
   uint64_t voice_size = 0;
+  uint64_t active_size = 0;
+  uint64_t inactive_size = 0;
 
   auto vitr = voice.begin();
   while(vitr != voice.end()) {
@@ -230,15 +232,22 @@ void proposals::calcvotepow() {
         " pt: " + std::to_string(points) + " " 
         " total: " + std::to_string(vote_power) + " " 
       );
+      active_size++;
     } else {
       print(" inactive: "+vitr->account.to_string() + " ");
+      inactive_size++;
     }
     voice_size++;
     vitr++;
   }
 
-  //size_set(cycle_vote_power_size, vote_power);
-  //size_set("voice.sz"_n, voice_size);
+  print("vote power total: "+std::to_string(vote_power));
+  print("num active: "+std::to_string(active_size));
+  print("num inactive: "+std::to_string(inactive_size));
+  print("num voice: "+std::to_string(voice_size));
+
+  size_set(cycle_vote_power_size, vote_power);
+  size_set("voice.sz"_n, voice_size);
 
 }
 
@@ -445,11 +454,6 @@ void proposals::updatevoice(uint64_t start) {
     tx.delay_sec = 1;
     tx.send(next_value, _self);
   }
-}
-
-uint64_t proposals::get_cycle_period_sec() {
-  auto moon_cycle = config_get(name("mooncyclesec"));
-  return moon_cycle / 2; // Using half moon cycles for now
 }
 
 uint64_t proposals::get_voice_decay_period_sec() {

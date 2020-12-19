@@ -122,7 +122,6 @@ CONTRACT proposals : public contract {
 
       void update_cycle();
       void update_voicedecay();
-      uint64_t get_cycle_period_sec();
       uint64_t get_voice_decay_period_sec();
       bool is_enough_stake(asset staked, asset quantity, name fund);
       uint64_t min_stake(asset quantity, name fund);
