@@ -812,10 +812,10 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: regenScores.rows,
         expected: [
-            { org_name: org2, regen_avg: 66000, rank: 50 },
+            { org_name: org2, regen_avg: 66000, rank: 65 },
             { org_name: org3, regen_avg: 2000, rank: 0 },
-            { org_name: org4, regen_avg: 33000, rank: 25 },
-            { org_name: org5, regen_avg: 115500, rank: 75 }
+            { org_name: org4, regen_avg: 33000, rank: 48 },
+            { org_name: org5, regen_avg: 115500, rank: 82 }
         ]
     })
 
@@ -824,10 +824,10 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: cbsRanks.rows,
         expected: [
-            { org_name: org1, community_building_score: 100, rank: 80 },
-            { org_name: org2, community_building_score: 75, rank: 60 },
-            { org_name: org3, community_building_score: 50, rank: 40 },
-            { org_name: org4, community_building_score: 25, rank: 20 },
+            { org_name: org1, community_building_score: 100, rank: 86 },
+            { org_name: org2, community_building_score: 75, rank: 72 },
+            { org_name: org3, community_building_score: 50, rank: 58 },
+            { org_name: org4, community_building_score: 25, rank: 44 },
             { org_name: org5, community_building_score: 1, rank: 0 }
         ]
     })
@@ -839,11 +839,11 @@ describe('organization scores', async assert => {
         should: 'rank thr orgs properly',
         actual: txRanks.rows,
         expected: [
-            { account: org1, points: 301, rank: 0 },
-            { account: org2, points: 601, rank: 20 },
-            { account: org3, points: 1201, rank: 40 },
-            { account: org4, points: 1534, rank: 60 },
-            { account: org5, points: 1601, rank: 80 }
+            { account: org1, points: 363, rank: 0 },
+            { account: org2, points: 725, rank: 44 },
+            { account: org3, points: 1449, rank: 58 },
+            { account: org4, points: 1865, rank: 72 },
+            { account: org5, points: 2232, rank: 86 }
         ]
     })
     console.log('trxs', txRanks.rows)

@@ -1089,7 +1089,7 @@ describe('reputation & cbs ranking', async assert => {
     given: '4 users with cbs',
     should: 'have entries in cbs table',
     actual: cbsAfter.rows.map(({rank})=>rank),
-    expected: [0,25,50,75]
+    expected: [0,48,65,82]
   })
 
   assert({
