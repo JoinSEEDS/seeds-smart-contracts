@@ -26,6 +26,11 @@ ACTION bioregion::reset() {
     while(sitr != sponsors.end()){
         sitr = sponsors.erase(sitr);
     }
+
+    auto ditr = biodelays.begin();
+    while(ditr != biodelays.end()) {
+        ditr = biodelays.erase(ditr);
+    }
 }
 
 void bioregion::auth_founder(name bioregion, name founder) {
@@ -251,7 +256,7 @@ void bioregion::remove_member(name account) {
 
     roles_tables roles(get_self(), mitr -> bioregion.value);
     auto ritr = roles.find(account.value);
-    check(ritr == roles.end(), "user can not leave bioregion because it has a role");
+    check(ritr == roles.end(), "user can not leave bioregion because it has a role in it");
 
     size_change(mitr->bioregion, -1);
 

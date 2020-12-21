@@ -3,6 +3,10 @@ const { eos, encodeName, names, getTableRows, isLocal, initContracts, createKeyp
 
 const { accounts, harvest, bioregion, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser } = names
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const randomAccountNameBDC = () => {
   let length = 8
   var result           = '';
@@ -127,6 +131,8 @@ describe("Bioregions General", async assert => {
 
   console.log('configure bio.vote.del to 0')
   await contracts.settings.conffloat("bio.vote.del", 0, { authorization: `${settings}@active` })
+  await sleep(1000)
+
 
   console.log('add role')
   await contracts.bioregion.join(bioname, seconduser, { authorization: `${seconduser}@active` })
