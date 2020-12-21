@@ -76,6 +76,15 @@ describe('guardians', async assert => {
   
   await addActorPermission(firstuser, "owner", guardians, "eosio.code");
 
+  let badParams = false
+  try {
+    console.log('init guardians (bad)')
+    await contracts.guardians.init(firstuser, [seconduser, seconduser, fourthuser], 0, { authorization: `${firstuser}@active` })
+    badParams = true
+  } catch (err) {
+    console.log("expected exception ")
+  }
+
   console.log('init guardians')
   await contracts.guardians.init(firstuser, [seconduser, thirduser, fourthuser], 0, { authorization: `${firstuser}@active` })
   
@@ -203,6 +212,13 @@ describe('guardians', async assert => {
     should: "have timestamp",
     expected: true,
     actual: recovers2.rows[0].complete_timestamp > 0
+  })
+
+  assert({
+    given: "init with duplicate list entry",
+    should: "fail",
+    expected: false,
+    actual: badParams
   })
 
   assert({

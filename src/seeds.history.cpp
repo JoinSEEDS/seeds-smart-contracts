@@ -110,6 +110,28 @@ void history::addregen(name organization) {
   size_change("regens.sz"_n, 1);
 }
 
+double history::get_transaction_multiplier (name account, name other) {
+  double multiplier = utils::get_rep_multiplier(account);
+  
+  auto oitr = organizations.find(account.value);
+  if (oitr != organizations.end() && oitr -> status == regenerative_org) {
+    multiplier *= config_float_get("regen.mul"_n);
+  }
+
+  auto bitr_account = members.find(account.value);
+  auto bitr_other = members.find(other.value);
+
+  if (
+    bitr_account != members.end() && 
+    bitr_other != members.end() && 
+    bitr_account -> bioregion == bitr_other -> bioregion
+  ) {
+    multiplier *= config_float_get("local.mul"_n);
+  }
+
+  return multiplier;
+}
+
 void history::historyentry(name account, string action, uint64_t amount, string meta) {
   require_auth(get_self());
 
@@ -153,6 +175,8 @@ void history::trxentry(name from, name to, asset quantity) {
     std::min(max_transaction_points_organizations, quantity.amount) : 
     std::min(max_transaction_points_individuals, quantity.amount)
   ) / 10000.0;
+
+  double from_multiplier = get_transaction_multiplier(to, from);
   
   double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
@@ -162,8 +186,8 @@ void history::trxentry(name from, name to, asset quantity) {
     transaction.to = to;
     transaction.volume = quantity.amount;
     transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
-    transaction.from_points = uint64_t(ceil(from_capped_amount * utils::get_rep_multiplier(to)));
-    transaction.to_points = to_is_organization ? uint64_t(ceil(to_capped_amount * utils::get_rep_multiplier(from))) : 0;
+    transaction.from_points = uint64_t(ceil(from_capped_amount * get_transaction_multiplier(to, from)));
+    transaction.to_points = to_is_organization ? uint64_t(ceil(to_capped_amount * get_transaction_multiplier(from, to))) : 0;
     transaction.timestamp = timestamp;
   });
 
@@ -455,6 +479,18 @@ uint64_t history::config_get(name key) {
   DEFINE_CONFIG_TABLE
   DEFINE_CONFIG_TABLE_MULTI_INDEX
   config_tables config(contracts::settings, contracts::settings.value);
+
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+double history::config_float_get(name key) {
+  DEFINE_CONFIG_FLOAT_TABLE
+  DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
+  config_float_tables config(contracts::settings, contracts::settings.value);
 
   auto citr = config.find(key.value);
   if (citr == config.end()) { 

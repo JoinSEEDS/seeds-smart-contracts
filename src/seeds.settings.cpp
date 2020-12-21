@@ -219,6 +219,18 @@ void settings::reset() {
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
   confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", high_impact);
 
+  // =====================================
+  // transaction multipliers
+  // =====================================
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
+  conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
+
+
+  conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
+
+  // =====================================
+  // bioregion
+  // =====================================
   conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
 
   // contracts

@@ -1,8 +1,8 @@
 const { describe } = require("riteway")
-const { names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
+const { names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, thirduser, history, accounts, organization, token, settings } = names
+const { firstuser, seconduser, thirduser, history, accounts, organization, token, settings, bioregion } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -752,4 +752,157 @@ describe('org transaction entry', async assert => {
       }
     ]
   })
+})
+
+
+describe('individual transactions', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const firstorg = 'firstorg'
+  const secondorg = 'secondorg'
+
+  const contracts = await initContracts({ token, history, accounts, settings, organization, bioregion })
+
+  const day = getBeginningOfDayInSeconds()
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('history reset')
+  await contracts.history.reset(firstuser, { authorization: `${history}@active` })
+  await contracts.history.reset(seconduser, { authorization: `${history}@active` })
+  await contracts.history.reset(thirduser, { authorization: `${history}@active` })
+  await contracts.history.reset(firstorg, { authorization: `${history}@active` })
+  await contracts.history.reset(secondorg, { authorization: `${history}@active` })
+  await contracts.history.reset(history, { authorization: `${history}@active` })
+  await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+
+  console.log('token reset weekly')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset orgs')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('reset bios')
+  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+
+  const transfer = async (from, to, quantity) => {
+    await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
+    await sleep(2000)
+  }
+  
+  console.log('join users')
+  const users = [firstuser, seconduser, thirduser]
+  const rep = 49
+  for (let i = 0; i < users.length; i++) {
+    await contracts.accounts.adduser(users[i], '', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(users[i], rep, { authorization: `${accounts}@active` })
+  }
+
+  await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${seconduser}@active` })
+
+  console.log('create organization')
+  await contracts.organization.create(firstuser, firstorg, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+  await contracts.organization.create(seconduser, secondorg, "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
+  await contracts.accounts.testsetrs(firstorg, 49, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(secondorg, 49, { authorization: `${accounts}@active` })
+  await contracts.organization.testregen(firstorg, { authorization: `${organization}@active` })
+    
+  console.log('add bioregions')
+  const keypair = await createKeypair();
+  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const bios = ['bio1.bdc']
+  for (let index = 0; index < bios.length; index++) {
+    const bio = bios[index]
+    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.bioregion.create(
+      users[index], 
+      bio, 
+      'test bio region',
+      '{lat:0.0111,lon:1.3232}', 
+      1.1, 
+      1.23, 
+      keypair.public, 
+      { authorization: `${users[index]}@active` })
+  }
+
+  await contracts.bioregion.join(bios[0], thirduser, { authorization: `${thirduser}@active` })
+
+  await transfer(firstuser, thirduser, 1)
+  await transfer(thirduser, seconduser, 1)
+  await transfer(seconduser, firstorg, 1)
+  await transfer(firstuser, secondorg, 1)
+  await transfer(firstorg, secondorg, 1)
+
+  const dailyTrx = await getTableRows({
+    code: history,
+    scope: day,
+    table: 'dailytrxs',
+    json: true
+  })
+
+  assert({
+    given: 'transactions made',
+    should: 'have the correct multipliers applied',
+    actual: dailyTrx.rows.map(r => {
+      delete r.timestamp
+      return r
+    }),
+    expected: [
+      { 
+        id: 0,
+        from: firstuser,
+        to: thirduser,
+        volume: 10000,
+        qualifying_volume: 10000,
+        from_points: 2,
+        to_points: 0
+      },
+      { 
+        id: 1,
+        from: thirduser,
+        to: seconduser,
+        volume: 10000,
+        qualifying_volume: 10000,
+        from_points: 1,
+        to_points: 0
+      },
+      { 
+        id: 2,
+        from: seconduser,
+        to: firstorg,
+        volume: 10000,
+        qualifying_volume: 10000,
+        from_points: 2,
+        to_points: 1
+      },
+      {
+        id: 3,
+        from: firstuser,
+        to: secondorg,
+        volume: 10000,
+        qualifying_volume: 10000,
+        from_points: 1,
+        to_points: 1
+      },
+      { 
+        id: 4,
+        from: firstorg,
+        to: secondorg,
+        volume: 10000,
+        qualifying_volume: 10000,
+        from_points: 1,
+        to_points: 2
+      }
+    ]
+  })
+
 })
