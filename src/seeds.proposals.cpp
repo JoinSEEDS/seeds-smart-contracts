@@ -200,54 +200,36 @@ void proposals::initsz() {
 void proposals::calcvotepow() {
   require_auth(_self);
   
-  // remove unused size
-  size_tables sizes(get_self(), get_self().value);
-  auto sitr = sizes.find("active.sz"_n.value);
-  if (sitr != sizes.end()) {
-    sizes.erase(sitr);
-  }
-  DEFINE_CS_POINTS_TABLE
-  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
-
-  cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
   uint64_t cutoff_date = active_cutoff_date();
-  uint64_t vote_power = 0;
-  uint64_t voice_size = 0;
-  uint64_t active_size = 0;
-  uint64_t inactive_size = 0;
+  uint64_t vote_power_alliance = 0;
+  uint64_t vote_power_campaign = 0;
 
-  auto vitr = voice.begin();
-  while(vitr != voice.end()) {
-    if (is_active(vitr->account, cutoff_date)) {
-      auto csitr = cspoints.find(vitr->account.value);
-      uint64_t points = 0;
-      if (csitr != cspoints.end()) {
-        points = csitr -> rank;
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  uint64_t current_cycle = c.propcycle;
+  uint64_t last_cyle = current_cycle - 1;
+
+  auto pitr = props.rbegin();
+  bool counting = false;
+  while(pitr != props.rend()) {
+    if (pitr->passed_cycle == last_cyle) {
+      print(" counting prop id "+std::to_string(pitr->id));
+      print(" total votes "+std::to_string(pitr->total));
+
+      counting = true;
+      if (get_type(pitr->fund) == alliance_type) {
+        vote_power_alliance += pitr->total;
+      } else {
+        vote_power_campaign += pitr->total;
       }
-
-      vote_power += points;
-      
-      print("| active: " + 
-        vitr->account.to_string() +
-        " pt: " + std::to_string(points) + " " 
-        " total: " + std::to_string(vote_power) + " " 
-      );
-      active_size++;
-    } else {
-      print(" inactive: "+vitr->account.to_string() + " ");
-      inactive_size++;
+    } else if (counting) {
+      break;
     }
-    voice_size++;
-    vitr++;
+    pitr++;
   }
 
-  print("vote power total: "+std::to_string(vote_power));
-  print("num active: "+std::to_string(active_size));
-  print("num inactive: "+std::to_string(inactive_size));
-  print("num voice: "+std::to_string(voice_size));
+  print(" => vote power total: "+std::to_string(vote_power_campaign) + " alliance "+std::to_string(vote_power_alliance));
 
-  size_set(cycle_vote_power_size, vote_power);
-  size_set("voice.sz"_n, voice_size);
+  size_set(cycle_vote_power_size, std::max(vote_power_campaign, vote_power_alliance));
 
 }
 
@@ -273,17 +255,25 @@ void proposals::onperiod() {
 
     uint64_t number_active_proposals = get_size(prop_active_size);
     uint64_t total_eligible_voters = get_size(user_active_size);
+    uint64_t cycle_vote_power = get_size(cycle_vote_power_size);
+    // if (cycle_vote_power == 0) {
+    //   cycle_vote_power = get_size("voice.sz"_n) * 50;
+    // }
     check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
+    check(cycle_vote_power > 0, "no vote power - likely an error; can't run proposals.");
     
     uint64_t quorum =  get_quorum(number_active_proposals);
 
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     uint64_t current_cycle = c.propcycle;
 
+    uint64_t total_votes_alliance = 0;
+    uint64_t total_votes_campaign = 0;
+
     while (pitr != props.end()) {
       if (pitr->stage == stage_active) {
         votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
+        //uint64_t voters_number = distance(votes.begin(), votes.end());
 
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
@@ -291,18 +281,27 @@ void proposals::onperiod() {
         name prop_type = get_type(pitr->fund);
         bool is_alliance_type = prop_type == alliance_type;
         bool is_campaign_type = prop_type == campaign_type;
+        bool is_new_proposal_this_cycle = pitr -> status == status_open;
 
         bool valid_quorum = false;
 
         if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
           valid_quorum = true;
         } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          //valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          
+          print(" prop " + std::to_string(pitr->id) + 
+          " favor: "+ std::to_string(pitr->favour) +
+          " votepower: "+ std::to_string(cycle_vote_power) +
+          " quorum: "+ std::to_string(quorum) 
+          );
+
+          valid_quorum = utils::is_valid_quorum(pitr->favour, quorum, cycle_vote_power);
         }
 
         if (passed && valid_quorum) {
 
-          if (pitr -> status == status_open) {
+          if (is_new_proposal_this_cycle) {
 
             refund_staked(pitr->creator, pitr->staked);
             change_rep(pitr->creator, true);
@@ -349,7 +348,7 @@ void proposals::onperiod() {
           }
 
         } else {
-          if (pitr->status != status_evaluate) {
+          if (is_new_proposal_this_cycle) {
             burn(pitr->staked);
           }
 
@@ -359,6 +358,15 @@ void proposals::onperiod() {
               proposal.status = status_rejected;
               proposal.stage = stage_done;
           });
+        }
+
+        if (is_new_proposal_this_cycle) {
+          // we count all new proposals votes cast to set the vote power for the next cycle
+          if (get_type(pitr->fund) == alliance_type) {
+            total_votes_alliance += pitr->total;
+          } else {
+            total_votes_campaign += pitr->total;
+          }
         }
 
         size_change(prop_active_size, -1);
@@ -374,6 +382,8 @@ void proposals::onperiod() {
 
       pitr++;
     }
+
+    size_set(cycle_vote_power_size, std::max(total_votes_campaign, total_votes_alliance));
 
     updatevoices();
     
@@ -410,13 +420,11 @@ void proposals::updatevoice(uint64_t start) {
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
 
   if (start == 0) {
-      size_set(cycle_vote_power_size, 0);
       size_set(user_active_size, 0);
   }
 
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t count = 0;
-  uint64_t vote_power = 0;
   uint64_t active_users = 0;
   
   while (vitr != voice.end() && count < batch_size) {
@@ -429,7 +437,6 @@ void proposals::updatevoice(uint64_t start) {
       set_voice(vitr -> account, points, ""_n);
 
       if (is_active(vitr -> account, cutoff_date)) {
-        vote_power += points;
         active_users++;
       }
 
@@ -437,7 +444,6 @@ void proposals::updatevoice(uint64_t start) {
       count++;
   }
   
-  size_change(cycle_vote_power_size, vote_power);
   size_change(user_active_size, active_users);
 
   if (vitr != voice.end()) {
@@ -1210,8 +1216,6 @@ void proposals::recover_voice(name account) {
 
   set_voice(account, voice_amount, ""_n);
 
-  size_change(cycle_vote_power_size, voice_amount);
-
 }
 
 void proposals::size_change(name id, int64_t delta) {
@@ -1264,6 +1268,13 @@ void proposals::testsetvoice(name user, uint64_t amount) {
   require_auth(get_self());
   set_voice(user, amount, ""_n);
 }
+
+void proposals::testsetvotep(uint64_t amount) {
+  require_auth(get_self());
+  size_set(cycle_vote_power_size, amount);
+}
+
+
 
 name proposals::get_type (name fund) {
   if (fund == bankaccts::alliances) {

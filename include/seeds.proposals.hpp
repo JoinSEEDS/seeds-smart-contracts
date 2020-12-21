@@ -79,6 +79,9 @@ CONTRACT proposals : public contract {
       ACTION migratevoice(uint64_t start);
 
       ACTION testsetvoice(name user, uint64_t amount);
+
+      ACTION testsetvotep(uint64_t amount);
+      
       ACTION initsz();
 
       ACTION initnumprop();
@@ -304,7 +307,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)
-        (calcvotepow)
+        (calcvotepow)(testsetvotep)
         )
       }
   }

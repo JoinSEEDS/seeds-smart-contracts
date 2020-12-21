@@ -37,6 +37,7 @@ describe('Proposals', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -629,6 +630,7 @@ describe('Evaluation phase', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -793,6 +795,7 @@ describe('Participants', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -962,6 +965,7 @@ describe('Change Trust', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
@@ -1010,7 +1014,7 @@ describe('Change Trust', async assert => {
 
 })
 
-describe('Proposals Quorum', async assert => {
+describe.only('Proposals Quorum', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1036,6 +1040,7 @@ describe('Proposals Quorum', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
@@ -1089,7 +1094,9 @@ describe('Proposals Quorum', async assert => {
   })
   console.log("sizes "+JSON.stringify(sizes, null, 2))
 
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  let res = await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  console.log('res '+JSON.stringify(res, null, 2))
 
   const props = await getTableRows({
     code: proposals,
@@ -1159,6 +1166,7 @@ describe('Recepient invalid', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
@@ -1241,6 +1249,7 @@ describe('Stake limits', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -1443,6 +1452,7 @@ describe('Active count and vote power', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -1587,6 +1597,7 @@ describe('Voice decay', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
@@ -1689,6 +1700,7 @@ describe('Voice scope', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
@@ -1781,6 +1793,7 @@ describe('delegate trust', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+  await contracts.proposals.testsetvotep(10, { authorization: `${proposals}@active` })
 
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
