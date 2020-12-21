@@ -1786,8 +1786,8 @@ describe('delegate trust', async assert => {
   await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
   console.log('join users')
-  const users = [firstuser, seconduser, thirduser, fourthuser]
-  const voices = [20, 10, 50, 35]
+  const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
+  const voices = [20, 10, 50, 35, 22]
   for (let i = 0; i < users.length; i++) {
     await contracts.accounts.adduser(users[i], `user ${i}`, 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.testcitizen(users[i], { authorization: `${accounts}@active` })
@@ -1886,6 +1886,9 @@ describe('delegate trust', async assert => {
     await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
   }
 
+  console.log('add another delegation')
+  await contracts.proposals.delegate(fifthuser, firstuser, scopeCampaigns, { authorization: `${fifthuser}@active` }) 
+
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
   
@@ -1898,6 +1901,7 @@ describe('delegate trust', async assert => {
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(seconduser, scopeCampaigns, { authorization: `${firstuser}@active` })
   await contracts.proposals.undelegate(thirduser, scopeCampaigns, { authorization: `${firstuser}@active` })
+  await contracts.proposals.undelegate(fifthuser, scopeCampaigns, { authorization: `${fifthuser}@active` })
 
   const delCampaigns = await eos.getTableRows({
     code: proposals,
@@ -1943,7 +1947,7 @@ describe('delegate trust', async assert => {
     given: 'user delegated its voice',
     should: 'give a user a percentage of the earned reputation',
     actual: reps,
-    expected: [2, 1, 1, 1]
+    expected: [2, 1, 1, 1, 0]
   })
 
   assert({
@@ -1955,13 +1959,15 @@ describe('delegate trust', async assert => {
         { account: firstuser, balance: 15 },
         { account: seconduser, balance: 8 },
         { account: thirduser, balance: 38 },
-        { account: fourthuser, balance: 27 }
+        { account: fourthuser, balance: 27 },
+        { account: fifthuser, balance: 22 }
       ],
       alliances: [
         { account: firstuser, balance: 20 },
         { account: seconduser, balance: 0 },
         { account: thirduser, balance: 0 },
-        { account: fourthuser, balance: 0 }
+        { account: fourthuser, balance: 0 },
+        { account: fifthuser, balance: 22 }
       ]
     }
   })
@@ -1975,13 +1981,15 @@ describe('delegate trust', async assert => {
         { account: firstuser, balance: 10 },
         { account: seconduser, balance: 5 },
         { account: thirduser, balance: 25 },
-        { account: fourthuser, balance: 35 }
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
       ],
       alliances: [
         { account: firstuser, balance: 20 },
         { account: seconduser, balance: 10 },
         { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 }
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
       ]
     }
   })

@@ -929,6 +929,15 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
+void proposals::voteonbehalf(name voter, uint64_t id, uint64_t amount, name option) {
+  require_auth(get_self());
+  bool is_new = true;
+  if (option == distrust) {
+    is_new = !(revert_vote(voter, id));
+  }
+  vote_aux(voter, id, amount, option, is_new, true);
+}
+
 void proposals::addvoice(name user, uint64_t amount) {
   require_auth(_self);
   voice_change(user, amount, false, ""_n);
@@ -1340,6 +1349,19 @@ ACTION proposals::delegate (name delegator, name delegatee, name scope) {
 
 }
 
+void proposals::send_vote_on_behalf (name voter, uint64_t id, uint64_t amount, name option) {
+  action vote_on_behalf_action(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    "voteonbehalf"_n,
+    std::make_tuple(voter, id, amount, option)
+  );
+  transaction tx;
+  tx.actions.emplace_back(vote_on_behalf_action);
+  // tx.delay_sec = 1;
+  tx.send(voter.value, _self);
+}
+
 void proposals::send_mimic_delegatee_vote (name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option) {
 
   uint64_t batch_size = config_get("batchsize"_n);
@@ -1387,12 +1409,11 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
     auto vitr = voices.find(voter.value);
 
     if (option == trust) {
-      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, trust, true, true);
+      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
     } else if (option == distrust) {
-      bool vote_reverted = revert_vote(voter, proposal_id);
-      vote_aux(voter, proposal_id, vitr -> balance * percentage_used, distrust, !vote_reverted, true);
+      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, distrust);
     } else if (option == abstain) {
-      vote_aux(voter, proposal_id, uint64_t(0), abstain, true, true);
+      send_vote_on_behalf(voter, proposal_id, uint64_t(0), abstain);
     }
 
     ditr++;
