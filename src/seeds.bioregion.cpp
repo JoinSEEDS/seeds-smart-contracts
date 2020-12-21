@@ -174,7 +174,7 @@ ACTION bioregion::join(name bioregion, name account) {
             item.joined_date_timestamp = now;
         });
     } else {
-        check(ditr -> joined_date_timestamp < (now - config_float_get("bio.vote.del"_n)), "user needs to wait until the delay ends");
+        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("bio.vote.del"_n)), "user needs to wait until the delay ends");
         biodelays.modify(ditr, _self, [&](auto & item){
             item.apply_vote_delay = true;
             item.joined_date_timestamp = now;
