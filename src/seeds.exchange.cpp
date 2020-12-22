@@ -187,6 +187,45 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
   }
 }
 
+void exchange::onhusd(name from, name to, asset quantity, string memo) {
+  if (
+    get_first_receiver() == husd_contract  &&
+    to == get_self() &&                          
+    quantity.symbol == husd_symbol                 
+  ) {
+    on_husd(from, to, quantity, memo);
+  }
+}
+
+// void exchange::testhusd(name from, name to, asset quantity) {
+//   require_auth(get_self());
+//   on_husd(from, to, quantity, "test_test");
+// }
+
+void exchange::on_husd(name from, name to, asset quantity, string memo) {
+    uint64_t usd_amount = quantity.amount * 100;
+
+    check(quantity.symbol == husd_symbol, "wrong symbol");
+
+    asset usd_asset = asset(usd_amount, usd_symbol);
+
+    purchase_usd(from, usd_asset, "HUSD", memo);
+
+    auto now = eosio::current_time_point().sec_since_epoch();
+
+    string paymentId = from.to_string() + ": "+quantity.to_string() + " time: " + std::to_string(now);
+
+    payhistory.emplace(_self, [&](auto& item) {
+      item.id = payhistory.available_primary_key();
+      item.recipientAccount = from;
+      item.paymentSymbol = "HUSD";
+      item.paymentId = paymentId;
+      item.multipliedUsdValue = usd_asset.amount;
+    });
+}
+
+
+
 
 void exchange::newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue) {
 
