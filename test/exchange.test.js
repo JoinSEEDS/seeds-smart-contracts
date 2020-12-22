@@ -487,6 +487,29 @@ describe('Token Sale Price', async assert => {
 
 })
 
+// comment testhusd action in before running this
+// describe.only('HUSD', async assert => {
+
+//   const contracts = await initContracts({ accounts, token, exchange })
+//   console.log(`reset exchange`)
+  
+//   await contracts.exchange.reset({ authorization: `${exchange}@active` })  
+
+//   console.log(`reset accounts`)
+//   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+//   console.log(`add user`)
+//   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+//   console.log(`transfer seeds to ${exchange}`)
+//   await contracts.token.transfer(firstuser, exchange, "2000000.0000 SEEDS", 'unit test', { authorization: `${firstuser}@active` })
+//   console.log(`update daily limits`)
+//   await contracts.exchange.updatelimit("100.0000 SEEDS", "10.0000 SEEDS", "3000000.0000 SEEDS", { authorization: `${exchange}@active` })
+//   await contracts.exchange.initrounds( (1000000) * 10000, "100.0000 SEEDS", { authorization: `${exchange}@active` })
+
+//   console.log(`test husd`)
+
+//   await contracts.exchange.testhusd(firstuser, "x", "1.00 HUSD", { authorization: `${exchange}@active` })
+// })
 
 describe('Token Sale 50 Rounds', async assert => {
 

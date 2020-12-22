@@ -27,6 +27,8 @@ CONTRACT exchange : public contract {
     ACTION onperiod();
     
     ACTION ontransfer(name buyer, name contract, asset tlos_quantity, string memo);
+
+    ACTION onhusd(name from, name to, asset quantity, string memo);
     
     ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue);
 
@@ -54,9 +56,13 @@ CONTRACT exchange : public contract {
 
     ACTION reset();
 
+    //ACTION testhusd(name from, name to, asset quantity);
+
   private:
 
     void purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo); 
+    void on_husd(name from, name to, asset quantity, string memo);
+
     asset seeds_for_usd(asset usd_quantity);
     void update_price(); 
     void price_update_aux();
@@ -66,10 +72,12 @@ CONTRACT exchange : public contract {
     void price_history_update(); 
 
     symbol tlos_symbol = symbol("TLOS", 4);
+    symbol husd_symbol = symbol("HUSD", 2);
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol usd_symbol = symbol("USD", 4);
     name paused_flag = "paused"_n;
     name tlos_paused_flag = "tlos.paused"_n;
+    name husd_contract = "husd.hypha"_n;
 
     TABLE configtable {
       asset seeds_per_usd;
@@ -171,6 +179,8 @@ CONTRACT exchange : public contract {
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::tlostoken.value) {
       execute_action<exchange>(name(receiver), name(code), &exchange::ontransfer);
+  } else if (action == name("transfer").value && code == "husd.hypha"_n.value) {
+      execute_action<exchange>(name(receiver), name(code), &exchange::onhusd);
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(exchange, 
@@ -178,6 +188,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (addround)(initsale)(initrounds)(priceupdate)
           (migrate)(pause)(unpause)(setflag)
           (incprice)
+          //(testhusd)
           )
       }
   }
