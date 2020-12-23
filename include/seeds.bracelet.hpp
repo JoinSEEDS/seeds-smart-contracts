@@ -53,7 +53,7 @@ CONTRACT bracelet : public contract {
     TABLE balance_table {
       name account;
       asset balance;
-      bool is_freezed;
+      bool is_frozen;
 
       uint64_t primary_key() const { return account.value; }
     };

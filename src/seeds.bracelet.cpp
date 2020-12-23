@@ -40,7 +40,7 @@ ACTION bracelet::freeze (name account) {
   check(bitr != balances.end(), "bracelet: user " + account.to_string() + " has no balance entry");
 
   balances.modify(bitr, _self, [&](auto & item){
-    item.is_freezed = true;
+    item.is_frozen = true;
   });
 }
 
@@ -51,7 +51,7 @@ ACTION bracelet::unfreeze (name account) {
   check(bitr != balances.end(), "bracelet: user " + account.to_string() + " has no balance entry");
 
   balances.modify(bitr, _self, [&](auto & item){
-    item.is_freezed = false;
+    item.is_frozen = false;
   });
 }
 
@@ -75,7 +75,7 @@ void bracelet::init_balance (name account) {
     balances.emplace(_self, [&](auto & item){
       item.account = account;
       item.balance = asset(0, utils::seeds_symbol);
-      item.is_freezed = false;
+      item.is_frozen = false;
     });
   }
 }
@@ -118,10 +118,10 @@ void bracelet::sub_balance (name account, asset quantity) {
 }
 
 void bracelet::_deposit (asset quantity) {
-  check_asset(quantity);
+  utils::check_asset(quantity);
 
   token::transfer_action action{contracts::token, {_self, "active"_n}};
-  action.send(_self, contracts::bank, quantity, "");
+  action.send(_self, contracts::bank, quantity, "bracelet deposit");
 }
 
 void bracelet::check_user (name account) {
@@ -137,5 +137,5 @@ void bracelet::_transfer (name beneficiary, asset quantity, string memo) {
 
 void bracelet::check_freeze (name account) {
   auto bitr = balances.get(account.value, "bracelet: no balance object found");
-  check(!bitr.is_freezed, "bracelet: account is freezed");
+  check(!bitr.is_frozen, "bracelet: account is freezed");
 }
