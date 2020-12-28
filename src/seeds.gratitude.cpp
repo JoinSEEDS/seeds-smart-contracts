@@ -31,6 +31,11 @@ ACTION gratitude::reset () {
 ACTION gratitude::give (name from, name to, asset quantity, string memo) {
   require_auth(from);
 
+  check( from != to, "gratitude: cannot give to self" );
+  check( is_account( to ), "gratitude: to account does not exist");
+  check_asset(quantity);
+  check( quantity.amount > 0, "gratitude: must give positive quantity" );
+
   // Should create balances if not there yet
   init_balances(to);
   init_balances(from);
@@ -38,7 +43,7 @@ ACTION gratitude::give (name from, name to, asset quantity, string memo) {
   sub_gratitude(from, quantity);
   add_gratitude(to, quantity);
 
-  increase_volume(quantity.amount);
+  update_stats(from, to, quantity);
 }
 
 ACTION gratitude::newround() {
@@ -80,14 +85,16 @@ uint64_t gratitude::get_current_volume() {
   return stitr->volume.amount;
 }
 
-void gratitude::increase_volume(uint64_t added) {
+void gratitude::update_stats(name from, name to, asset quantity) {
   auto stitr = stats.rbegin();
   auto round_id = stitr->round_id;
 
   auto stitr2 = stats.find(round_id);
   auto oldvolume = stitr2->volume.amount;
+  auto oldtransfers = stitr2->num_transfers;
   stats.modify(stitr2, _self, [&](auto& item) {
-      item.volume = asset(oldvolume+added, gratitude_symbol);
+      item.volume = asset(oldvolume + quantity.amount, gratitude_symbol);
+      item.num_transfers = oldtransfers + 1;
   });
 }
 

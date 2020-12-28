@@ -42,7 +42,7 @@ CONTRACT gratitude : public contract {
     void add_gratitude(name account, asset quantity);
     void sub_gratitude(name account, asset quantity);
     uint64_t get_current_volume();
-    void increase_volume(uint64_t newvolume);
+    void update_stats(name from, name to, asset quantity);
     void _transfer(name beneficiary, asset quantity, string memo);
     uint64_t config_get(name key);
     void size_change(name id, int delta);
