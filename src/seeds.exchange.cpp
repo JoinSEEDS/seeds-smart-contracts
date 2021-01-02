@@ -222,6 +222,15 @@ void exchange::on_husd(name from, name to, asset quantity, string memo) {
       item.paymentId = paymentId;
       item.multipliedUsdValue = usd_asset.amount;
     });
+
+    string burn_memo = "burn";
+
+    action(
+      permission_level{get_self(), "active"_n},
+      husd_contract, "transfer"_n,
+      make_tuple(get_self(), "bank.hypha"_n, quantity, burn_memo)
+    ).send();    
+
 }
 
 
