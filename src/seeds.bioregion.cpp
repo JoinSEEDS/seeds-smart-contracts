@@ -164,10 +164,7 @@ ACTION bioregion::join(name bioregion, name account) {
 
     auto mitr = members.find(account.value);
 
-    if (mitr != members.end()) {
-        if (mitr -> bioregion == bioregion) { return; }
-        leave(mitr -> bioregion, account);
-    }
+    check(mitr == members.end(), "user already belongs to a bioregion");
 
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
@@ -256,7 +253,10 @@ void bioregion::remove_member(name account) {
 
     roles_tables roles(get_self(), mitr -> bioregion.value);
     auto ritr = roles.find(account.value);
-    check(ritr == roles.end(), "user can not leave bioregion because it has a role in it");
+    
+    if (ritr != roles.end()) {
+        roles.erase(ritr);
+    }
 
     size_change(mitr->bioregion, -1);
 
