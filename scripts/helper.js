@@ -169,6 +169,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
+      bracelet: contract('brclet.seeds', 'bracelet'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -606,6 +607,12 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'rankbiocss'
+}, {
+  target: `${accounts.bracelet.account}@active`,
+  actor: `${accounts.bracelet.account}@eosio.code`
+}, {
+  target: `${accounts.bank.account}@active`,
+  actor: `${accounts.bracelet.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

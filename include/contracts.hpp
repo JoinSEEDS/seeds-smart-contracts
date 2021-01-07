@@ -23,6 +23,7 @@ namespace contracts {
   name exchange = "tlosto.seeds"_n;
   name escrow = "escrow.seeds"_n;
   name bioregion = "bio.seeds"_n;
+  name bracelet = "brclet.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;
