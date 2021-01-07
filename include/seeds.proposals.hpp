@@ -54,6 +54,8 @@ CONTRACT proposals : public contract {
 
       ACTION neutral(name user, uint64_t id);
 
+      ACTION voteonbehalf(name voter, uint64_t id, uint64_t amount, name option);
+
       ACTION erasepartpts(uint64_t active_proposals);
 
       ACTION onperiod();
@@ -159,6 +161,7 @@ CONTRACT proposals : public contract {
       void send_mimic_delegatee_vote(name delegatee, name scope, uint64_t proposal_id, double percentage_used, name option);
       uint64_t active_cutoff_date();
       bool is_active(name account, uint64_t cutoff_date);
+      void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -304,7 +307,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
-        (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)
+        (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
         )
       }
