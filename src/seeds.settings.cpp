@@ -18,6 +18,8 @@ void settings::reset() {
   confwithdesc(name("prop.al.pct"), uint64_t(1 * 10000), "Alliance proposals funding fee in % - 1% [x 10,000 for 4 digits of precision]", high_impact);
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
+
+  confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
   
   confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);

@@ -27,6 +27,7 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
+          cyclestats(receiver, receiver.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
 
@@ -163,6 +164,11 @@ CONTRACT proposals : public contract {
       bool is_active(name account, uint64_t cutoff_date);
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
+      void increase_voice_cast(name voter, uint64_t amount, name option);
+      uint64_t calc_quorum_base(uint64_t propcycle);
+      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
+      void add_voted_proposal(uint64_t proposal_id);
+
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
         DEFINE_CONFIG_TABLE_MULTI_INDEX
@@ -263,7 +269,33 @@ CONTRACT proposals : public contract {
         uint64_t by_delegatee()const { return delegatee.value; }
         uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
       };
-    
+
+      TABLE cycle_stats_table {
+        uint64_t propcycle; 
+        
+        uint64_t start_time; 
+        uint64_t end_time; 
+        uint64_t num_proposals;
+        uint64_t num_votes;
+        uint64_t total_voice_cast;
+        uint64_t total_favour;
+        uint64_t total_against; 
+        uint64_t total_citizens;
+        uint64_t quorum_vote_base;
+        uint64_t quorum_votes_needed;
+        float unity_needed;
+
+        std::vector<uint64_t> active_props;
+        std::vector<uint64_t> eval_props;
+
+        uint64_t primary_key()const { return propcycle; }
+      };
+
+      TABLE voted_proposals_table { // scoped by cycle
+        uint64_t proposal_id;
+
+        uint64_t primary_key()const { return proposal_id; }
+      };
 
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
@@ -284,7 +316,9 @@ CONTRACT proposals : public contract {
       indexed_by<"byddelegator"_n,
       const_mem_fun<delegate_trust_table, uint128_t, &delegate_trust_table::by_delegatee_delegator>>
     > delegate_trust_tables;
-
+    typedef eosio::multi_index<"cyclestats"_n, cycle_stats_table> cycle_stats_tables;
+    typedef eosio::multi_index<"cycvotedprps"_n, voted_proposals_table> voted_proposals_tables;
+ 
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
@@ -296,6 +330,7 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
+    cycle_stats_tables cyclestats;
 
 };
 

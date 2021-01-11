@@ -58,6 +58,11 @@ void proposals::reset() {
     }
   }
 
+  auto citr = cyclestats.begin();
+  while (citr != cyclestats.end()) {
+    citr = cyclestats.erase(citr);
+  }
+
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
@@ -271,7 +276,12 @@ void proposals::onperiod() {
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     uint64_t current_cycle = c.propcycle;
 
+    std::vector<uint64_t> active_props;
+    std::vector<uint64_t> eval_props;
+
     while (pitr != props.end()) {
+      uint64_t prop_id = pitr -> id;
+
       if (pitr->stage == stage_active) {
         votes_tables votes(get_self(), pitr->id);
         uint64_t voters_number = distance(votes.begin(), votes.end());
@@ -314,6 +324,8 @@ void proposals::onperiod() {
               proposal.current_payout += payout_amount;
             });
 
+            eval_props.push_back(prop_id);
+
           } else {
             
             uint64_t age = pitr -> age + 1;
@@ -334,6 +346,8 @@ void proposals::onperiod() {
                 proposal.executed = true;
                 proposal.status = status_passed;
                 proposal.stage = stage_done;
+              } else {
+                eval_props.push_back(prop_id);
               }
               proposal.current_payout += payout_amount;
             });
@@ -361,11 +375,14 @@ void proposals::onperiod() {
           proposal.stage = stage_active;
         });
         size_change(prop_active_size, 1);
+        active_props.push_back(prop_id);
       }
 
       pitr++;
     }
 
+    update_cycle();
+    update_cycle_stats(active_props, eval_props);
     updatevoices();
     
     transaction trx_erase_participants{};
@@ -378,8 +395,6 @@ void proposals::onperiod() {
     // I don't know how long delay I should use
     // trx_erase_participants.delay_sec = 5;
     trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
-
-    update_cycle();
 }
 
 void proposals::updatevoices() {
@@ -564,6 +579,31 @@ void proposals::update_cycle() {
     c.propcycle += 1;
     c.t_onperiod = current_time_point().sec_since_epoch();
     cycle.set(c, get_self());
+}
+
+void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props) {
+  cycle_table c = cycle.get();
+
+  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+  uint64_t num_proposals = active_props.size() + eval_props.size();
+
+  cyclestats.emplace(_self, [&](auto & item){
+    item.propcycle = c.propcycle;
+    item.start_time = c.t_onperiod;
+    item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
+    item.num_proposals = num_proposals;
+    item.num_votes = 0;
+    item.total_voice_cast = 0;
+    item.total_favour = 0;
+    item.total_against = 0;
+    item.total_citizens = get_size("voice.sz"_n);
+    item.quorum_vote_base = quorum_vote_base;
+    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
+    item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
+    item.active_props.assign(active_props.begin(), active_props.end());
+    item.eval_props.assign(eval_props.begin(), eval_props.end());
+  });
+
 }
 
 void proposals::create(
@@ -911,6 +951,10 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
       item.timestamp = current_time_point().sec_since_epoch();
     });
   }
+
+  add_voted_proposal(pitr->id);
+  increase_voice_cast(voter, amount, option);
+
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -1452,3 +1496,69 @@ ACTION proposals::undelegate (name delegator, name scope) {
 
   deltrusts.erase(ditr);
 }
+
+void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
+
+  cycle_table c = cycle.get();
+  auto citr = cyclestats.find(c.propcycle);
+
+  if (citr != cyclestats.end()) {
+    cyclestats.modify(citr, _self, [&](auto & item){
+      item.total_voice_cast += amount;
+      if (option == trust) {
+        item.total_favour += amount;
+      } else if (option == distrust) {
+        item.total_against += amount;
+      }
+      item.num_votes += 1;
+    });
+  }
+
+}
+
+uint64_t proposals::calc_quorum_base (uint64_t propcycle) {
+
+  uint64_t num_cycles = config_get("prop.cyc.qb"_n);
+  uint64_t total = 0;
+  uint64_t count = 0;
+
+  auto citr = cyclestats.find(propcycle);
+
+  if (citr == cyclestats.end()) {
+    // in case there is no information for this propcycle
+    return get_size(user_active_size) / 2;
+  }
+
+  while (count < num_cycles) {
+
+    total += citr -> total_voice_cast;
+    // total += citr -> num_votes; // uncomment to make it count number of votes
+    count++;
+
+    if (citr == cyclestats.begin()) {
+      break;
+    } else {
+      citr--;
+    }
+
+  }
+
+  return count > 0 ? total / count : 0;
+
+}
+
+void proposals::add_voted_proposal (uint64_t proposal_id) {
+
+  cycle_table c = cycle.get();
+  voted_proposals_tables votedprops(get_self(), c.propcycle);
+
+  auto vpitr = votedprops.find(proposal_id);
+
+  if (vpitr == votedprops.end()) {
+    votedprops.emplace(_self, [&](auto & prop){
+      prop.proposal_id = proposal_id;
+    });
+  }
+
+}
+
