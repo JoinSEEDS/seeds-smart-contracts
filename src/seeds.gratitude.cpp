@@ -54,13 +54,10 @@ ACTION gratitude::newround() {
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
-
-  auto balances_by_received = balances.get_index<"byreceived"_n>();
-
-  auto bitr = balances_by_received.begin();
-  while (bitr != balances_by_received.end()) {
+  auto bitr = balances.begin();
+  while (bitr != balances.end()) {
     uint64_t my_received = bitr->received.amount;
-    balances_by_received.modify(bitr, _self, [&](auto& item) {
+    balances.modify(bitr, _self, [&](auto& item) {
         item.received = asset(0, gratitude_symbol);
         item.remaining = asset(generated_gratz, gratitude_symbol);
     });
