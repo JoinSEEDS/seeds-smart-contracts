@@ -37,7 +37,7 @@ namespace utils {
      * The cheap way to fix it is to limit rank to 99
     */
 
-    float rank_coefs[99] = { 0.00,
+    const float rank_coefs[99] = { 0.00,
                             0.01,
                             0.03,
                             0.06,
@@ -138,12 +138,10 @@ namespace utils {
                             99.00
     };
 
-    float calc = (current * 100) / (float)total;
+    uint64_t calc = (current * 100) / total;
+    if (calc > 99) calc = 99;
 
-    for (int r=0; r<100; r++) {
-      if (calc <= rank_coefs[r]) return (uint64_t)r;
-    }
-    return 99;
+    return (uint64_t)rank_coefs[calc];
   }
 
   inline bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority) {

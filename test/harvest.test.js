@@ -384,7 +384,7 @@ describe("Harvest General", async assert => {
     })),
     expected: [{
       account: firstuser,
-      score: 65
+      score: 28
     }, {
       account: seconduser,
       score: 0
@@ -455,7 +455,7 @@ describe("harvest planted score", async assert => {
     given: 'planted calculation',
     should: 'have values',
     actual: planted.rows.map(({ rank }) => rank),
-    expected: [65, 0]
+    expected: [28, 0]
   })
 
 })
@@ -545,7 +545,7 @@ describe("harvest transaction score", async assert => {
   await contracts.accounts.testsetrs(thirduser, 75, { authorization: `${accounts}@active` })
   await transfer(seconduser, thirduser, 10, '0'+memoprefix)
 
-  await checkScores([10, 16], [0, 65], "2 reputation, 2 tx", "0, 50 score")
+  await checkScores([10, 16], [0, 28], "2 reputation, 2 tx", "0, 28 score")
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
   console.log("More than 26 transactions. Expected tx points: "+ expectedScore)
@@ -557,7 +557,7 @@ describe("harvest transaction score", async assert => {
     // score from before was 15
     await transfer(firstuser, seconduser, 9, memoprefix+" tx "+i)
   }
-  await checkScores([19, 16], [65, 0], "2 reputation, 2 tx", "50, 0 score")
+  await checkScores([19, 16], [28, 0], "2 reputation, 2 tx", "28, 0 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
@@ -599,7 +599,7 @@ describe("harvest transaction score", async assert => {
     given: 'contribution score points',
     should: 'have contribution points',
     actual: cspoints.rows.map(({ contribution_points }) => contribution_points), 
-    expected: [63]
+    expected: [27]
   })
 
   assert({
@@ -684,7 +684,7 @@ describe("harvest community building score", async assert => {
   await contracts.accounts.testsetcbs(fourthuser, 0, { authorization: `${accounts}@active` })
 
   await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
-  await checkScores([1, 2, 3, 0], [48, 65, 82, 0], "cbs distribution", "correct")
+  await checkScores([1, 2, 3, 0], [4, 28, 65, 0], "cbs distribution", "correct")
 })
 
 describe("plant for other user", async assert => {
@@ -1192,8 +1192,8 @@ describe('bioregions contribution score', async assert => {
     should: 'have the correct ranks',
     actual: cspointsBios.rows,
     expected: [
-      { account: 'bio2.bdc', contribution_points: 113, rank: 0 },
-      { account: 'bio3.bdc', contribution_points: 140, rank: 65 }
+      { account: 'bio2.bdc', contribution_points: 43, rank: 0 },
+      { account: 'bio3.bdc', contribution_points: 84, rank: 28 }
     ]
   })
 
