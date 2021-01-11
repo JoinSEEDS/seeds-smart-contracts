@@ -371,8 +371,8 @@ describe('forum reputation', async assert => {
         should: 'rank all the users in the forum correctly',
         expected: [
             { account: firstuser, reputation: -70000, rank: 0 },
-            { account: seconduser, reputation: 70000, rank: 76 },
-            { account: thirduser, reputation: 35000, rank: 54 }
+            { account: seconduser, reputation: 70000, rank: 52 },
+            { account: thirduser, reputation: 35000, rank: 9 }
         ],
         actual: forumReputation.rows
     })
@@ -387,7 +387,7 @@ describe('forum reputation', async assert => {
     assert({
         given: 'reputation distributed',
         should: 'give users correct reputation',
-        expected: [10000, 5007, 10005],
+        expected: [10000, 5005, 10000],
         actual: users.rows.map(u => u.reputation)
     })
 })
