@@ -138,6 +138,13 @@ namespace utils {
                             99.00
     };
 
+    // TEST CODE - for illustration and testing - remove this
+    for(int i = 0; i <100; i++) {
+      print(" " + std::to_string(i));
+      auto coef = rank_coefs[i];
+      print(": " + std::to_string(coef));
+    }
+
     uint64_t calc = (current * 100) / total;
     if (calc > 99) calc = 99;
 
