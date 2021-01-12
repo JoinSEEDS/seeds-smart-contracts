@@ -522,6 +522,8 @@ describe('Proposals', async assert => {
 
   let escrowLock = escrowLocks.rows[0]
 
+  console.log(escrowLock)
+
   delete escrowLock.vesting_date
   delete escrowLock.created_date
   delete escrowLock.updated_date

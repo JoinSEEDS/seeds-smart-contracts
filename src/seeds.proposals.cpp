@@ -259,11 +259,10 @@ bool proposals::is_active(name account, uint64_t cutoff_date) {
   return aitr != actives.end() && aitr->timestamp > cutoff_date;
 }
 
-
 void proposals::onperiod() {
     require_auth(_self);
 
-    auto pitr = props.begin();
+    auto props_by_status = props.get_index<"bystatus"_n>();
 
     uint64_t prop_majority = config_get(name("propmajority"));
 
@@ -279,106 +278,118 @@ void proposals::onperiod() {
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
-    while (pitr != props.end()) {
-      uint64_t prop_id = pitr -> id;
+    if (props_by_status.begin() != props_by_status.end()) {
+      auto p1 = props_by_status.begin();
+      auto p2 = p1;
+      p2++;
 
-      if (pitr->stage == stage_active) {
-        votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
+      while (p1 != props_by_status.end()) {
+        auto pitr = p1;
+        uint64_t prop_id = pitr -> id;
 
-        double majority = double(prop_majority) / 100.0;
-        double fav = double(pitr->favour);
-        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        name prop_type = get_type(pitr->fund);
-        bool is_alliance_type = prop_type == alliance_type;
-        bool is_campaign_type = prop_type == campaign_type;
+        if (pitr->stage == stage_active) {
+          votes_tables votes(get_self(), pitr->id);
+          uint64_t voters_number = distance(votes.begin(), votes.end());
 
-        bool valid_quorum = false;
+          double majority = double(prop_majority) / 100.0;
+          double fav = double(pitr->favour);
+          bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
+          name prop_type = get_type(pitr->fund);
+          bool is_alliance_type = prop_type == alliance_type;
+          bool is_campaign_type = prop_type == campaign_type;
 
-        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
-          valid_quorum = true;
-        } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
-        }
+          bool valid_quorum = false;
 
-        if (passed && valid_quorum) {
+          if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+            valid_quorum = true;
+          } else { // in open status, quorum is calculated
+            valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          }
 
-          if (pitr -> status == status_open) {
+          if (passed && valid_quorum) {
 
-            refund_staked(pitr->creator, pitr->staked);
-            change_rep(pitr->creator, true);
+            if (pitr -> status == status_open) {
 
-            asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-            
-            if (is_alliance_type) {
-              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+              refund_staked(pitr->creator, pitr->staked);
+              change_rep(pitr->creator, true);
+
+              asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+              
+              if (is_alliance_type) {
+                send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+              } else {
+                withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+              }
+
+              props_by_status.modify(pitr, _self, [&](auto & proposal){
+                proposal.passed_cycle = current_cycle;
+                proposal.age = 0;
+                proposal.staked = asset(0, seeds_symbol);
+                proposal.status = status_evaluate;
+                proposal.current_payout += payout_amount;
+              });
+
+              eval_props.push_back(prop_id);
+
             } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+              
+              uint64_t age = pitr -> age + 1;
+
+              asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
+
+              if (is_alliance_type) {
+                send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+              } else {
+                withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+              }
+
+              uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
+
+              props_by_status.modify(pitr, _self, [&](auto & proposal){
+                proposal.age = age;
+                if (age == num_cycles) {
+                  proposal.executed = true;
+                  proposal.status = status_passed;
+                  proposal.stage = stage_done;
+                } else {
+                  eval_props.push_back(prop_id);
+                }
+                proposal.current_payout += payout_amount;
+              });
             }
-
-            props.modify(pitr, _self, [&](auto & proposal){
-              proposal.passed_cycle = current_cycle;
-              proposal.age = 0;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = status_evaluate;
-              proposal.current_payout += payout_amount;
-            });
-
-            eval_props.push_back(prop_id);
 
           } else {
-            
-            uint64_t age = pitr -> age + 1;
-
-            asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
-
-            if (is_alliance_type) {
-              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-            } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+            if (pitr->status != status_evaluate) {
+              burn(pitr->staked);
             }
 
-            uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
-
-            props.modify(pitr, _self, [&](auto & proposal){
-              proposal.age = age;
-              if (age == num_cycles) {
-                proposal.executed = true;
-                proposal.status = status_passed;
+            props_by_status.modify(pitr, _self, [&](auto& proposal) {
+                proposal.executed = false;
+                proposal.staked = asset(0, seeds_symbol);
+                proposal.status = status_rejected;
                 proposal.stage = stage_done;
-              } else {
-                eval_props.push_back(prop_id);
-              }
-              proposal.current_payout += payout_amount;
             });
           }
 
-        } else {
-          if (pitr->status != status_evaluate) {
-            burn(pitr->staked);
-          }
-
-          props.modify(pitr, _self, [&](auto& proposal) {
-              proposal.executed = false;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = status_rejected;
-              proposal.stage = stage_done;
-          });
+          size_change(prop_active_size, -1);
+        
         }
 
-        size_change(prop_active_size, -1);
-      
+        if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
+          props_by_status.modify(pitr, _self, [&](auto& proposal) {
+            proposal.stage = stage_active;
+          });
+          size_change(prop_active_size, 1);
+          active_props.push_back(prop_id);
+        }
+
+        p1 = p2;
+        if (p1 != props_by_status.end() && (p1 -> status != status_open && p1 -> status != status_evaluate)) {
+          p1 = props_by_status.end();
+        }
+        if (p2 != props_by_status.end()) { p2++; }
       }
 
-      if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
-        props.modify(pitr, _self, [&](auto& proposal) {
-          proposal.stage = stage_active;
-        });
-        size_change(prop_active_size, 1);
-        active_props.push_back(prop_id);
-      }
-
-      pitr++;
     }
 
     update_cycle();
