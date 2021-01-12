@@ -12,12 +12,12 @@ using namespace eosio;
 using namespace utils;
 using std::string;
 
-CONTRACT bracelet : public contract {
+CONTRACT pouch : public contract {
 
   public:
 
     using contract::contract;
-    bracelet(name receiver, name code, datastream<const char*> ds)
+    pouch(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value)
@@ -67,10 +67,10 @@ CONTRACT bracelet : public contract {
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::token.value) {
-      execute_action<bracelet>(name(receiver), name(code), &bracelet::deposit);
+      execute_action<pouch>(name(receiver), name(code), &pouch::deposit);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(bracelet, 
+        EOSIO_DISPATCH_HELPER(pouch, 
           (reset)(deposit)
           (freeze)(unfreeze)
           (withdraw)(transfer)

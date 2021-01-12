@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, names, getTableRows, isLocal, initContracts, getBalance, createKeypair } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, bracelet, accounts, token, bank } = names
+const { firstuser, seconduser, pouch, accounts, token, bank } = names
 
 const createKeyPermission = async (account, role, parentRole = 'active', key) => {
 
@@ -49,19 +49,19 @@ const linkAuth = async (account, role, contract, action, { actor, perm }) => {
   }
 }
 
-describe('bracelet general', async assert => {
+describe('pouch general', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ bracelet, accounts, token })
+  const contracts = await initContracts({ pouch, accounts, token })
 
-  const getBraceletBalance = async account => {
+  const getPouchBalance = async account => {
     const balanceTable = await getTableRows({
-      code: bracelet,
-      scope: bracelet,
+      code: pouch,
+      scope: pouch,
       table: 'balances',
       json: true
     })
@@ -69,18 +69,18 @@ describe('bracelet general', async assert => {
     return parseInt(balance[0].balance)
   }
 
-  const checkBraceletBalance = async (account, expectedBalance) => {
-    const balance = await getBraceletBalance(account)
+  const checkPouchBalance = async (account, expectedBalance) => {
+    const balance = await getPouchBalance(account)
     assert({
-      given: `${account} used the bracelet`,
+      given: `${account} used the pouch`,
       should: 'have the correct balance',
       actual: balance,
       expected: expectedBalance
     })
   }
 
-  console.log('bracelet reset')
-  await contracts.bracelet.reset({ authorization: `${bracelet}@active` })
+  console.log('pouch reset')
+  await contracts.pouch.reset({ authorization: `${pouch}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -98,54 +98,54 @@ describe('bracelet general', async assert => {
 
   const bankBalanceBefore = await getBalance(bank) || 0
 
-  console.log('transfer to bracelet')
+  console.log('transfer to pouch')
   for (const user of users) {
-    await contracts.token.transfer(user, bracelet, `${amount}.0000 SEEDS`, 'test', { authorization: `${user}@active` })
-    await checkBraceletBalance(user, amount)
+    await contracts.token.transfer(user, pouch, `${amount}.0000 SEEDS`, 'test', { authorization: `${user}@active` })
+    await checkPouchBalance(user, amount)
   }
 
-  await checkBraceletBalance(bracelet, amount * users.length)
+  await checkPouchBalance(pouch, amount * users.length)
 
   const bankBalanceAfter = await getBalance(bank)
 
   console.log('withdraw')
   const withdrawAmount = 500
   
-  await contracts.bracelet.withdraw(seconduser, `${withdrawAmount}.0000 SEEDS`, { authorization: `${seconduser}@active` })
-  await checkBraceletBalance(seconduser, amount - withdrawAmount)
+  await contracts.pouch.withdraw(seconduser, `${withdrawAmount}.0000 SEEDS`, { authorization: `${seconduser}@active` })
+  await checkPouchBalance(seconduser, amount - withdrawAmount)
 
   const seconduserBalanceBefore = await getBalance(seconduser)
 
   console.log('freeze')
-  await contracts.bracelet.freeze(firstuser, { authorization: `${firstuser}@active` })
+  await contracts.pouch.freeze(firstuser, { authorization: `${firstuser}@active` })
 
   let transferWhenFreeze = false
   try {
-    await contracts.bracelet.transfer(firstuser, seconduser, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    await contracts.pouch.transfer(firstuser, seconduser, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
     transferWhenFreeze = true
   } catch (err) {
     console.log('can not transfer when account is freezed (expected)')
   }
 
   console.log('unfreeze')
-  await contracts.bracelet.unfreeze(firstuser, { authorization: `${firstuser}@active` })
+  await contracts.pouch.unfreeze(firstuser, { authorization: `${firstuser}@active` })
 
-  console.log('create bracelet permission')
-  await createKeyPermission(firstuser, 'bracelet', 'active', eosDevKey)
-  await linkAuth(firstuser, 'bracelet', bracelet, 'transfer', { actor: firstuser, perm: 'active' })
+  console.log('create pouch permission')
+  await createKeyPermission(firstuser, 'pouch', 'active', eosDevKey)
+  await linkAuth(firstuser, 'pouch', pouch, 'transfer', { actor: firstuser, perm: 'active' })
 
   console.log('transfer')
   const transferAmount = 100
-  await contracts.bracelet.transfer(firstuser, seconduser, `${transferAmount}.0000 SEEDS`, '', { authorization: `${firstuser}@bracelet` })
+  await contracts.pouch.transfer(firstuser, seconduser, `${transferAmount}.0000 SEEDS`, '', { authorization: `${firstuser}@pouch` })
 
   const seconduserBalanceAfter = await getBalance(seconduser)
   const bankBalanceAfter2 = await getBalance(bank)
 
-  await checkBraceletBalance(firstuser, amount - transferAmount)
-  await checkBraceletBalance(bracelet, users.length * amount - transferAmount - withdrawAmount)
+  await checkPouchBalance(firstuser, amount - transferAmount)
+  await checkPouchBalance(pouch, users.length * amount - transferAmount - withdrawAmount)
 
   assert({
-    given: 'transfer to bracelet',
+    given: 'transfer to pouch',
     should: 'have more balance',
     actual: bankBalanceAfter - bankBalanceBefore,
     expected: amount * users.length

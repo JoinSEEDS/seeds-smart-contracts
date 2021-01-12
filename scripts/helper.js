@@ -169,7 +169,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
-      bracelet: contract('brclet.seeds', 'bracelet'),
+      pouch: contract('pouch.seeds', 'pouch'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -203,6 +203,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
+      pouch: contract('pouch.seeds', 'pouch'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -244,6 +245,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
+      pouch: contract('pouch.seeds', 'pouch'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -608,11 +610,11 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   action: 'rankbiocss'
 }, {
-  target: `${accounts.bracelet.account}@active`,
-  actor: `${accounts.bracelet.account}@eosio.code`
+  target: `${accounts.pouch.account}@active`,
+  actor: `${accounts.pouch.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.bracelet.account}@active`
+  actor: `${accounts.pouch.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

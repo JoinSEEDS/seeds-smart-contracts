@@ -1,7 +1,7 @@
-#include <seeds.bracelet.hpp>
+#include <seeds.pouch.hpp>
 
 
-ACTION bracelet::reset () {
+ACTION pouch::reset () {
   require_auth(get_self());
 
   auto bitr = balances.begin();
@@ -11,7 +11,7 @@ ACTION bracelet::reset () {
 }
 
 
-ACTION bracelet::deposit (name from, name to, asset quantity, string memo) {
+ACTION pouch::deposit (name from, name to, asset quantity, string memo) {
 
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
       to  ==  get_self() &&                     // to here
@@ -33,43 +33,43 @@ ACTION bracelet::deposit (name from, name to, asset quantity, string memo) {
 
 }
 
-ACTION bracelet::freeze (name account) {
+ACTION pouch::freeze (name account) {
   require_auth(account);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "bracelet: user " + account.to_string() + " has no balance entry");
+  check(bitr != balances.end(), "pouch: user " + account.to_string() + " has no balance entry");
 
   balances.modify(bitr, _self, [&](auto & item){
     item.is_frozen = true;
   });
 }
 
-ACTION bracelet::unfreeze (name account) {
+ACTION pouch::unfreeze (name account) {
   require_auth(account);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "bracelet: user " + account.to_string() + " has no balance entry");
+  check(bitr != balances.end(), "pouch: user " + account.to_string() + " has no balance entry");
 
   balances.modify(bitr, _self, [&](auto & item){
     item.is_frozen = false;
   });
 }
 
-ACTION bracelet::withdraw (name account, asset quantity) {
+ACTION pouch::withdraw (name account, asset quantity) {
   require_auth(account);
   string memo = "";
   sub_balance(account, quantity);
   _transfer(account, quantity, memo);
 }
 
-ACTION bracelet::transfer (name from, name to, asset quantity, string memo) {
-  require_auth(permission_level(from, "bracelet"_n));
+ACTION pouch::transfer (name from, name to, asset quantity, string memo) {
+  require_auth(permission_level(from, "pouch"_n));
   check_freeze(from);
   sub_balance(from, quantity);
   _transfer(to, quantity, memo);
 }
 
-void bracelet::init_balance (name account) {
+void pouch::init_balance (name account) {
   auto bitr = balances.find(account.value);
   if (bitr == balances.end()) {
     balances.emplace(_self, [&](auto & item){
@@ -80,14 +80,14 @@ void bracelet::init_balance (name account) {
   }
 }
 
-void bracelet::add_balance (name account, asset quantity) {
+void pouch::add_balance (name account, asset quantity) {
   utils::check_asset(quantity);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "bracelet: no balance object found for " + account.to_string());
+  check(bitr != balances.end(), "pouch: no balance object found for " + account.to_string());
 
   auto bcitr = balances.find((get_self()).value);
-  check(bcitr != balances.end(), "bracelet: contract has not balance entry");
+  check(bcitr != balances.end(), "pouch: contract has not balance entry");
 
   balances.modify(bitr, _self, [&](auto & item){
     item.balance += quantity;
@@ -98,15 +98,15 @@ void bracelet::add_balance (name account, asset quantity) {
   });
 }
 
-void bracelet::sub_balance (name account, asset quantity) {
+void pouch::sub_balance (name account, asset quantity) {
   utils::check_asset(quantity);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "bracelet: no balance object found for " + account.to_string());
-  check(bitr -> balance.amount >= quantity.amount, "bracelet: overdrawn balance");
+  check(bitr != balances.end(), "pouch: no balance object found for " + account.to_string());
+  check(bitr -> balance.amount >= quantity.amount, "pouch: overdrawn balance");
 
   auto bcitr = balances.find((get_self()).value);
-  check(bcitr != balances.end(), "bracelet: contract has not balance entry");
+  check(bcitr != balances.end(), "pouch: contract has not balance entry");
   
   balances.modify(bitr, _self, [&](auto & item){
     item.balance -= quantity;
@@ -117,25 +117,25 @@ void bracelet::sub_balance (name account, asset quantity) {
   });
 }
 
-void bracelet::_deposit (asset quantity) {
+void pouch::_deposit (asset quantity) {
   utils::check_asset(quantity);
 
   token::transfer_action action{contracts::token, {_self, "active"_n}};
-  action.send(_self, contracts::bank, quantity, "bracelet deposit");
+  action.send(_self, contracts::bank, quantity, "pouch deposit");
 }
 
-void bracelet::check_user (name account) {
+void pouch::check_user (name account) {
   auto uitr = users.find(account.value);
-  check(uitr != users.end(), "bracelet: no user");
+  check(uitr != users.end(), "pouch: no user");
 }
 
-void bracelet::_transfer (name beneficiary, asset quantity, string memo) {
+void pouch::_transfer (name beneficiary, asset quantity, string memo) {
   utils::check_asset(quantity);
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
   action.send(contracts::bank, beneficiary, quantity, memo);
 }
 
-void bracelet::check_freeze (name account) {
-  auto bitr = balances.get(account.value, "bracelet: no balance object found");
-  check(!bitr.is_frozen, "bracelet: account is freezed");
+void pouch::check_freeze (name account) {
+  auto bitr = balances.get(account.value, "pouch: no balance object found");
+  check(!bitr.is_frozen, "pouch: account is freezed");
 }
