@@ -1562,3 +1562,23 @@ void proposals::add_voted_proposal (uint64_t proposal_id) {
 
 }
 
+ACTION proposals::migrtevotedp () {
+  require_auth(get_self());
+
+  auto pitr = props.begin();
+  
+  while (pitr != props.end()) {
+    if (pitr -> passed_cycle != 0) {
+      voted_proposals_tables votedprops(get_self(), pitr -> passed_cycle);
+      auto vpitr = votedprops.find(pitr -> id);
+      if (vpitr == votedprops.end()) {
+        votedprops.emplace(_self, [&](auto & item){
+          item.proposal_id = pitr -> id;
+        });
+      }
+    }
+    pitr++;
+  }
+
+}
+

@@ -92,6 +92,9 @@ CONTRACT proposals : public contract {
 
       ACTION undelegate(name delegator, name scope);
 
+
+      ACTION migrtevotedp ();
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -344,6 +347,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
+        (migrtevotedp)
         )
       }
   }
