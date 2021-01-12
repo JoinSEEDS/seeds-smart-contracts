@@ -263,7 +263,6 @@ CONTRACT proposals : public contract {
         uint64_t by_delegatee()const { return delegatee.value; }
         uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
       };
-    
 
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
