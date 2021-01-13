@@ -364,6 +364,9 @@ void proposals::onperiod() {
             }
 
             props_by_status.modify(pitr, _self, [&](auto& proposal) {
+                if (pitr->status != status_evaluate) {
+                  proposal.passed_cycle = current_cycle;
+                }
                 proposal.executed = false;
                 proposal.staked = asset(0, seeds_symbol);
                 proposal.status = status_rejected;
@@ -603,7 +606,7 @@ void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vect
     item.start_time = c.t_onperiod;
     item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
     item.num_proposals = num_proposals;
-    item.num_votes = 0;
+    item.num_voters = 0;
     item.total_voice_cast = 0;
     item.total_favour = 0;
     item.total_against = 0;
@@ -963,7 +966,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     });
   }
 
-  add_voted_proposal(pitr->id);
+  add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
   increase_voice_cast(voter, amount, option);
 
 }
@@ -1521,7 +1524,7 @@ void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
       } else if (option == distrust) {
         item.total_against += amount;
       }
-      item.num_votes += 1;
+      item.num_voters += 1;
     });
   }
 
@@ -1537,13 +1540,13 @@ uint64_t proposals::calc_quorum_base (uint64_t propcycle) {
 
   if (citr == cyclestats.end()) {
     // in case there is no information for this propcycle
-    return get_size(user_active_size) / 2;
+    return get_size(user_active_size) * 50 / 2;
   }
 
   while (count < num_cycles) {
 
     total += citr -> total_voice_cast;
-    // total += citr -> num_votes; // uncomment to make it count number of votes
+    // total += citr -> num_voters; // uncomment to make it count number of voters
     count++;
 
     if (citr == cyclestats.begin()) {
@@ -1591,5 +1594,44 @@ ACTION proposals::migrtevotedp () {
     pitr++;
   }
 
+}
+
+ACTION proposals::migrpass () {
+  // fix passed for rejected proposla in the range from cycle 25 
+  
+  // Manual review results: 
+
+  // 72 - 25
+  // 80 - 26 
+  // 90 - 27
+  // 95 - 28
+  // 100 - 28 <-- current cycle
+
+  auto pitr = props.find(72);
+
+  while(pitr != props.end() && pitr->id <= 100) {
+    if (pitr->status == status_rejected && pitr->passed_cycle == 0) {
+
+      uint64_t cycle = 25;
+
+      if (pitr->id >= 80) {
+        cycle = 26;
+      }
+
+      if (pitr->id >= 90) {
+        cycle = 27;
+      }
+      
+      if (pitr->id >= 95) {
+        cycle = 28;
+      }
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+        proposal.passed_cycle = cycle;
+      });
+
+    }
+    pitr++;
+  }
 }
 
