@@ -1720,17 +1720,23 @@ ACTION proposals::migrpass () {
 ACTION proposals::migstats (uint64_t cycle) {
   require_auth(get_self());
 
+  auto citr = cyclestats.find(cycle);
+  while(citr != cyclestats.end()) {
+    citr = cyclestats.erase(citr);
+  }
+
   // calculate vote power for cycle
   auto pitr = props.find(72);
 
-  uint64_t num_proposals;
-  uint64_t num_votes;
-  uint64_t total_voice_cast;
-  uint64_t total_favour;
-  uint64_t total_against; 
+  uint64_t num_proposals = 0;
+  uint64_t num_votes = 0;
+  uint64_t total_voice_cast = 0;
+  uint64_t total_favour = 0;
+  uint64_t total_against = 0; 
 
   while(pitr != props.end() && pitr->passed_cycle <= cycle) {
     if (pitr->passed_cycle == cycle) {
+      print("passed: "+std::to_string(cycle) + " " + std::to_string(pitr->id));
       num_proposals++;
       votes_tables votes(get_self(), pitr->id);
       auto vitr = votes.begin();
