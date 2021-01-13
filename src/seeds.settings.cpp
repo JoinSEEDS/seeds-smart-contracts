@@ -230,6 +230,10 @@ void settings::reset() {
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 
+  // =====================================
+  // bioregion
+  // =====================================
+  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
@@ -250,7 +254,7 @@ void settings::configure(name param, uint64_t value) {
   auto citr = config.find(param.value);
 
   auto fitr = configfloat.find(param.value);
-  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+  check(fitr == configfloat.end(), param.to_string() + ", this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {
@@ -292,7 +296,7 @@ void settings::confwithdesc(name param, uint64_t value, string description, name
   auto citr = config.find(param.value);
 
   auto fitr = configfloat.find(param.value);
-  check(fitr == configfloat.end(), "this parameter is defined as floating point");
+  check(fitr == configfloat.end(), param.to_string() + ", this parameter is defined as floating point");
 
   if (citr == config.end()) {
     config.emplace(_self, [&](auto& item) {

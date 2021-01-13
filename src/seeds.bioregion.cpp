@@ -26,6 +26,11 @@ ACTION bioregion::reset() {
     while(sitr != sponsors.end()){
         sitr = sponsors.erase(sitr);
     }
+
+    auto ditr = biodelays.begin();
+    while(ditr != biodelays.end()) {
+        ditr = biodelays.erase(ditr);
+    }
 }
 
 void bioregion::auth_founder(name bioregion, name founder) {
@@ -159,15 +164,30 @@ ACTION bioregion::join(name bioregion, name account) {
 
     auto mitr = members.find(account.value);
 
-    if (mitr != members.end()) {
-        check(false, "user exists TODO allow users to switch");
-    } else {
-        members.emplace(_self, [&](auto & item) {
-            item.bioregion = bioregion;
+    check(mitr == members.end(), "user already belongs to a bioregion");
+
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+    auto ditr = biodelays.find(account.value);
+    if (ditr == biodelays.end()) {
+        biodelays.emplace(_self, [&](auto & item){
             item.account = account;
+            item.apply_vote_delay = false;
+            item.joined_date_timestamp = now;
         });
-        size_change(bioregion, 1);
+    } else {
+        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("bio.vote.del"_n)), "user needs to wait until the delay ends");
+        biodelays.modify(ditr, _self, [&](auto & item){
+            item.apply_vote_delay = true;
+            item.joined_date_timestamp = now;
+        });
     }
+
+    members.emplace(_self, [&](auto & item) {
+        item.bioregion = bioregion;
+        item.account = account;
+    });
+    size_change(bioregion, 1);
 
 }
 
@@ -230,6 +250,13 @@ void bioregion::remove_member(name account) {
     auto mitr = members.find(account.value);
     
     check(mitr != members.end(), "member not found");
+
+    roles_tables roles(get_self(), mitr -> bioregion.value);
+    auto ritr = roles.find(account.value);
+    
+    if (ritr != roles.end()) {
+        roles.erase(ritr);
+    }
 
     size_change(mitr->bioregion, -1);
 
@@ -296,3 +323,10 @@ void bioregion::size_change(name bioregion, int delta) {
     });
 }
 
+double bioregion::config_float_get(name key) {
+  auto citr = configfloat.find(key.value);
+  if (citr == configfloat.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}

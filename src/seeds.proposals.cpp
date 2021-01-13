@@ -1545,8 +1545,8 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
   while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
 
     name voter = ditr -> delegator;
-    auto vitr = voices.find(voter.value);
 
+    auto vitr = voices.find(voter.value);
     if (option == trust) {
       send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
     } else if (option == distrust) {

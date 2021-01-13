@@ -5,6 +5,7 @@
 #include <utils.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -17,8 +18,10 @@ CONTRACT bioregion : public contract {
               bioregions(receiver, receiver.value),
               members(receiver, receiver.value),
               sponsors(receiver, receiver.value),
+              biodelays(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
-              config(contracts::settings, contracts::settings.value)
+              config(contracts::settings, contracts::settings.value),
+              configfloat(contracts::settings, contracts::settings.value)
               {}
         
         
@@ -64,6 +67,7 @@ CONTRACT bioregion : public contract {
         void delete_role(name bioregion, name account);
         bool is_member(name bioregion, name account);
         bool is_admin(name bioregion, name account);
+        double config_float_get(name key);
 
         TABLE bioregion_table {
             name id;
@@ -123,6 +127,15 @@ CONTRACT bioregion : public contract {
         };
         typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;
 
+        TABLE delay_table {
+            name account;
+            bool apply_vote_delay;
+            uint64_t joined_date_timestamp;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+        typedef eosio::multi_index <"biodelays"_n, delay_table> delay_tables;
+
         // External tables
 
         DEFINE_USER_TABLE
@@ -135,11 +148,17 @@ CONTRACT bioregion : public contract {
 
         DEFINE_CONFIG_TABLE_MULTI_INDEX
 
+        DEFINE_CONFIG_FLOAT_TABLE
+
+        DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
+
         config_tables config;
+        config_float_tables configfloat;
 
         bioregion_tables bioregions;
         members_tables members;
         sponsors_tables sponsors;
+        delay_tables biodelays;
 };
 
 
