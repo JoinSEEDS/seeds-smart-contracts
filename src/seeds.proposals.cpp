@@ -1770,20 +1770,12 @@ void proposals::migcycstat() {
 
   uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
 
-  auto pitr = cyclestats.find(c.propcycle);
+  auto citr = cyclestats.find(c.propcycle);
 
-  uint64_t num_proposals = pitr->active_props.size();
+  uint64_t num_proposals = citr->active_props.size();
 
-  cyclestats.modify(pitr, _self, [&](auto & item){
-    item.propcycle = c.propcycle;
-    item.start_time = c.t_onperiod;
-    item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
+  cyclestats.modify(citr, _self, [&](auto & item){
     item.num_proposals = num_proposals;
-    item.num_votes = 0;
-    item.total_voice_cast = 0;
-    item.total_favour = 0;
-    item.total_against = 0;
-    item.total_citizens = get_size("voice.sz"_n);
     item.quorum_vote_base = quorum_vote_base;
     item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
