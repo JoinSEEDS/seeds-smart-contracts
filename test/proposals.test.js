@@ -471,7 +471,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -500,7 +500,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -628,8 +628,8 @@ describe('Proposals', async assert => {
         total_favour: 0,
         total_against: 0,
         total_citizens: 3,
-        quorum_vote_base: 1,
-        quorum_votes_needed: 0,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
         unity_needed: '0.80000001192092896',
         active_props: [ 1, 2, 3, 4 ],
         eval_props: []
@@ -655,8 +655,8 @@ describe('Proposals', async assert => {
         total_favour: 26,
         total_against: 7,
         total_citizens: 3,
-        quorum_vote_base: 1,
-        quorum_votes_needed: 0,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
         unity_needed: '0.80000001192092896',
         active_props: [ 1, 2, 3, 4 ],
         eval_props: []

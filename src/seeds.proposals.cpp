@@ -63,6 +63,8 @@ void proposals::reset() {
     citr = cyclestats.erase(citr);
   }
 
+  cycle.remove();
+
 }
 
 bool proposals::is_enough_stake(asset staked, asset quantity, name fund) {
@@ -278,19 +280,24 @@ void proposals::onperiod() {
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
+    // TODO this is not working at the moment, use old way... FIX after this cycle.
+
     // find smallesd prop id that's in open or eval stage
     // this way we skip all proposals that are definitely already passed or rejected
-    auto pps_itr = props_by_status.begin();
-    uint64_t smallest_prop_id = 0;
-    while (pps_itr != props_by_status.end() && 
-      (pps_itr -> status == status_open || pps_itr -> status_evaluate) ) {
-      smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
-    }
+    // auto pps_itr = props_by_status.begin();
+    // uint64_t smallest_prop_id = 0;
+    // while (pps_itr != props_by_status.end() && 
+    //   (pps_itr -> status == status_open || pps_itr -> status == status_evaluate) ) {
+    //   smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
+    //   pps_itr++;
+    // }
 
-    print("smallest id: "+std::to_string(smallest_prop_id));
+    // print("smallest id: "+std::to_string(smallest_prop_id));
       
-    pitr = props.find(smallest_prop_id);
+    // auto pitr = props.find(smallest_prop_id);
 
+    auto pitr = props.begin();
+    
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
 
@@ -399,6 +406,7 @@ void proposals::onperiod() {
         active_props.push_back(prop_id);
       }
 
+      pitr++;
     } 
 
     update_cycle();
@@ -431,18 +439,22 @@ void proposals::testperiod() {
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
+    // TODO this is not working at the moment, use old way... FIX after this cycle.
+
     // find smallesd prop id that's in open or eval stage
     // this way we skip all proposals that are definitely already passed or rejected
-    auto pps_itr = props_by_status.begin();
-    uint64_t smallest_prop_id = 0;
-    while (pps_itr != props_by_status.end() && 
-      (pps_itr -> status == status_open || pps_itr -> status_evaluate) ) {
-      smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
-    }
+    // auto pps_itr = props_by_status.begin();
+    // uint64_t smallest_prop_id = 0;
+    // while (pps_itr != props_by_status.end() && 
+    //   (pps_itr -> status == status_open || pps_itr -> status == status_evaluate) ) {
+    //   smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
+    //   pps_itr++;
+    // }
 
-    print("smallest id: "+std::to_string(smallest_prop_id) );
+    // print("smallest id: "+std::to_string(smallest_prop_id) );
       
-    pitr = props.find(smallest_prop_id);
+    // auto pitr = props.find(smallest_prop_id);
+    auto pitr = props.find(50);
 
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
@@ -477,7 +489,7 @@ void proposals::testperiod() {
         }
       
       }
-      
+      pitr++;
     } 
 }
 void proposals::updatevoices() {
@@ -1705,7 +1717,7 @@ ACTION proposals::migrpass () {
   }
 }
 
-ACTION proposals::migstats (utint64_t cycle) {
+ACTION proposals::migstats (uint64_t cycle) {
   require_auth(get_self());
 
   // calculate vote power for cycle
