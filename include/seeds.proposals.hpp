@@ -95,6 +95,7 @@ CONTRACT proposals : public contract {
 
       ACTION migrtevotedp ();
       ACTION migrpass ();
+      ACTION testperiod ();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -280,7 +281,7 @@ CONTRACT proposals : public contract {
         uint64_t start_time; 
         uint64_t end_time; 
         uint64_t num_proposals;
-        uint64_t num_voters;
+        uint64_t num_votes;
         uint64_t total_voice_cast;
         uint64_t total_favour;
         uint64_t total_against; 
@@ -348,7 +349,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
-        (migrtevotedp)(migrpass)
+        (migrtevotedp)(migrpass)(testperiod)
         )
       }
   }
