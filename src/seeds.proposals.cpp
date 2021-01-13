@@ -680,7 +680,7 @@ void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vect
   cycle_table c = cycle.get();
 
   uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
-  uint64_t num_proposals = active_props.size() + eval_props.size();
+  uint64_t num_proposals = active_props.size();
 
   cyclestats.emplace(_self, [&](auto & item){
     item.propcycle = c.propcycle;
@@ -1761,6 +1761,32 @@ ACTION proposals::migstats (uint64_t cycle) {
     item.total_voice_cast = total_voice_cast;
     item.total_favour = total_favour;
     item.total_against = total_against;
+  });
+
+}
+
+void proposals::migcycstat() {
+  cycle_table c = cycle.get();
+
+  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+
+  auto pitr = cyclestats.find(c.propcycle);
+
+  uint64_t num_proposals = pitr->active_props.size();
+
+  cyclestats.modify(pitr, _self, [&](auto & item){
+    item.propcycle = c.propcycle;
+    item.start_time = c.t_onperiod;
+    item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
+    item.num_proposals = num_proposals;
+    item.num_votes = 0;
+    item.total_voice_cast = 0;
+    item.total_favour = 0;
+    item.total_against = 0;
+    item.total_citizens = get_size("voice.sz"_n);
+    item.quorum_vote_base = quorum_vote_base;
+    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
+    item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
   });
 
 }
