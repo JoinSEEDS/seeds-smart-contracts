@@ -1824,6 +1824,14 @@ describe('delegate trust', async assert => {
   await contracts.proposals.delegate(seconduser, thirduser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(fourthuser, thirduser, scopeAlliance, { authorization: `${fourthuser}@active` })
 
+  let avoidCyclesWorks = true
+  try {
+    await contracts.proposals.delegate(firstuser, fourthuser, scopeCampaigns, { authorization: `${firstuser}@active` })
+    avoidCyclesWorks = false
+  } catch (err) {
+    console.log('no cycles allowed', err)
+  }
+
   const getVoices = async () => {
     const voiceCampaigns = await eos.getTableRows({
       code: proposals,
@@ -1999,6 +2007,13 @@ describe('delegate trust', async assert => {
     should: 'cancel trust delegation',
     actual: delCampaigns.rows,
     expected: []
+  })
+
+  assert({
+    given: 'try to delegate voice',
+    should: 'not create a cycle',
+    actual: avoidCyclesWorks,
+    expected: true
   })
 
 })
