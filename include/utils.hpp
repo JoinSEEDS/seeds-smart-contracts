@@ -37,7 +37,8 @@ namespace utils {
      * The cheap way to fix it is to limit rank to 99
     */
 
-    const float rank_coefs[99] = { 0.00,
+    const float rank_coefs[100] = { 0.00,
+                            0.005,
                             0.01,
                             0.03,
                             0.06,
