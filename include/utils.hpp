@@ -37,8 +37,9 @@ namespace utils {
      * The cheap way to fix it is to limit rank to 99
     */
 
+    // Spline rank table coeficients
     const float rank_coefs[100] = { 0.00,
-                            0.005,
+                            0.00,
                             0.01,
                             0.03,
                             0.06,
@@ -138,13 +139,6 @@ namespace utils {
                             97.54,
                             99.00
     };
-
-    // TEST CODE - for illustration and testing - remove this
-    for(int i = 0; i <100; i++) {
-      print(" " + std::to_string(i));
-      auto coef = rank_coefs[i];
-      print(": " + std::to_string(coef));
-    }
 
     uint64_t calc = (current * 100) / total;
     if (calc > 99) calc = 99;
