@@ -1019,7 +1019,19 @@ describe('organization status', async assert => {
     await contracts.token.transfer(org2, org3, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
     await sleep(300)
 
+
+    const regenScores = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'regenscores',
+        json: true
+    })
+    console.log(regenScores)
+
     console.log('make reputable')
+
+    // with Spline ranks the "average" rank is now 27
+    await contracts.settings.configure('rep.minrank', 27, { authorization: `${settings}@active` })
 
     await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
 
@@ -1032,6 +1044,9 @@ describe('organization status', async assert => {
 
     await contracts.settings.configure('rgen.resref', 1, { authorization: `${settings}@active` })
     await contracts.settings.configure('rgen.refrred', 3, { authorization: `${settings}@active` })
+    // with Spline ranks the "average" rank is now 27
+    await contracts.settings.configure('rgen.minrank', 27, { authorization: `${settings}@active` })
+
 
     console.log('make regen')
 
