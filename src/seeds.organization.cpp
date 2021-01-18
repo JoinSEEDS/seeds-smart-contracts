@@ -610,7 +610,7 @@ void organization::check_can_make_reputable(name organization) {
     auto bitr = balances.find(organization.value);
 
     uint64_t planted_min = get_config(name("rep.minplnt"));
-    uint64_t regen_min_rank = get_config(name("rep.minrank"));
+    uint64_t rep_min_rank = get_config(name("rep.minrank"));
     uint64_t min_invited = get_config(name("rep.refrred"));
     uint64_t min_residents_invited = get_config(name("rep.resref"));
     uint64_t min_trx = get_config(name("rep.mintrx"));
@@ -620,7 +620,7 @@ void organization::check_can_make_reputable(name organization) {
     uint64_t valid_trxs = count_transactions(organization);
 
     check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
-    check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
+    check(regen_score >= rep_min_rank, "organization has less than the required regenerative score");
     check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
         std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
     check(valid_trxs >= min_trx, 
