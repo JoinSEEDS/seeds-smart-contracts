@@ -153,6 +153,15 @@ describe('Proposals', async assert => {
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
 
+  console.log('------------------------------------')
+  const cyclestats1 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cyclestats',
+    json: true,
+  })
+  console.log(cyclestats1)
+
   const activeProposals = await eos.getTableRows({
     code: proposals,
     scope: proposals,
@@ -235,6 +244,15 @@ describe('Proposals', async assert => {
 
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  console.log('------------------------------------')
+  const cyclestats2 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cyclestats',
+    json: true,
+  })
+  console.log(cyclestats2)
 
   const repsAfter = await eos.getTableRows({
     code: accounts,
@@ -453,7 +471,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -482,7 +500,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -503,6 +521,8 @@ describe('Proposals', async assert => {
   })
 
   let escrowLock = escrowLocks.rows[0]
+
+  console.log(escrowLock)
 
   delete escrowLock.vesting_date
   delete escrowLock.created_date
@@ -590,6 +610,86 @@ describe('Proposals', async assert => {
     should: 'send reward',
     actual: balancesAfterFinish[0] - balancesBefore[0],
     expected: 600
+  })
+
+  delete cyclestats1.rows[0].start_time
+  delete cyclestats1.rows[0].end_time
+
+  assert({
+    given: 'onperiod executed',
+    should: 'store cycle stats',
+    actual: cyclestats1.rows,
+    expected: [
+      {
+        propcycle: initialCycle + 1,
+        num_proposals: 4,
+        num_votes: 0,
+        total_voice_cast: 0,
+        total_favour: 0,
+        total_against: 0,
+        total_citizens: 3,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
+        unity_needed: '0.80000001192092896',
+        active_props: [ 1, 2, 3, 4 ],
+        eval_props: []
+      }
+    ]
+  })
+
+  delete cyclestats2.rows[0].start_time
+  delete cyclestats2.rows[0].end_time
+  delete cyclestats2.rows[1].start_time
+  delete cyclestats2.rows[1].end_time
+
+  assert({
+    given: 'onperiod executed',
+    should: 'store cycle stats',
+    actual: cyclestats2.rows,
+    expected: [
+      {
+        propcycle: initialCycle + 1,
+        num_proposals: 4,
+        num_votes: 8,
+        total_voice_cast: 33,
+        total_favour: 26,
+        total_against: 7,
+        total_citizens: 3,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
+        unity_needed: '0.80000001192092896',
+        active_props: [ 1, 2, 3, 4 ],
+        eval_props: []
+      },
+      {
+        propcycle: initialCycle + 2,
+        num_proposals: 2,
+        num_votes: 0,
+        total_voice_cast: 0,
+        total_favour: 0,
+        total_against: 0,
+        total_citizens: 4,
+        quorum_vote_base: 33,
+        quorum_votes_needed: 6,
+        unity_needed: '0.80000001192092896',
+        active_props: [],
+        eval_props: [ 1, 4 ]
+      }
+    ]
+  })
+
+  const votedProps = await getTableRows({
+    code: proposals,
+    scope: initialCycle + 1,
+    table: 'cycvotedprps',
+    json: true
+  })
+
+  assert({
+    given: 'voted props in first cycle',
+    should: 'have the correct entries',
+    actual: votedProps.rows.map(r => r.proposal_id),
+    expected: [1,2,3,4]
   })
 
   const escrowLocksAfterFinish = await eos.getTableRows({
@@ -1786,8 +1886,8 @@ describe('delegate trust', async assert => {
   await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
   console.log('join users')
-  const users = [firstuser, seconduser, thirduser, fourthuser]
-  const voices = [20, 10, 50, 35]
+  const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
+  const voices = [20, 10, 50, 35, 22]
   for (let i = 0; i < users.length; i++) {
     await contracts.accounts.adduser(users[i], `user ${i}`, 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.testcitizen(users[i], { authorization: `${accounts}@active` })
@@ -1886,6 +1986,9 @@ describe('delegate trust', async assert => {
     await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
   }
 
+  console.log('add another delegation')
+  await contracts.proposals.delegate(fifthuser, firstuser, scopeCampaigns, { authorization: `${fifthuser}@active` }) 
+
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
   
@@ -1898,6 +2001,7 @@ describe('delegate trust', async assert => {
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(seconduser, scopeCampaigns, { authorization: `${firstuser}@active` })
   await contracts.proposals.undelegate(thirduser, scopeCampaigns, { authorization: `${firstuser}@active` })
+  await contracts.proposals.undelegate(fifthuser, scopeCampaigns, { authorization: `${fifthuser}@active` })
 
   const delCampaigns = await eos.getTableRows({
     code: proposals,
@@ -1943,7 +2047,7 @@ describe('delegate trust', async assert => {
     given: 'user delegated its voice',
     should: 'give a user a percentage of the earned reputation',
     actual: reps,
-    expected: [2, 1, 1, 1]
+    expected: [2, 1, 1, 1, 0]
   })
 
   assert({
@@ -1955,13 +2059,15 @@ describe('delegate trust', async assert => {
         { account: firstuser, balance: 15 },
         { account: seconduser, balance: 8 },
         { account: thirduser, balance: 38 },
-        { account: fourthuser, balance: 27 }
+        { account: fourthuser, balance: 27 },
+        { account: fifthuser, balance: 22 }
       ],
       alliances: [
         { account: firstuser, balance: 20 },
         { account: seconduser, balance: 0 },
         { account: thirduser, balance: 0 },
-        { account: fourthuser, balance: 0 }
+        { account: fourthuser, balance: 0 },
+        { account: fifthuser, balance: 22 }
       ]
     }
   })
@@ -1975,13 +2081,15 @@ describe('delegate trust', async assert => {
         { account: firstuser, balance: 10 },
         { account: seconduser, balance: 5 },
         { account: thirduser, balance: 25 },
-        { account: fourthuser, balance: 35 }
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
       ],
       alliances: [
         { account: firstuser, balance: 20 },
         { account: seconduser, balance: 10 },
         { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 }
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
       ]
     }
   })
