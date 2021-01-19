@@ -18,6 +18,8 @@ void settings::reset() {
   confwithdesc(name("prop.al.pct"), uint64_t(1 * 10000), "Alliance proposals funding fee in % - 1% [x 10,000 for 4 digits of precision]", high_impact);
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
+
+  confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
   
   confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
@@ -30,12 +32,12 @@ void settings::reset() {
   confwithdesc(name("refsnewprice"), 25 * 10000, "Minimum price to create a referendum", high_impact);
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
-  confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
+  confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
 
-  confwithdesc(name("quorum.base"), 90, "Quorum base percentage = 90% / number of proposals.", high_impact);
-  confwithdesc(name("quor.min.pct"), 5, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
-  confwithdesc(name("quor.max.pct"), 20, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quorum.base"), 100, "Quorum base percentage = 90% / number of proposals.", high_impact);
+  confwithdesc(name("quor.min.pct"), 7, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quor.max.pct"), 40, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
 
   confwithdesc(name("propvoice"), 77, "Voice base per period", high_impact); // voice base per period
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);

@@ -153,6 +153,15 @@ describe('Proposals', async assert => {
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
 
+  console.log('------------------------------------')
+  const cyclestats1 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cyclestats',
+    json: true,
+  })
+  console.log(cyclestats1)
+
   const activeProposals = await eos.getTableRows({
     code: proposals,
     scope: proposals,
@@ -235,6 +244,15 @@ describe('Proposals', async assert => {
 
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  console.log('------------------------------------')
+  const cyclestats2 = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cyclestats',
+    json: true,
+  })
+  console.log(cyclestats2)
 
   const repsAfter = await eos.getTableRows({
     code: accounts,
@@ -453,7 +471,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -482,7 +500,7 @@ describe('Proposals', async assert => {
       status: 'rejected',
       fund: campaignbank,
       pay_percentages: [10,30,30,30],
-      passed_cycle: 0,
+      passed_cycle: 1,
       age: 0,
       current_payout: '0.0000 SEEDS'
     }
@@ -503,6 +521,8 @@ describe('Proposals', async assert => {
   })
 
   let escrowLock = escrowLocks.rows[0]
+
+  console.log(escrowLock)
 
   delete escrowLock.vesting_date
   delete escrowLock.created_date
@@ -590,6 +610,86 @@ describe('Proposals', async assert => {
     should: 'send reward',
     actual: balancesAfterFinish[0] - balancesBefore[0],
     expected: 600
+  })
+
+  delete cyclestats1.rows[0].start_time
+  delete cyclestats1.rows[0].end_time
+
+  assert({
+    given: 'onperiod executed',
+    should: 'store cycle stats',
+    actual: cyclestats1.rows,
+    expected: [
+      {
+        propcycle: initialCycle + 1,
+        num_proposals: 4,
+        num_votes: 0,
+        total_voice_cast: 0,
+        total_favour: 0,
+        total_against: 0,
+        total_citizens: 3,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
+        unity_needed: '0.80000001192092896',
+        active_props: [ 1, 2, 3, 4 ],
+        eval_props: []
+      }
+    ]
+  })
+
+  delete cyclestats2.rows[0].start_time
+  delete cyclestats2.rows[0].end_time
+  delete cyclestats2.rows[1].start_time
+  delete cyclestats2.rows[1].end_time
+
+  assert({
+    given: 'onperiod executed',
+    should: 'store cycle stats',
+    actual: cyclestats2.rows,
+    expected: [
+      {
+        propcycle: initialCycle + 1,
+        num_proposals: 4,
+        num_votes: 8,
+        total_voice_cast: 33,
+        total_favour: 26,
+        total_against: 7,
+        total_citizens: 3,
+        quorum_vote_base: 75,
+        quorum_votes_needed: 15,
+        unity_needed: '0.80000001192092896',
+        active_props: [ 1, 2, 3, 4 ],
+        eval_props: []
+      },
+      {
+        propcycle: initialCycle + 2,
+        num_proposals: 2,
+        num_votes: 0,
+        total_voice_cast: 0,
+        total_favour: 0,
+        total_against: 0,
+        total_citizens: 4,
+        quorum_vote_base: 33,
+        quorum_votes_needed: 6,
+        unity_needed: '0.80000001192092896',
+        active_props: [],
+        eval_props: [ 1, 4 ]
+      }
+    ]
+  })
+
+  const votedProps = await getTableRows({
+    code: proposals,
+    scope: initialCycle + 1,
+    table: 'cycvotedprps',
+    json: true
+  })
+
+  assert({
+    given: 'voted props in first cycle',
+    should: 'have the correct entries',
+    actual: votedProps.rows.map(r => r.proposal_id),
+    expected: [1,2,3,4]
   })
 
   const escrowLocksAfterFinish = await eos.getTableRows({
