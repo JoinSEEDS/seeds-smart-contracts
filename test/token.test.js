@@ -2,7 +2,6 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 const { assert } = require('chai')
-const { asset } = require('eosjs/lib/schema')
 
 const { token, firstuser, seconduser, thirduser, history, accounts, harvest, settings } = names
 
