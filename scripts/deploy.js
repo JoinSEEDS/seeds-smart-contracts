@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const R = require('ramda')
-const { eos, isLocal, encodeName, getBalance, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions } = require('./helper')
+const { eos, isLocal, encodeName, getBalance, accounts, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sleep } = require('./helper')
 
 const debug = process.env.DEBUG || false
 
@@ -515,6 +515,8 @@ const deployAllContracts = async () => {
     if (account.quantity && Number.parseFloat(account.quantity) > 0) {
       await transferCoins(accounts.token, account)
     }
+
+    await sleep(1000)
   }
 
   await updatePermissions()
