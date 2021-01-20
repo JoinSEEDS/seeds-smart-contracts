@@ -24,6 +24,7 @@ namespace contracts {
   name escrow = "escrow.seeds"_n;
   name bioregion = "bio.seeds"_n;
   name pouch = "brclet.seeds"_n;
+  name quests = "quests.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;

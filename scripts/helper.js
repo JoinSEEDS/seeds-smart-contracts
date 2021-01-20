@@ -170,6 +170,7 @@ const accountsMetadata = (network) => {
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       pouch: contract('pouch.seeds', 'pouch'),
+      quests: contract('quests.seeds', 'quests')
     }
   } else if (network == networks.telosMainnet) {
     return {

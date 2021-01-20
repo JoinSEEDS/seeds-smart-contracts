@@ -14,3 +14,6 @@ package-lock.json
 secrets_generated/
 scripts/attest.js
 create_owner.sh
+
+include/document_graph
+src/document_graph
