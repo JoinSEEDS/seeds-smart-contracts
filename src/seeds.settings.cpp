@@ -50,6 +50,8 @@ void settings::reset() {
   confwithdesc(name("inact.cyc"), 3, "Number of cycles until a voter is considered inactive and no longer counts towards quorum", high_impact);
   confwithdesc(name("propcyclesec"), utils::proposal_cycle, "Proposal cycle lengs in seconds", high_impact);
 
+  confwithdesc(name("dlegate.dpth"), 100, "Maximum depth for delegating the voice", high_impact);
+
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 
   confwithdesc(name("i.trx.max"), uint64_t(1777) * uint64_t(10000), "Individuals: Maximum points for a transaction", high_impact);
