@@ -597,6 +597,9 @@ var permissions = [{
   target: `${accounts.harvest.account}@execute`,
   action: 'calcmintrate'
 }, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'runharvest'
+}, {
   target: `${accounts.token.account}@minthrvst`,
   actor: `${accounts.harvest.account}@eosio.code`,
   parent: 'active',

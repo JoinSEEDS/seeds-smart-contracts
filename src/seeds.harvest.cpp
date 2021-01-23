@@ -1154,7 +1154,11 @@ void harvest::runharvest() {
   require_auth(get_self());
 
   auto mitr = mintrate.begin();
-  check(mitr != mintrate.end(), "mint rate table is empty");
+  // check(mitr != mintrate.end(), "mint rate table is empty");
+  if (mitr == mintrate.end()) {
+    print("mint rate is empty");
+    return;
+  }
 
   if (mitr -> mint_rate <= 0) { return; }
 
