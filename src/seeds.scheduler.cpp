@@ -95,6 +95,7 @@ void scheduler::reset_aux(bool destructive) {
 
         name("hrvst.qevs"),
         name("hrvst.mintr"),
+        name("hrvst.hrvst"),
     };
     
     std::vector<name> operations_v = {
@@ -125,6 +126,7 @@ void scheduler::reset_aux(bool destructive) {
 
         name("calcmqevs"),
         name("calcmintrate"),
+        name("runharvest"),
     };
 
     std::vector<name> contracts_v = {
@@ -153,6 +155,7 @@ void scheduler::reset_aux(bool destructive) {
         contracts::forum,
         contracts::forum,
 
+        contracts::harvest,
         contracts::harvest,
         contracts::harvest,
     };
@@ -185,6 +188,7 @@ void scheduler::reset_aux(bool destructive) {
 
         utils::seconds_per_day,
         utils::seconds_per_day,
+        utils::seconds_per_hour,
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -217,6 +221,7 @@ void scheduler::reset_aux(bool destructive) {
 
         now,
         now + 600 - utils::seconds_per_hour,
+        now
     };
 
     int i = 0;
