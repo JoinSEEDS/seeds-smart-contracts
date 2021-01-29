@@ -204,6 +204,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
+      gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
     }
   } else if (network == networks.telosTestnet) {
@@ -246,6 +247,7 @@ const accountsMetadata = (network) => {
       bioregion: contract('bio.seeds', 'bioregion'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
+      gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
     }
   } else if (network == networks.kylin) {
