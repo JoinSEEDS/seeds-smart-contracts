@@ -21,15 +21,15 @@ void settings::reset() {
 
   confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
   
-  confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
-  confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
-  confwithdesc(name("unity.low"), 60, "Low unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.high"), 90, "High unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.low"), 80, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 7, "High threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.mdium"), 5, "Medium threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.low"), 3, "Low threshold for quorum (in percentage)", high_impact);
+  confwithdesc(name("quorum.high"), 20, "High threshold for quorum (in percentage of total citizens)", high_impact);
+  confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
+  confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
-  confwithdesc(name("refsnewprice"), 25 * 10000, "Minimum price to create a referendum", high_impact);
+  confwithdesc(name("refsnewprice"), 1111 * 10000, "Minimum price to create a referendum", high_impact);
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
