@@ -50,7 +50,7 @@ ACTION service::createinvite(name sponsor, asset transfer_quantity, asset sow_qu
 
   sub_balance(sponsor, total_quantity);
 
-  _transfer(contracts::onboarding, total_quantity, "service for "+sponsor.to_string());
+  _transfer(contracts::onboarding, total_quantity, "");
 
   // void onboarding::invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
   action(

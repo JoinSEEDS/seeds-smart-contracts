@@ -625,6 +625,9 @@ var permissions = [{
   target: `${accounts.pouch.account}@active`,
   actor: `${accounts.pouch.account}@eosio.code`
 }, {
+  target: `${accounts.service.account}@active`,
+  actor: `${accounts.service.account}@eosio.code`
+}, {
   // target: `${accounts.bank.account}@active`,
   // actor: `${accounts.pouch.account}@active`
 }]
