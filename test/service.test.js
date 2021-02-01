@@ -132,7 +132,7 @@ describe('service test', async assert => {
         "invite_id": 0,
         "transfer_quantity": "10.0000 SEEDS",
         "sow_quantity": "5.0000 SEEDS",
-        "sponsor": "servc.seeds",
+        "sponsor": "hello.seeds",
         "account": "",
         "invite_hash": inviteHash,
         "invite_secret": "0000000000000000000000000000000000000000000000000000000000000000"
