@@ -97,7 +97,7 @@ describe('service test', async assert => {
 
   let transferWhenPause = false
   try {
-    await contracts.service.createinvite(firstuser, "10.0000 SEEDS", "5.0000 SEEDS", inviteHash, { authorization: `${service}@active` })
+    await contracts.service.createinvite(firstuser, "10.0000 SEEDS", "5.0000 SEEDS", inviteHash, { authorization: `${service}@invite` })
     transferWhenPause = true
   } catch (err) {
     console.log('can not transfer when account is paused (expected)')
@@ -108,7 +108,7 @@ describe('service test', async assert => {
 
   console.log('invite')
   const transferAmount = 15
-  await contracts.service.createinvite(firstuser, "10.0000 SEEDS", "5.0000 SEEDS", inviteHash, { authorization: `${service}@active` })
+  await contracts.service.createinvite(firstuser, "10.0000 SEEDS", "5.0000 SEEDS", inviteHash, { authorization: `${service}@invite` })
 
   console.log("check for valid invite")
   
@@ -132,7 +132,7 @@ describe('service test', async assert => {
         "invite_id": 0,
         "transfer_quantity": "10.0000 SEEDS",
         "sow_quantity": "5.0000 SEEDS",
-        "sponsor": "srvc.seeds",
+        "sponsor": "servc.seeds",
         "account": "",
         "invite_hash": inviteHash,
         "invite_secret": "0000000000000000000000000000000000000000000000000000000000000000"
