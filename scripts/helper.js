@@ -68,6 +68,13 @@ const apiKeys = {
 }
 const apiPublicKey = apiKeys[chainId]
 
+const inviteApiKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.telosMainnet]: 'EOS87Wy26MWLJgQYPCzb8aRe9ezjXRDrigkKZMvhHJy27td5F7nZ5',
+  [networks.telosTestnet]: 'EOS8PC16tnMUkUxeuQHWmEWkAtoz6GvvHVWnehk1HPQSYBV4ujT6v'
+}
+const inviteApiKey = inviteApiKeys[chainId]
+
 
 const payForCPUKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
@@ -171,6 +178,7 @@ const accountsMetadata = (network) => {
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
+      service: contract('servc.seeds', 'service'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -206,6 +214,7 @@ const accountsMetadata = (network) => {
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
+      service: contract('servc.seeds', 'service'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -249,6 +258,7 @@ const accountsMetadata = (network) => {
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
+      service: contract('servc.seeds', 'service'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -621,6 +631,16 @@ var permissions = [{
 },{
   target: `${accounts.pouch.account}@active`,
   actor: `${accounts.pouch.account}@eosio.code`
+}, {
+  target: `${accounts.service.account}@active`,
+  actor: `${accounts.service.account}@eosio.code`
+}, {
+  target: `${accounts.service.account}@invite`,
+  key: inviteApiKey,
+  parent: 'active'
+}, {
+  target: `${accounts.service.account}@invite`,
+  action: 'createinvite'
 }, {
   // target: `${accounts.bank.account}@active`,
   // actor: `${accounts.pouch.account}@active`
