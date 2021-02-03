@@ -75,6 +75,10 @@ CONTRACT referendums : public contract {
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
+    static constexpr name high_impact = "high"_n;
+    static constexpr name medium_impact = "med"_n;
+    static constexpr name low_impact = "low"_n;
+
     void give_voice();
     void run_testing();
     void run_active();
@@ -83,6 +87,9 @@ CONTRACT referendums : public contract {
     void send_refund_stake(name account, asset quantity);
     void send_burn_stake(asset quantity);
     void send_change_setting(name setting_name, uint64_t setting_value);
+
+    uint64_t get_quorum(const name & setting);
+    uint64_t get_unity(const name & setting);
 
     TABLE voter_table {
       name account;
