@@ -4,6 +4,8 @@ const { TextEncoder, TextDecoder } = require('util')
 const ecc = require('eosjs/dist/eosjs-ecc-migration')
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
+const { option } = require('commander')
+const { transactionHeader } = require('eosjs/dist/eosjs-serialize')
 
 const { Api, JsonRpc, Serialize } = eosjs
 
@@ -73,23 +75,40 @@ class Eos {
           }
         }
 
-        const res = await api.transact({
-          actions: [{
-            account: accountName,
-            name: action.name,
-            authorization: [{
-              actor,
-              permission,
-            }],
-            data
-          }]
-        },
-        {
+        const actions = [{
+          account: accountName,
+          name: action.name,
+          authorization: [{
+            actor,
+            permission,
+          }],
+          data
+        }]
+        const trxConfig = {
           blocksBehind: 3,
           expireSeconds: 30,
-        })
+        }
 
-        await sleep(100)
+        let res
+        try {
+          res = await api.transact({
+            actions
+          }, trxConfig)
+        }
+        catch (err) {
+          const errStr = ''+err
+          console.log('TRANSACTION ERROR:', errStr)
+          if (errStr.toLowerCase().includes('deadline exceeded')) {
+            await sleep(3000)
+            console.log('retrying...')
+            res = await api.transact({
+              actions
+            }, trxConfig)
+          } else {
+            throw err
+          }
+        }
+
         return res
 
       }
@@ -99,24 +118,8 @@ class Eos {
 
   }
 
-  async getTableRows ({
-    code,
-    scope,
-    table,
-    json = true,
-    limit = 10,
-    reverse = false,
-    show_payer = false
-  }) {
-    return rpc.get_table_rows({
-      json,
-      code,
-      scope,
-      table,
-      limit,
-      reverse,
-      show_payer
-    })
+  async getTableRows (namedParameters) {
+    return rpc.get_table_rows(namedParameters)
   }
 
   async getCurrencyBalance (contract, account, token) {
@@ -141,7 +144,7 @@ class Eos {
 
     let [actor, permission] = authorization.split('@')
 
-    const res = await api.transact({
+    const res = await this.transaction({
       actions: [{
         account: 'eosio',
         name: 'setabi',
@@ -158,7 +161,7 @@ class Eos {
     {
       blocksBehind: 3,
       expireSeconds: 30,
-    })
+    }, 3)
 
     await sleep(100)
     return res
@@ -170,7 +173,7 @@ class Eos {
     const wasmHexString = code.toString('hex')
     let [actor, permission] = authorization.split('@')
 
-    const res = await api.transact({
+    const res = await this.transaction({
       actions: [{
         account: 'eosio',
         name: 'setcode',
@@ -189,17 +192,27 @@ class Eos {
     {
       blocksBehind: 3,
       expireSeconds: 30,
-    })
+    }, 3)
 
     await sleep(100)
     return res
 
   }
 
-  async transaction (trx, trxConfig={}) {
+  async transaction (trx, trxConfig={}, numTries=0) {
     trxConfig = { blocksBehind:3, expireSeconds:30, ...trxConfig }
-    const result = await api.transact(trx, trxConfig)
-    await sleep(100)
+    let result
+    try {
+      result = await api.transact(trx, trxConfig)
+    } catch (err) {
+      const errStr = '' + err
+      if (errStr.toLowerCase().includes('exceeded by') && numTries > 0) {
+        console.error(errStr, ', retrying...')
+        await sleep(100)
+        return await this.transaction(trx, trxConfig, numTries-1)
+      }
+      throw err
+    }
     return result
   }
 
@@ -226,7 +239,7 @@ class Eos {
       return 1
     })
 
-    const res = await api.transact({
+    const res = await this.transaction({
       actions: [
       {
         account: 'eosio',
@@ -245,7 +258,7 @@ class Eos {
     }, {
       blocksBehind: 3,
       expireSeconds: 30,
-    })
+    }, 3)
 
     await sleep(100)
     return res
@@ -256,7 +269,7 @@ class Eos {
 
     let [actor, permission] = authorization.split('@')
 
-    const res = await api.transact({
+    const res = await this.transaction({
       actions: [{
         account: 'eosio',
         name: 'linkauth',
@@ -274,7 +287,7 @@ class Eos {
     }, {
       blocksBehind: 3,
       expireSeconds: 30,
-    })
+    }, 3)
 
     await sleep(100)
     return res
