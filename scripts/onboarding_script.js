@@ -414,6 +414,40 @@ const traceorgs = async () => {
       console.log(output)
 }
 
+const escrowBalance = async (account) => {
+  console.log("Escrow Summary for "+account)
+  console.log("====================================")
+
+  var total = 0.0
+  var more = true
+  var next = 0
+  while(more) {
+    const escrow = await eos.getTableRows({
+      code: "escrow.seeds",
+      scope: "escrow.seeds",
+      table: 'locks',
+      lower_bound: next,
+      json: true,
+      limit: 1000
+    })
+
+    more = escrow.more
+    next = escrow.next_key
+
+    //console.log(" more "+ more + " next "+next + " rows: "+escrow.rows.length)
+
+    escrow.rows.forEach(row => {
+      if (row.beneficiary == account) {
+        console.log("+ "+row.quantity + "\t\t date: " + row.created_date)
+        total += parseFloat(row.quantity)
+      }
+    })
+  }
+  console.log("====================================")
+  console.log("Total: "+total)
+
+
+}
 program
   .command('invite <sponsor>')
   .description('invite new user')
@@ -505,6 +539,13 @@ program
   .description('information about organizations')
   .action(async function () {
     await traceorgs() 
+  })
+
+  program
+  .command('escrow <account>')
+  .description('escrow balance')
+  .action(async function (account) {
+    await escrowBalance(account) 
   })
 
 program.parse(process.argv)

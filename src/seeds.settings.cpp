@@ -18,24 +18,26 @@ void settings::reset() {
   confwithdesc(name("prop.al.pct"), uint64_t(1 * 10000), "Alliance proposals funding fee in % - 1% [x 10,000 for 4 digits of precision]", high_impact);
 
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
+
+  confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
   
-  confwithdesc(name("unity.high"), 80, "High unity threshold (in percentage)", high_impact);
-  confwithdesc(name("unity.medium"), 70, "Medium unity threshold (in percentage)", high_impact);
-  confwithdesc(name("unity.low"), 60, "Low unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.high"), 90, "High unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
+  confwithdesc(name("unity.low"), 80, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 7, "High threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.mdium"), 5, "Medium threshold for quorum (in percentage)", high_impact);
-  confwithdesc(name("quorum.low"), 3, "Low threshold for quorum (in percentage)", high_impact);
+  confwithdesc(name("quorum.high"), 20, "High threshold for quorum (in percentage of total citizens)", high_impact);
+  confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
+  confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
-  confwithdesc(name("refsnewprice"), 25 * 10000, "Minimum price to create a referendum", high_impact);
+  confwithdesc(name("refsnewprice"), 1111 * 10000, "Minimum price to create a referendum", high_impact);
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
-  confwithdesc(name("propmajority"), 80, "Majority proposals threshold", high_impact);
+  confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
 
-  confwithdesc(name("quorum.base"), 90, "Quorum base percentage = 90% / number of proposals.", high_impact);
-  confwithdesc(name("quor.min.pct"), 5, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
-  confwithdesc(name("quor.max.pct"), 20, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quorum.base"), 100, "Quorum base percentage = 90% / number of proposals.", high_impact);
+  confwithdesc(name("quor.min.pct"), 7, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
+  confwithdesc(name("quor.max.pct"), 40, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
 
   confwithdesc(name("propvoice"), 77, "Voice base per period", high_impact); // voice base per period
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
@@ -47,6 +49,8 @@ void settings::reset() {
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
   confwithdesc(name("inact.cyc"), 3, "Number of cycles until a voter is considered inactive and no longer counts towards quorum", high_impact);
   confwithdesc(name("propcyclesec"), utils::proposal_cycle, "Proposal cycle lengs in seconds", high_impact);
+
+  confwithdesc(name("dlegate.dpth"), 100, "Maximum depth for delegating the voice", high_impact);
 
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 
@@ -232,6 +236,11 @@ void settings::reset() {
   // bioregion
   // =====================================
   conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
+
+  // =====================================
+  // gratitude 
+  // =====================================
+  confwithdesc(name("gratz.gen"), 100 * 10000, "Base quantity of gratitude tokens received per cycle", high_impact);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
