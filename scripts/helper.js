@@ -11,7 +11,8 @@ const networks = {
   mainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
   jungle: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473',
   kylin: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191',
-  local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
+  // local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
+  local: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
@@ -615,6 +616,18 @@ var permissions = [{
 }, {
   target: `${accounts.bank.account}@active`,
   actor: `${accounts.pouch.account}@active`
+}, {
+  target: `${accounts.quests.account}@active`,
+  actor: `${accounts.quests.account}@eosio.code`
+}, {
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.quests.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -738,9 +751,17 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const eoslime = require('eoslime').init({ url: httpEndpoint, chainId })
+
+const eoslimeAccounts = {}
+
+for (let [key, value] of Object.entries(names)) {
+  eoslimeAccounts[`${key}Account`] = eoslime.Account.load(key, keyProvider[1])
+}
+
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, eoslimeAccounts
 }
 
