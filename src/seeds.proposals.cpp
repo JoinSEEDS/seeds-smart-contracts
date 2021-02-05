@@ -1476,6 +1476,25 @@ ACTION proposals::delegate (name delegator, name delegatee, name scope) {
   delegate_trust_tables deltrusts(get_self(), scope.value);
   auto ditr = deltrusts.find(delegator.value);
 
+  name current = delegatee;
+  bool has_no_cycles = false;
+  uint64_t max_depth = config_get("dlegate.dpth"_n);
+
+  for (int i = 0; i < max_depth; i++) {
+    auto dditr = deltrusts.find(current.value);
+    if (dditr != deltrusts.end()) {
+      current = dditr -> delegatee;
+      if (current == delegator) {
+        break;
+      }
+    } else {
+      has_no_cycles = true;
+      break;
+    }
+  }
+
+  check(has_no_cycles, "can not add delegatee, cycles are not allowed");
+
   if (ditr != deltrusts.end()) {
     deltrusts.modify(ditr, _self, [&](auto & item){
       item.delegatee = delegatee;

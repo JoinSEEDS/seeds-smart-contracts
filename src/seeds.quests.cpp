@@ -80,6 +80,8 @@ ACTION quests::reset () {
   hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), root_doc.getHash(), graph::OWNED_BY);
   hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposals_v_doc.getHash(), graph::VARIABLE);
 
+  get_account_info(bankaccts::campaigns, true);
+
 }
 
 ACTION quests::stake (name from, name to, asset quantity, string memo) {
@@ -103,9 +105,9 @@ ACTION quests::stake (name from, name to, asset quantity, string memo) {
       add_balance(account_info_v_doc, quantity);
     }
 
-    hypha::Document account_infos_doc = get_account_infos_node();
-    hypha::Document account_infos_v_doc = get_variable_node_or_fail(account_infos_doc);
-    add_balance(account_infos_v_doc, quantity);
+    // hypha::Document account_infos_doc = get_account_infos_node();
+    // hypha::Document account_infos_v_doc = get_variable_node_or_fail(account_infos_doc);
+    // add_balance(account_infos_v_doc, quantity);
 
   }
   
@@ -715,10 +717,13 @@ void quests::propose_aux (const checksum256 & node_hash, const name & passed_act
   //   proposal_quest_aux(node_doc);
   // }
 
+  asset amount = asset(0, utils::seeds_symbol);
+
   if (passed_action == "propactivate"_n) {
-    asset amount = node_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
-    token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
-    action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
+    // asset amount = node_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
+    // token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
+    // action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
+    amount = node_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
   }
 
   hypha::ContentGroups proposal_cgs {
@@ -727,7 +732,8 @@ void quests::propose_aux (const checksum256 & node_hash, const name & passed_act
       hypha::Content(TYPE, graph::PROPOSAL),
       hypha::Content(PROPOSAL_TYPE, proposal_type),
       hypha::Content(PASSED_ACTION, passed_action),
-      hypha::Content(REJECTED_ACTION, rejected_action)
+      hypha::Content(REJECTED_ACTION, rejected_action),
+      hypha::Content(AMOUNT, amount)
     },
     hypha::ContentGroup {
       hypha::Content(hypha::CONTENT_GROUP_LABEL, IDENTIFIER_DETAILS),
@@ -841,16 +847,14 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
       name passed_action = proposal_cw.getOrFail(FIXED_DETAILS, PASSED_ACTION) -> getAs<name>();
       checksum256 node_hash = proposal_cw.getOrFail(IDENTIFIER_DETAILS, NODE_HASH) -> getAs<checksum256>();
 
-      // if (passed_action == "propactivate"_n) {
-      //   hypha::Document quest_doc(get_self(), node_hash);
-      //   hypha::ContentWrapper quest_cw = quest_doc.getContentWrapper();
-      //   asset amount = quest_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
-      //   token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
-      //   action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
-
-      //   // propactivate(node_hash);
-
-      // }
+      if (passed_action == "propactivate"_n) {
+        // hypha::Document quest_doc(get_self(), node_hash);
+        // hypha::ContentWrapper quest_cw = quest_doc.getContentWrapper();
+        asset amount = proposal_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
+        token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
+        action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
+        print("MAKE THE TRANSFER\n");
+      }
 
       action(
         permission_level(get_self(), "active"_n),
@@ -914,7 +918,7 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
 
 }
 
-ACTION quests::onperiod () {
+ACTION quests::onperiod (name just_one) {
 
   require_auth(get_self());
 
@@ -930,23 +934,38 @@ ACTION quests::onperiod () {
 
   for (int64_t i = 0; i < edges.size(); i++) {
 
-    // action(
-    //   permission_level(get_self(), "active"_n),
-    //   get_self(),
-    //   "evalprop"_n,
-    //   std::make_tuple(edges[i], total_eligible_voters, quorum, i)
-    // ).send();
+    if (just_one == "yes"_n) { 
+      // action(
+      //   permission_level(get_self(), "active"_n),
+      //   get_self(),
+      //   "evalprop"_n,
+      //   std::make_tuple(edges[i], total_eligible_voters, quorum, i)
+      // ).send();
 
-    transaction trx{};
-    trx.actions.emplace_back(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "evalprop"_n,
-      std::make_tuple(edges[i], total_eligible_voters, quorum, i)
-    );
-    // I don't know how long delay I should use
-    // trx.delay_sec = i*4;
-    trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
+      transaction trx{};
+      trx.actions.emplace_back(
+        permission_level(get_self(), "active"_n),
+        get_self(),
+        "evalprop"_n,
+        std::make_tuple(edges[i], total_eligible_voters, quorum, i)
+      );
+      // I don't know how long delay I should use
+      // trx.delay_sec = i*4;
+      trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
+
+      break; 
+    } else {
+      transaction trx{};
+      trx.actions.emplace_back(
+        permission_level(get_self(), "active"_n),
+        get_self(),
+        "evalprop"_n,
+        std::make_tuple(edges[i], total_eligible_voters, quorum, i)
+      );
+      // I don't know how long delay I should use
+      // trx.delay_sec = i*4;
+      trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
+    }
 
   }
 
@@ -1547,8 +1566,7 @@ hypha::Document quests::get_account_info (name & account, const bool & create_if
         hypha::ContentGroup {
           hypha::Content(hypha::CONTENT_GROUP_LABEL, VARIABLE_DETAILS),
           hypha::Content(ACCOUNT_BALANCE, asset(0, utils::seeds_symbol)),
-          hypha::Content(LOCKED_BALANCE, asset(0, utils::seeds_symbol)),
-          hypha::Content(LAST_ACTIVITY, int64_t(0))
+          hypha::Content(LOCKED_BALANCE, asset(0, utils::seeds_symbol))
         },
         hypha::ContentGroup {
           hypha::Content(hypha::CONTENT_GROUP_LABEL, IDENTIFIER_DETAILS),
@@ -1648,4 +1666,61 @@ bool quests::is_voted_quest (hypha::Document & quest_doc) {
 
   return fund != creator;
 }
+
+
+ACTION quests::testtransfer (asset amount, uint64_t n) {
+  require_auth(get_self());
+
+  name a = "aaa"_n;
+  name b = "bbb"_n;
+  name c = "ccc"_n;
+
+  hypha::Document d1 = get_account_info(a, true);
+  hypha::Document d1_v = get_variable_node_or_fail(d1);
+  hypha::Document d2 = get_account_info(b, true);
+  hypha::Document d2_v = get_variable_node_or_fail(d2);
+  hypha::Document d3 = get_account_info(c, true);
+  hypha::Document d3_v = get_variable_node_or_fail(d3);
+
+  token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
+  action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
+  print("TRANSFER NUMBER: ", n, "\n");
+}
+
+ACTION quests::test1 (uint64_t n) {
+  require_auth(get_self());
+
+  for (uint64_t i = 0; i < n; i++) {
+    asset amount = asset((i+1)*10000, utils::seeds_symbol);
+    transaction trx{};
+    trx.actions.emplace_back(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "testtransfer"_n,
+      std::make_tuple(amount, i)
+    );
+    // I don't know how long delay I should use
+    // trx.delay_sec = i*4;
+    trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
+  }
+}
+
+ACTION quests::test2 (uint64_t n) {
+  require_auth(get_self());
+
+  for (uint64_t i = 0; i < n; i++) {
+    asset amount = asset(1*10000, utils::seeds_symbol);
+    transaction trx{};
+    trx.actions.emplace_back(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "testtransfer"_n,
+      std::make_tuple(amount, i)
+    );
+    // I don't know how long delay I should use
+    // trx.delay_sec = i*4;
+    trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
+  }
+}
+
 

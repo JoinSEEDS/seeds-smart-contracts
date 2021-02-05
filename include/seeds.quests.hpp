@@ -86,7 +86,7 @@ CONTRACT quests : public contract {
 
     ACTION quitapplcnt(checksum256 applicant_hash);
 
-    ACTION onperiod();
+    ACTION onperiod(name just_one);
 
     ACTION evalprop(hypha::Edge prop_edge, uint64_t total_eligible_voters, uint64_t quorum, int64_t key);
 
@@ -97,6 +97,11 @@ CONTRACT quests : public contract {
     ACTION rateapplcnt(checksum256 maker_hash, name opinion);
 
     ACTION ratequest(checksum256 quest_hash, name opinion);
+
+
+    ACTION testtransfer(asset amount, uint64_t n);
+    ACTION test1(uint64_t n);
+    ACTION test2(uint64_t n);
 
 
   private:
@@ -219,6 +224,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (expirequest)(expireappl)(cancelappl)(retractappl)(quitapplcnt)
           (onperiod)(evalprop)(favour)(against)
           (rateapplcnt)(ratequest)
+          (testtransfer)(test1)(test2)
         )
       }
   }
