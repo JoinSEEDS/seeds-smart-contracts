@@ -58,19 +58,19 @@ ACTION quests::reset () {
     }
   };
 
-  hypha::ContentGroups proposals_v_cgs {
-    hypha::ContentGroup {
-      hypha::Content(hypha::CONTENT_GROUP_LABEL, VARIABLE_DETAILS),
-      hypha::Content(OPEN_PROPOSALS, int64_t(0)),
-      hypha::Content(OWNER, get_self())
-    }
-  };
+  // hypha::ContentGroups proposals_v_cgs {
+  //   hypha::ContentGroup {
+  //     hypha::Content(hypha::CONTENT_GROUP_LABEL, VARIABLE_DETAILS),
+  //     hypha::Content(OPEN_PROPOSALS, int64_t(0)),
+  //     hypha::Content(OWNER, get_self())
+  //   }
+  // };
 
   hypha::Document root_doc(get_self(), get_self(), std::move(root_cgs));
   hypha::Document account_infos_doc(get_self(), get_self(), std::move(account_infos_cgs));
   hypha::Document account_infos_v_doc(get_self(), get_self(), std::move(account_infos_v_cgs));
   hypha::Document proposals_doc(get_self(), get_self(), std::move(proposals_cgs));
-  hypha::Document proposals_v_doc(get_self(), get_self(), std::move(proposals_v_cgs));
+  // hypha::Document proposals_v_doc(get_self(), get_self(), std::move(proposals_v_cgs));
 
   hypha::Edge::write(get_self(), get_self(), root_doc.getHash(), account_infos_doc.getHash(), graph::OWNS_ACCOUNT_INFOS);
   hypha::Edge::write(get_self(), get_self(), account_infos_doc.getHash(), root_doc.getHash(), graph::OWNED_BY);
@@ -78,7 +78,7 @@ ACTION quests::reset () {
 
   hypha::Edge::write(get_self(), get_self(), root_doc.getHash(), proposals_doc.getHash(), graph::OWNS_PROPOSALS);
   hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), root_doc.getHash(), graph::OWNED_BY);
-  hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposals_v_doc.getHash(), graph::VARIABLE);
+  // hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposals_v_doc.getHash(), graph::VARIABLE);
 
   get_account_info(bankaccts::campaigns, true);
 
@@ -105,9 +105,9 @@ ACTION quests::stake (name from, name to, asset quantity, string memo) {
       add_balance(account_info_v_doc, quantity);
     }
 
-    // hypha::Document account_infos_doc = get_account_infos_node();
-    // hypha::Document account_infos_v_doc = get_variable_node_or_fail(account_infos_doc);
-    // add_balance(account_infos_v_doc, quantity);
+    hypha::Document account_infos_doc = get_account_infos_node();
+    hypha::Document account_infos_v_doc = get_variable_node_or_fail(account_infos_doc);
+    add_balance(account_infos_v_doc, quantity);
 
   }
   
@@ -309,7 +309,7 @@ ACTION quests::activate (checksum256 quest_hash) {
       hypha::Content(STAGE, quest_stage_proposed)
     });
 
-    propose_aux(quest_hash, name("propactivate"), name("notactivate"));
+    propose_aux(quest_hash, creator, name("propactivate"), name("notactivate"));
     return;
   }
 
@@ -434,7 +434,7 @@ ACTION quests::apply (checksum256 quest_hash, name applicant, string description
   hypha::Edge::write(get_self(), applicant, applicant_doc.getHash(), applicant_v_doc.getHash(), graph::VARIABLE);
 
   if (is_voted_quest(quest_doc)) {
-    propose_aux(applicant_doc.getHash(), name("accptapplcnt"), name("rejctapplcnt"));
+    propose_aux(applicant_doc.getHash(), quest_doc.getCreator(), name("accptapplcnt"), name("rejctapplcnt"));
   }
 
 }
@@ -561,7 +561,7 @@ ACTION quests::mcomplete (checksum256 milestone_hash, string url_documentation, 
   });
 
   if (is_voted_quest(quest_doc)) {
-    propose_aux(milestone_hash, name("propaccptmil"), name("rejctmilstne"));
+    propose_aux(milestone_hash, quest_doc.getCreator(), name("propaccptmil"), name("rejctmilstne"));
   }
 
 }
@@ -652,21 +652,11 @@ ACTION quests::payoutmilstn (checksum256 milestone_hash) {
   name maker = maker_doc.getCreator();
   name fund = quest_cw.getOrFail(FIXED_DETAILS, FUND) -> getAs<name>();
 
-  print("QUEST FUND:", fund, "\n");
-
   hypha::Document account_info_doc = get_account_info(fund, false);
   hypha::Document account_info_v_doc = get_variable_node_or_fail(account_info_doc);
   hypha::ContentWrapper account_info_v_cw = account_info_v_doc.getContentWrapper();
 
   asset locked_balance = account_info_v_cw.getOrFail(VARIABLE_DETAILS, LOCKED_BALANCE) -> getAs<asset>();
-  
-  // int64_t payout_percentage = milestone_cw.getOrFail(FIXED_DETAILS, PAYOUT_PERCENTAGE) -> getAs<int64_t>();
-  // asset amount = quest_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
-
-  // double payout_percentage_double = payout_percentage / 10000.0;
-  // asset payout_amount = asset(amount.amount * payout_percentage_double, utils::seeds_symbol);
-
-  
   asset payout_amount = milestone_cw.getOrFail(FIXED_DETAILS, PAYOUT_AMOUNT) -> getAs<asset>();
 
   send_to_escrow(get_self(), maker, payout_amount, "milestone payout");
@@ -680,7 +670,6 @@ ACTION quests::payoutmilstn (checksum256 milestone_hash) {
   });
 
 }
-
 
 ACTION quests::rejctmilstne (checksum256 milestone_hash) {
 
@@ -701,9 +690,7 @@ ACTION quests::rejctmilstne (checksum256 milestone_hash) {
 
 }
 
-// // voted quests
-
-void quests::propose_aux (const checksum256 & node_hash, const name & passed_action, const name & rejected_action) {
+void quests::propose_aux (const checksum256 & node_hash, const name & quest_owner, const name & passed_action, const name & rejected_action) {
 
   hypha::Document node_doc(get_self(), node_hash);
   hypha::ContentWrapper node_cw = node_doc.getContentWrapper();
@@ -713,16 +700,9 @@ void quests::propose_aux (const checksum256 & node_hash, const name & passed_act
 
   check(proposal_type != name("none"), "quests: invalid proposal type");
 
-  // if (proposal_type == proposal_type_quest) {
-  //   proposal_quest_aux(node_doc);
-  // }
-
   asset amount = asset(0, utils::seeds_symbol);
 
   if (passed_action == "propactivate"_n) {
-    // asset amount = node_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
-    // token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
-    // action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
     amount = node_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
   }
 
@@ -733,7 +713,8 @@ void quests::propose_aux (const checksum256 & node_hash, const name & passed_act
       hypha::Content(PROPOSAL_TYPE, proposal_type),
       hypha::Content(PASSED_ACTION, passed_action),
       hypha::Content(REJECTED_ACTION, rejected_action),
-      hypha::Content(AMOUNT, amount)
+      hypha::Content(AMOUNT, amount),
+      hypha::Content(QUEST_OWNER, quest_owner)
     },
     hypha::ContentGroup {
       hypha::Content(hypha::CONTENT_GROUP_LABEL, IDENTIFIER_DETAILS),
@@ -772,32 +753,15 @@ void quests::propose_aux (const checksum256 & node_hash, const name & passed_act
 
 }
 
-// void quests::proposal_quest_aux (hypha::Document & quest_doc) {
+uint64_t quests::get_quorum() {
+  // uint64_t base_quorum = config_get("quorum.base"_n);
+  // uint64_t quorum_min = config_get("quor.min.pct"_n);
+  // uint64_t quorum_max = config_get("quor.max.pct"_n);
 
-//   hypha::ContentWrapper quest_cw = quest_doc.getContentWrapper();
-//   name creator = quest_doc.getCreator();
-//   name fund = quest_cw.getOrFail(FIXED_DETAILS, FUND) -> getAs<name>();
-
-//   check(creator != fund, "the quest must be funded by " + bankaccts::campaigns.to_string());
-//   check_quest_status_stage(quest_doc.getHash(), ""_n, quest_stage_staged, "can not propose quest");
-
-//   validate_milestones(quest_doc.getHash());
-
-//   hypha::Document quest_v_doc = get_variable_node_or_fail(quest_doc);
-//   update_node(&quest_v_doc, VARIABLE_DETAILS, {
-//     hypha::Content(STAGE, quest_stage_proposed)
-//   });
-
-// }
-
-uint64_t quests::get_quorum(uint64_t total_proposals) {
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
-
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
-  quorum = std::max(quorum_min, quorum);
-  return std::min(quorum_max, quorum);
+  // uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  // quorum = std::max(quorum_min, quorum);
+  // return std::min(quorum_max, quorum);
+  return 20;
 }
 
 uint64_t quests::get_size(name id) {
@@ -809,18 +773,24 @@ uint64_t quests::get_size(name id) {
   }
 }
 
-ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, uint64_t quorum, int64_t key) {
+ACTION quests::evalprop (checksum256 proposal_hash) {
 
-  require_auth(get_self());
-
-  checksum256 proposals_doc_hash = prop_edge.getFromNode();
-
-  hypha::Document proposal_doc(get_self(), prop_edge.getToNode());
-  hypha::Document proposal_v_doc = get_variable_node_or_fail(proposal_doc);
+  hypha::Document proposal_doc(get_self(), proposal_hash);
   hypha::ContentWrapper proposal_cw = proposal_doc.getContentWrapper();
+
+  hypha::Document proposal_v_doc = get_variable_node_or_fail(proposal_doc);
   hypha::ContentWrapper proposal_v_cw = proposal_v_doc.getContentWrapper();
 
-  double majority = config_get(name("prop.q.mjrty")) / 100.0;
+  if(has_auth(get_self())) {
+    require_auth(get_self());
+  } else {
+    name quest_owner = proposal_cw.getOrFail(FIXED_DETAILS, QUEST_OWNER) -> getAs<name>();
+    require_auth(quest_owner);
+  }
+
+  uint64_t majority = config_get(name("prop.q.mjrty"));
+  uint64_t total_eligible_voters = get_size(user_active_size);
+  uint64_t quorum = get_quorum();
 
   name stage = proposal_v_cw.getOrFail(VARIABLE_DETAILS, STAGE) -> getAs<name>();
   uint64_t voters_number = uint64_t(proposal_v_cw.getOrFail(VARIABLE_DETAILS, TOTAL_VOTES) -> getAs<int64_t>());
@@ -830,31 +800,35 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
     int64_t favour = proposal_v_cw.getOrFail(VARIABLE_DETAILS, FAVOUR) -> getAs<int64_t>();
     int64_t against = proposal_v_cw.getOrFail(VARIABLE_DETAILS, AGAINST) -> getAs<int64_t>();
 
-    bool proposal_passed = favour > 0 && double(favour) >= (favour + against) * majority;
+    bool proposal_passed = utils::is_valid_majority(favour, against, majority); // favour > 0 && double(favour) >= (favour + against) * majority;
     bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
 
     print("voters_number:", voters_number, ", quorum:", quorum, ", total_eligible_voters:", total_eligible_voters, "\n");
-    
+
+    hypha::Document proposals_doc = get_proposals_node();
+
+    (hypha::Edge::get(get_self(), proposals_doc.getHash(), graph::OPEN)).erase();
+
     if (proposal_passed && valid_quorum) {
+
       update_node(&proposal_v_doc, VARIABLE_DETAILS, {
         hypha::Content(STATUS, proposal_status_passed),
         hypha::Content(STAGE, proposal_stage_done)
       });
-      prop_edge.erase();
-      hypha::Edge::write(get_self(), get_self(), proposals_doc_hash, proposal_doc.getHash(), graph::PASSED);
 
-      // execute passing action
+      hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposal_doc.getHash(), graph::PASSED);
+
       name passed_action = proposal_cw.getOrFail(FIXED_DETAILS, PASSED_ACTION) -> getAs<name>();
       checksum256 node_hash = proposal_cw.getOrFail(IDENTIFIER_DETAILS, NODE_HASH) -> getAs<checksum256>();
 
       if (passed_action == "propactivate"_n) {
-        // hypha::Document quest_doc(get_self(), node_hash);
-        // hypha::ContentWrapper quest_cw = quest_doc.getContentWrapper();
         asset amount = proposal_cw.getOrFail(FIXED_DETAILS, AMOUNT) -> getAs<asset>();
         token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
         action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
         print("MAKE THE TRANSFER\n");
       }
+
+      print("EXECUTE ACTION:", passed_action, "\n");
 
       action(
         permission_level(get_self(), "active"_n),
@@ -863,25 +837,14 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
         std::make_tuple(node_hash)
       ).send();
 
-      // transaction trx{};
-      // trx.actions.emplace_back(
-      //   permission_level(get_self(), "active"_n),
-      //   get_self(),
-      //   passed_action,
-      //   std::make_tuple(node_hash)
-      // );
-      // trx.delay_sec = 1;
-      // trx.send(eosio::current_time_point().sec_since_epoch() + key, _self);
-
-      print("EXECUTE ACTION:", passed_action, "\n");
-
     } else {
+
       update_node(&proposal_v_doc, VARIABLE_DETAILS, {
         hypha::Content(STATUS, proposal_status_rejected),
         hypha::Content(STAGE, proposal_stage_done)
       });
-      prop_edge.erase();
-      hypha::Edge::write(get_self(), get_self(), proposals_doc_hash, proposal_doc.getHash(), graph::REJECTED);
+
+      hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposal_doc.getHash(), graph::REJECTED);
 
       // execute rejection action if any
       name rejected_action = proposal_cw.getOrFail(FIXED_DETAILS, REJECTED_ACTION) -> getAs<name>();
@@ -896,16 +859,6 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
           rejected_action,
           std::make_tuple(node_hash)
         ).send();
-
-        // transaction trx{};
-        // trx.actions.emplace_back(
-        //   permission_level(get_self(), "active"_n),
-        //   get_self(),
-        //   rejected_action,
-        //   std::make_tuple(node_hash)
-        // );
-        // trx.delay_sec = 1;
-        // trx.send(eosio::current_time_point().sec_since_epoch() + key, _self);
       }
 
     }
@@ -914,59 +867,6 @@ ACTION quests::evalprop (hypha::Edge prop_edge, uint64_t total_eligible_voters, 
     update_node(&proposal_v_doc, VARIABLE_DETAILS, {
       hypha::Content(STAGE, proposal_stage_active)
     });
-  }
-
-}
-
-ACTION quests::onperiod (name just_one) {
-
-  require_auth(get_self());
-
-  hypha::Document proposals_doc = get_proposals_node();
-  checksum256 proposals_doc_hash = proposals_doc.getHash();
-
-  std::vector<hypha::Edge> edges = m_documentGraph.getEdgesFrom(proposals_doc.getHash(), graph::OPEN);
-
-  uint64_t total_eligible_voters = get_size(user_active_size);
-  uint64_t quorum = get_quorum(edges.size());
-
-  print("EDGES SIZE:", edges.size(), "\n");
-
-  for (int64_t i = 0; i < edges.size(); i++) {
-
-    if (just_one == "yes"_n) { 
-      // action(
-      //   permission_level(get_self(), "active"_n),
-      //   get_self(),
-      //   "evalprop"_n,
-      //   std::make_tuple(edges[i], total_eligible_voters, quorum, i)
-      // ).send();
-
-      transaction trx{};
-      trx.actions.emplace_back(
-        permission_level(get_self(), "active"_n),
-        get_self(),
-        "evalprop"_n,
-        std::make_tuple(edges[i], total_eligible_voters, quorum, i)
-      );
-      // I don't know how long delay I should use
-      // trx.delay_sec = i*4;
-      trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
-
-      break; 
-    } else {
-      transaction trx{};
-      trx.actions.emplace_back(
-        permission_level(get_self(), "active"_n),
-        get_self(),
-        "evalprop"_n,
-        std::make_tuple(edges[i], total_eligible_voters, quorum, i)
-      );
-      // I don't know how long delay I should use
-      // trx.delay_sec = i*4;
-      trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
-    }
-
   }
 
 }
@@ -1002,8 +902,6 @@ void quests::vote_aux (name & voter, const checksum256 & proposal_hash, int64_t 
   check(!edge_exists(proposal_hash, voter), "quests: only one vote");
 
   hypha::Document account_info_doc = get_account_info(voter, true);
-  // hypha::Document account_info_v_doc = get_variable_node_or_fail(account_info_doc);
-  // hypha::ContentWrapper account_info_v_cw = account_info_v_doc.getContentWrapper();
 
   if (proposal_type == proposal_type_quest) {
     hypha::Edge::getOrNew(get_self(), get_self(), node_doc.getHash(), account_info_doc.getHash(), graph::VALIDATE);
@@ -1020,19 +918,6 @@ void quests::vote_aux (name & voter, const checksum256 & proposal_hash, int64_t 
     "questvote"_n,
     std::make_tuple(voter, amount, true, contracts::proposals)
   ).send();
-
-  // int64_t cutoff_date = active_cutoff_date();
-  // if (!is_active(account_info_v_cw, cutoff_date)) {
-  //   size_change(user_active_size, 1);
-  // }
-
-  // int64_t last_activity = account_info_v_cw.getOrFail(VARIABLE_DETAILS, LAST_ACTIVITY) -> getAs<int64_t>();
-  // int64_t now = int64_t(eosio::current_time_point().sec_since_epoch());
-  // if (last_activity != now) {
-  //   update_node(&account_info_v_doc, VARIABLE_DETAILS, {
-  //     hypha::Content(LAST_ACTIVITY, now)
-  //   });
-  // }
 
   string label;
   int64_t new_value;
@@ -1088,7 +973,6 @@ ACTION quests::against (name voter, checksum256 proposal_hash, int64_t amount) {
   vote_aux(voter, proposal_hash, amount, distrust);
 }
 
-// // timeouts
 
 ACTION quests::expirequest (checksum256 quest_hash) {
 
@@ -1114,7 +998,7 @@ ACTION quests::expirequest (checksum256 quest_hash) {
   bool create_proposal = check_auth_create_proposal(creator, fund);
 
   if (create_proposal) {
-    propose_aux(quest_hash, name("expirequest"), ""_n);
+    propose_aux(quest_hash, creator, name("expirequest"), ""_n);
     return;
   }
 
@@ -1181,7 +1065,7 @@ ACTION quests::expireappl (checksum256 maker_hash) {
   bool create_proposal = check_auth_create_proposal(creator, fund);
 
   if (create_proposal) {
-    propose_aux(maker_hash, name("expireappl"), ""_n);
+    propose_aux(maker_hash, creator, name("expireappl"), ""_n);
     return;
   }
 
@@ -1193,7 +1077,6 @@ ACTION quests::expireappl (checksum256 maker_hash) {
   });
 
 }
-
 
 ACTION quests::cancelappl (checksum256 maker_hash) {
 
@@ -1218,7 +1101,7 @@ ACTION quests::cancelappl (checksum256 maker_hash) {
   bool create_proposal = check_auth_create_proposal(creator, fund);
 
   if (create_proposal) {
-    propose_aux(maker_hash, name("cancelappl"), ""_n);
+    propose_aux(maker_hash, creator, name("cancelappl"), ""_n);
     return;
   }
 
@@ -1299,7 +1182,6 @@ ACTION quests::quitapplcnt (checksum256 applicant_hash) {
 
 }
 
-
 ACTION quests::rateapplcnt (checksum256 maker_hash, name opinion) {
 
   hypha::Document maker_doc(get_self(), maker_hash);
@@ -1364,7 +1246,6 @@ ACTION quests::ratequest (checksum256 quest_hash, name opinion) {
   });
 
 }
-
 
 void quests::check_type (hypha::Document & node_doc, const name & type) {
   hypha::ContentWrapper node_cw = node_doc.getContentWrapper();
@@ -1666,61 +1547,3 @@ bool quests::is_voted_quest (hypha::Document & quest_doc) {
 
   return fund != creator;
 }
-
-
-ACTION quests::testtransfer (asset amount, uint64_t n) {
-  require_auth(get_self());
-
-  name a = "aaa"_n;
-  name b = "bbb"_n;
-  name c = "ccc"_n;
-
-  hypha::Document d1 = get_account_info(a, true);
-  hypha::Document d1_v = get_variable_node_or_fail(d1);
-  hypha::Document d2 = get_account_info(b, true);
-  hypha::Document d2_v = get_variable_node_or_fail(d2);
-  hypha::Document d3 = get_account_info(c, true);
-  hypha::Document d3_v = get_variable_node_or_fail(d3);
-
-  token::transfer_action action{contracts::token, {bankaccts::campaigns, "active"_n}};
-  action.send(bankaccts::campaigns, get_self(), amount, "quest supply");
-  print("TRANSFER NUMBER: ", n, "\n");
-}
-
-ACTION quests::test1 (uint64_t n) {
-  require_auth(get_self());
-
-  for (uint64_t i = 0; i < n; i++) {
-    asset amount = asset((i+1)*10000, utils::seeds_symbol);
-    transaction trx{};
-    trx.actions.emplace_back(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "testtransfer"_n,
-      std::make_tuple(amount, i)
-    );
-    // I don't know how long delay I should use
-    // trx.delay_sec = i*4;
-    trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
-  }
-}
-
-ACTION quests::test2 (uint64_t n) {
-  require_auth(get_self());
-
-  for (uint64_t i = 0; i < n; i++) {
-    asset amount = asset(1*10000, utils::seeds_symbol);
-    transaction trx{};
-    trx.actions.emplace_back(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "testtransfer"_n,
-      std::make_tuple(amount, i)
-    );
-    // I don't know how long delay I should use
-    // trx.delay_sec = i*4;
-    trx.send(eosio::current_time_point().sec_since_epoch() - i, _self);
-  }
-}
-
-

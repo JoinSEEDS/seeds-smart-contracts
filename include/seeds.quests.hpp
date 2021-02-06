@@ -86,9 +86,9 @@ CONTRACT quests : public contract {
 
     ACTION quitapplcnt(checksum256 applicant_hash);
 
-    ACTION onperiod(name just_one);
+    // ACTION onperiod(name just_one);
 
-    ACTION evalprop(hypha::Edge prop_edge, uint64_t total_eligible_voters, uint64_t quorum, int64_t key);
+    ACTION evalprop(checksum256 proposal_hash);
 
     ACTION favour(name voter, checksum256 proposal_hash, int64_t amount);
 
@@ -97,11 +97,6 @@ CONTRACT quests : public contract {
     ACTION rateapplcnt(checksum256 maker_hash, name opinion);
 
     ACTION ratequest(checksum256 quest_hash, name opinion);
-
-
-    ACTION testtransfer(asset amount, uint64_t n);
-    ACTION test1(uint64_t n);
-    ACTION test2(uint64_t n);
 
 
   private:
@@ -162,7 +157,7 @@ CONTRACT quests : public contract {
     void update_milestone_status(hypha::Document * milestone_v_doc, const name & new_status, const name & check_status);
     void send_to_escrow(const name & fromfund, const name & recipient, asset & quantity, const string & memo);
     void update_node(hypha::Document * node_doc, const string & content_group_label, const std::vector<hypha::Content> & new_contents);
-    void propose_aux(const checksum256 & node_hash, const name & passed_action, const name & rejected_action);
+    void propose_aux(const checksum256 & node_hash, const name & quest_owner, const name & passed_action, const name & rejected_action);
     void proposal_quest_aux(hypha::Document & quest_doc);
     void vote_aux(name & voter, const checksum256 & proposal_hash, int64_t & amount, const name & option);
     void check_auth(name & creator, name & fund);
@@ -179,7 +174,7 @@ CONTRACT quests : public contract {
     hypha::Document get_account_info(name & account, const bool & create_if_not_exists);
     hypha::Document get_quest_node_from_milestone(hypha::Document & milestone_doc);
     bool edge_exists(const checksum256 & from_node_hash, const name & edge_name);
-    uint64_t get_quorum(uint64_t total_proposals);
+    uint64_t get_quorum();
     uint64_t get_size(name id);
     bool is_voted_quest(hypha::Document & quest_doc);
     bool check_auth_create_proposal(name & creator, name & fund);
@@ -222,9 +217,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (addquest)(activate)(propactivate)(notactivate)(delquest)(apply)(accptapplcnt)(rejctapplcnt)(accptquest)
           (addmilestone)(delmilestone)(mcomplete)(accptmilstne)(propaccptmil)(payoutmilstn)(rejctmilstne)
           (expirequest)(expireappl)(cancelappl)(retractappl)(quitapplcnt)
-          (onperiod)(evalprop)(favour)(against)
+          (evalprop)(favour)(against)
           (rateapplcnt)(ratequest)
-          (testtransfer)(test1)(test2)
         )
       }
   }

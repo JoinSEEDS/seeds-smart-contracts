@@ -86,5 +86,6 @@ namespace graph {
   #define APPLICANT_OPINION "applicant_opinion"
   #define PAYOUT_AMOUNT "payout_amount"
   #define IS_PAID_OUT "is_paid_out"
+  #define QUEST_OWNER "quest_owner"
 
 }
