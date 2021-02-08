@@ -457,11 +457,11 @@ ACTION quests::accptapplcnt (checksum256 applicant_hash) {
 
   check_auth(creator, fund);
 
-  bool exists = edge_exists(quest_doc.getHash(), graph::HAS_MAKER);
+  bool exists = edge_exists(quest_doc.getHash(), graph::HAS_ACCPTAPPL);
 
   if (creator == fund) {
     check_quest_status_stage(quest_hash, ""_n, quest_stage_active, "quests: can not accept applicant");
-    check(!exists, "quests: quest already has a maker");
+    check(!exists, "quests: quest already has an accepted applicant");
   } else {
     if (exists) { print("ACCPTAPPLICNT not executed\n"); return; }
     hypha::Document quest_v_doc = get_variable_node_or_fail(quest_doc);
@@ -475,7 +475,7 @@ ACTION quests::accptapplcnt (checksum256 applicant_hash) {
     hypha::Content(ACCEPTED_DATE, int64_t(eosio::current_time_point().sec_since_epoch()))
   });
 
-  hypha::Edge::write(get_self(), creator, quest_hash, applicant_doc.getHash(), graph::HAS_MAKER);
+  hypha::Edge::write(get_self(), creator, quest_hash, applicant_doc.getHash(), graph::HAS_ACCPTAPPL);
 
   name applicant_account = applicant_cw.getOrFail(FIXED_DETAILS, APPLICANT_ACCOUNT) -> getAs<name>();
   print("ACCPTAPPLCNT action executed successfully (", applicant_account, ")\n");
@@ -513,7 +513,7 @@ ACTION quests::accptquest (checksum256 quest_hash) {
   hypha::Document quest_doc(get_self(), quest_hash);
   check_type(quest_doc, graph::QUEST);
 
-  hypha::Document maker_doc = get_doc_from_edge(quest_hash, graph::HAS_MAKER);
+  hypha::Document maker_doc = get_doc_from_edge(quest_hash, graph::HAS_ACCPTAPPL);
   hypha::Document maker_v_doc = get_variable_node_or_fail(maker_doc);
   hypha::ContentWrapper maker_cw = maker_doc.getContentWrapper();
   hypha::ContentWrapper maker_v_cw = maker_v_doc.getContentWrapper();
@@ -530,6 +530,11 @@ ACTION quests::accptquest (checksum256 quest_hash) {
   update_node(&quest_v_doc, VARIABLE_DETAILS, {
     hypha::Content(STARTED_DATE, int64_t(eosio::current_time_point().sec_since_epoch()))
   });
+
+  hypha::Edge maker_edge = hypha::Edge::get(get_self(), quest_hash, maker_doc.getHash(), graph::HAS_ACCPTAPPL);
+  maker_edge.erase();
+
+  hypha::Edge::write(get_self(), quest_doc.getCreator(), quest_hash, maker_doc.getHash(), graph::HAS_MAKER);
 
 }
 
@@ -1069,7 +1074,7 @@ ACTION quests::expireappl (checksum256 maker_hash) {
     return;
   }
 
-  hypha::Edge maker_edge = hypha::Edge::get(get_self(), quest_doc.getHash(), maker_doc.getHash(), graph::HAS_MAKER);
+  hypha::Edge maker_edge = hypha::Edge::get(get_self(), quest_doc.getHash(), maker_doc.getHash(), graph::HAS_ACCPTAPPL);
   maker_edge.erase();
 
   update_node(&maker_v_doc, VARIABLE_DETAILS, {

@@ -4,10 +4,12 @@ const { eos, names, getTableRows, getBalance, initContracts, isLocal, getBalance
 const { expect, assert } = require('chai');
 const { stat } = require('fs-extra');
 
-const { quests, accounts, settings, escrow, token, firstuser, seconduser, thirduser, fourthuser, fifthuser, campaignbank, proposals } = names
+const { quests, accounts, settings, escrow, token, firstuser, seconduser, thirduser, fourthuser, fifthuser, campaignbank, proposals, organization } = names
 
 const fixedDetails = 'fixed'
 const variableDetails = 'variable'
+
+const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -150,7 +152,10 @@ async function getApplicants (questHash) {
 }
 
 async function getMaker (questHash) {
-  const makerFixed = await getNodesTo(questHash, 'hasmaker')
+  let makerFixed = await getNodesTo(questHash, 'hasmaker')
+  if (makerFixed.length == 0) {
+    makerFixed = await getNodesTo(questHash, 'hasaccptappl')
+  }
   return (await getFixedVariables(makerFixed))[0]
 }
 
@@ -553,7 +558,7 @@ describe('Voted quests', async assert => {
     return
   }
 
-  const contracts = await initContracts({ quests, accounts, token, settings, escrow, proposals })
+  const contracts = await initContracts({ quests, accounts, token, settings, escrow, proposals, organization })
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -569,6 +574,9 @@ describe('Voted quests', async assert => {
 
   console.log('reset quests')
   await contracts.quests.reset({ authorization: `${quests}@active` })
+
+  console.log('reset organization')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
@@ -730,8 +738,18 @@ describe('Voted quests', async assert => {
   })
 
   console.log('apply for a quest')
-  await contracts.quests.apply(quest.fixed.hash, firstuser, 'Applicant description', { authorization: `${firstuser}@active` })
-  await contracts.quests.apply(quest.fixed.hash, thirduser, 'Applicant description', { authorization: `${thirduser}@active` })
+
+  const organization1 = 'org1'
+  const organization2 = 'org2'
+
+  await contracts.token.transfer(firstuser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(thirduser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${thirduser}@active` })
+
+  await contracts.organization.create(firstuser, organization1, "Org 1", eosDevKey,  { authorization: `${firstuser}@active` })
+  await contracts.organization.create(thirduser, organization2, "Org 2 - Test, Inc.", eosDevKey, { authorization: `${thirduser}@active` })
+
+  await contracts.quests.apply(quest.fixed.hash, organization1, 'Applicant description', { authorization: `${organization1}@active` })
+  await contracts.quests.apply(quest.fixed.hash, organization2, 'Applicant description', { authorization: `${organization2}@active` })
 
   const questApplicants = await getApplicants(quest.fixed.hash)
 
@@ -1010,6 +1028,13 @@ describe('Private quests timeouts', async assert => {
     should: 'have the correct status'
   })
 
+  assert({
+    given: 'expired applicant',
+    should: 'not have the accepted applicant edge',
+    actual: await getMaker(firstuserQ1.fixed.hash),
+    expected: undefined
+  })
+
   console.log('cancel applicant')
   const seconduserQuestApplicants = await getApplicants(seconduserQ1.fixed.hash)
   await contracts.quests.accptapplcnt(seconduserQuestApplicants[1].fixed.hash, { authorization: `${seconduser}@active` })
@@ -1025,6 +1050,13 @@ describe('Private quests timeouts', async assert => {
     value: 'cancel',
     given: 'canceled applicant',
     should: 'have the correct status'
+  })
+
+  assert({
+    given: 'canceled the applicant',
+    should: 'not have the maker edge',
+    actual: await getMaker(seconduserQ1.fixed.hash),
+    expected: undefined
   })
 
   console.log('retract application')
@@ -1245,32 +1277,4 @@ describe('Voted quests timeouts', async assert => {
   })
 
 })
-
-
-// describe('Private quests', async assert => {
-
-//   if (!isLocal()) {
-//     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-//     return
-//   }
-
-//   const contracts = await initContracts({ quests, accounts, token, settings, escrow })
-
-//   console.log('reset settings')
-//   await contracts.settings.reset({ authorization: `${settings}@active` })
-
-//   console.log('reset accounts')
-//   await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
-//   console.log('reset escrow')
-//   await contracts.escrow.reset({ authorization: `${escrow}@active` })
-
-//   console.log('reset quests')
-//   await contracts.quests.reset({ authorization: `${quests}@active` })
-
-
-//   console.log('test transfer')
-//   await contracts.quests.test1(4, { authorization: `${quests}@active` })
-
-// })
 

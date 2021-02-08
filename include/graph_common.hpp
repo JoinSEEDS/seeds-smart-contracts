@@ -25,6 +25,7 @@ namespace graph {
   static constexpr name MILESTONE_OF = name("milestoneof");
   static constexpr name HAS_MILESTONE = name("hasmilestone");
   static constexpr name HAS_APPLICANT = name("hasapplicant");
+  static constexpr name HAS_ACCPTAPPL = name("hasaccptappl");
   static constexpr name HAS_MAKER = name("hasmaker");
   static constexpr name PROPOSED_BY = name("proposedby");
   static constexpr name PROPOSE = name("propose");
