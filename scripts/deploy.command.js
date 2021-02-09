@@ -125,7 +125,7 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
         ]
       })
     } catch (error) {
-      console.error("unknown delegatebw action")
+      console.error("unknown delegatebw action "+err)
     }
 
     console.log(`${account} created`)
