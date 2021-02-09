@@ -1,8 +1,7 @@
 require('dotenv').config()
 
-const Eos = require('eosjs')
+const Eos = require('./eosjs-port')
 const R = require('ramda')
-const ecc = require('eosjs-ecc')
 
 // Note: For some reason local chain ID is different on docker vs. local install of eosio
 const dockerLocalChainID = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
@@ -684,7 +683,7 @@ const config = {
   chainId
 }
 
-const eos = Eos(config)
+const eos = new Eos(config)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -701,11 +700,15 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return Eos(config)
+  return new Eos(config)
 }
 
-const encodeName = Eos.modules.format.encodeName
-const decodeName = Eos.modules.format.decodeName
+// ===========================================================================
+// This methods not exist anymore, but they aren't used throughout the project
+const encodeName = null // Eos.modules.format.encodeName
+const decodeName = null // Eos.modules.format.decodeName
+// ===========================================================================
+
 const getTableRows = eos.getTableRows
 
 const getTelosBalance = async (user) => {
@@ -738,26 +741,34 @@ const initContracts = (accounts) =>
     ))
   )
   
-const sha256 = Eos.modules.ecc.sha256
+const sha256 = Eos.getEcc().sha256
 
 const isLocal = () => { return chainId == networks.local }
 
 const ramdom64ByteHexString = async () => {
-  let privateKey = await ecc.randomKey()
+  let privateKey = await Eos.getEcc().randomKey({}, {
+    secureEnv: true
+  })
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
-  let private = await ecc.randomKey()
-  let public = await ecc.privateToPublic(private)
+  let private = await Eos.getEcc().randomKey({}, {
+    secureEnv: true
+  })
+  let public = await Eos.getEcc().privateToPublic(private)
   return{ private, public }
+}
+
+const sleep = async (ms) => {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
 }
 

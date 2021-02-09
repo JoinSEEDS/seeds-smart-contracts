@@ -1,7 +1,6 @@
 const { describe } = require("riteway")
 const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
-const { asset } = require("eosjs/lib/schema")
 
 const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history, exchange } = names
 
