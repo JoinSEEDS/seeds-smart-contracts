@@ -44,6 +44,36 @@ void referendums::give_voice() {
   }
 }
 
+uint64_t referendums::get_quorum(const name & setting) {
+  auto citr = config.find(setting.value);
+  switch (citr->impact) {
+    case high_impact:
+      return config.find(name("quorum.high").value) -> value;
+    case medium_impact:
+      return config.find(name("quorum.med").value) -> value;
+    case low_impact:
+      return config.find(name("quorum.low").value) -> value;
+    default:
+      check(false, "unknown impact for setting " + setting.to_string());
+      break;
+  }
+}
+
+uint64_t referendums::get_unity(const name & setting) {
+  auto citr = config.find(setting.value);
+  switch (citr->impact) {
+    case high_impact:
+      return config.find(name("unity.high").value) -> value;
+    case medium_impact:
+      return config.find(name("unity.medium").value) -> value;
+    case low_impact:
+      return config.find(name("unity.low").value) -> value;
+    default:
+      check(false, "unknown impact for setting " + setting.to_string());
+      break;
+  }
+}
+
 void referendums::run_testing() {
   referendum_tables testing(get_self(), name("testing").value);
   referendum_tables passed(get_self(), name("passed").value);
@@ -51,9 +81,11 @@ void referendums::run_testing() {
 
   auto titr = testing.begin();
 
-  uint64_t majority = config.find(name("refsmajority").value)->value;
+  uint64_t majority = 0;
 
   while (titr != testing.end()) {
+    majority = get_unity(titr->setting_name);
+
     bool referendum_passed = utils::is_valid_majority(titr->favour, titr->against, majority);
 
     if (referendum_passed) {
@@ -81,10 +113,13 @@ void referendums::run_active() {
 
   auto aitr = active.begin();
 
-  uint64_t majority = config.find(name("refsmajority").value)->value;
-  uint64_t quorum = config.find(name("refsquorum").value)->value;
+  uint64_t majority = 0;
+  uint64_t quorum = 0;
 
   while (aitr != active.end()) {
+    majority = get_unity(aitr->setting_name);
+    quorum = get_quorum(aitr->setting_name);
+
     voter_tables voters(get_self(), aitr->referendum_id);
     uint64_t voters_number = distance(voters.begin(), voters.end());
     

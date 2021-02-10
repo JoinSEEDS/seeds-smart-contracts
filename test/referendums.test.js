@@ -20,7 +20,9 @@ describe('Referendums', async assert => {
   const referendumId = 0
   const failedReferendumId = 1
 
-  const settingName = "tempsetting"
+  const settingName = 'tempsetting'
+  const settingDescription = 'test setting for referendums'
+  const settingImpact = 'high'
   const settingValue = 21
   const settingInitialValue = 0
 
@@ -33,6 +35,9 @@ describe('Referendums', async assert => {
   }
 
   const sendVotes = () => async () => {
+    console.log('set quorum to 80 for high impact')
+    await contracts.settings.configure('quorum.high', 80, { authorization: `${settings}@active` })
+
     console.log(`send favour vote from ${firstuser} with value of ${favour} for #${referendumId}`)
     await contracts.referendums.favour(firstuser, referendumId, favour, { authorization: `${firstuser}@active` })
 
@@ -155,7 +160,7 @@ describe('Referendums', async assert => {
     await contracts.referendums.reset({ authorization: `${referendums}@active` })
 
     console.log('settings configure')
-    await contracts.settings.configure(settingName, settingInitialValue, { authorization: `${settings}@active` })
+    await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
 
   }
 
@@ -234,8 +239,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingInitialValue,
-      description: '',
-      impact: ''
+      description: settingDescription,
+      impact: settingImpact
     }
   })
 
@@ -321,8 +326,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingInitialValue,
-      description: '',
-      impact: ''
+      description: settingDescription,
+      impact: settingImpact
     }
   })
 
@@ -333,8 +338,8 @@ describe('Referendums', async assert => {
     expected: {
       param: settingName,
       value: settingValue,
-      description: '',
-      impact: ''
+      description: settingDescription,
+      impact: settingImpact
     }
   })
 
