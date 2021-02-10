@@ -27,7 +27,6 @@ CONTRACT proposals : public contract {
           participants(receiver, receiver.value),
           minstake(receiver, receiver.value),
           actives(receiver, receiver.value),
-          cyclestats(receiver, receiver.value),
           users(contracts::accounts, contracts::accounts.value)
           {}
 
@@ -96,8 +95,8 @@ CONTRACT proposals : public contract {
       ACTION migrtevotedp ();
       ACTION migrpass ();
 
-      ACTION migstats (uint64_t cycle);
-      ACTION migcycstat ();
+      ACTION migstats (uint64_t cycle, name prop_type);
+      ACTION migcycstat (name prop_type);
 
       ACTION testperiod ();
 
@@ -173,9 +172,9 @@ CONTRACT proposals : public contract {
       bool is_active(name account, uint64_t cutoff_date);
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
-      void increase_voice_cast(name voter, uint64_t amount, name option);
-      uint64_t calc_quorum_base(uint64_t propcycle);
-      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
+      void increase_voice_cast(name voter, uint64_t amount, name option, name prop_type);
+      uint64_t calc_quorum_base(uint64_t propcycle, name prop_type);
+      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props, name prop_type);
       void add_voted_proposal(uint64_t proposal_id);
 
       uint64_t config_get(name key) {
@@ -339,7 +338,7 @@ CONTRACT proposals : public contract {
     cycle_tables cycle;
     min_stake_tables minstake;
     active_tables actives;
-    cycle_stats_tables cyclestats;
+    // cycle_stats_tables cyclestats;
 
 };
 

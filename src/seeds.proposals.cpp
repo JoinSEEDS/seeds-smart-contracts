@@ -58,9 +58,16 @@ void proposals::reset() {
     }
   }
 
-  auto citr = cyclestats.begin();
-  while (citr != cyclestats.end()) {
-    citr = cyclestats.erase(citr);
+  cycle_stats_tables ccyclestats(get_self(), campaign_type.value);
+  auto ccitr = ccyclestats.begin();
+  while (ccitr != ccyclestats.end()) {
+    ccitr = ccyclestats.erase(ccitr);
+  }
+
+  cycle_stats_tables acyclestats(get_self(), alliance_type.value);
+  auto acitr = acyclestats.begin();
+  while (acitr != acyclestats.end()) {
+    acitr = acyclestats.erase(acitr);
   }
 
   cycle.remove();
@@ -280,6 +287,9 @@ void proposals::onperiod() {
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
+    std::vector<uint64_t> alliance_active_props;
+    std::vector<uint64_t> alliance_eval_props;
+
     // TODO this is not working at the moment, use old way... FIX after this cycle.
 
     // find smallesd prop id that's in open or eval stage
@@ -301,6 +311,10 @@ void proposals::onperiod() {
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
 
+      name prop_type = get_type(pitr->fund);
+      bool is_alliance_type = prop_type == alliance_type;
+      bool is_campaign_type = prop_type == campaign_type;
+
       // active proposals are evaluated
       if (pitr->stage == stage_active) {
 
@@ -310,9 +324,6 @@ void proposals::onperiod() {
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        name prop_type = get_type(pitr->fund);
-        bool is_alliance_type = prop_type == alliance_type;
-        bool is_campaign_type = prop_type == campaign_type;
 
         bool valid_quorum = false;
 
@@ -347,8 +358,12 @@ void proposals::onperiod() {
               proposal.status = status_evaluate;
               proposal.current_payout += payout_amount;
             });
-
-            eval_props.push_back(prop_id);
+            
+            if (is_alliance_type) {
+              alliance_eval_props.push_back(prop_id);
+            } else {
+              eval_props.push_back(prop_id);
+            }
 
           } else {
             
@@ -403,14 +418,19 @@ void proposals::onperiod() {
           proposal.stage = stage_active;
         });
         size_change(prop_active_size, 1);
-        active_props.push_back(prop_id);
+        if (is_alliance_type) {
+          alliance_active_props.push_back(prop_id);
+        } else {
+          active_props.push_back(prop_id);
+        }
       }
 
       pitr++;
     } 
 
     update_cycle();
-    update_cycle_stats(active_props, eval_props);
+    update_cycle_stats(active_props, eval_props, campaign_type);
+    update_cycle_stats(alliance_active_props, alliance_eval_props, alliance_type);
     updatevoices();
     
     transaction trx_erase_participants{};
@@ -676,11 +696,19 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
-void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props) {
+void proposals::update_cycle_stats (
+  std::vector<uint64_t>active_props, 
+  std::vector<uint64_t> eval_props,
+  name prop_type) 
+{
   cycle_table c = cycle.get();
 
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+  // TODO split into types, do by type
+
+  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1, prop_type);
   uint64_t num_proposals = active_props.size();
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   cyclestats.emplace(_self, [&](auto & item){
     item.propcycle = c.propcycle;
@@ -1048,7 +1076,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
-  increase_voice_cast(voter, amount, option);
+  increase_voice_cast(voter, amount, option, fund_type);
 
 }
 
@@ -1611,9 +1639,12 @@ ACTION proposals::undelegate (name delegator, name scope) {
   deltrusts.erase(ditr);
 }
 
-void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
+void proposals::increase_voice_cast (name voter, uint64_t amount, name option, name prop_type) {
 
   cycle_table c = cycle.get();
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
+  
   auto citr = cyclestats.find(c.propcycle);
 
   if (citr != cyclestats.end()) {
@@ -1630,11 +1661,13 @@ void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
 
 }
 
-uint64_t proposals::calc_quorum_base (uint64_t propcycle) {
+uint64_t proposals::calc_quorum_base (uint64_t propcycle, name prop_type) {
 
   uint64_t num_cycles = config_get("prop.cyc.qb"_n);
   uint64_t total = 0;
   uint64_t count = 0;
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   auto citr = cyclestats.find(propcycle);
 
@@ -1736,8 +1769,18 @@ ACTION proposals::migrpass () {
   }
 }
 
-ACTION proposals::migstats (uint64_t cycle) {
+ACTION proposals::migstats (uint64_t cycle, name prop_type) {
   require_auth(get_self());
+  
+  // erase old
+  // cycle_stats_tables old_cycle_stats(get_self(), get_self().value);
+  // auto ocitr = old_cycle_stats.begin();
+  // while(ocitr != old_cycle_stats.end()) {
+  //   ocitr = old_cycle_stats.erase(ocitr);
+  // }
+
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   auto citr = cyclestats.find(cycle);
   while(citr != cyclestats.end()) {
@@ -1754,7 +1797,7 @@ ACTION proposals::migstats (uint64_t cycle) {
   uint64_t total_against = 0; 
 
   while(pitr != props.end() && pitr->passed_cycle <= cycle) {
-    if (pitr->passed_cycle == cycle) {
+    if (pitr->passed_cycle == cycle && prop_type == get_type(pitr->fund)) {
       print("passed: "+std::to_string(cycle) + " " + std::to_string(pitr->id));
       num_proposals++;
       votes_tables votes(get_self(), pitr->id);
@@ -1784,10 +1827,12 @@ ACTION proposals::migstats (uint64_t cycle) {
 
 }
 
-void proposals::migcycstat() {
+void proposals::migcycstat(name prop_type) {
   cycle_table c = cycle.get();
 
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1, prop_type);
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   auto citr = cyclestats.find(c.propcycle);
 
