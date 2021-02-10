@@ -14,7 +14,7 @@ describe('Referendums', async assert => {
 
   const contracts = await initContracts({ referendums, token, settings, accounts })
 
-  const stake_price = '25.0000 SEEDS'
+  const stake_price = '1111.0000 SEEDS'
   const favour = 4
   const against = 1
   const referendumId = 0
