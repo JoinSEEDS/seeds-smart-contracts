@@ -1033,12 +1033,17 @@ void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
 void accounts::flag (name from, name to) {
   require_auth(from);
 
+  if (from == to) { return; }
+
   flag_points_tables flags(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
   flag_points_tables removed_flags(get_self(), flag_remove_scope.value);
 
   auto fitr = flags.find(from.value);
   check(fitr == flags.end(), "a user can only flag another user once");
+
+  auto to_rep = rep.find(to.value);
+  check(to_rep != rep.end(), to.to_string() + " user has no reputation");
 
   uint64_t points = 0;
   uint64_t base_points = 0;

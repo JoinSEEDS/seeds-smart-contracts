@@ -1319,7 +1319,6 @@ describe('Punishment', async assert => {
       table: 'rep',
       json: true
     })
-    console.log(reps)
     assert({
       given: 'user punished',
       should: 'have the correct reputation',
@@ -1335,7 +1334,6 @@ describe('Punishment', async assert => {
       table: 'flagpts',
       json: true
     })
-    console.log(flagPoints)
     assert({
       given: `${user} flagged`,
       should: 'have the correct flags',
@@ -1348,7 +1346,6 @@ describe('Punishment', async assert => {
       table: 'flagpts',
       json: true
     })
-    console.log(flagPointsGeneral)
     assert({
       given: `${user} flagged`,
       should: 'have the correct flags (general table)',
@@ -1414,6 +1411,24 @@ describe('Punishment', async assert => {
   await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
   await contracts.accounts.flag(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
 
+  let onlyOneFlag = true
+  try {
+    await sleep(300)
+    await contracts.accounts.flag(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
+    onlyOneFlag = false
+  } catch (err) {
+    console.log('only one flag (expected)')
+  }
+
+  let onlyResidentCitizen = true
+  try {
+    await sleep(300)
+    await contracts.accounts.flag(fifthuser, firstuser, { authorization: `${fifthuser}@active` })
+    onlyResidentCitizen = false
+  } catch (err) {
+    console.log('only residents or citizens (expected)')
+  }
+
   await checkFlags(firstuser, 46)
   await checkPunishmentPoints(firstuser, 46)
   await checkReps([24, 54, 154, 300, 44])
@@ -1433,6 +1448,37 @@ describe('Punishment', async assert => {
   await checkFlags(firstuser, 70) // -24
   await checkPunishmentPoints(firstuser, 70)
   await checkReps([30, 130, 300, 44])
+
+  console.log('flag a user without rep')
+  await contracts.accounts.testcitizen(fifthuser, { authorization: `${accounts}@active` })
+  let mustHaveRep = true
+  try {
+    await contracts.accounts.flag(fifthuser, firstuser, { authorization: `${fifthuser}@active` })
+    mustHaveRep = false
+  } catch (err) {
+    console.log('"to" has no rep (expected)')
+  }
+
+  assert({
+    given: 'user has flagged another user',
+    should: 'only allow one flag',
+    actual: onlyOneFlag,
+    expected: true
+  })
+
+  assert({
+    given: 'user is not a resident/citizen',
+    should: 'not allow user to flag another one',
+    actual: onlyResidentCitizen,
+    expected: true
+  })
+
+  assert({
+    given: 'A tries to flag B',
+    should: 'not flag, if B has no rep',
+    actual: mustHaveRep,
+    expected: true
+  })
 
 })
 
