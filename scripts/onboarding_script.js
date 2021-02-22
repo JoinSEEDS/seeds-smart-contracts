@@ -80,6 +80,60 @@ const bulk_cancel = async (sponsor, hashList) => {
 
 }
 
+const moon_phase = async (list, start = 0) => {
+  
+  let actions = []
+
+  let max_batched_actions = 100
+
+  for (let i=start; i<list.length; i++) {
+      
+      let fullLine = list[i]
+
+      let line = fullLine.split(",")
+      
+      console.log((i+1)+ "/" +list.length + " adding phase ", line)
+
+      // note: there's a time string in line[0] but we ignore that
+      let action = createMoonPhaseAction({
+        timestamp: line[1],
+        name: line[2], 
+        eclipse: line[3]
+      })
+
+      if (i > 0 && i % max_batched_actions == 0) {
+
+        console.log("pushing actions... ")
+
+        const transactionResult = await eos.transaction({
+              actions: actions
+            }, {
+              blocksBehind: 3,
+              expireSeconds: 30,
+            });
+          
+            actions = []
+
+            console.log("Moon phase through "+i)
+
+      }
+
+      actions.push(action)
+
+  }
+
+  if (actions.length > 0) {
+      console.log("Adding remaining "+actions.length + " moon phases")
+      const transactionResult = await eos.transaction({
+          actions: actions
+        }, {
+          blocksBehind: 3,
+          expireSeconds: 30,
+        });
+  }
+
+}
+
 // max batched actions - 20 seemed to be stable, 44 would sometimes crash (not good, messy)
 // and 100 would always crash on mainnet but work fine on testnet
 
@@ -226,6 +280,24 @@ const createCancelAction = (sponsor, hash) => {
         }
       }
       return action
+}
+
+const createMoonPhaseAction = ({timestamp, name, eclipse}) => {
+
+  const action = {
+      account: 'cycle.seeds',
+      name: 'moonphase',
+      authorization: [{
+        actor: 'cycle.seeds',
+        permission: 'active',
+      }],
+      data: {
+        timestamp: timestamp,
+        phase_name: name,
+        eclipse: eclipse
+      }
+    }
+    return action
 }
 
 
@@ -500,6 +572,17 @@ program
     await bulk_cancel(sponsor, textByLine)
   })
 
+  program
+  .command('moonphase <filename> <start>')
+  .description('Add moon phases from a file')
+  .action(async function (filename, start) {
+    start = start ?? 0
+    console.log("moon phases from " + filename + " start at " + start)
+    var text = fs.readFileSync(filename)
+    var textByLine = text.toString().split("\n")
+
+    await moon_phase(textByLine, start)
+  })
 
 
   program
