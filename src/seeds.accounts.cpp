@@ -17,7 +17,25 @@ void accounts::reset() {
       vitr = vouch.erase(vitr);
     }
 
+    flag_points_tables flags(get_self(), uitr->account.value);
+    auto fitr = flags.begin();
+    while (fitr != flags.end()) {
+      fitr = flags.erase(fitr);
+    }
+
     uitr = users.erase(uitr);
+  }
+
+  flag_points_tables flags(get_self(), flag_total_scope.value);
+  auto fitr = flags.begin();
+  while (fitr != flags.end()) {
+    fitr = flags.erase(fitr);
+  }
+
+  flag_points_tables flagsremoved(get_self(), flag_remove_scope.value);
+  auto fritr = flagsremoved.begin();
+  while (fritr != flagsremoved.end()) {
+    fritr = flagsremoved.erase(fritr);
   }
 
   auto refitr = refs.begin();
@@ -179,28 +197,6 @@ void accounts::send_subrep(name user, uint64_t amount) {
       contracts::accounts, "subrep"_n,
       std::make_tuple(user, amount)
   ).send();
-}
-
-void accounts::punish(name account) {
-  require_auth(get_self());
-  
-  check_user(account);
-
-  auto uitr = users.find(account.value);
-
-  users.modify(uitr, _self, [&](auto& item) {
-    item.status = "visitor"_n;
-  });
-
-  vouch_tables vouch(get_self(), account.value);
-
-  auto vitr = vouch.begin();
-
-  while (vitr != vouch.end()) {
-    auto sponsor = vitr->sponsor;
-    send_subrep(sponsor, 50);
-    vitr++;
-  }
 }
 
 void accounts::rewards(name account, name new_status) {
@@ -568,6 +564,15 @@ uint64_t accounts::config_get(name key) {
     check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
   }
   return citr->value;
+}
+
+double accounts::config_float_get (name key) {
+  auto fitr = configfloat.find(key.value);
+  if (fitr == configfloat.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return fitr->value;
 }
 
 void accounts::cancitizen(name user) {
@@ -976,3 +981,146 @@ uint64_t accounts::rep_score(name user)
 
     return ritr->rank;
 }
+
+void accounts::send_punish (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "punish"_n,
+    std::make_tuple(account, points)
+  ).send();
+}
+
+void accounts::punish (name account, uint64_t points) {
+  require_auth(get_self());
+  send_subrep(account, points);
+  pnshvouchers(account, points, uint64_t(0));
+}
+
+void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
+  require_auth(get_self());
+
+  vouch_tables vouch(get_self(), account.value);
+
+  auto vitr = start == 0 ? vouch.begin() : vouch.find(start);
+  uint64_t count = 0;
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t lost_points = points * config_float_get("flag.vouch.p"_n);
+
+  while (vitr != vouch.end() && count < batch_size) {
+    send_subrep(vitr -> sponsor, lost_points);
+    vitr++;
+    count++;
+  }
+
+  if (vitr != vouch.end()) {
+    uint64_t next_value = (vitr -> sponsor).value;
+    
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "pnshvouchers"_n,
+        std::make_tuple(account, points, next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    // tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
+void accounts::flag (name from, name to) {
+  require_auth(from);
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+  flag_points_tables removed_flags(get_self(), flag_remove_scope.value);
+
+  auto fitr = flags.find(from.value);
+  check(fitr == flags.end(), "a user can only flag another user once");
+
+  uint64_t points = 0;
+  uint64_t base_points = 0;
+  auto uitr = users.get(from.value, "user not found");
+
+  if (uitr.status == name("citizen")) {
+    base_points = config_get("flag.base.c"_n);
+  } else if (uitr.status == name("resident")) {
+    base_points = config_get("flag.base.r"_n);
+  } else {
+    check(false, "user must be a resident or a citizen");
+  }
+
+  auto ritr = rep.get(from.value, "no rep found for user");
+  
+  points = base_points * utils::rep_multiplier_for_score(ritr.rank);
+
+  flags.emplace(_self, [&](auto & item){
+    item.account = from;
+    item.flag_points = points;
+  });
+
+  uint64_t total_flag_points = 0;
+  uint64_t removed_flag_points = 0;
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  if (total_flag_p_itr != total_flags.end()) { total_flag_points = total_flag_p_itr -> flag_points; }
+  total_flag_points += points;
+
+  auto removed_flag_p_itr = removed_flags.find(to.value);
+  if (removed_flag_p_itr != removed_flags.end()) { removed_flag_points = removed_flag_p_itr -> flag_points; }
+
+  uint64_t flag_threshold = config_get("flag.thresh"_n);
+
+  if (total_flag_points >= flag_threshold && removed_flag_points < total_flag_points) {
+    uint64_t punishment_points = total_flag_points - removed_flag_points;
+
+    send_punish(to, punishment_points);
+    
+    if (removed_flag_p_itr == removed_flags.end()) {
+      removed_flags.emplace(_self, [&](auto & item){
+        item.account = to;
+        item.flag_points = total_flag_points;
+      });
+    } else {
+      removed_flags.modify(removed_flag_p_itr, _self, [&](auto & item){
+        item.flag_points = total_flag_points;
+      });
+    }
+  }
+
+  if (total_flag_p_itr == total_flags.end()) {
+    total_flags.emplace(_self, [&](auto & item){
+      item.account = to;
+      item.flag_points = total_flag_points;
+    });
+  } else {
+    total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+      item.flag_points = total_flag_points;
+    });
+  }
+
+}
+
+void accounts::removeflag (name from, name to) {
+  require_auth(from);
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+
+  auto flag_itr = flags.find(from.value);
+  check(flag_itr != flags.end(), "flag not found");
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  check(total_flag_p_itr != flags.end(), to.to_string() + ", has not total flags entry");
+
+  total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+    item.flag_points -= flag_itr -> flag_points;
+  });
+
+  flags.erase(flag_itr);
+}
+
+
+

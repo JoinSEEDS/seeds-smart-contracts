@@ -7,6 +7,7 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -25,6 +26,7 @@ CONTRACT accounts : public contract {
           sizes(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
           config(contracts::settings, contracts::settings.value),
+          configfloat(contracts::settings, contracts::settings.value),
           accts(contracts::token, contracts::token.value),
           actives(contracts::proposals, contracts::proposals.value),
           totals(contracts::history, contracts::history.value),
@@ -53,7 +55,7 @@ CONTRACT accounts : public contract {
 
       ACTION subrep(name user, uint64_t amount);
 
-      ACTION punish(name account);
+      // ACTION punish(name account);
 
       ACTION requestvouch(name account, name sponsor);
 
@@ -66,6 +68,11 @@ CONTRACT accounts : public contract {
       ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
       ACTION changesize(name id, int64_t delta);
+
+      ACTION flag(name from, name to);
+      ACTION removeflag(name from, name to);
+      ACTION punish(name account, uint64_t points);
+      ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
 
       ACTION testresident(name user);
       ACTION testcitizen(name user);
@@ -116,6 +123,9 @@ CONTRACT accounts : public contract {
       const name vou_cbp_reward_resident = "vou.cbp1.ind"_n;
       const name vou_cbp_reward_citizen = "vou.cbp2.ind"_n;
 
+      const name flag_total_scope = "flag.total"_n;
+      const name flag_remove_scope = "flag.remove"_n;
+
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
       void rewards(name account, name new_status);
@@ -134,6 +144,7 @@ CONTRACT accounts : public contract {
       uint64_t rep_score(name user);
       void add_rep_item(name account, uint64_t reputation);
       uint64_t config_get(name key);
+      double config_float_get(name key);
       void size_change(name id, int delta);
       void size_set(name id, uint64_t newsize);
       uint64_t get_size(name id);
@@ -142,6 +153,7 @@ CONTRACT accounts : public contract {
       uint32_t num_transactions(name account, uint32_t limit);
       void add_active (name user);
       void add_cbs(name account, int points);
+      void send_punish(name account, uint64_t points);
 
       DEFINE_USER_TABLE
 
@@ -187,9 +199,22 @@ CONTRACT accounts : public contract {
         uint64_t by_sponsor()const { return sponsor.value; }
       };
 
+      TABLE flag_points_table { // scoped by receiving user
+        name account;
+        uint64_t flag_points;
+
+        uint64_t primary_key() const { return account.value; }
+      };
+
+      typedef eosio::multi_index<"flagpts"_n, flag_points_table> flag_points_tables;
+
     DEFINE_CONFIG_TABLE
 
     DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+    DEFINE_CONFIG_FLOAT_TABLE
+
+    DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
       // Borrowed from histry.seeds contract
       TABLE citizen_table {
@@ -260,6 +285,7 @@ CONTRACT accounts : public contract {
     citizen_tables citizens;
 
     config_tables config;
+    config_float_tables configfloat;
 
     // From history contract
     TABLE totals_table {
@@ -289,6 +315,7 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(punish)(requestvouch)(vouch)
+(testreward)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
+(flag)(removeflag)(punish)(pnshvouchers)
 );
