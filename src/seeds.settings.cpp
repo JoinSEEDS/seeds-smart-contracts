@@ -218,7 +218,7 @@ void settings::reset() {
   confwithdesc(name("flag.thresh"), 100, "Max number of flag points before lossing reputation", high_impact);
   confwithdesc(name("flag.base.r"), 10, "Base flag points a resident can give", high_impact);
   confwithdesc(name("flag.base.c"), 20, "Base flag points a citizen can give", high_impact);
-  conffloatdsc(name("flag.vouch.p"), 1.0, "Percentage of the reputation the vouchers will lose", high_impact);
+  conffloatdsc(name("flag.vouch.p"), 0.5, "Percentage of the reputation the vouchers will lose", high_impact);
 
 
   // =====================================
