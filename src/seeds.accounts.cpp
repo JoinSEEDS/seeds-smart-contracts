@@ -25,6 +25,11 @@ void accounts::reset() {
     vitr = vouches.erase(vitr);
   }
 
+  auto vtitr = vouchtotals.begin();
+  while (vtitr != vouchtotals.end()) {
+    vtitr = vouchtotals.erase(vtitr);
+  }
+
   auto refitr = refs.begin();
   while (refitr != refs.end()) {
     refitr = refs.erase(refitr);
@@ -107,39 +112,61 @@ void accounts::vouch(name sponsor, name account) {
   _vouch(sponsor, account);
 }
 
+/*
+* Internal vouch function
+*/
+void accounts::_vouch(name sponsor, name account) {
+  auto uitrs = users.find(sponsor.value);
+  if (uitrs == users.end()) { return; }
+
+  if (uitrs->type != individual) {
+    return; // only individuals can vouch
+  }
+
+  check_user(account);
+
+  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
+  auto vitr = vouches_by_sponsor_account.find(id);
+  
+  if (vitr == vouches_by_sponsor_account.end()) {
+    name sponsor_status = uitrs->status;
+
+    auto resident_basepoints = config_get(resident_vouch_points);
+    auto citizen_basepoints = config_get(citizen_vouch_points);
+
+    uint64_t vouch_points = 0;
+
+    if (sponsor_status == name("resident")) vouch_points = resident_basepoints;
+    if (sponsor_status == name("citizen")) vouch_points = citizen_basepoints;
+
+    vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
+
+    if (vouch_points > 0) {
+      vouches.emplace(_self, [&](auto& item) {
+        item.id = vouches.available_primary_key();
+        item.sponsor = sponsor;
+        item.account = account;
+        item.vouch_points = vouch_points;
+      });
+    }
+  }
+
+  calc_vouch_rep(account); 
+}
+
 void accounts::unvouch (name sponsor, name account) {
   require_auth(sponsor);
 
-  uint64_t total_vouch = 0;
-  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
-  auto vitr = vouches_by_account.find(account.value);
-  auto sponsor_itr = vitr;
+  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
+  auto vitr = vouches_by_sponsor_account.find(id);
 
-  bool is_sponsor = false;
+  check(vitr != vouches_by_sponsor_account.end(), "vouch not found");
 
-  while (vitr != vouches_by_account.end() && vitr->account == account) {
-    if (vitr->sponsor == sponsor) { 
-      is_sponsor = true;
-      sponsor_itr = vitr;
-    }
-    total_vouch += vitr->vouch_points;
-    vitr++;
-  }
-  check(is_sponsor, "sponsor not found");
-
-  uint64_t max_vouch = config_get(max_vouch_points);
-  uint64_t new_total_vouch = total_vouch - sponsor_itr->vouch_points;
-
-  if (total_vouch > max_vouch) {
-    if (new_total_vouch < max_vouch) {
-      send_subrep(account, max_vouch - new_total_vouch);
-    }
-  } else {
-    send_subrep(account, sponsor_itr->vouch_points);
-  }
-
-  vouches_by_account.erase(sponsor_itr);
-
+  vouches_by_sponsor_account.erase(vitr);
+  
+  calc_vouch_rep(account);
 }
 
 void accounts::pnishvouched (name sponsor, uint64_t start_account) {
@@ -157,29 +184,11 @@ void accounts::pnishvouched (name sponsor, uint64_t start_account) {
 
   while (vitr != vouches_by_sponsor_account.end() && vitr->sponsor == sponsor && count < batch_size) {
 
-    name account = vitr->account;
-
-    uint64_t total_vouch = 0;
-    auto vaitr = vouches_by_account.find(account.value);
-
-    while (vaitr != vouches_by_account.end() && vaitr->account == account) {
-      total_vouch += vaitr->vouch_points;
-      vaitr++;
-    }
-
-    uint64_t new_total_vouch = total_vouch - vitr->vouch_points;
-
-    if (total_vouch > max_vouch) {
-      if (new_total_vouch < max_vouch) {
-        send_subrep(account, max_vouch - new_total_vouch);
-      }
-    } else {
-      send_subrep(account, vitr->vouch_points);
-    }
-
     vouches_by_sponsor_account.modify(vitr, _self, [&](auto & item){
       item.vouch_points = 0;
     });
+
+    calc_vouch_rep(vitr->account);
 
     vitr++;
     count++;
@@ -199,74 +208,55 @@ void accounts::pnishvouched (name sponsor, uint64_t start_account) {
     tx.delay_sec = 1;
     tx.send(sponsor.value, _self);
   }
-
 }
 
-
-/*
-* Internal vouch function
-*/
-void accounts::_vouch(name sponsor, name account) {
-
-  auto uitrs = users.find(sponsor.value);
-
-  if (uitrs == users.end()) {
-    return;
-  }
-
-  if (uitrs->type != individual) {
-    return; // only individuals can vouch
-  }
-
-  check_user(account);
-  auto uitra = users.find(account.value);
-
-  name sponsor_status = uitrs->status;
-
-  auto resident_basepoints = config_get(resident_vouch_points);
-  auto citizen_basepoints = config_get(citizen_vouch_points);
-
-  uint64_t reps = 0;
-  if (sponsor_status == name("resident")) reps = resident_basepoints;
-  if (sponsor_status == name("citizen")) reps = citizen_basepoints;
-
-  reps = reps * utils::get_rep_multiplier(sponsor); // REPLACE with local function
-
-  if (reps == 0) {
-    // this is called from invite accept - just no op
-    return;
-  }
-
-  uint64_t vouch_points = reps;
-
-  uint64_t total_vouch = 0;
+void accounts::calc_vouch_rep (name account) {
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vitr = vouches_by_account.find(account.value);
 
+  uint64_t max_vouch = config_get(max_vouch_points);
+  uint64_t total_vouch = 0;
+  uint64_t total_rep = 0;
+
   while (vitr != vouches_by_account.end() && vitr->account == account) {
-    if (vitr->sponsor == sponsor) { return; }
     total_vouch += vitr -> vouch_points;
     vitr++;
   }
 
-  uint64_t new_total_vouch = total_vouch + vouch_points;
-  uint64_t max_vouch = config_get(max_vouch_points);
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
 
-  if (total_vouch < max_vouch) {
-    if (new_total_vouch > max_vouch) {
-      reps = max_vouch - total_vouch;
-    }
-    send_addrep(account, reps);
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+  if (total_rep < total_vouch_capped) {
+    
+    delta = total_vouch_capped - total_rep;
+    send_addrep(account, delta);
+    total_rep += delta;
+
+  } else if (total_rep > total_vouch_capped) {
+
+    delta = total_rep - total_vouch_capped;
+    send_subrep(account, delta);
+    total_rep -= delta;
+
   }
 
-  vouches.emplace(_self, [&](auto& item) {
-    item.id = vouches.available_primary_key();
-    item.sponsor = sponsor;
-    item.account = account;
-    item.vouch_points = vouch_points;
-  });
-  
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_rep;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_rep;
+    });
+  }
 }
+
 
 void accounts::send_addrep(name user, uint64_t amount) {
     action(
@@ -1101,7 +1091,9 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
 void accounts::migratevouch (name start_user, name start_sponsor) {
   require_auth(get_self());
 
-  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t batch_size = 0.6 * config_get("batchsize"_n);
+  batch_size = batch_size > 0 ? batch_size : 100;
+  
   uint64_t count = 0;
   name current_sponsor = "."_n;
 
@@ -1136,6 +1128,7 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     }
 
     if (vitr == vouch.end()) {
+      calc_vouch_rep(uitr->account);
       uitr++;
       current_sponsor = "."_n;
     } else {

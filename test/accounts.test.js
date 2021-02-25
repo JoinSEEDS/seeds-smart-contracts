@@ -431,10 +431,10 @@ describe('vouching', async assert => {
   await checkVouch(5, `${thirduser} vouched for ${fourthuser}`, 'store the vouch')
 
   console.log('unvoching')
-  await contract.unvouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
   await settingscontract.configure("maxvouch", 50, { authorization: `${settings}@active` })
+  await contract.unvouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
   await contract.unvouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
-  await checkReps([3, 2, 30, 3], "unvouch", "have the correct rep")
+  await checkReps([3, 2, 30, 20], "unvouch", "have the correct rep")
   await checkVouch(3, `${firstuser} unvouched`, 'store the vouch')
 
   assert({
@@ -454,8 +454,13 @@ describe('vouching', async assert => {
   console.log('punish firstuser')
   await contract.vouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
   await contract.punish(firstuser, { authorization: `${accounts}@active` })
-  await checkReps([3, 2, 10, 3], "user punished", "have the correct rep")
+  await checkReps([3, 2, 10, 20], "user punished", "have the correct rep")
   await checkVouch(4, `${firstuser} punished`, 'store the vouch')
+
+  await settingscontract.configure("maxvouch", 5, { authorization: `${settings}@active` })
+  await contract.vouch(seconduser, fourthuser,{ authorization: `${seconduser}@active` })
+  await checkReps([3, 2, 10, 5], `${seconduser} vouched`, "have the correct rep")
+  await checkVouch(5, `${firstuser} unvouched`, 'store the vouch')
 
 })
 
@@ -512,13 +517,21 @@ describe('test vouch migration', async assert => {
   await contract.migratevouch('.', '.', { authorization: `${accounts}@active` })
   await sleep(8000)
 
-  const vouchTables = await getTableRows({
+  const vouchTable = await getTableRows({
     code: accounts,
     scope: accounts,
     table: 'vouches',
     json: true
   })
-  console.log(vouchTables)
+  console.log(vouchTable)
+
+  const vouchTotalsTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'vouchtotals',
+    json: true
+  })
+  console.log(vouchTotalsTable)
 
 })
 

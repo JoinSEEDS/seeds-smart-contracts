@@ -21,6 +21,7 @@ CONTRACT accounts : public contract {
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
           vouches(receiver, receiver.value),
+          vouchtotals(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
@@ -148,6 +149,7 @@ CONTRACT accounts : public contract {
       uint32_t num_transactions(name account, uint32_t limit);
       void add_active (name user);
       void add_cbs(name account, int points);
+      void calc_vouch_rep(name account);
 
       DEFINE_USER_TABLE
 
@@ -194,6 +196,14 @@ CONTRACT accounts : public contract {
         uint64_t by_sponsor()const { return sponsor.value; }
         uint128_t by_sponsor_account()const { return (uint128_t(sponsor.value) << 64) + account.value; }
         uint128_t by_account_sponsor()const { return (uint128_t(account.value) << 64) + sponsor.value; }
+      };
+
+      TABLE vouches_totals_table {
+        name account;
+        uint64_t total_vouch_points;
+        uint64_t total_rep_points;
+
+        uint64_t primary_key() const { return account.value; }
       };
 
       TABLE req_vouch_table {
@@ -257,6 +267,8 @@ CONTRACT accounts : public contract {
       const_mem_fun<vouches_table, uint128_t, &vouches_table::by_account_sponsor>>
     > vouches_tables;
 
+    typedef eosio::multi_index<"vouchtotals"_n, vouches_totals_table> vouches_totals_tables;
+
     typedef eosio::multi_index<"reqvouch"_n, req_vouch_table,
       indexed_by<"byaccount"_n,
       const_mem_fun<req_vouch_table, uint64_t, &req_vouch_table::by_account>>,
@@ -281,6 +293,7 @@ CONTRACT accounts : public contract {
     cbs_tables cbs;
     ref_tables refs;
     vouches_tables vouches;
+    vouches_totals_tables vouchtotals;
     req_vouch_tables reqvouch;
     user_tables users;
     rep_tables rep;
