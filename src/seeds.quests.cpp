@@ -58,19 +58,10 @@ ACTION quests::reset () {
     }
   };
 
-  // hypha::ContentGroups proposals_v_cgs {
-  //   hypha::ContentGroup {
-  //     hypha::Content(hypha::CONTENT_GROUP_LABEL, VARIABLE_DETAILS),
-  //     hypha::Content(OPEN_PROPOSALS, int64_t(0)),
-  //     hypha::Content(OWNER, get_self())
-  //   }
-  // };
-
   hypha::Document root_doc(get_self(), get_self(), std::move(root_cgs));
   hypha::Document account_infos_doc(get_self(), get_self(), std::move(account_infos_cgs));
   hypha::Document account_infos_v_doc(get_self(), get_self(), std::move(account_infos_v_cgs));
   hypha::Document proposals_doc(get_self(), get_self(), std::move(proposals_cgs));
-  // hypha::Document proposals_v_doc(get_self(), get_self(), std::move(proposals_v_cgs));
 
   hypha::Edge::write(get_self(), get_self(), root_doc.getHash(), account_infos_doc.getHash(), graph::OWNS_ACCOUNT_INFOS);
   hypha::Edge::write(get_self(), get_self(), account_infos_doc.getHash(), root_doc.getHash(), graph::OWNED_BY);
@@ -78,7 +69,6 @@ ACTION quests::reset () {
 
   hypha::Edge::write(get_self(), get_self(), root_doc.getHash(), proposals_doc.getHash(), graph::OWNS_PROPOSALS);
   hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), root_doc.getHash(), graph::OWNED_BY);
-  // hypha::Edge::write(get_self(), get_self(), proposals_doc.getHash(), proposals_v_doc.getHash(), graph::VARIABLE);
 
   get_account_info(bankaccts::campaigns, true);
 
@@ -282,6 +272,7 @@ ACTION quests::delmilestone (checksum256 milestone_hash) {
 
 }
 
+// used by the quest creator
 ACTION quests::activate (checksum256 quest_hash) {
 
   hypha::Document quest_doc(get_self(), quest_hash);
@@ -335,6 +326,7 @@ ACTION quests::activate (checksum256 quest_hash) {
 
 }
 
+// used by the contract inside a proposal
 ACTION quests::propactivate (checksum256 quest_hash) {
 
   require_auth(get_self());
@@ -350,6 +342,7 @@ ACTION quests::propactivate (checksum256 quest_hash) {
 
 }
 
+// used by the contract inside a proposal
 ACTION quests::notactivate (checksum256 quest_hash) {
 
   hypha::Document quest_doc(get_self(), quest_hash);
@@ -371,6 +364,7 @@ ACTION quests::notactivate (checksum256 quest_hash) {
 
 }
 
+// used by the quest cretor
 ACTION quests::delquest (checksum256 quest_hash) {
 
   hypha::Document quest_doc(get_self(), quest_hash);
@@ -439,6 +433,7 @@ ACTION quests::apply (checksum256 quest_hash, name applicant, string description
 
 }
 
+// used by the contract inside a proposal (voted quest) or the quest creator (private quest)
 ACTION quests::accptapplcnt (checksum256 applicant_hash) {
 
   hypha::Document applicant_doc(get_self(), applicant_hash);
@@ -482,6 +477,7 @@ ACTION quests::accptapplcnt (checksum256 applicant_hash) {
 
 }
 
+// used by the contract inside a proposal (voted quest) or the quest creator (private quest)
 ACTION quests::rejctapplcnt (checksum256 applicant_hash) {
 
   hypha::Document applicant_doc(get_self(), applicant_hash);
@@ -506,6 +502,7 @@ ACTION quests::rejctapplcnt (checksum256 applicant_hash) {
 
 }
 
+// the applicant selected as the maker accepts the quest
 ACTION quests::accptquest (checksum256 quest_hash) {
 
   check_quest_status_stage(quest_hash, ""_n, quest_stage_active, "quests: applicant can not accept this quest");
@@ -538,6 +535,7 @@ ACTION quests::accptquest (checksum256 quest_hash) {
 
 }
 
+// the maker completes a milestone
 ACTION quests::mcomplete (checksum256 milestone_hash, string url_documentation, string description) {
 
   hypha::Document milestone_doc(get_self(), milestone_hash);
@@ -603,6 +601,7 @@ void quests::accept_milestone (hypha::Document & milestone_doc, hypha::Document 
 
 }
 
+// used by the quest creator
 ACTION quests::accptmilstne (checksum256 milestone_hash) {
 
   hypha::Document milestone_doc(get_self(), milestone_hash);
@@ -624,6 +623,7 @@ ACTION quests::accptmilstne (checksum256 milestone_hash) {
 
 }
 
+// used by the contract inside a proposal
 ACTION quests::propaccptmil (checksum256 milestone_hash) {
 
   require_auth(get_self());
@@ -637,6 +637,7 @@ ACTION quests::propaccptmil (checksum256 milestone_hash) {
 
 }
 
+// pays out an accepted milestone, can be called by anyone
 ACTION quests::payoutmilstn (checksum256 milestone_hash) {
 
   hypha::Document milestone_doc(get_self(), milestone_hash);
@@ -676,6 +677,7 @@ ACTION quests::payoutmilstn (checksum256 milestone_hash) {
 
 }
 
+// used by the contract inside a proposal (voted quest) or the quest creator (private quest)
 ACTION quests::rejctmilstne (checksum256 milestone_hash) {
 
   hypha::Document milestone_doc(get_self(), milestone_hash);
@@ -759,14 +761,7 @@ void quests::propose_aux (const checksum256 & node_hash, const name & quest_owne
 }
 
 uint64_t quests::get_quorum() {
-  // uint64_t base_quorum = config_get("quorum.base"_n);
-  // uint64_t quorum_min = config_get("quor.min.pct"_n);
-  // uint64_t quorum_max = config_get("quor.max.pct"_n);
-
-  // uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
-  // quorum = std::max(quorum_min, quorum);
-  // return std::min(quorum_max, quorum);
-  return 20;
+  return config_get("quest.quorum"_n);
 }
 
 uint64_t quests::get_size(name id) {
@@ -778,6 +773,7 @@ uint64_t quests::get_size(name id) {
   }
 }
 
+// determines whether a prop passes or not, executes the corresponding action
 ACTION quests::evalprop (checksum256 proposal_hash) {
 
   hypha::Document proposal_doc(get_self(), proposal_hash);
@@ -964,7 +960,6 @@ void quests::vote_aux (name & voter, const checksum256 & proposal_hash, int64_t 
 
   hypha::Edge::write(get_self(), voter, proposal_hash, vote_doc.getHash(), voter);
   hypha::Edge::write(get_self(), voter, proposal_hash, vote_doc.getHash(), graph::VOTED_BY);
-  // hypha::Edge::write(get_self(), voter, vote_doc.getHash(), proposal_hash, graph::VOTE_FOR);
 
 }
 
@@ -978,7 +973,7 @@ ACTION quests::against (name voter, checksum256 proposal_hash, int64_t amount) {
   vote_aux(voter, proposal_hash, amount, distrust);
 }
 
-
+// can expire if the quest is taking too long
 ACTION quests::expirequest (checksum256 quest_hash) {
 
   hypha::Document quest_doc(get_self(), quest_hash);
@@ -1040,6 +1035,7 @@ ACTION quests::expirequest (checksum256 quest_hash) {
 
 }
 
+// can expire applicant if he/she is taking too long to accept the quest
 ACTION quests::expireappl (checksum256 maker_hash) {
 
   hypha::Document maker_doc(get_self(), maker_hash);
@@ -1083,6 +1079,7 @@ ACTION quests::expireappl (checksum256 maker_hash) {
 
 }
 
+// cancel the maker
 ACTION quests::cancelappl (checksum256 maker_hash) {
 
   hypha::Document maker_doc(get_self(), maker_hash);
@@ -1119,6 +1116,7 @@ ACTION quests::cancelappl (checksum256 maker_hash) {
 
 }
 
+// cancel the application if not getting any response (used by the applicant)
 ACTION quests::retractappl (checksum256 applicant_hash) {
 
   hypha::Document applicant_doc(get_self(), applicant_hash);
@@ -1161,6 +1159,7 @@ ACTION quests::retractappl (checksum256 applicant_hash) {
 
 }
 
+// abandone a quest (if the applicant is the maker)
 ACTION quests::quitapplcnt (checksum256 applicant_hash) {
 
   hypha::Document applicant_doc(get_self(), applicant_hash);
@@ -1206,6 +1205,10 @@ ACTION quests::rateapplcnt (checksum256 maker_hash, name opinion) {
   require_auth(creator);
 
   hypha::Document maker_v_doc = get_variable_node_or_fail(maker_doc);
+  hypha::ContentWrapper maker_v_cw = maker_v_doc.getContentWrapper();
+
+  auto [idx, item] = maker_v_cw.get(VARIABLE_DETAILS, OWNER_OPINION);
+  check(idx == -1, "the applicant has already been rated");
 
   if (opinion == like) {
     name applicant_account = maker_cw.getOrFail(FIXED_DETAILS, APPLICANT_ACCOUNT) -> getAs<name>();
@@ -1235,6 +1238,10 @@ ACTION quests::ratequest (checksum256 quest_hash, name opinion) {
   check_quest_status_stage(quest_hash, quest_status_finished, quest_stage_done, "quests: can not rate quest");
 
   hypha::Document quest_v_doc = get_variable_node_or_fail(quest_doc);
+  hypha::ContentWrapper quest_v_cw = quest_v_doc.getContentWrapper();
+
+  auto [idx, item] = quest_v_cw.get(VARIABLE_DETAILS, APPLICANT_OPINION);
+  check(idx == -1, "the quest has already been rated");
 
   if (opinion == like) {
     name creator = quest_doc.getCreator();

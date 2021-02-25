@@ -504,6 +504,23 @@ describe('Private quests', async assert => {
   await sleep(200)
   await contracts.quests.ratequest(firstuserQ1.fixed.hash, 'dislike', { authorization: `${questMaker.fixed.creator}@active` })
 
+  let cantRateTwice = true
+  await sleep(400)
+  try {
+    await contracts.quests.rateapplcnt(questMaker.fixed.hash, 'like', { authorization: `${firstuser}@active` })
+    cantRateTwice = false
+  } catch (err) {
+    console.log('can not rate applicant twice (expected')
+  }
+
+  await sleep(400)
+  try {
+    await contracts.quests.ratequest(firstuserQ1.fixed.hash, 'dislike', { authorization: `${questMaker.fixed.creator}@active` })
+    cantRateTwice = false
+  } catch (err) {
+    console.log('can not rate quest twice (expected')
+  }
+
   await checkNodes(assert, variableDetails, {
     nodes: await getMaker(firstuserQ1.fixed.hash),
     label: 'owner_opinion',
@@ -545,6 +562,13 @@ describe('Private quests', async assert => {
     given: 'milestone paied out',
     should: 'not pay twice',
     actual: payoutOnce,
+    expected: true
+  })
+
+  assert({
+    given: 'applicant and quest have been rated',
+    should: 'not be rated twice',
+    actual: cantRateTwice,
     expected: true
   })
 
@@ -600,7 +624,7 @@ describe('Voted quests', async assert => {
   await contracts.proposals.addvoice(fourthuser, 44, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(fifthuser, 44, { authorization: `${proposals}@active` })
 
-  console.log('add private quest')
+  console.log('add voted quest')
   await contracts.quests.addquest(firstuser, '100.0000 SEEDS', 'Test quest 2', 'Test quest 2', campaignbank, 1, { authorization: `${firstuser}@active` })
   await contracts.quests.addquest(seconduser, '200.0000 SEEDS', 'Test quest 1', 'Test quest 1', campaignbank, 1, { authorization: `${seconduser}@active` })
   
@@ -1161,7 +1185,7 @@ describe('Voted quests timeouts', async assert => {
   await contracts.proposals.addvoice(fourthuser, 44, { authorization: `${proposals}@active` })
   await contracts.proposals.addvoice(fifthuser, 44, { authorization: `${proposals}@active` })
 
-  console.log('add private quest')
+  console.log('add voted quest')
   await contracts.quests.addquest(firstuser, '100.0000 SEEDS', 'Test quest 2', 'Test quest 2', campaignbank, 1, { authorization: `${firstuser}@active` })
   await contracts.quests.addquest(seconduser, '200.0000 SEEDS', 'Test quest 1', 'Test quest 1', campaignbank, 1, { authorization: `${seconduser}@active` })
   

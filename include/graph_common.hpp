@@ -8,13 +8,11 @@ namespace graph {
 
   // document type
   static constexpr name ROOT = name("root");
-  // static constexpr name BALANCES = name("balances");
   static constexpr name QUEST = name("quest");
   static constexpr name MILESTONE = name("milestone");
   static constexpr name APPLICANT = name("applicant");
   static constexpr name PROPOSALS = name("proposals");
   static constexpr name PROPOSAL = name("proposal");
-  // static constexpr name VOICES = name("voices");
   static constexpr name ACCOUNT_INFOS = name("accntinfos");
   static constexpr name ACCOUNT_INFO = name("accntinfo");
   static constexpr name VOTE = name("vote");
@@ -32,10 +30,8 @@ namespace graph {
   static constexpr name OPEN = name("open");
   static constexpr name PASSED = name("passed");
   static constexpr name REJECTED = name("rejected");
-  // static constexpr name OWNS_BALANCES = name("ownbalances");
   static constexpr name OWNS_ACCOUNT_INFOS = name("ownaccntinfs");
   static constexpr name OWNS_PROPOSALS = name("ownproposals");
-  // static constexpr name OWNS_VOICES = name("ownvoices");
   static constexpr name OWNED_BY = name("ownedby");
   static constexpr name VOTE_FOR = name("votefor");
   static constexpr name VOTED_BY = name("votedby");

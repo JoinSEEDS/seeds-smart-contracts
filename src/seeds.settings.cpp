@@ -244,6 +244,7 @@ void settings::reset() {
   confwithdesc(name("qst.exp.appl"), 1209600, "Number of seconds to wait before the applicant can be expired", high_impact);
   confwithdesc(name("qst.rep.appl"), 3, "Reputation for the quest maker once the owner has reated the applicant", high_impact);
   confwithdesc(name("qst.rep.qst"), 3, "Reputation for the quest owner once the applicant has rated the quest", high_impact);
+  confwithdesc(name("quest.quorum"), 20, "Quorum required for the quest to be executed", high_impact);
 
   // =====================================
   // gratitude 
