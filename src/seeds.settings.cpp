@@ -29,7 +29,7 @@ void settings::reset() {
   confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
   confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
-  confwithdesc(name("refsnewprice"), 1111 * 10000, "Minimum price to create a referendum", high_impact);
+  confwithdesc(name("refsnewprice"), 1111 * 10000, "Minimum price to create a referendum - 1111.0000 SEEDS", high_impact);
   confwithdesc(name("refsmajority"), 80, "Majority referendums threshold", high_impact);
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);

@@ -23,7 +23,6 @@
     "dotenv": "^8.1.0",
     "eosjs": "^21.0.3",
     "eosjs-ecc": "^4.0.7",
-    "eoslime": "^2.0.0",
     "fs-extra": "^9.1.0",
     "handlebars": "^4.7.6",
     "json": "^9.0.6",

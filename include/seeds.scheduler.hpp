@@ -15,6 +15,7 @@ CONTRACT scheduler : public contract {
         scheduler(name receiver, name code, datastream<const char*> ds)
         :contract(receiver, code, ds),
         operations(receiver, receiver.value),
+        moonphases(receiver, receiver.value),
         test(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value)
         {}
@@ -37,6 +38,8 @@ CONTRACT scheduler : public contract {
         ACTION stop();
         
         ACTION start();
+
+        ACTION moonphase(uint64_t timestamp, string phase_name, string eclipse);
 
         ACTION test1();
 
@@ -66,6 +69,15 @@ CONTRACT scheduler : public contract {
             uint64_t by_timestamp() const { return timestamp; }
         };
 
+        TABLE moon_phases_table {
+            uint64_t timestamp;
+            time_point time;
+            string phase_name;
+            string eclipse;
+
+            uint64_t primary_key() const { return timestamp; }
+        };
+
         TABLE test_table {
             name param;
             uint64_t value;
@@ -80,6 +92,8 @@ CONTRACT scheduler : public contract {
             indexed_by<"bytimestamp"_n, const_mem_fun<operations_table, uint64_t, &operations_table::by_timestamp>>
         > operations_tables;
 
+        typedef eosio::multi_index <"moonphases"_n, moon_phases_table> moon_phases_tables;
+
         typedef eosio::multi_index <"test"_n, test_table> test_tables;
 
         name seconds_to_execute = "secndstoexec"_n;
@@ -87,6 +101,7 @@ CONTRACT scheduler : public contract {
         operations_tables operations;
         config_tables config;
         test_tables test;
+        moon_phases_tables moonphases;
 
         bool is_ready_to_execute(name operation);
 };

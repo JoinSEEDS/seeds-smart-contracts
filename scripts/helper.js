@@ -779,17 +779,8 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const eoslime = require('eoslime').init({ url: httpEndpoint, chainId })
-
-const eoslimeAccounts = {}
-
-for (let [key, value] of Object.entries(names)) {
-  eoslimeAccounts[`${key}Account`] = eoslime.Account.load(key, keyProvider[1])
-}
-
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, eoslimeAccounts
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
 }
-

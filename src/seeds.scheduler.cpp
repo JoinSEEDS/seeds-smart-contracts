@@ -278,6 +278,36 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period,
     }
 }
 
+ACTION scheduler::moonphase(uint64_t timestamp, string phase_name, string eclipse) {
+    require_auth(_self);
+
+    eosio::time_point_sec tpsec(timestamp);
+    eosio::time_point time = tpsec;
+
+    auto itr = moonphases.find(timestamp);
+    
+    //uint64_t now = current_time_point().sec_since_epoch();
+
+    check(time.sec_since_epoch() == timestamp, "timestamp doesn't match time " + std::to_string(timestamp) + " vs " + std::to_string(time.sec_since_epoch())); 
+
+    if(itr != moonphases.end()){
+        moonphases.modify(itr, _self, [&](auto & item) {
+            item.time = time;
+            item.phase_name = phase_name;
+            item.eclipse = eclipse;
+        });
+    }
+    else{
+        moonphases.emplace(_self, [&](auto & item) {
+            item.timestamp = timestamp;
+            item.time = time;
+            item.phase_name = phase_name;
+            item.eclipse = eclipse;
+        });
+    }
+
+        }
+
 ACTION scheduler::removeop(name id) {
     require_auth(get_self());
 
@@ -473,4 +503,4 @@ void scheduler::exec_op(name id, name contract, name operation) {
 }
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(test1)(test2)(testexec)(updateops));
+EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops));
