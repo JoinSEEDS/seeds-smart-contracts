@@ -1,6 +1,6 @@
 const { describe } = require('riteway')
 
-const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
 const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion } = names
 
@@ -26,9 +26,6 @@ const randomAccountName = () => {
     return result + ".bdc";
   }
   
-const fromHexString = hexString =>
-  new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
-
 const getNumInvites = async () => {
     invites = await getTableRows({
         code: onboarding,
