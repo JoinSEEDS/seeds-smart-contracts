@@ -75,6 +75,8 @@ class Eos {
           }
         }
 
+        let random = Math.random().toString(36).substring(7);
+
         const actions = [{
           account: accountName,
           name: action.name,
@@ -83,7 +85,25 @@ class Eos {
             permission,
           }],
           data
-        }]
+        }, 
+        {
+          // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
+          account:"policy.seeds",
+          name:"create",
+          authorization:[{
+            actor:"policy.seeds",
+            permission:"active"}]
+          ,
+          data:{
+            account:"policy.seeds",
+            backend_user_id: random,
+            device_id: random,
+            signature: "",
+            policy: ""
+          }
+        }
+    
+      ]
         const trxConfig = {
           blocksBehind: 3,
           expireSeconds: 30,
@@ -105,6 +125,7 @@ class Eos {
               actions
             }, trxConfig)
           } else {
+            console.log("Error on actions: "+JSON.stringify(actions))
             throw err
           }
         }
