@@ -741,7 +741,8 @@ const initContracts = (accounts) =>
     ))
   )
   
-const sha256 = Eos.getEcc().sha256
+const ecc = require('eosjs-ecc')
+const sha256 = ecc.sha256
 
 const isLocal = () => { return chainId == networks.local }
 
