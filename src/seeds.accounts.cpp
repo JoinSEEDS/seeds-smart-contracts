@@ -993,6 +993,15 @@ void accounts::send_punish (name account, uint64_t points) {
 
 void accounts::punish (name account, uint64_t points) {
   require_auth(get_self());
+  
+  check_user(account);
+
+  auto uitr = users.find(account.value);
+
+  users.modify(uitr, _self, [&](auto& item) {
+    item.status = "visitor"_n;
+  });
+  
   send_subrep(account, points);
   pnshvouchers(account, points, uint64_t(0));
 }
@@ -1042,9 +1051,6 @@ void accounts::flag (name from, name to) {
   auto fitr = flags.find(from.value);
   check(fitr == flags.end(), "a user can only flag another user once");
 
-  auto to_rep = rep.find(to.value);
-  check(to_rep != rep.end(), to.to_string() + " user has no reputation");
-
   uint64_t points = 0;
   uint64_t base_points = 0;
   auto uitr = users.get(from.value, "user not found");
@@ -1079,20 +1085,25 @@ void accounts::flag (name from, name to) {
   uint64_t flag_threshold = config_get("flag.thresh"_n);
 
   if (total_flag_points >= flag_threshold && removed_flag_points < total_flag_points) {
-    uint64_t punishment_points = total_flag_points - removed_flag_points;
 
-    send_punish(to, punishment_points);
-    
-    if (removed_flag_p_itr == removed_flags.end()) {
-      removed_flags.emplace(_self, [&](auto & item){
-        item.account = to;
-        item.flag_points = total_flag_points;
-      });
-    } else {
-      removed_flags.modify(removed_flag_p_itr, _self, [&](auto & item){
-        item.flag_points = total_flag_points;
-      });
+    auto to_rep_itr = rep.find(to.value);
+    if (to_rep_itr != rep.end()) {
+      uint64_t punishment_points = total_flag_points - removed_flag_points;
+
+      send_punish(to, punishment_points);
+      
+      if (removed_flag_p_itr == removed_flags.end()) {
+        removed_flags.emplace(_self, [&](auto & item){
+          item.account = to;
+          item.flag_points = total_flag_points;
+        });
+      } else {
+        removed_flags.modify(removed_flag_p_itr, _self, [&](auto & item){
+          item.flag_points = total_flag_points;
+        });
+      }
     }
+
   }
 
   if (total_flag_p_itr == total_flags.end()) {
