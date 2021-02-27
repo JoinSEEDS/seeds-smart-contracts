@@ -55,7 +55,7 @@ CONTRACT accounts : public contract {
 
       ACTION subrep(name user, uint64_t amount);
 
-      ACTION punish(name account);
+      ACTION punish(name account, uint64_t points);
 
       ACTION requestvouch(name account, name sponsor);
 
