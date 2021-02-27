@@ -75,6 +75,8 @@ class Eos {
           }
         }
 
+        await sleep(200)
+
         const actions = [{
           account: accountName,
           name: action.name,

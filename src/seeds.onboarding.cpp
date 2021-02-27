@@ -99,7 +99,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
   checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
-  
+
   checksum256 empty_checksum;
 
   invite_tables invites(get_self(), get_self().value);

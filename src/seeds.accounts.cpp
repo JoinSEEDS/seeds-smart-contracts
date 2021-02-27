@@ -274,7 +274,7 @@ void accounts::send_subrep(name user, uint64_t amount) {
   ).send();
 }
 
-void accounts::punish(name account) {
+void accounts::punish(name account, uint64_t points) {
   require_auth(get_self());
   
   check_user(account);

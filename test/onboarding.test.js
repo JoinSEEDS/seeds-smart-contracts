@@ -406,8 +406,8 @@ describe('Use application permission to accept', async assert => {
 
     const vouchAfterInvite = await eos.getTableRows({
         code: accounts,
-        scope: newAccount,
-        table: 'vouch',
+        scope: accounts,
+        table: 'vouches',
         json: true
     })
     

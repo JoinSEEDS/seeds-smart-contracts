@@ -453,7 +453,7 @@ describe('vouching', async assert => {
 
   console.log('punish firstuser')
   await contract.vouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
-  await contract.punish(firstuser, { authorization: `${accounts}@active` })
+  await contract.punish(firstuser, 10, { authorization: `${accounts}@active` })
   await checkReps([3, 2, 10, 20], "user punished", "have the correct rep")
   await checkVouch(4, `${firstuser} punished`, 'store the vouch')
 
