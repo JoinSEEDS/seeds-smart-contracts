@@ -279,12 +279,6 @@ void accounts::punish(name account, uint64_t points) {
   
   check_user(account);
 
-  auto uitr = users.find(account.value);
-
-  users.modify(uitr, _self, [&](auto& item) {
-    item.status = "visitor"_n;
-  });
-
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vitr = vouches_by_account.find(account.value);
 
