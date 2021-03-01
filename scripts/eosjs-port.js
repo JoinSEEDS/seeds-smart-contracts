@@ -13,8 +13,35 @@ const { Api, JsonRpc, Serialize } = eosjs
 let rpc
 let api
 
-function sleep(ms) {
+function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function getNonce () {
+  try {
+    await rpc.getRawAbi('policy.seeds')
+    const random = Math.random().toString(36).substring(10);
+    return [{
+      // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
+      account:"policy.seeds",
+      name:"create",
+      authorization: [
+        {
+          actor: 'policy.seeds',
+          permission: 'active'
+        }
+      ],
+      data:{
+        account:"policy.seeds",
+        backend_user_id: random,
+        device_id: random,
+        signature: "",
+        policy: ""
+      }
+    }]
+  } catch (err) {
+    return []
+  }
 }
 
 class Eos {
@@ -76,35 +103,20 @@ class Eos {
           }
         }
 
-        let random = Math.random().toString(36).substring(7);
-
-        const actions = [{
+        const nonce = await getNonce()
+        const actions = [
+          {
           account: accountName,
           name: action.name,
           authorization: [{
             actor,
             permission,
           }],
-          data
-        }, 
-        {
-          // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
-          account:"policy.seeds",
-          name:"create",
-          authorization:[{
-            actor:"policy.seeds",
-            permission:"active"}]
-          ,
-          data:{
-            account:"policy.seeds",
-            backend_user_id: random,
-            device_id: random,
-            signature: "",
-            policy: ""
-          }
-        }
-    
-      ]
+            data
+          },
+          ...nonce
+        ]
+
         const trxConfig = {
           blocksBehind: 3,
           expireSeconds: 30,

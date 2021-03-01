@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion, settings } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -43,7 +43,10 @@ describe('Onboarding', async assert => {
         return
     }
     
-    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+    const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
+
+    console.log(`reset ${settings}`)
+    await contracts.settings.reset({ authorization: `${settings}@active` })
 
     const transferQuantity = `10.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
@@ -89,7 +92,7 @@ describe('Onboarding', async assert => {
         await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
     
         console.log(`reset ${harvest}`)
-        await contracts.harvest.reset({ authorization: `${harvest}@active` })    
+        await contracts.harvest.reset({ authorization: `${harvest}@active` })
     }
 
     const deposit = async (user, memo = '') => {
