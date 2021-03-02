@@ -515,6 +515,7 @@ describe('Ambassador and Org rewards', async assert => {
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
   await contracts.exchange.reset({ authorization: `${exchange}@active` })
   await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -1371,6 +1372,25 @@ describe('Punishment', async assert => {
     })
   }
 
+  const checkUserStatus = async (user, status) => {
+    const usersTable = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'users',
+      json: true
+    })
+    const userStatus = (usersTable.rows.filter(u => u.account == user)[0]).status
+    assert({
+      given: `${user} punished`,
+      should: 'have the correct status',
+      actual: userStatus,
+      expected: status
+    })
+  }
+
+  console.log('change resident threshold')
+  await contracts.settings.configure('res.rep.pt', 10, { authorization: `${settings}@active` })
+
   console.log('join users')
   await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, `user`, 'individual', { authorization: `${accounts}@active` })
@@ -1379,8 +1399,9 @@ describe('Punishment', async assert => {
   await contracts.accounts.adduser(fifthuser, `user`, 'individual', { authorization: `${accounts}@active` })
 
   console.log('make residents')
-  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await checkUserStatus(firstuser, 'citizen')
 
   console.log('make citizens')
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
@@ -1391,10 +1412,10 @@ describe('Punishment', async assert => {
   await contracts.accounts.addrep(seconduser, 100, { authorization: `${accounts}@active` })
   await contracts.accounts.addrep(thirduser, 200, { authorization: `${accounts}@active` })
   await contracts.accounts.addrep(fourthuser, 300, { authorization: `${accounts}@active` })
-  await contracts.accounts.addrep(fifthuser, 20, { authorization: `${accounts}@active` })
+  // await contracts.accounts.addrep(fifthuser, 20, { authorization: `${accounts}@active` })
 
   console.log('manipulating the ranking')
-  await contracts.accounts.testsetrs(firstuser, 0, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(firstuser, 10, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(seconduser, 33, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(thirduser, 60, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(fourthuser, 99, { authorization: `${accounts}@active` })
@@ -1402,9 +1423,9 @@ describe('Punishment', async assert => {
   console.log('vouching')
   await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
   await contracts.accounts.vouch(thirduser, firstuser, { authorization: `${thirduser}@active` })
-  await contracts.accounts.vouch(thirduser, fifthuser, { authorization: `${thirduser}@active` })
+  await contracts.accounts.vouch(seconduser, fifthuser, { authorization: `${seconduser}@active` })
 
-  await checkReps([70, 100, 200, 300, 44])
+  await checkReps([70, 100, 200, 300, 6])
   
   console.log('flag users')
   await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
@@ -1430,23 +1451,27 @@ describe('Punishment', async assert => {
 
   await checkFlags(firstuser, 46)
   await checkPunishmentPoints(firstuser, 46)
-  await checkReps([24, 77, 177, 300, 44])
+  await checkReps([24, 77, 177, 300, 6])
+  await checkUserStatus(firstuser, 'resident')
 
   console.log('remove flag')
   await contracts.accounts.removeflag(seconduser, firstuser, { authorization: `${seconduser}@active` })
 
   await checkFlags(firstuser, 40)
   await checkPunishmentPoints(firstuser, 46)
-  await checkReps([24, 77, 177, 300, 44])
+  await checkReps([24, 77, 177, 300, 6])
 
   console.log('flag again')
   await sleep(300)
   await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
   await contracts.accounts.flag(thirduser, firstuser, { authorization: `${thirduser}@active` })
 
+  await sleep(1500)
+
   await checkFlags(firstuser, 70) // -24
   await checkPunishmentPoints(firstuser, 70)
-  await checkReps([65, 165, 300, 44])
+  await checkReps([65, 165, 300, 6])
+  await checkUserStatus(firstuser, 'visitor')
 
   console.log('flag a user without rep')
   await contracts.accounts.testcitizen(fifthuser, { authorization: `${accounts}@active` })

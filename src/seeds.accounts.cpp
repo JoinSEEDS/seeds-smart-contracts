@@ -993,15 +993,7 @@ void accounts::send_punish (name account, uint64_t points) {
 
 void accounts::punish (name account, uint64_t points) {
   require_auth(get_self());
-  
   check_user(account);
-
-  auto uitr = users.find(account.value);
-
-  users.modify(uitr, _self, [&](auto& item) {
-    item.status = "visitor"_n;
-  });
-  
   send_subrep(account, points);
   pnshvouchers(account, points, uint64_t(0));
 }
@@ -1091,6 +1083,7 @@ void accounts::flag (name from, name to) {
       uint64_t punishment_points = total_flag_points - removed_flag_points;
 
       send_punish(to, punishment_points);
+      send_eval_demote(to);
       
       if (removed_flag_p_itr == removed_flags.end()) {
         removed_flags.emplace(_self, [&](auto & item){
@@ -1136,6 +1129,100 @@ void accounts::removeflag (name from, name to) {
   });
 
   flags.erase(flag_itr);
+}
+
+void accounts::send_eval_demote (name to) {
+  
+  uint64_t batch_size = config_get(name("batchsize"));
+
+  action next_execution(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "evaldemote"_n,
+    std::make_tuple(to, uint64_t(0), uint64_t(0), batch_size)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(to.value + 1, _self);
+
+}
+
+void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uritr = rep.find(to.value);
+  if (uritr == rep.end()) {
+    updatestatus(to, name("visitor"));
+    return;
+  }
+
+  uint64_t total = get_size("rep.sz"_n);
+  if (total == 0) return;
+
+  uint64_t current = chunk * chunksize;
+  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
+  uint64_t count = 0;
+  bool evaluated = false;
+
+  while (ritr != rep_by_rep.end() && count < chunksize) {
+
+    if (ritr->account == to) {
+      uint64_t rank = utils::rank(current, total);
+
+      rep_by_rep.modify(ritr, _self, [&](auto& item) {
+        item.rank = rank;
+      });
+
+      auto uitr = users.find(ritr->account.value);
+
+      uint64_t min_rep_score_citizen = config_get("cit.rep.sc"_n);
+      uint64_t min_rep_score_resident = config_get("res.rep.pt"_n);
+
+      name current_rank = uitr->status;
+
+      if (rank < min_rep_score_resident) {
+        current_rank = name("visitor");
+      } else if (rank < min_rep_score_citizen) {
+        current_rank = name("resident");
+      } else {
+        current_rank = name("citizen");
+      }
+
+      if (uitr->status == name("citizen") && current_rank != name("citizen")) {
+        updatestatus(uitr->account, current_rank);
+      }
+      else if (uitr->status == name("resident") && current_rank == name("visitor")) {
+        updatestatus(uitr->account, name("visitor"));
+      }
+
+      evaluated = true;
+      break;
+    }
+
+    current++;
+    count++;
+    ritr++;
+  }
+
+  if (!evaluated && ritr != rep_by_rep.end()) {
+    // recursive call
+    uint64_t next_value = ritr->by_rep();
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "evaldemote"_n,
+        std::make_tuple(to, next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self); 
+  }
+
 }
 
 

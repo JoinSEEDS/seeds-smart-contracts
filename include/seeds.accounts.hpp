@@ -71,6 +71,7 @@ CONTRACT accounts : public contract {
       ACTION removeflag(name from, name to);
       ACTION punish(name account, uint64_t points);
       ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
+      ACTION evaldemote(name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
       ACTION testresident(name user);
       ACTION testcitizen(name user);
@@ -152,6 +153,7 @@ CONTRACT accounts : public contract {
       void add_active (name user);
       void add_cbs(name account, int points);
       void send_punish(name account, uint64_t points);
+      void send_eval_demote(name to);
 
       DEFINE_USER_TABLE
 
@@ -315,5 +317,5 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
-(flag)(removeflag)(punish)(pnshvouchers)
+(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 );

@@ -1,11 +1,11 @@
 const eosjs = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const { TextEncoder, TextDecoder } = require('util')
-const ecc = require('eosjs/dist/eosjs-ecc-migration')
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
 const { option } = require('commander')
 const { transactionHeader } = require('eosjs/dist/eosjs-serialize')
+const ecc = require('eosjs-ecc')
 
 const { Api, JsonRpc, Serialize } = eosjs
 
@@ -35,7 +35,7 @@ class Eos {
   }
 
   static getEcc () {
-    return ecc.ecc
+    return ecc
   }
 
   async getInfo () {
