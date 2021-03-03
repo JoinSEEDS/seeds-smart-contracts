@@ -226,25 +226,46 @@ void onboarding::deposit(name from, name to, asset quantity, string memo) {
 }
 
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
-  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash);
+  _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash, 0);
 }
 
 void onboarding::invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
-  _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash);
+  _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash, 0);
 }
 
-void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id) {
   require_auth(sponsor);
 
   asset total_quantity = asset(transfer_quantity.amount + sow_quantity.amount, seeds_symbol);
 
-  auto sitr = sponsors.find(sponsor.value);
-  check(sitr != sponsors.end(), "sponsor not found");
-  check(sitr->balance >= total_quantity, "balance less than " + total_quantity.to_string());
+  if (campaign_id > 0) {
+    auto citr = campaigns.find(campaign_id);
+    check(citr != campaigns.end(), "campaign not found");
 
-  sponsors.modify(sitr, get_self(), [&](auto& sponsor) {
-    sponsor.balance -= total_quantity;
-  });
+    check(total_quantity <= citr->max_amount_per_invite, "max amount per invite exceeded");
+    check(total_quantity <= citr->remaining_amount, "remaining amount exceeded");
+
+    campaigns.modify(citr, _self, [&](auto & item){
+      item.remaining_amount -= total_quantity;
+    });
+
+    auto csitr = campsponsors.find(sponsor.value);
+    check(csitr != campsponsors.end(), "sponsor not found");
+    check(csitr->balance >= total_quantity, "balance less than " + total_quantity.to_string());
+
+    campsponsors.modify(csitr, _self, [&](auto & sponsor) {
+      sponsor.balance -= total_quantity;
+    });
+
+  } else {
+    auto sitr = sponsors.find(sponsor.value);
+    check(sitr != sponsors.end(), "sponsor not found");
+    check(sitr->balance >= total_quantity, "balance less than " + total_quantity.to_string());
+
+    sponsors.modify(sitr, get_self(), [&](auto& sponsor) {
+      sponsor.balance -= total_quantity;
+    });
+  }
 
   invite_tables invites(get_self(), get_self().value);
   auto invites_byhash = invites.get_index<"byhash"_n>();
@@ -283,6 +304,7 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
   check(iitr->invite_secret == empty_checksum, "invite already accepted");
+  check(iitr->sponsor == sponsor, "only sponsor can cancel invite");
 
   auto refitr = referrers.find(iitr->invite_id);
   if (refitr != referrers.end()) {
@@ -363,6 +385,152 @@ void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size
     
   }
 
+}
 
+uint64_t onboarding::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+ACTION onboarding::createcampg (
+  name origin_account, 
+  name owner, 
+  asset max_amount_per_invite, 
+  asset planted, 
+  name reward_owner,
+  asset total_amount
+) {
+
+  require_auth(origin_account);
+
+  uint64_t min_planted = config_get("inv.cmp.plnt"_n);
+  check(planted.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted));
+
+  auto sitr = sponsors.find(origin_account.value);
+  check(sitr != sponsors.end(), "origin account " + origin_account.to_string() + " has no balance entry");
+  check(sitr->balance >= total_amount, "origin account has not enough balance");
+
+  sponsors.modify(sitr, _self, [&](auto & item){
+    item.balance -= total_amount;
+  });
+
+  auto csitr = campsponsors.find(origin_account.value);
+  if (csitr == campsponsors.end()) {
+    campsponsors.emplace(_self, [&](auto & item){
+      item.account = origin_account;
+      item.balance = total_amount;
+    });
+  } else {
+    campsponsors.modify(csitr, _self, [&](auto & item){
+      item.balance += total_amount;
+    });
+  }
+
+  name type = private_campaign;
+
+  if (origin_account == bankaccts::campaigns) {
+    type = invite_campaign;
+  }
+
+  uint64_t key = campaigns.available_primary_key(); 
+
+  campaigns.emplace(_self, [&](auto & item){
+    item.id = key > 0 ? key : 1;
+    item.type = type;
+    item.origin_account = origin_account;
+    item.owner = owner;
+    item.max_amount_per_invite = max_amount_per_invite;
+    item.planted = planted;
+    item.reward_owner = reward_owner;
+    item.reward = config_get("inv.cmp.rwrd"_n);
+    item.authorized_accounts = { owner };
+    item.total_amount = total_amount;
+    item.remaining_amount = total_amount;
+  });
+
+}
+
+ACTION onboarding::campinvite (uint64_t id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash) {
+  
+  auto citr = campaigns.find(id);
+  check(citr != campaigns.end(), "campaign not found");
+  
+  check(planted >= citr->planted, "the planted amount must be greater or equal than " + citr->planted.to_string());
+  check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), authorizing_account), 
+    authorizing_account.to_string() + " is not authorized for invite in this campaign");
+
+  require_auth(authorizing_account);
+
+  _invite(citr->origin_account, authorizing_account, quantity, planted, invite_hash, id);
+
+}
+
+ACTION onboarding::addauthorized (uint64_t id, name account) {
+
+  auto citr = campaigns.find(id);
+  check(citr != campaigns.end(), "campaign not found");
+
+  require_auth(citr->owner);
+
+  if (std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), account)) {
+    return;
+  }
+
+  campaigns.modify(citr, _self, [&](auto & item){
+    item.authorized_accounts.push_back(account);
+  });
+
+}
+
+ACTION onboarding::remauthorized (uint64_t id, name account) {
+
+  auto citr = campaigns.find(id);
+  check(citr != campaigns.end(), "campaign not found");
+
+  require_auth(citr->owner);
+
+  auto itr = std::lower_bound(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), account);
+
+  if (itr == citr->authorized_accounts.end() || *itr != account) {
+    return;
+  }
+
+  campaigns.modify(citr, _self, [&](auto & item){
+    item.authorized_accounts.erase(itr);
+  });
+
+}
+
+ACTION onboarding::returnfunds (uint64_t id) {
+
+  auto citr = campaigns.find(id);
+  check(citr != campaigns.end(), "campaign not found");  
+
+  name owner = citr->owner;
+  name origin_account = citr->origin_account;
+
+  if (has_auth(owner)) {
+    require_auth(owner);
+  } else {
+    require_auth(origin_account);
+  }
+
+  asset remaining_amount = citr->remaining_amount;
+
+  campaigns.modify(citr, _self, [&](auto & item){
+    item.remaining_amount = asset(0, seeds_symbol);
+  });
+
+  auto csitr = campsponsors.find(origin_account.value);
+  check(csitr != campsponsors.end(), "sponsor not found");
+
+  campsponsors.modify(csitr, _self, [&](auto & item){
+    item.balance -= remaining_amount;
+  });
+
+  transfer_seeds(origin_account, remaining_amount, "return campaign funds");
 
 }
