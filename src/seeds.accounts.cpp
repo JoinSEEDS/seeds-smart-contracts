@@ -995,7 +995,15 @@ void accounts::punish (name account, uint64_t points) {
   require_auth(get_self());
   check_user(account);
   send_subrep(account, points);
-  pnshvouchers(account, points, uint64_t(0));
+}
+
+void accounts::send_punish_vouchers (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "pnshvouchers"_n,
+    std::make_tuple(account, points, uint64_t(0))
+  ).send();
 }
 
 void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
@@ -1084,6 +1092,7 @@ void accounts::flag (name from, name to) {
 
       send_punish(to, punishment_points);
       send_eval_demote(to);
+      send_punish_vouchers(to, punishment_points);
       
       if (removed_flag_p_itr == removed_flags.end()) {
         removed_flags.emplace(_self, [&](auto & item){

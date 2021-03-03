@@ -154,6 +154,7 @@ CONTRACT accounts : public contract {
       void add_cbs(name account, int points);
       void send_punish(name account, uint64_t points);
       void send_eval_demote(name to);
+      void send_punish_vouchers(name account, uint64_t points);
 
       DEFINE_USER_TABLE
 
