@@ -741,12 +741,13 @@ const initContracts = (accounts) =>
     ))
   )
   
-const sha256 = Eos.getEcc().sha256
+const ecc = require('eosjs-ecc')
+const sha256 = ecc.sha256
 
 const isLocal = () => { return chainId == networks.local }
 
 const ramdom64ByteHexString = async () => {
-  let privateKey = await Eos.getEcc().randomKey({}, {
+  let privateKey = await Eos.getEcc().randomKey(undefined, {
     secureEnv: true
   })
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
@@ -755,7 +756,7 @@ const ramdom64ByteHexString = async () => {
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
-  let private = await Eos.getEcc().randomKey({}, {
+  let private = await Eos.getEcc().randomKey(undefined, {
     secureEnv: true
   })
   let public = await Eos.getEcc().privateToPublic(private)
