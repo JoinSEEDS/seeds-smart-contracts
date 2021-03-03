@@ -165,7 +165,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
       EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup)
-      (createcampg)(campinvite)(addauthorized)(returnfunds)
+      (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)
       )
       }
   }

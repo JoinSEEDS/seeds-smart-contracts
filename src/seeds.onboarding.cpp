@@ -99,7 +99,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
   checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
-  
+
   checksum256 empty_checksum;
 
   invite_tables invites(get_self(), get_self().value);
@@ -186,6 +186,16 @@ void onboarding::reset() {
   while (iitr != invites.end()) {
     iitr = invites.erase(iitr);
   }
+
+  auto citr = campaigns.begin();
+  while (citr != campaigns.end()) {
+    citr = campaigns.erase(citr);
+  }
+
+  auto csitr = campsponsors.begin();
+  while (csitr != campsponsors.end()) {
+    csitr = campsponsors.erase(csitr);
+  }
 }
 
 
@@ -226,15 +236,16 @@ void onboarding::deposit(name from, name to, asset quantity, string memo) {
 }
 
 void onboarding::invite(name sponsor, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  require_auth(sponsor);
   _invite(sponsor, sponsor, transfer_quantity, sow_quantity, invite_hash, 0);
 }
 
 void onboarding::invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash) {
+  require_auth(sponsor);
   _invite(sponsor, referrer, transfer_quantity, sow_quantity, invite_hash, 0);
 }
 
 void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id) {
-  require_auth(sponsor);
 
   asset total_quantity = asset(transfer_quantity.amount + sow_quantity.amount, seeds_symbol);
 
@@ -304,7 +315,7 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
   check(iitr->invite_secret == empty_checksum, "invite already accepted");
-  check(iitr->sponsor == sponsor, "only sponsor can cancel invite");
+  check(iitr->sponsor == sponsor, "not sponsor");
 
   auto refitr = referrers.find(iitr->invite_id);
   if (refitr != referrers.end()) {
@@ -458,11 +469,12 @@ ACTION onboarding::campinvite (uint64_t id, name authorizing_account, asset plan
   auto citr = campaigns.find(id);
   check(citr != campaigns.end(), "campaign not found");
   
-  check(planted >= citr->planted, "the planted amount must be greater or equal than " + citr->planted.to_string());
   check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), authorizing_account), 
-    authorizing_account.to_string() + " is not authorized for invite in this campaign");
+    authorizing_account.to_string() + " is not authorized to invite in this campaign");
 
   require_auth(authorizing_account);
+
+  check(planted >= citr->planted, "the planted amount must be greater or equal than " + citr->planted.to_string());
 
   _invite(citr->origin_account, authorizing_account, quantity, planted, invite_hash, id);
 
@@ -491,6 +503,7 @@ ACTION onboarding::remauthorized (uint64_t id, name account) {
   check(citr != campaigns.end(), "campaign not found");
 
   require_auth(citr->owner);
+  check(account != citr->owner, "can not remove owner");
 
   auto itr = std::lower_bound(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), account);
 

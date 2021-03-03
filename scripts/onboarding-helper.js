@@ -14,10 +14,9 @@
 
 const Eos = require('./eosjs-port')
 const ecc = Eos.getEcc()
-// const ecc = require('eosjs-ecc')
 
 const ramdom64ByteHexString = async () => {
-  let privateKey = await ecc.randomKey({}, {
+  let privateKey = await ecc.randomKey(undefined, {
     secureEnv: true
   })
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 

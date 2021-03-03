@@ -1,19 +1,47 @@
 const eosjs = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const { TextEncoder, TextDecoder } = require('util')
-const ecc = require('eosjs/dist/eosjs-ecc-migration')
+
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
 const { option } = require('commander')
 const { transactionHeader } = require('eosjs/dist/eosjs-serialize')
+const ecc = require('eosjs-ecc')
 
 const { Api, JsonRpc, Serialize } = eosjs
 
 let rpc
 let api
 
-function sleep(ms) {
+function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function getNonce () {
+  try {
+    await rpc.getRawAbi('policy.seeds')
+    const random = Math.random().toString(36).substring(10);
+    return [{
+      // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
+      account:"policy.seeds",
+      name:"create",
+      authorization: [
+        {
+          actor: 'policy.seeds',
+          permission: 'active'
+        }
+      ],
+      data:{
+        account:"policy.seeds",
+        backend_user_id: random,
+        device_id: random,
+        signature: "",
+        policy: ""
+      }
+    }]
+  } catch (err) {
+    return []
+  }
 }
 
 class Eos {
@@ -35,7 +63,7 @@ class Eos {
   }
 
   static getEcc () {
-    return ecc.ecc
+    return ecc
   }
 
   async getInfo () {
@@ -75,17 +103,20 @@ class Eos {
           }
         }
 
-        await sleep(300)
-
-        const actions = [{
+        const nonce = await getNonce()
+        const actions = [
+          {
           account: accountName,
           name: action.name,
           authorization: [{
             actor,
             permission,
           }],
-          data
-        }]
+            data
+          },
+          ...nonce
+        ]
+
         const trxConfig = {
           blocksBehind: 3,
           expireSeconds: 30,
@@ -107,6 +138,7 @@ class Eos {
               actions
             }, trxConfig)
           } else {
+            console.log("Error on actions: "+JSON.stringify(actions))
             throw err
           }
         }
