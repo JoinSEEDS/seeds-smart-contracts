@@ -283,6 +283,7 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
   check(iitr->invite_secret == empty_checksum, "invite already accepted");
+  check(iitr->sponsor == sponsor, "not sponsor");
 
   auto refitr = referrers.find(iitr->invite_id);
   if (refitr != referrers.end()) {
