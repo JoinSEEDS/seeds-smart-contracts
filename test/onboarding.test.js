@@ -741,29 +741,13 @@ describe('Private campaign', async assert => {
             table: 'campaigns',
             json: true
         })
-        const funds = (camps.rows.filter(r => r.id === campaignId)[0]).remaining_amount
+        const funds = (camps.rows.filter(r => r.campaign_id === campaignId)[0]).remaining_amount
         assert({
             given: `invite created`,
             should: `have the correct remaining funds`,
             actual: funds,
             expected: expectedFunds
         })    
-    }
-
-    const checkSponsorFunds = async (sponsor, expectedFunds) => {
-        const campSponsors = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'campsponsors',
-            json: true
-        })
-        console.log(campSponsors)
-        assert({
-            given: 'invite created',
-            should: `have the correct funds (sponsor: ${sponsor})`,
-            actual: (campSponsors.rows.filter(r => r.account === sponsor)[0]).balance,
-            expected: expectedFunds
-        })
     }
 
     const checkUsers = async (newUser, numberOfUsers) => {
@@ -819,18 +803,18 @@ describe('Private campaign', async assert => {
     console.log('create campaign')
     const maxAmount1 = '20.0000 SEEDS'
     await deposit(firstuser, onboarding, '60.0000 SEEDS')
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, maxAmount1, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, maxAmount1, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '50.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
 
     await checkCampaignFunds(1, maxAmount1)
-    await checkSponsorFunds(firstuser, '40.0000 SEEDS')
+    await checkCampaignFunds(2, maxAmount1)
 
     console.log(`invite ${seconduser}`)
+    const firstuserBalanceBeforeAccept = await getBalance(firstuser)
     await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '4.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
     await contracts.onboarding.accept(seconduser, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
-    await checkCampaignFunds(1, '10.0000 SEEDS')
-    await checkSponsorFunds(firstuser, '30.0000 SEEDS')
+    await checkCampaignFunds(1, '9.0000 SEEDS')
     await checkUsers(seconduser, 2)
     await checkVouches(seconduser, 1)
     
@@ -850,8 +834,9 @@ describe('Private campaign', async assert => {
     await contracts.onboarding.campinvite(1, seconduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
     await contracts.onboarding.accept(thirduser, inviteSecret2, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
-    await checkCampaignFunds(1, '4.0000 SEEDS')
-    await checkSponsorFunds(firstuser, '24.0000 SEEDS')
+    const firstuserBalanceAfterAccept = await getBalance(firstuser)
+
+    await checkCampaignFunds(1, '2.0000 SEEDS')
     await checkUsers(thirduser, 3)
     await checkVouches(thirduser, 0)
 
@@ -878,13 +863,16 @@ describe('Private campaign', async assert => {
     }
 
     console.log('retire funds')
-
     const firstuserBalanceBefore = await getBalance(firstuser)
     await contracts.onboarding.returnfunds(1, { authorization: `${firstuser}@active` })
     const firstuserBalanceAfter = await getBalance(firstuser)
-
     await checkCampaignFunds(1, '0.0000 SEEDS')
-    await checkSponsorFunds(firstuser, '20.0000 SEEDS')
+
+    console.log('cancel invite')
+    await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${firstuser}@active` })
+    await checkCampaignFunds(2, '14.0000 SEEDS')
+    await contracts.onboarding.cancel(firstuser, inviteHash4, { authorization: `${firstuser}@active` })
+    await checkCampaignFunds(2, '20.0000 SEEDS')
 
     assert({
         given: 'user invites with no permission',
@@ -911,7 +899,14 @@ describe('Private campaign', async assert => {
         given: `${firstuser} call returnfunds`,
         should: 'return the correct amount',
         actual: firstuserBalanceAfter - firstuserBalanceBefore,
-        expected: 4
+        expected: 2
+    })
+
+    assert({
+        given: 'invites been accepted',
+        should: `${firstuser} has more funds`,
+        actual: firstuserBalanceAfterAccept - firstuserBalanceBeforeAccept,
+        expected: 2
     })
     
 })

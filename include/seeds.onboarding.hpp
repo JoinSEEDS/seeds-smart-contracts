@@ -22,7 +22,6 @@ CONTRACT onboarding : public contract {
         sponsors(receiver, receiver.value),
         referrers(receiver, receiver.value),
         campaigns(receiver, receiver.value),
-        campsponsors(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value),
         config(contracts::settings, contracts::settings.value)
         {}
@@ -41,7 +40,7 @@ CONTRACT onboarding : public contract {
 
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
-    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset total_amount);
+    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
     ACTION campinvite(uint64_t id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash);
     ACTION addauthorized(uint64_t id, name account);
     ACTION remauthorized(uint64_t id, name account);
@@ -65,7 +64,10 @@ CONTRACT onboarding : public contract {
     void invitevouch(name sponsor, name account);
     void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
     void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id);
+    void check_user(name account);
     uint64_t config_get(name key);
+    void send_campaign_reward(uint64_t campaign_id);
+
 
     TABLE invite_table {
       uint64_t invite_id;
@@ -75,10 +77,12 @@ CONTRACT onboarding : public contract {
       name account;
       checksum256 invite_hash;
       checksum256 invite_secret;
+      uint64_t campaign_id;
 
       uint64_t primary_key()const { return invite_id; }
       uint64_t by_sponsor()const { return sponsor.value; }
       checksum256 by_hash()const { return invite_hash; }
+      uint64_t by_campaign()const { return campaign_id; }
     };
 
     TABLE referrer_table {
@@ -95,27 +99,20 @@ CONTRACT onboarding : public contract {
       uint64_t primary_key() const { return account.value; }
     };
 
-    TABLE campaign_sponsor_table {
-      name account;
-      asset balance;
-
-      uint64_t primary_key() const { return account.value; }
-    };
-
     TABLE campaign_table {
-      uint64_t id;
+      uint64_t campaign_id;
       name type;
       name origin_account;
       name owner;
       asset max_amount_per_invite;
       asset planted;
       name reward_owner;
-      uint64_t reward;
+      asset reward;
       std::vector<name> authorized_accounts;
       asset total_amount;
       asset remaining_amount;
 
-      uint64_t primary_key() const { return id; }
+      uint64_t primary_key() const { return campaign_id; }
       uint64_t by_type() const { return type.value; }
       uint64_t by_origin_account() const { return origin_account.value; }
       uint64_t by_owner() const { return owner.value; }
@@ -128,7 +125,9 @@ CONTRACT onboarding : public contract {
       indexed_by<"byhash"_n,
       const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>,
       indexed_by<"bysponsor"_n,
-      const_mem_fun<invite_table, uint64_t, &invite_table::by_sponsor>>
+      const_mem_fun<invite_table, uint64_t, &invite_table::by_sponsor>>,
+      indexed_by<"bycampaign"_n,
+      const_mem_fun<invite_table, uint64_t, &invite_table::by_campaign>>
     > invite_tables;
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
@@ -148,13 +147,10 @@ CONTRACT onboarding : public contract {
       const_mem_fun<campaign_table, uint64_t, &campaign_table::by_owner>>
     > campaign_tables;
 
-    typedef eosio::multi_index<"campsponsors"_n, campaign_sponsor_table> campaign_sponsor_tables;
-
     sponsor_tables sponsors;
     user_tables users;
     referrer_tables referrers;
     campaign_tables campaigns;
-    campaign_sponsor_tables campsponsors;
     config_tables config;
 
 };
