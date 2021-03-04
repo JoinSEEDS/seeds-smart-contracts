@@ -1,8 +1,8 @@
 const { describe } = require('riteway')
 
-const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance } = require('../scripts/helper')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion, settings } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -26,9 +26,6 @@ const randomAccountName = () => {
     return result + ".bdc";
   }
   
-const fromHexString = hexString =>
-  new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
-
 const getNumInvites = async () => {
     invites = await getTableRows({
         code: onboarding,
@@ -46,7 +43,10 @@ describe('Onboarding', async assert => {
         return
     }
     
-    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+    const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
+
+    console.log(`reset ${settings}`)
+    await contracts.settings.reset({ authorization: `${settings}@active` })
 
     const transferQuantity = `10.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
@@ -92,7 +92,7 @@ describe('Onboarding', async assert => {
         await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
     
         console.log(`reset ${harvest}`)
-        await contracts.harvest.reset({ authorization: `${harvest}@active` })    
+        await contracts.harvest.reset({ authorization: `${harvest}@active` })
     }
 
     const deposit = async (user, memo = '') => {
@@ -201,7 +201,7 @@ describe('Onboarding', async assert => {
 
     //console.log("REFS - after "+ JSON.stringify(refs, null, 2))
     
-    console.log("invitefor - after referrersA "+ JSON.stringify(referrersA, null, 2))
+    //console.log("invitefor - after referrersA "+ JSON.stringify(referrersA, null, 2))
 
     let refererOfNewAccount = refs.rows.filter( (item) => item.invited == newAccount2)
 
@@ -223,11 +223,23 @@ describe('Onboarding', async assert => {
     await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
     let sponsors2 = await getSponsors()
 
-    console.log("sponsors2 "+JSON.stringify(sponsors2, null, 2))
+    //console.log("sponsors2 "+JSON.stringify(sponsors2, null, 2))
 
     await contracts.onboarding.invite(firstuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
     let invites1 = await getNumInvites()
     let referrers1 = await getNumReferrers()
+
+    console.log("cancel from account other than sponsor")
+    let otherCancel = false
+    try {
+        await contracts.onboarding.cancel(seconduser, inviteHash2, { authorization: `${seconduser}@active` })
+        otherCancel = true
+    } catch (err) {
+        if ((""+err).indexOf("not sponsor") == -1) {
+            console.log("unexpected error cancel "+err)
+        }
+    }
+
 
     console.log("cancel")
     let b1 = await getBalance(firstuser)
@@ -248,6 +260,13 @@ describe('Onboarding', async assert => {
     await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
     let invites2_after = await getNumInvites()
     let referrers2_after = await getNumReferrers()
+
+    assert({
+        given: 'Cancel from non sponsor account',
+        should: 'only sponsor can cancel',
+        actual: otherCancel,
+        expected: false
+    })
 
     assert({
         given: 'invite cancel',
@@ -311,7 +330,7 @@ describe('Onboarding', async assert => {
     })
 
 
-    console.log("refererOfNewAccount "+JSON.stringify(refererOfNewAccount, null, 2))
+    //console.log("refererOfNewAccount "+JSON.stringify(refererOfNewAccount, null, 2))
 
     assert({
         given: 'search by referrer user 4',
@@ -395,7 +414,7 @@ describe('Use application permission to accept', async assert => {
         table: 'users',
         json: true
     })
-    console.log("users "+JSON.stringify(acceptUsers, null, 2))
+    //console.log("users "+JSON.stringify(acceptUsers, null, 2))
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -406,12 +425,12 @@ describe('Use application permission to accept', async assert => {
 
     const vouchAfterInvite = await eos.getTableRows({
         code: accounts,
-        scope: newAccount,
-        table: 'vouch',
+        scope: accounts,
+        table: 'vouches',
         json: true
     })
     
-    console.log("vouch after accept "+JSON.stringify(vouchAfterInvite, null, 2))
+    //console.log("vouch after accept "+JSON.stringify(vouchAfterInvite, null, 2))
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
 

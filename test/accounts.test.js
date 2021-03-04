@@ -323,6 +323,22 @@ describe('vouching', async assert => {
   
   }
   
+  const checkVouch = async (expectedTam, given, should) => {
+    const vouchTables = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'vouches',
+      json: true
+    })
+    console.log(vouchTables)
+    assert({
+      given,
+      should,
+      actual: vouchTables.rows.length,
+      expected: expectedTam
+    })
+  }
+
   const contract = await eos.contract(accounts)
   const thetoken = await eos.contract(token)
   const harvestContract = await eos.contract(harvest)
@@ -371,6 +387,9 @@ describe('vouching', async assert => {
   await contract.vouch(firstuser, thirduser, { authorization: `${firstuser}@active` })
 
   await checkReps([0, 20, 20], "after vouching", "get rep bonus for being vouched")
+  await checkVouch(2, `${firstuser} vouched`, 'store the vouch')
+
+  await sleep(500)
 
   var cantVouchTwice = true
   try {
@@ -391,6 +410,7 @@ describe('vouching', async assert => {
 
   await contract.vouch(seconduser, thirduser,{ authorization: `${seconduser}@active` })
   await checkReps([1, 20, 30], "resident vouch", "rep bonus")
+  await checkVouch(3, `${seconduser} vouched`, 'store the vouch')
 
   await contract.testresident(thirduser, { authorization: `${accounts}@active` })
   await checkReps([2, 21, 30], "after user is resident", "all sponsors gets rep bonus")
@@ -403,14 +423,19 @@ describe('vouching', async assert => {
   await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
   await contract.vouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
   await checkReps([3, 22, 30, 3], "max vouch reached", "can still vouch")
-  let maxVouchExceeded = false
-  try {
-    await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
-    maxVouchExceeded = true
-  } catch (err) {
-    console.log("err expected "+err)
-  }
+  await checkVouch(4, `${firstuser} vouched for ${fourthuser}`, 'store the vouch')
 
+  console.log('max vouch exceeded')
+  await contract.vouch(thirduser, fourthuser,{ authorization: `${thirduser}@active` })
+  await checkReps([3, 22, 30, 3], "max vouch reached", "not gain reputation")
+  await checkVouch(5, `${thirduser} vouched for ${fourthuser}`, 'store the vouch')
+
+  console.log('unvoching')
+  await settingscontract.configure("maxvouch", 50, { authorization: `${settings}@active` })
+  await contract.unvouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
+  await contract.unvouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
+  await checkReps([3, 2, 30, 20], "unvouch", "have the correct rep")
+  await checkVouch(3, `${firstuser} unvouched`, 'store the vouch')
 
   assert({
     given: 'vouch sponsor is not resident or citizen',
@@ -425,14 +450,88 @@ describe('vouching', async assert => {
     actual: cantVouchTwice,
     expected: true
   })
-  assert({
-    given: 'vouch past max points',
-    should: 'not be able to vouch',
-    actual: maxVouchExceeded,
-    expected: false
+
+  console.log('punish firstuser')
+  await contract.vouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
+  await contract.punish(firstuser, 10, { authorization: `${accounts}@active` })
+  await checkReps([2, 10, 20], "user punished", "have the correct rep")
+  await checkVouch(4, `${firstuser} punished`, 'store the vouch')
+
+  await settingscontract.configure("maxvouch", 5, { authorization: `${settings}@active` })
+  await contract.vouch(seconduser, fourthuser,{ authorization: `${seconduser}@active` })
+  await checkReps([2, 10, 5], `${seconduser} vouched`, "have the correct rep")
+  await checkVouch(5, `${firstuser} unvouched`, 'store the vouch')
+
+})
+
+describe('test vouch migration', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contract = await eos.contract(accounts)
+  const settingscontract = await eos.contract(settings)
+
+  console.log('reset accounts')
+  await contract.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await settingscontract.reset({ authorization: `${settings}@active` })
+
+  console.log('add users')
+  await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
+  await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
+
+  await contract.testsetrs(firstuser, 50, { authorization: `${accounts}@active` })
+  await contract.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
+  await contract.testsetrs(thirduser, 50, { authorization: `${accounts}@active` })
+  await contract.testsetrs(fourthuser, 50, { authorization: `${accounts}@active` })
+
+  console.log('test citizen')
+  await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  await contract.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
+  console.log('add vouch information')
+  await contract.testmvouch(firstuser, seconduser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(firstuser, thirduser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(firstuser, fourthuser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(seconduser, thirduser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(seconduser, fourthuser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(thirduser, fourthuser, 20, { authorization: `${accounts}@active` })
+  await sleep(300)
+  await contract.testmvouch(fourthuser, firstuser, 20, { authorization: `${accounts}@active` })
+
+  console.log('migration')
+  await settingscontract.configure('batchsize', 2, { authorization: `${settings}@active` })
+  await contract.migratevouch('.', '.', { authorization: `${accounts}@active` })
+  await sleep(8000)
+
+  const vouchTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'vouches',
+    json: true
   })
+  console.log(vouchTable)
 
-
+  const vouchTotalsTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'vouchtotals',
+    json: true
+  })
+  console.log(vouchTotalsTable)
 
 })
 
@@ -1426,6 +1525,9 @@ describe('Punishment', async assert => {
   await contracts.accounts.vouch(seconduser, fifthuser, { authorization: `${seconduser}@active` })
 
   await checkReps([70, 100, 200, 300, 6])
+
+  console.log('set batchsize')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
   
   console.log('flag users')
   await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
@@ -1448,6 +1550,8 @@ describe('Punishment', async assert => {
   } catch (err) {
     console.log('only residents or citizens (expected)')
   }
+
+  await sleep(2000)
 
   await checkFlags(firstuser, 46)
   await checkPunishmentPoints(firstuser, 46)

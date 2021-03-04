@@ -740,7 +740,7 @@ const initContracts = (accounts) =>
       })
     ))
   )
-
+  
 const ecc = require('eosjs-ecc')
 const sha256 = ecc.sha256
 

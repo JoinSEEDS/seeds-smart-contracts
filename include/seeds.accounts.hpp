@@ -21,6 +21,8 @@ CONTRACT accounts : public contract {
           users(receiver, receiver.value),
           refs(receiver, receiver.value),
           cbs(receiver, receiver.value),
+          vouches(receiver, receiver.value),
+          vouchtotals(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
@@ -58,6 +60,8 @@ CONTRACT accounts : public contract {
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
+      ACTION unvouch(name sponsor, name account);
+      ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
       ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
@@ -81,6 +85,9 @@ CONTRACT accounts : public contract {
       ACTION testsetrs(name user, uint64_t amount);
       ACTION testsetcbs(name user, uint64_t amount);
       ACTION testreward();
+
+      ACTION testmvouch(name sponsor, name account, uint64_t reps);
+      ACTION migratevouch(name start_user, name start_sponsor);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -155,6 +162,7 @@ CONTRACT accounts : public contract {
       void send_punish(name account, uint64_t points);
       void send_eval_demote(name to);
       void send_punish_vouchers(name account, uint64_t points);
+      void calc_vouch_rep(name account);
 
       DEFINE_USER_TABLE
 
@@ -188,6 +196,27 @@ CONTRACT accounts : public contract {
         uint64_t primary_key() const { return sponsor.value; }
         uint64_t by_account()const { return account.value; }
 
+      };
+
+      TABLE vouches_table {
+        uint64_t id;
+        name account;
+        name sponsor;
+        uint64_t vouch_points;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_account()const { return account.value; }
+        uint64_t by_sponsor()const { return sponsor.value; }
+        uint128_t by_sponsor_account()const { return (uint128_t(sponsor.value) << 64) + account.value; }
+        uint128_t by_account_sponsor()const { return (uint128_t(account.value) << 64) + sponsor.value; }
+      };
+
+      TABLE vouches_totals_table {
+        name account;
+        uint64_t total_vouch_points;
+        uint64_t total_rep_points;
+
+        uint64_t primary_key() const { return account.value; }
       };
 
       TABLE req_vouch_table {
@@ -253,6 +282,19 @@ CONTRACT accounts : public contract {
       const_mem_fun<vouch_table, uint64_t, &vouch_table::by_account>>
     > vouch_tables;
 
+    typedef eosio::multi_index<"vouches"_n, vouches_table,
+      indexed_by<"byaccount"_n,
+      const_mem_fun<vouches_table, uint64_t, &vouches_table::by_account>>,
+      indexed_by<"bysponsor"_n,
+      const_mem_fun<vouches_table, uint64_t, &vouches_table::by_sponsor>>,
+      indexed_by<"byspnsoracct"_n,
+      const_mem_fun<vouches_table, uint128_t, &vouches_table::by_sponsor_account>>,
+      indexed_by<"byacctspnsor"_n,
+      const_mem_fun<vouches_table, uint128_t, &vouches_table::by_account_sponsor>>
+    > vouches_tables;
+
+    typedef eosio::multi_index<"vouchtotals"_n, vouches_totals_table> vouches_totals_tables;
+
     typedef eosio::multi_index<"reqvouch"_n, req_vouch_table,
       indexed_by<"byaccount"_n,
       const_mem_fun<req_vouch_table, uint64_t, &req_vouch_table::by_account>>,
@@ -276,6 +318,8 @@ CONTRACT accounts : public contract {
 
     cbs_tables cbs;
     ref_tables refs;
+    vouches_tables vouches;
+    vouches_totals_tables vouchtotals;
     req_vouch_tables reqvouch;
     user_tables users;
     rep_tables rep;
@@ -316,7 +360,8 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(requestvouch)(vouch)
+(testreward)(requestvouch)(vouch)(unvouch)(pnishvouched)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
+(testmvouch)(migratevouch)
 );
