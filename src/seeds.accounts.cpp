@@ -1159,7 +1159,7 @@ void accounts::flag (name from, name to) {
     check(false, "user must be a resident or a citizen");
   }
 
-  auto ritr = rep.get(from.value, "no rep found for user");
+  auto ritr = rep.get(from.value, (from.to_string() + " needs reputation to flag others").c_str());
   
   points = base_points * utils::rep_multiplier_for_score(ritr.rank);
 
