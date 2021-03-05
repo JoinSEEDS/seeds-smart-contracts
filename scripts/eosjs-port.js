@@ -1,7 +1,6 @@
 const eosjs = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const { TextEncoder, TextDecoder } = require('util')
-
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
 const { option } = require('commander')
