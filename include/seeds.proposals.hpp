@@ -37,6 +37,8 @@ CONTRACT proposals : public contract {
       
       ACTION createx(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, std::vector<uint64_t> pay_percentages);
 
+      ACTION createinvite(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, asset max_amount_per_invite, asset planted, asset reward);
+
       ACTION cancel(uint64_t id);
 
       ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
@@ -132,6 +134,9 @@ CONTRACT proposals : public contract {
       name alliance_type = "alliance"_n;
       name campaign_type = "campaign"_n;
 
+      name invite_subtype = "invite"_n;
+      name funding_subtype = "funding"_n;
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
@@ -177,6 +182,9 @@ CONTRACT proposals : public contract {
       uint64_t calc_quorum_base(uint64_t propcycle);
       void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
       void add_voted_proposal(uint64_t proposal_id);
+      void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
+        name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
+      void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -214,6 +222,12 @@ CONTRACT proposals : public contract {
           uint64_t passed_cycle;
           uint32_t age;
           asset current_payout;
+
+          // I am not sure
+          name subtype;
+          asset max_amount_per_invite;
+          asset planted;
+          asset reward;
 
           uint64_t primary_key()const { return id; }
           uint64_t by_status()const { return status.value; }
@@ -348,7 +362,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)

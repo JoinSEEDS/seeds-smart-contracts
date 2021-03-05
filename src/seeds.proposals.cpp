@@ -261,6 +261,23 @@ bool proposals::is_active(name account, uint64_t cutoff_date) {
   return aitr != actives.end() && aitr->timestamp > cutoff_date;
 }
 
+void proposals::send_create_invite (
+  name origin_account, 
+  name owner, 
+  asset max_amount_per_invite, 
+  asset planted, 
+  name reward_owner, 
+  asset reward, 
+  asset total_amount
+) {
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "createcampg"_n,
+    std::make_tuple(origin_account, owner, max_amount_per_invite, planted, reward_owner, reward, total_amount)
+  ).send();
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
@@ -334,7 +351,13 @@ void proposals::onperiod() {
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
             } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+              if (pitr->subtype == invite_subtype) {
+                withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+                withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+                send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount);
+              } else {
+                withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+              }
             }
 
             // TODO: if we allow num_cycles == 1, this needs to go into passed instead of evaluate.
@@ -380,6 +403,10 @@ void proposals::onperiod() {
         } else {
           if (pitr->status != status_evaluate) {
             burn(pitr->staked);
+          }
+
+          if (pitr->subtype == invite_subtype) {
+            send_
           }
 
           props.modify(pitr, _self, [&](auto& proposal) {
@@ -701,38 +728,22 @@ void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vect
 
 }
 
-void proposals::create(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
-  string summary, 
-  string description, 
-  string image, 
-  string url, 
-  name fund
-) {
-  require_auth(creator);
-  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
-
-  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc );
-}
-
-void proposals::createx(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
+void proposals::create_aux (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
   string summary, 
   string description, 
   string image, 
   string url, 
   name fund,
-  std::vector<uint64_t> pay_percentages
+  name subtype,
+  std::vector<uint64_t> pay_percentages,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
 ) {
-  
-  require_auth(creator);
-
   check_user(creator);
   
   check_percentages(pay_percentages);
@@ -746,8 +757,11 @@ void proposals::createx(
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
-  utils::check_asset(quantity);
 
+  utils::check_asset(quantity);
+  utils::check_asset(max_amount_per_invite);
+  utils::check_asset(planted);
+  utils::check_asset(reward);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -781,6 +795,10 @@ void proposals::createx(
       proposal.passed_cycle = 0;
       proposal.age = 0;
       proposal.current_payout = asset(0, seeds_symbol);
+      proposal.subtype = subtype;
+      proposal.max_amount_per_invite = max_amount_per_invite;
+      proposal.planted = planted;
+      proposal.reward = reward;
   });
 
   auto litr = lastprops.find(creator.value);
@@ -796,6 +814,69 @@ void proposals::createx(
     });
   }
   update_min_stake(propKey);
+}
+
+void proposals::createinvite (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
+) {
+
+  require_auth(creator);
+
+  // I don't know
+  check(fund == bankaccts::campaigns, "the bank must be " + bankaccts::campaigns.to_string() + " for invite campaign proposals");
+
+  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, invite_subtype, perc, max_amount_per_invite, planted, reward);
+
+}
+
+void proposals::create(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund
+) {
+  require_auth(creator);
+  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+  asset cero_value = asset(0, utils::seeds_symbol);
+
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, funding_subtype, perc, cero_value, cero_value, cero_value);
+}
+
+void proposals::createx(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  std::vector<uint64_t> pay_percentages
+) {
+  
+  require_auth(creator);
+  asset cero_value = asset(0, utils::seeds_symbol);
+
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, funding_subtype, pay_percentages, cero_value, cero_value, cero_value);
+
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
@@ -826,6 +907,10 @@ void proposals::updatex(uint64_t id, string title, string summary, string descri
   require_auth(pitr->creator);
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
+  
+  if (pitr->subtype == invite_subtype) {
+    pay_percentages = { 100, 0, 0, 0, 0, 0 };
+  }
 
   check_percentages(pay_percentages);
 
