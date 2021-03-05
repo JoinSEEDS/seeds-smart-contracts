@@ -178,6 +178,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -643,6 +644,18 @@ var permissions = [{
 }, {
   // target: `${accounts.bank.account}@active`,
   // actor: `${accounts.pouch.account}@active`
+},{
+  target: `${accounts.quests.account}@active`,
+  actor: `${accounts.quests.account}@eosio.code`
+}, {
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.quests.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -768,4 +781,3 @@ module.exports = {
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
 }
-

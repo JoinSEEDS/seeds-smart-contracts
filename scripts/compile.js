@@ -1,6 +1,7 @@
 require('dotenv').config()
 const { exec } = require('child_process')
 const { promisify } = require('util')
+const fse = require('fs-extra')
 var fs = require('fs');
 var dir = './tmp';
 
@@ -48,6 +49,33 @@ const compile = async ({ contract, source, include = "" }) => {
   // clean build folder
   await deleteIfExists(artifacts+"/"+contract+".wasm")
   await deleteIfExists(artifacts+"/"+contract+".abi")
+
+  // copy document-graph submodule to the project's paths
+  const docGraphInclude = dir + 'include/document_graph'
+  const docGraphSrc = dir + 'src/document_graph'
+
+  const docGraphIncludeFound = await existsAsync(docGraphInclude)
+  const docGraphSrcFound = await existsAsync(docGraphSrc)
+
+  if (!docGraphIncludeFound) {
+    fse.copySync(dir + 'document-graph/include/document_graph', docGraphInclude, { overwrite: true }, (err) => {
+      if (err) {
+        throw new Error(''+err)
+      } else {
+        console.log("document graph submodule include prepared")
+      }
+    })
+  }
+
+  if (!docGraphSrcFound) {
+    fse.copySync(dir + 'document-graph/src/document_graph', docGraphSrc, { overwrite: true }, (err) => {
+      if (err) {
+        throw new Error(''+err)
+      } else {
+        console.log("document graph submodule src prepared")
+      }
+    })
+  }
 
   // run compile
   const execCommand = command({ contract, source, include, dir })

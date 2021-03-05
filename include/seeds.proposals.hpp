@@ -92,6 +92,8 @@ CONTRACT proposals : public contract {
 
       ACTION undelegate(name delegator, name scope);
 
+      ACTION questvote(name user, uint64_t amount, bool reduce, name scope);
+
 
       ACTION migrtevotedp ();
       ACTION migrpass ();
@@ -354,6 +356,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
         (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
+        (questvote)
         )
       }
   }
