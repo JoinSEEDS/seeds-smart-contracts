@@ -332,3 +332,73 @@ describe('token.resetweekly', async assert => {
 
 })
 
+describe.only('transaction limits', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ token, settings, accounts, harvest })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('set tx limit min to 3')
+  let minTrx = 3
+  await contracts.settings.configure("txlimit.min", minTrx, { authorization: `${settings}@active` })
+
+  console.log('set tx multiplier to 2')
+  await contracts.settings.configure("txlimit.mul", 2, { authorization: `${settings}@active` })
+  
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('plant')
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '3.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  let transfer = async (from, to) => {
+    return await contracts.token.transfer(from, to, '0.0001 SEEDS', ``, { authorization: `${from}@active` })
+  }
+
+  let verifyLimit = async (from, to, limit) => {
+
+    for(let i = 0; i < limit; i++) {
+      await transfer(from, to)
+    }
+
+    let overLimit = false
+    try {
+      await transfer(from, to)
+      overLimit = true
+    } catch(err) {
+
+    }
+    assert({
+      given: from + ' has limit of ' + limit,
+      should: 'allow limit but not more',
+      actual: overLimit,
+      expected: false
+    })
+  }
+  // first user can make min tx but not more
+  console.log("first user has 1 planted, can make transactions" + minTrx)
+  await verifyLimit(firstuser, seconduser, minTrx)
+
+  console.log("second user has 3 planted, can make 6 transactions")
+  await verifyLimit(seconduser, firstuser, 6)
+
+  console.log("third user has nothing planted, can make minTrx transactions")
+  await verifyLimit(thirduser, firstuser, minTrx)
+
+})
