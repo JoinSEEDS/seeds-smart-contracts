@@ -73,9 +73,19 @@ void settings::reset() {
   
   // Organizations
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
-  confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
-  confwithdesc(name("org.minsub"), 7, "Minimum amount of points a user can take from an org", high_impact);
-  confwithdesc(name("org.maxadd"), 7, "Maximum amount of points a user can give to an org", high_impact);
+  
+  confwithdesc(name("org.minsub"), 7, "Minimum amount of rating points a user can take from an org", high_impact);
+  confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
+
+  // replace this single rating with the below
+  // confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
+  
+  // user rating threshold when an org can become a (reputable/sustainable/regenerative/thrivable) org
+  confwithdesc(name("org.rated.5"), 1000, "Thrivable organization rating threshold", low_impact);
+  confwithdesc(name("org.rated.4"), 200, "Regenerative organization rating threshold", low_impact);
+  confwithdesc(name("org.rated.3"), 100, "Sustainable organization rating threshold", low_impact);
+  confwithdesc(name("org.rated.2"), 50, "Reputable organization rating threshold", low_impact);
+
 
   // Resident orgs
   confwithdesc(name("rep.minplnt"), 400 * 10000, "Minimum amount planted to become a Reputable Organization (in Seeds)", high_impact);
@@ -205,12 +215,20 @@ void settings::reset() {
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
 
-  // community buiding points for voucher when user becomes resident
-  confwithdesc(name("vou.cbp1.ind"), 2, "Community buiding points for voucher when user becomes resident", high_impact);
+  // community buiding points for referrer when user becomes resident
+  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", high_impact);
 
-  // community buiding points for voucher when user becomes citizen
-  confwithdesc(name("vou.cbp2.ind"), 2, "Community buiding points for voucher when user becomes citizen", high_impact);
+  // community buiding points for referrer when user becomes citizen
+  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", high_impact);
 
+  // community buiding points for voucher when user referred reputable org
+  confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
+
+  // community buiding points for org referrer when referred user becomes resident
+  confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
+
+  // community buiding points for org referrer when user becomes citizen
+  confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
 
 
   // =====================================
