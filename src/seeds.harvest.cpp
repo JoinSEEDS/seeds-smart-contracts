@@ -606,6 +606,9 @@ void harvest::calc_contribution_score(name account, name type) {
   auto pitr = planted.find(account.value);
   if (pitr != planted.end()) planted_score = pitr->rank;
 
+  // CS scrore for org needs to be calculated differently
+  // Page 71 constitution
+
   if (type == "organisation"_n) {
     tx_points_tables orgtxpoints(get_self(), "org"_n.value);
     auto titr = orgtxpoints.find(account.value);
@@ -620,6 +623,13 @@ void harvest::calc_contribution_score(name account, name type) {
 
   auto ritr = rep.find(account.value);
   if (ritr != rep.end()) reputation_score = ritr->rank;
+
+  // TODO verify this as correct for the constitution pp 71
+  // Orgs need to have different scope for rep
+  // Orgs need to have different scope for cbp
+
+  // org Planted seeds ranking for orgs may need to be in a different scope (Seeds 2.0 feature)
+  // ORG Total Organisation Contribution Point = (CC+EC) * ORM
 
   uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; 
 
