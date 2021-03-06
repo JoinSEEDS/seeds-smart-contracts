@@ -303,8 +303,6 @@ void accounts::vouchreward(name account) {
 
   // For adding community building points
   bool is_citizen = status.value == name("citizen").value;
-  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
-  int community_building_points = int(config_get(vou_cbp_param));
 
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
