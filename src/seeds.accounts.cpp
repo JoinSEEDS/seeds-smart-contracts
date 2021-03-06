@@ -419,6 +419,9 @@ void accounts::refreward(name account, name new_status) {
 
       send_reward(referrer, quantity);
     }
+
+    add_cbs(referrer, community_building_points); 
+
   }
 
 
