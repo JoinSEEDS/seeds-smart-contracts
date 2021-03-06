@@ -22,6 +22,7 @@ CONTRACT onboarding : public contract {
         sponsors(receiver, receiver.value),
         referrers(receiver, receiver.value),
         campaigns(receiver, receiver.value),
+        campinvites(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value),
         config(contracts::settings, contracts::settings.value)
         {}
@@ -45,6 +46,7 @@ CONTRACT onboarding : public contract {
     ACTION addauthorized(uint64_t id, name account);
     ACTION remauthorized(uint64_t id, name account);
     ACTION returnfunds(uint64_t id);
+    ACTION rtrnfundsaux(uint64_t campaign_id);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -67,6 +69,7 @@ CONTRACT onboarding : public contract {
     void check_user(name account);
     uint64_t config_get(name key);
     void send_campaign_reward(uint64_t campaign_id);
+    void send_return_funds_aux(uint64_t campaign_id);
 
 
     TABLE invite_table {
@@ -77,12 +80,10 @@ CONTRACT onboarding : public contract {
       name account;
       checksum256 invite_hash;
       checksum256 invite_secret;
-      uint64_t campaign_id;
 
       uint64_t primary_key()const { return invite_id; }
       uint64_t by_sponsor()const { return sponsor.value; }
       checksum256 by_hash()const { return invite_hash; }
-      uint64_t by_campaign()const { return campaign_id; }
     };
 
     TABLE referrer_table {
@@ -118,6 +119,16 @@ CONTRACT onboarding : public contract {
       uint64_t by_owner() const { return owner.value; }
     };
 
+    TABLE campaign_invite_table {
+      uint64_t invite_id;
+      uint64_t campaign_id;
+
+      uint64_t primary_key() const { return invite_id; }
+      uint64_t by_campaign() const { return campaign_id; }
+      uint128_t by_invite_campaign() const { return (uint128_t(invite_id) << 64) + campaign_id; }
+      uint128_t by_campaign_invite() const { return (uint128_t(campaign_id) << 64) + invite_id; }
+    };
+
     DEFINE_CONFIG_TABLE
     DEFINE_CONFIG_TABLE_MULTI_INDEX
 
@@ -125,9 +136,7 @@ CONTRACT onboarding : public contract {
       indexed_by<"byhash"_n,
       const_mem_fun<invite_table, checksum256, &invite_table::by_hash>>,
       indexed_by<"bysponsor"_n,
-      const_mem_fun<invite_table, uint64_t, &invite_table::by_sponsor>>,
-      indexed_by<"bycampaign"_n,
-      const_mem_fun<invite_table, uint64_t, &invite_table::by_campaign>>
+      const_mem_fun<invite_table, uint64_t, &invite_table::by_sponsor>>
     > invite_tables;
 
     typedef multi_index<"sponsors"_n, sponsor_table> sponsor_tables;
@@ -147,11 +156,21 @@ CONTRACT onboarding : public contract {
       const_mem_fun<campaign_table, uint64_t, &campaign_table::by_owner>>
     > campaign_tables;
 
+    typedef eosio::multi_index<"campinvites"_n, campaign_invite_table,
+      indexed_by<"bycampaign"_n,
+      const_mem_fun<campaign_invite_table, uint64_t, &campaign_invite_table::by_campaign>>,
+      indexed_by<"byinvitecamp"_n,
+      const_mem_fun<campaign_invite_table, uint128_t, &campaign_invite_table::by_invite_campaign>>,
+      indexed_by<"bycampinvite"_n,
+      const_mem_fun<campaign_invite_table, uint128_t, &campaign_invite_table::by_campaign_invite>>
+    > campaign_invite_tables;
+
     sponsor_tables sponsors;
     user_tables users;
     referrer_tables referrers;
     campaign_tables campaigns;
     config_tables config;
+    campaign_invite_tables campinvites;
 
 };
 
@@ -161,7 +180,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
       EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup)
-      (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)
+      (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux)
       )
       }
   }
