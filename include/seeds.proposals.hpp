@@ -133,9 +133,9 @@ CONTRACT proposals : public contract {
 
       name alliance_type = "alliance"_n;
       name campaign_type = "campaign"_n;
-
-      name invite_subtype = "invite"_n;
-      name funding_subtype = "funding"_n;
+      name campaign_invite_type = "cmp.invite"_n;
+      name campaign_funding_type = "cmp.funding"_n;
+      name milestone_type = "milestone"_n;
 
       void update_cycle();
       void update_voicedecay();
@@ -185,6 +185,7 @@ CONTRACT proposals : public contract {
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
         name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
       void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
+      void send_return_funds_campaign(uint64_t campaign_id);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -222,15 +223,17 @@ CONTRACT proposals : public contract {
           uint64_t passed_cycle;
           uint32_t age;
           asset current_payout;
-
-          // I am not sure
-          name subtype;
+          name campaign_type;
           asset max_amount_per_invite;
           asset planted;
           asset reward;
+          uint64_t campaign_id;
 
           uint64_t primary_key()const { return id; }
           uint64_t by_status()const { return status.value; }
+          uint64_t by_stage()const { return stage.value; }
+          uint64_t by_type()const { return campaign_type.value; }
+          uint64_t by_creator()const { return creator.value; } // ???
       };
 
       TABLE min_stake_table {

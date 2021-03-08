@@ -278,6 +278,15 @@ void proposals::send_create_invite (
   ).send();
 }
 
+void proposals::send_return_funds_campaign (uint64_t campaign_id) {
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "returnfunds"_n,
+    std::make_tuple(campaign_id)
+  ).send();
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
@@ -339,6 +348,8 @@ void proposals::onperiod() {
           valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
         }
 
+        print("proposal id: ", pitr->id, ", passed: ", passed, ", valid_quorum: ", valid_quorum, ", quorum: ", quorum, "\n");
+
         if (passed && valid_quorum) {
 
           if (pitr -> status == status_open) {
@@ -351,9 +362,9 @@ void proposals::onperiod() {
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
             } else {
-              if (pitr->subtype == invite_subtype) {
-                withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-                withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+              if (pitr->campaign_type == campaign_invite_type) {
+                withdraw(get_self(), payout_amount, pitr->fund, "invite campaign");
+                withdraw(pitr->recipient, payout_amount, get_self(), "invite campaign");
                 send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount);
               } else {
                 withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
@@ -405,8 +416,8 @@ void proposals::onperiod() {
             burn(pitr->staked);
           }
 
-          if (pitr->subtype == invite_subtype) {
-            send_
+          if (pitr->campaign_type == campaign_invite_type) {
+            send_return_funds_campaign(pitr->campaign_id);
           }
 
           props.modify(pitr, _self, [&](auto& proposal) {
@@ -738,7 +749,7 @@ void proposals::create_aux (
   string image, 
   string url, 
   name fund,
-  name subtype,
+  name campaign_type,
   std::vector<uint64_t> pay_percentages,
   asset max_amount_per_invite,
   asset planted,
@@ -759,9 +770,6 @@ void proposals::create_aux (
   }
 
   utils::check_asset(quantity);
-  utils::check_asset(max_amount_per_invite);
-  utils::check_asset(planted);
-  utils::check_asset(reward);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -795,10 +803,11 @@ void proposals::create_aux (
       proposal.passed_cycle = 0;
       proposal.age = 0;
       proposal.current_payout = asset(0, seeds_symbol);
-      proposal.subtype = subtype;
+      proposal.campaign_type = campaign_type;
       proposal.max_amount_per_invite = max_amount_per_invite;
       proposal.planted = planted;
       proposal.reward = reward;
+      proposal.campaign_id = 0;
   });
 
   auto litr = lastprops.find(creator.value);
@@ -833,11 +842,22 @@ void proposals::createinvite (
 
   require_auth(creator);
 
-  // I don't know
   check(fund == bankaccts::campaigns, "the bank must be " + bankaccts::campaigns.to_string() + " for invite campaign proposals");
 
+  utils::check_asset(max_amount_per_invite);
+  utils::check_asset(planted);
+  utils::check_asset(reward);
+
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(planted.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted));
+
+  uint64_t max_reward = config_get("inv.max.rwrd"_n);
+  check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
+
+  check(recipient == contracts::onboarding, "the recipient must be " + contracts::onboarding.to_string() + " for invite campaigns");
+  
   std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
-  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, invite_subtype, perc, max_amount_per_invite, planted, reward);
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
 
 }
 
@@ -854,9 +874,8 @@ void proposals::create(
 ) {
   require_auth(creator);
   std::vector<uint64_t> perc = { 25, 25, 25, 25 };
-  asset cero_value = asset(0, utils::seeds_symbol);
 
-  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, funding_subtype, perc, cero_value, cero_value, cero_value);
+  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
 }
 
 void proposals::createx(
@@ -875,7 +894,17 @@ void proposals::createx(
   require_auth(creator);
   asset cero_value = asset(0, utils::seeds_symbol);
 
-  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, funding_subtype, pay_percentages, cero_value, cero_value, cero_value);
+  name type;
+
+  if (fund == bankaccts::alliances) {
+    type = alliance_type;
+  } else if (fund == bankaccts::milestone) {
+    type = milestone_type;
+  } else {
+    type = campaign_funding_type;
+  }
+
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, type, pay_percentages, cero_value, cero_value, cero_value);
 
 }
 
@@ -908,7 +937,7 @@ void proposals::updatex(uint64_t id, string title, string summary, string descri
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
   
-  if (pitr->subtype == invite_subtype) {
+  if (pitr->campaign_type == campaign_invite_type) {
     pay_percentages = { 100, 0, 0, 0, 0, 0 };
   }
 
