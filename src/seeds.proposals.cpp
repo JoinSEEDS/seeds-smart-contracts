@@ -733,7 +733,7 @@ void proposals::createx(
   
   require_auth(creator);
 
-  check_user(creator);
+  check_resident(creator);
   
   check_percentages(pay_percentages);
 
@@ -1306,6 +1306,16 @@ void proposals::check_citizen(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+void proposals::check_resident(name account)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(
+    uitr->status == name("citizen") || 
+    uitr->status == name("resident"), 
+    "user is not a resident or citizen");
 }
 
 void proposals::addactive(name account) {
