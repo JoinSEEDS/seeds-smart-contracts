@@ -11,11 +11,14 @@ const { Api, JsonRpc, Serialize } = eosjs
 
 let rpc
 let api
+let isUnitTest
 
 function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// TODO: We need to only use nonce in testnet, not in mainnet. Mainnet its causing 
+// errors, and we don't need it. It's only for unit tests. 
 async function getNonce () {
   try {
     await rpc.getRawAbi('policy.seeds')
@@ -102,7 +105,7 @@ class Eos {
           }
         }
 
-        const nonce = await getNonce()
+        const nonce = await getNonce() 
         const actions = [
           {
           account: accountName,
