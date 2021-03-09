@@ -327,6 +327,8 @@ void proposals::onperiod() {
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
 
+      print("running proposal: ", pitr->id, "\n");
+
       // active proposals are evaluated
       if (pitr->stage == stage_active) {
 
@@ -363,8 +365,8 @@ void proposals::onperiod() {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
             } else {
               if (pitr->campaign_type == campaign_invite_type) {
-                withdraw(get_self(), payout_amount, pitr->fund, "invite campaign");
-                withdraw(pitr->recipient, payout_amount, get_self(), "invite campaign");
+                withdraw(get_self(), payout_amount, pitr->fund, "invites");
+                withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
                 send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount);
               } else {
                 withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
@@ -757,7 +759,9 @@ void proposals::create_aux (
 ) {
   check_user(creator);
   
-  check_percentages(pay_percentages);
+  if (campaign_type != campaign_invite_type) {
+    check_percentages(pay_percentages);
+  }
 
   check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
@@ -853,8 +857,6 @@ void proposals::createinvite (
 
   uint64_t max_reward = config_get("inv.max.rwrd"_n);
   check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
-
-  check(recipient == contracts::onboarding, "the recipient must be " + contracts::onboarding.to_string() + " for invite campaigns");
   
   std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
   create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
@@ -982,6 +984,7 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
         id = litr->proposal_id;
       } else {
+        if (memo == "invites") { return; }
         id = std::stoi(memo);
       }
 

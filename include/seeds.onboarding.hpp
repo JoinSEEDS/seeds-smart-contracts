@@ -41,7 +41,7 @@ CONTRACT onboarding : public contract {
 
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
-    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
+    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
     ACTION campinvite(uint64_t id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash);
     ACTION addauthorized(uint64_t id, name account);
     ACTION remauthorized(uint64_t id, name account);

@@ -486,7 +486,7 @@ ACTION onboarding::createcampg (
 
   name type = private_campaign;
 
-  if (origin_account == bankaccts::campaigns || origin_account == contracts::proposals) {
+  if (origin_account == contracts::proposals) {
     type = invite_campaign;
   }
 
