@@ -677,13 +677,15 @@ if (keyProvider.length == 0 || keyProvider[0] == null) {
   console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
 }
 
+const isLocal = () => { return chainId == networks.local }
+
 const config = {
   keyProvider,
   httpEndpoint,
   chainId
 }
 
-const eos = new Eos(config)
+const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -700,7 +702,7 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return new Eos(config)
+  return new Eos(config, isLocal)
 }
 
 // ===========================================================================
@@ -743,8 +745,6 @@ const initContracts = (accounts) =>
   
 const ecc = require('eosjs-ecc')
 const sha256 = ecc.sha256
-
-const isLocal = () => { return chainId == networks.local }
 
 const ramdom64ByteHexString = async () => {
   let privateKey = await ecc.randomKey()
