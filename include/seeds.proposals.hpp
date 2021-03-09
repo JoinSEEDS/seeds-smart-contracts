@@ -94,6 +94,8 @@ CONTRACT proposals : public contract {
 
       ACTION undelegate(name delegator, name scope);
 
+      ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
+
 
       ACTION migrtevotedp ();
       ACTION migrpass ();
@@ -184,7 +186,7 @@ CONTRACT proposals : public contract {
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
         name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
-      void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
+      void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
       void send_return_funds_campaign(uint64_t campaign_id);
 
       uint64_t config_get(name key) {
@@ -369,7 +371,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
-        (calcvotepow)
+        (calcvotepow)(addcampaign)
         (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
         )
       }

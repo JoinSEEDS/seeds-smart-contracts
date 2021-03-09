@@ -268,13 +268,14 @@ void proposals::send_create_invite (
   asset planted, 
   name reward_owner, 
   asset reward, 
-  asset total_amount
+  asset total_amount,
+  uint64_t proposal_id
 ) {
   action(
     permission_level(get_self(), "active"_n),
     contracts::onboarding,
     "createcampg"_n,
-    std::make_tuple(origin_account, owner, max_amount_per_invite, planted, reward_owner, reward, total_amount)
+    std::make_tuple(origin_account, owner, max_amount_per_invite, planted, reward_owner, reward, total_amount, proposal_id)
   ).send();
 }
 
@@ -367,7 +368,7 @@ void proposals::onperiod() {
               if (pitr->campaign_type == campaign_invite_type) {
                 withdraw(get_self(), payout_amount, pitr->fund, "invites");
                 withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
-                send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount);
+                send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
               } else {
                 withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
               }
@@ -976,6 +977,9 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
       utils::check_asset(quantity);
       //check_user(from);
 
+      if (from == contracts::onboarding) { return; }
+      if (from == bankaccts::campaigns) { return; }
+
       uint64_t id = 0;
 
       if (memo.empty()) {
@@ -984,7 +988,6 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
         id = litr->proposal_id;
       } else {
-        if (memo == "invites") { return; }
         id = std::stoi(memo);
       }
 
@@ -1915,6 +1918,18 @@ void proposals::migcycstat() {
     item.quorum_vote_base = quorum_vote_base;
     item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
+  });
+
+}
+
+ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
+  require_auth(get_self());
+
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
+
+  props.modify(pitr, _self, [&](auto & item){
+    item.campaign_id = campaign_id;
   });
 
 }
