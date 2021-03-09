@@ -362,7 +362,7 @@ void accounts::refreward(name account, name new_status) {
 
     if (user_type == "organisation"_n) 
     {
-      community_building_points = is_citizen ? config_get("refcbp1.org"_n) : config_get("refcbp2.org"_n);
+      community_building_points = is_citizen ? config_get("refcbp2.org"_n) : config_get("refcbp1.org"_n);
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
       name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
       name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
