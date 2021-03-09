@@ -234,8 +234,12 @@ CONTRACT proposals : public contract {
           uint64_t primary_key()const { return id; }
           uint64_t by_status()const { return status.value; }
           uint64_t by_stage()const { return stage.value; }
-          uint64_t by_type()const { return campaign_type.value; }
-          uint64_t by_creator()const { return creator.value; } // ???
+          uint64_t by_campaign()const { return campaign_id; }
+          uint64_t by_creator()const { return creator.value; }
+
+          uint128_t by_status_id()const { return (uint128_t(status.value) << 64) + id; }
+          uint128_t by_stage_id()const { return (uint128_t(stage.value) << 64) + id; }
+          uint128_t by_campaign_type_id()const { return (uint128_t(campaign_type.value) << 64) + id; }
       };
 
       TABLE min_stake_table {
@@ -327,7 +331,19 @@ CONTRACT proposals : public contract {
 
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
-      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>,
+      indexed_by<"bystage"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_stage>>,
+      indexed_by<"bycampaign"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_campaign>>,
+      indexed_by<"bycreator"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_creator>>,
+      indexed_by<"bystatusid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_status_id>>,
+      indexed_by<"bystageid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_stage_id>>,
+      indexed_by<"bycmptypeid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_campaign_type_id>>
     > proposal_tables;
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
