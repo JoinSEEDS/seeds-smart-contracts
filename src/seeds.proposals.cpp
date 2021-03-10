@@ -1801,3 +1801,140 @@ void proposals::migcycstat() {
   });
 
 }
+
+ACTION proposals::resetprops () {
+
+  require_auth(get_self());
+
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t count = 0;
+
+  auto pitr = props.begin();
+
+  while (pitr != props.end() && count < batch_size) {
+    pitr = props.erase(pitr);
+    count++;
+  }
+
+  if (pitr != props.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "resetprops"_n,
+      std::make_tuple()
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(pitr->id, _self);
+  }
+
+}
+
+ACTION proposals::migprops (uint64_t start) {
+
+  require_auth(get_self());
+
+  auto pitr = start == 0 ? props.begin() : props.find(start);
+  
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t count = 0;
+
+  asset cero_value = asset(0, utils::seeds_symbol);
+  name campaign_type;
+
+  while (pitr != props.end() && count < batch_size) {
+
+    print("migrating prop: ", pitr->id, "\n");
+
+    if (pitr->fund == bankaccts::campaigns) {
+      campaign_type = campaign_funding_type;
+    } else if (pitr->fund == bankaccts::alliances) {
+      campaign_type = alliance_type;
+    } else if (pitr->fund == bankaccts::milestone) {
+      campaign_type = milestone_type;
+    }
+
+    auto mpitr = migrateprops.find(pitr->id);
+    
+    if (mpitr == migrateprops.end()) {
+      migrateprops.emplace(_self, [&](auto & item){
+        item.id = pitr->id;
+        item.creator = pitr->creator;
+        item.recipient = pitr->recipient;
+        item.quantity = pitr->quantity;
+        item.staked = pitr->staked;
+        item.executed = pitr->executed;
+        item.total = pitr->total;
+        item.favour = pitr->favour;
+        item.against = pitr->against;
+        item.title = pitr->title;
+        item.summary = pitr->summary;
+        item.description = pitr->description;
+        item.image = pitr->image;
+        item.url = pitr->url;
+        item.status = pitr->status;
+        item.stage = pitr->stage;
+        item.fund = pitr->fund;
+        item.creation_date = pitr->creation_date;
+        item.pay_percentages = pitr->pay_percentages;
+        item.passed_cycle = pitr->passed_cycle;
+        item.age = pitr->age;
+        item.current_payout = pitr->current_payout;
+        item.campaign_type = campaign_type;
+        item.max_amount_per_invite = cero_value;
+        item.planted = cero_value;
+        item.reward = cero_value;
+        item.campaign_id = 0;
+      });
+    } else {
+      migrateprops.modify(mpitr, _self, [&](auto & item){
+        item.creator = pitr->creator;
+        item.recipient = pitr->recipient;
+        item.quantity = pitr->quantity;
+        item.staked = pitr->staked;
+        item.executed = pitr->executed;
+        item.total = pitr->total;
+        item.favour = pitr->favour;
+        item.against = pitr->against;
+        item.title = pitr->title;
+        item.summary = pitr->summary;
+        item.description = pitr->description;
+        item.image = pitr->image;
+        item.url = pitr->url;
+        item.status = pitr->status;
+        item.stage = pitr->stage;
+        item.fund = pitr->fund;
+        item.creation_date = pitr->creation_date;
+        item.pay_percentages = pitr->pay_percentages;
+        item.passed_cycle = pitr->passed_cycle;
+        item.age = pitr->age;
+        item.current_payout = pitr->current_payout;
+        item.campaign_type = campaign_type;
+        item.max_amount_per_invite = cero_value;
+        item.planted = cero_value;
+        item.reward = cero_value;
+        item.campaign_id = 0;
+      });
+    }
+
+    pitr++;
+    count++;
+  }
+
+  if (pitr != props.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migprops"_n,
+      std::make_tuple(pitr->id)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(pitr->id + 1, _self);
+  }
+
+}
