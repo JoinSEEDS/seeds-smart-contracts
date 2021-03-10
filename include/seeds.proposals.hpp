@@ -64,6 +64,8 @@ CONTRACT proposals : public contract {
 
       ACTION onperiod();
 
+      ACTION evalproposal(uint64_t proposal_id);
+
       ACTION updatevoices();
 
       ACTION updatevoice(uint64_t start);
@@ -185,12 +187,17 @@ CONTRACT proposals : public contract {
 
       void increase_voice_cast(name voter, uint64_t amount, name option);
       uint64_t calc_quorum_base(uint64_t propcycle);
-      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
         name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
       void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
       void send_return_funds_campaign(uint64_t campaign_id);
+
+      void send_eval_prop(uint64_t proposal_id);
+      void init_cycle_stats();
+      void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
+      void send_punish(name account);
+      void send_update_voices();
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -445,7 +452,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)

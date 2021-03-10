@@ -484,6 +484,8 @@ void accounts::addrep(name user, uint64_t amount)
     });
   }
 
+  print("ADDDING REP: ", user, ", amount=", amount, "\n");
+
 }
 
 void accounts::subrep(name user, uint64_t amount)
