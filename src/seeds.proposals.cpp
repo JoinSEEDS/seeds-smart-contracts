@@ -1933,3 +1933,99 @@ ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
   });
 
 }
+
+ACTION proposals::initprops (uint64_t start) {
+
+  require_auth(get_self());
+
+  auto mpitr = start == 0 ? migrateprops.begin() : migrateprops.find(start);
+  
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t count = 0;
+
+  while (mpitr != migrateprops.end() && count < batch_size) {
+
+    print("migrating prop: ", mpitr->id, "\n");
+
+    auto pitr = props.find(mpitr->id);
+    
+    if (pitr == props.end()) {
+      props.emplace(_self, [&](auto & item){
+        item.id = mpitr->id;
+        item.creator = mpitr->creator;
+        item.recipient = mpitr->recipient;
+        item.quantity = mpitr->quantity;
+        item.staked = mpitr->staked;
+        item.executed = mpitr->executed;
+        item.total = mpitr->total;
+        item.favour = mpitr->favour;
+        item.against = mpitr->against;
+        item.title = mpitr->title;
+        item.summary = mpitr->summary;
+        item.description = mpitr->description;
+        item.image = mpitr->image;
+        item.url = mpitr->url;
+        item.status = mpitr->status;
+        item.stage = mpitr->stage;
+        item.fund = mpitr->fund;
+        item.creation_date = mpitr->creation_date;
+        item.pay_percentages = mpitr->pay_percentages;
+        item.passed_cycle = mpitr->passed_cycle;
+        item.age = mpitr->age;
+        item.current_payout = mpitr->current_payout;
+        item.campaign_type = mpitr->campaign_type;
+        item.max_amount_per_invite = mpitr->max_amount_per_invite;
+        item.planted = mpitr->planted;
+        item.reward = mpitr->reward;
+        item.campaign_id = mpitr->campaign_id;
+      });
+    } else {
+      props.modify(pitr, _self, [&](auto & item){
+        item.creator = mpitr->creator;
+        item.recipient = mpitr->recipient;
+        item.quantity = mpitr->quantity;
+        item.staked = mpitr->staked;
+        item.executed = mpitr->executed;
+        item.total = mpitr->total;
+        item.favour = mpitr->favour;
+        item.against = mpitr->against;
+        item.title = mpitr->title;
+        item.summary = mpitr->summary;
+        item.description = mpitr->description;
+        item.image = mpitr->image;
+        item.url = mpitr->url;
+        item.status = mpitr->status;
+        item.stage = mpitr->stage;
+        item.fund = mpitr->fund;
+        item.creation_date = mpitr->creation_date;
+        item.pay_percentages = mpitr->pay_percentages;
+        item.passed_cycle = mpitr->passed_cycle;
+        item.age = mpitr->age;
+        item.current_payout = mpitr->current_payout;
+        item.campaign_type = mpitr->campaign_type;
+        item.max_amount_per_invite = mpitr->max_amount_per_invite;
+        item.planted = mpitr->planted;
+        item.reward = mpitr->reward;
+        item.campaign_id = mpitr->campaign_id;
+      });
+    }
+
+    mpitr++;
+    count++;
+  }
+
+  if (mpitr != migrateprops.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "initprops"_n,
+      std::make_tuple(mpitr->id)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(mpitr->id + 1, _self);
+  }
+
+}

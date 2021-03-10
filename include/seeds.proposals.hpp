@@ -106,6 +106,8 @@ CONTRACT proposals : public contract {
 
       ACTION testperiod ();
 
+      ACTION initprops(uint64_t start);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -448,6 +450,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)
         (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
+        (initprops)
         )
       }
   }
