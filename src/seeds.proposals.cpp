@@ -315,21 +315,27 @@ void proposals::send_punish (name account) {
   ).send();
 }
 
-void proposals::evalproposal (uint64_t proposal_id) {
+void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
   require_auth(get_self());
 
   print("EVALPROPOSAL:", proposal_id, "\n");
 
   uint64_t prop_majority = config_get(name("propmajority"));
+  uint64_t number_active_proposals = 0;
+  uint64_t total_eligible_voters = 0;
+  
+  auto citr = cyclestats.find(prop_cycle);
+  if (citr !=  cyclestats.end()) {
+    number_active_proposals = citr->num_proposals;
+    total_eligible_voters = citr->total_eligible_voters;
+  } else {
+    number_active_proposals = get_size(prop_active_size);
+    total_eligible_voters = get_size(user_active_size);
+  }
 
-  uint64_t number_active_proposals = get_size(prop_active_size);
-  uint64_t total_eligible_voters = get_size(user_active_size);
   check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
   
   uint64_t quorum = get_quorum(number_active_proposals);
-
-  cycle_table c = cycle.get();
-  uint64_t current_cycle = c.propcycle - 1;
 
   auto pitr = props.find(proposal_id);
   if (pitr == props.end()) { return; }
@@ -385,7 +391,7 @@ void proposals::evalproposal (uint64_t proposal_id) {
         // uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
 
         props.modify(pitr, _self, [&](auto & proposal){
-          proposal.passed_cycle = current_cycle;
+          proposal.passed_cycle = prop_cycle;
           proposal.age = 0;
           proposal.staked = asset(0, seeds_symbol);
           proposal.status = status_evaluate;
@@ -434,7 +440,7 @@ void proposals::evalproposal (uint64_t proposal_id) {
 
       props.modify(pitr, _self, [&](auto& proposal) {
           if (pitr->status != status_evaluate) {
-            proposal.passed_cycle = current_cycle;
+            proposal.passed_cycle = prop_cycle;
           }
           proposal.executed = false;
           proposal.staked = asset(0, seeds_symbol);
@@ -457,7 +463,7 @@ void proposals::evalproposal (uint64_t proposal_id) {
 
 }
 
-void proposals::send_eval_prop (uint64_t proposal_id) {
+void proposals::send_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
   // action(
   //   permission_level(get_self(), "active"_n),
   //   get_self(),
@@ -469,7 +475,7 @@ void proposals::send_eval_prop (uint64_t proposal_id) {
     permission_level(get_self(), "active"_n),
     get_self(),
     "evalproposal"_n,
-    std::make_tuple(proposal_id)
+    std::make_tuple(proposal_id, prop_cycle)
   );
   // trx.delay_sec = 1;
   trx.send(proposal_id, _self);
@@ -483,32 +489,40 @@ void proposals::send_update_voices () {
     "updatevoice"_n,
     std::make_tuple(uint64_t(0))
   );
-  trx.delay_sec = 1;
+  // trx.delay_sec = 1;
   trx.send(eosio::current_time_point().sec_since_epoch() + contracts::proposals.value, _self);
 }
 
 void proposals::onperiod() {
   require_auth(get_self());
 
-  uint64_t number_active_proposals = get_size(prop_active_size);
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
-  update_cycle();
-  init_cycle_stats();
+  auto citr = cyclestats.find(c.propcycle);
+  if (citr != cyclestats.end()) {
+    cyclestats.modify(citr, _self, [&](auto & item){
+      item.total_eligible_voters = get_size(user_active_size);
+    });
+  }
+
+  uint64_t number_active_proposals = get_size(prop_active_size);
 
   auto props_by_stage = props.get_index<"bystage"_n>();
 
   auto spitr = props_by_stage.find(stage_staged.value);
   while (spitr != props_by_stage.end() && spitr->stage == stage_staged) {
-    send_eval_prop(spitr->id);
+    send_eval_prop(spitr->id, c.propcycle);
     spitr++;
   }
 
   auto apitr = props_by_stage.find(stage_active.value);
   while (apitr != props_by_stage.end() && apitr->stage == stage_active) {
-    send_eval_prop(apitr->id);
+    send_eval_prop(apitr->id, c.propcycle);
     apitr++;
   }
 
+  update_cycle();
+  init_cycle_new_stats();
   send_update_voices();
   
   transaction trx_erase_participants{};
@@ -773,7 +787,7 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
-void proposals::init_cycle_stats () {
+void proposals::init_cycle_new_stats () {
   cycle_table c = cycle.get();
 
   uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
@@ -792,6 +806,7 @@ void proposals::init_cycle_stats () {
     item.quorum_vote_base = quorum_vote_base;
     item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
+    item.total_eligible_voters = 0;
   });
 }
 

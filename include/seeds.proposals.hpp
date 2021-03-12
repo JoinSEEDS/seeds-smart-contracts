@@ -64,7 +64,7 @@ CONTRACT proposals : public contract {
 
       ACTION onperiod();
 
-      ACTION evalproposal(uint64_t proposal_id);
+      ACTION evalproposal(uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION updatevoices();
 
@@ -193,8 +193,8 @@ CONTRACT proposals : public contract {
       void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
       void send_return_funds_campaign(uint64_t campaign_id);
 
-      void send_eval_prop(uint64_t proposal_id);
-      void init_cycle_stats();
+      void send_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void init_cycle_new_stats();
       void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
       void send_punish(name account);
       void send_update_voices();
@@ -364,6 +364,7 @@ CONTRACT proposals : public contract {
         uint64_t total_citizens;
         uint64_t quorum_vote_base;
         uint64_t quorum_votes_needed;
+        uint64_t total_eligible_voters;
         float unity_needed;
 
         std::vector<uint64_t> active_props;
