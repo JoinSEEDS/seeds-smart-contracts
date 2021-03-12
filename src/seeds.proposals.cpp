@@ -1661,6 +1661,39 @@ uint64_t proposals::calc_quorum_base (uint64_t propcycle) {
 
 }
 
+uint64_t proposals::calc_quorum_base_1(uint64_t propcycle, name prop_type) {
+
+  uint64_t num_cycles = config_get("prop.cyc.qb"_n);
+  uint64_t total = 0;
+  uint64_t count = 0;
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
+
+  auto citr = cyclestats.find(propcycle);
+
+  if (citr == cyclestats.end()) {
+    // in case there is no information for this propcycle
+    return get_size(user_active_size) * 50 / 2;
+  }
+
+  while (count < num_cycles) {
+
+    total += citr -> total_voice_cast;
+    // total += citr -> num_votes; // uncomment to make it count number of voters
+    count++;
+
+    if (citr == cyclestats.begin()) {
+      break;
+    } else {
+      citr--;
+    }
+
+  }
+
+  return count > 0 ? total / count : 0;
+
+}
+
 void proposals::add_voted_proposal (uint64_t proposal_id) {
 
   cycle_table c = cycle.get();
@@ -1736,8 +1769,20 @@ ACTION proposals::migrpass () {
   }
 }
 
-ACTION proposals::migstats (uint64_t cycle) {
+ACTION proposals::migstats (uint64_t cycle, name prop_type) {
   require_auth(get_self());
+  
+  check(prop_type == campaign_type || prop_type == alliance_type, "need to be campaign or alliance");
+
+  // erase old
+  // cycle_stats_tables old_cycle_stats(get_self(), get_self().value);
+  // auto ocitr = old_cycle_stats.begin();
+  // while(ocitr != old_cycle_stats.end()) {
+  //   ocitr = old_cycle_stats.erase(ocitr);
+  // }
+
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   auto citr = cyclestats.find(cycle);
   while(citr != cyclestats.end()) {
@@ -1754,7 +1799,7 @@ ACTION proposals::migstats (uint64_t cycle) {
   uint64_t total_against = 0; 
 
   while(pitr != props.end() && pitr->passed_cycle <= cycle) {
-    if (pitr->passed_cycle == cycle) {
+    if (pitr->passed_cycle == cycle && prop_type == get_type(pitr->fund)) {
       print("passed: "+std::to_string(cycle) + " " + std::to_string(pitr->id));
       num_proposals++;
       votes_tables votes(get_self(), pitr->id);
@@ -1784,20 +1829,33 @@ ACTION proposals::migstats (uint64_t cycle) {
 
 }
 
-void proposals::migcycstat() {
+// This calculates the vote base and quorum for the current cycle and enters it in the current cycle stats.
+void proposals::migcycstat(name prop_type) {
   cycle_table c = cycle.get();
 
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+
+  uint64_t quorum_vote_base = calc_quorum_base_1(c.propcycle - 1, prop_type);
+
+  cycle_stats_tables cyclestats(get_self(), prop_type.value);
 
   auto citr = cyclestats.find(c.propcycle);
 
-  uint64_t num_proposals = citr->active_props.size();
+  // hard code for current round
+  uint64_t num_proposals = 0;
+  if (prop_type == campaign_type) {
+    num_proposals = 11;
+  } else if (prop_type == alliance_type) {
+    num_proposals = 6;
+  }
+
+  auto quorum_factor = (get_quorum(num_proposals) / 100.0);
+
+  print(" quorum factor "+std::to_string(quorum_factor));
 
   cyclestats.modify(citr, _self, [&](auto & item){
     item.num_proposals = num_proposals;
     item.quorum_vote_base = quorum_vote_base;
-    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
+    item.quorum_votes_needed = quorum_vote_base * quorum_factor;
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
   });
-
 }

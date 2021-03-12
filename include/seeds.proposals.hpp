@@ -96,8 +96,8 @@ CONTRACT proposals : public contract {
       ACTION migrtevotedp ();
       ACTION migrpass ();
 
-      ACTION migstats (uint64_t cycle);
-      ACTION migcycstat ();
+      ACTION migstats(uint64_t cycle, name prop_type);
+      ACTION migcycstat (name prop_type);
 
       ACTION testperiod ();
 
@@ -175,6 +175,8 @@ CONTRACT proposals : public contract {
 
       void increase_voice_cast(name voter, uint64_t amount, name option);
       uint64_t calc_quorum_base(uint64_t propcycle);
+      uint64_t calc_quorum_base_1(uint64_t propcycle, name prop_type);
+
       void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
       void add_voted_proposal(uint64_t proposal_id);
 
