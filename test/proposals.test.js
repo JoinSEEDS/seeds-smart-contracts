@@ -25,6 +25,9 @@ describe('Proposals', async assert => {
 
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+  console.log('change prop majority to 80%')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+
   console.log('change min stake')
   await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
   await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
