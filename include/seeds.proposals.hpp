@@ -93,7 +93,6 @@ CONTRACT proposals : public contract {
 
 
       ACTION migrtevotedp ();
-      ACTION migrpass ();
 
       ACTION migstats (uint64_t cycle, name prop_type);
       ACTION migcycstat (name prop_type);
@@ -352,7 +351,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
-        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
+        (migrtevotedp)(testperiod)(migstats)(migcycstat)
         )
       }
   }
