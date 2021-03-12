@@ -2316,7 +2316,7 @@ describe("invite campaigns", async assert => {
 
 })
 
-describe("migration", async assert => {
+describe("cycle stats migration", async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -2325,41 +2325,32 @@ describe("migration", async assert => {
 
   const contracts = await initContracts({ proposals, settings })
 
-  console.log('settings reset')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
-
-  console.log('change batch size')
-  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
-
-  console.log('proposals reset')
-  await contracts.proposals.reset({ authorization: `${proposals}@active` })
-
-  const propsBefore = await eos.getTableRows({
+  const cyclestatsBefore = await eos.getTableRows({
     code: proposals,
     scope: proposals,
-    table: 'props',
+    table: 'cyclestats',
     json: true,
   })
-  console.log('props before:', propsBefore)
+  console.log('cyclestats before:', cyclestatsBefore)
 
-  const mProps = await eos.getTableRows({
+  const mcyclestats = await eos.getTableRows({
     code: proposals,
     scope: proposals,
-    table: 'migrateprops',
+    table: 'mcyclestats',
     json: true,
   })
-  console.log('migrate props:', mProps)
+  console.log('migrate cyclestats:', mcyclestats)
 
-  await contracts.proposals.initprops(0, { authorization: `${proposals}@active` })
+  await contracts.proposals.migcycstats({ authorization: `${proposals}@active` })
   await sleep(3000)
 
-  const propsAfter = await eos.getTableRows({
+  const mcyclestatsAfter = await eos.getTableRows({
     code: proposals,
     scope: proposals,
-    table: 'props',
+    table: 'mcyclestats',
     json: true,
   })
-  console.log('props after:', propsAfter)
+  console.log('mcyclestats after:', mcyclestatsAfter)
 
 
 })
