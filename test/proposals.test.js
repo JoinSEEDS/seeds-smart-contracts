@@ -769,7 +769,7 @@ describe('Evaluation phase', async assert => {
   await contracts.proposals.favour(thirduser, 1, 8, { authorization: `${thirduser}@active` })
 
   console.log('vote on proposal 2')
-  await contracts.proposals.favour(firstuser, 2, 8, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 10, { authorization: `${firstuser}@active` })
   await contracts.proposals.against(seconduser, 2, 1, { authorization: `${seconduser}@active` })
 
   console.log('move proposals to evaluation phase')
