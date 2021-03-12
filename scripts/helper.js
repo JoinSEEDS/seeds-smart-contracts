@@ -677,13 +677,15 @@ if (keyProvider.length == 0 || keyProvider[0] == null) {
   console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
 }
 
+const isLocal = () => { return chainId == networks.local }
+
 const config = {
   keyProvider,
   httpEndpoint,
   chainId
 }
 
-const eos = new Eos(config)
+const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -700,7 +702,7 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return new Eos(config)
+  return new Eos(config, isLocal)
 }
 
 // ===========================================================================
@@ -741,23 +743,18 @@ const initContracts = (accounts) =>
     ))
   )
   
-const sha256 = Eos.getEcc().sha256
-
-const isLocal = () => { return chainId == networks.local }
+const ecc = require('eosjs-ecc')
+const sha256 = ecc.sha256
 
 const ramdom64ByteHexString = async () => {
-  let privateKey = await Eos.getEcc().randomKey({}, {
-    secureEnv: true
-  })
+  let privateKey = await ecc.randomKey()
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
-  let private = await Eos.getEcc().randomKey({}, {
-    secureEnv: true
-  })
+  let private = await ecc.randomKey()
   let public = await Eos.getEcc().privateToPublic(private)
   return{ private, public }
 }

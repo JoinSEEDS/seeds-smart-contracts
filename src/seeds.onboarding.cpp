@@ -99,7 +99,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
   checksum256 invite_hash = sha256((const char*)_invite_secret.data(), _invite_secret.size());
-  
+
   checksum256 empty_checksum;
 
   invite_tables invites(get_self(), get_self().value);
@@ -283,6 +283,7 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   auto iitr = invites_byhash.find(invite_hash);
   check(iitr != invites_byhash.end(), "invite not found");
   check(iitr->invite_secret == empty_checksum, "invite already accepted");
+  check(iitr->sponsor == sponsor, "not sponsor");
 
   auto refitr = referrers.find(iitr->invite_id);
   if (refitr != referrers.end()) {
