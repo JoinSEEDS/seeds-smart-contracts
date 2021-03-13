@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser, fifthuser } = names
+const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser, fifthuser, orguser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -46,6 +46,7 @@ const setting_in_seeds = async (key) => {
     upper_bound: key,
     json: true,
   })
+  console.log(key + " setting is ", value.rows[0].value)
   return Math.round(value.rows[0].value / 10000) // not entirely correct but works for now
 }
 
@@ -61,7 +62,7 @@ const get_settings = async (key) => {
   return value.rows[0].value
 }
 
-describe('accounts', async assert => {
+describe('General accounts', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -911,7 +912,7 @@ describe('make resident', async assert => {
 
 })
 
-describe('make citizen', async assert => {
+describe('make citizen test', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1246,7 +1247,8 @@ describe('reputation & cbs ranking', async assert => {
 
 })
 
-describe('vouching cbp earning', async assert => {
+describe('Referral cbp reward individual', async assert => {
+
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1258,29 +1260,27 @@ describe('vouching cbp earning', async assert => {
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+  console.log('reset settings')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('configure rewards')
+
+
+  const cbpRewardResident = 5
+  const cbpRewardCitizen = 7
+
+  await contracts.settings.configure("ref.cbp1.ind", cbpRewardResident, { authorization: `${settings}@active` })
+  await contracts.settings.configure("ref.cbp2.ind", cbpRewardCitizen, { authorization: `${settings}@active` })
+
   console.log('add users')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
 
-  await contracts.accounts.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
-
-  console.log('seconduser becomes a resident and can vouch')
-  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
-
-  console.log('vouch for first user')
-  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
-
-  const vouchTable = await getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'cbs',
-    json: true
-  })
-
+  console.log("seconduser is sponsor for first user")
+  await contracts.accounts.addref(seconduser, firstuser, { authorization: `${accounts}@api` })
 
   console.log("firstuser becomes resident")
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
-  const expected_cbp_res = await  get_settings("vou.cbp1.ind")
 
   const cbsAfterResident = await getTableRows({
     code: accounts,
@@ -1289,18 +1289,19 @@ describe('vouching cbp earning', async assert => {
     json: true
   })
 
-  // console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+  //console.log("should: ", cbpRewardResident, " cbs "+JSON.stringify(cbsAfterResident, null, 2))
+
+
 
   assert({
     given: 'firstuser became resident',
     should: 'sponsor received enough cbp',
     actual: cbsAfterResident.rows[0].community_building_score,
-    expected: expected_cbp_res
+    expected: cbpRewardResident
   })
 
   console.log("firstuser becomes citizen")
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  const expected_cbp_cit = await get_settings("vou.cbp2.ind")
 
   const cbsAfterCitizen = await getTableRows({
     code: accounts,
@@ -1309,13 +1310,156 @@ describe('vouching cbp earning', async assert => {
     json: true
   })
 
-  // console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
+  //console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
 
   assert({
     given: 'firstuser became citizen',
     should: 'sponsor received enough cbp',
     actual: cbsAfterCitizen.rows[0].community_building_score,
-    expected: expected_cbp_res + expected_cbp_cit
+    expected: cbpRewardResident + cbpRewardCitizen
+  })
+
+})
+
+describe('Referral cbp reward organization', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('set up rewards')
+  const cbpRewardResident = 3
+  const cbpRewardCitizen = 4
+
+  await contracts.settings.configure("refcbp1.org", cbpRewardResident, { authorization: `${settings}@active` })
+  await contracts.settings.configure("refcbp2.org", cbpRewardCitizen, { authorization: `${settings}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(orguser, 'org 1', "organisation", { authorization: `${accounts}@active` })
+
+  console.log("orguser is sponsor for first user")
+  await contracts.accounts.addref(orguser, firstuser, { authorization: `${accounts}@api` })
+
+  console.log("firstuser becomes resident")
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  const cbsAfterResident = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  //console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+
+  assert({
+    given: 'firstuser became resident',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterResident.rows[0].community_building_score,
+    expected: cbpRewardResident
+  })
+
+  console.log("firstuser becomes citizen")
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  const cbsAfterCitizen = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  // console.log("cbs 2 "+JSON.stringify(cbsAfterCitizen, null, 2))
+
+  assert({
+    given: 'firstuser became citizen',
+    should: 'sponsor received enough cbp',
+    actual: cbsAfterCitizen.rows[0].community_building_score,
+    expected: cbpRewardResident + cbpRewardCitizen
+  })
+
+})
+describe('Vouch reward', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ settings, accounts, onboarding })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  console.log('reset settings')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+
+  console.log('seconduser becomes a resident with rep and can vouch')
+  var secondUserRep = 44
+  await contracts.accounts.testsetrep(seconduser, secondUserRep, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  
+  console.log('vouch for first user')
+  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
+
+  console.log("firstuser becomes resident")
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  const repAfterResident = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower_bound: seconduser,
+    upper_bound: seconduser,
+    json: true
+  })
+
+  //console.log("rep "+JSON.stringify(repAfterResident, null, 2))
+
+  var expectedRepReward = 1
+
+  assert({
+    given: 'firstuser became resident',
+    should: 'referrer received rep',
+    actual: repAfterResident.rows[0].rep,
+    expected: secondUserRep + expectedRepReward
+  })
+
+  console.log("firstuser becomes citizen")
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  const repAfterCitizen = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    lower_bound: seconduser,
+    upper_bound: seconduser,
+    json: true
+  })
+
+  //console.log("rep "+JSON.stringify(repAfterCitizen, null, 2))
+
+  var expectedRepCitizenReward = 1
+
+  assert({
+    given: 'firstuser became citizen',
+    should: 'referrer received enough cbp',
+    actual: repAfterCitizen.rows[0].rep,
+    expected: secondUserRep + expectedRepReward + expectedRepCitizenReward
   })
 
 })

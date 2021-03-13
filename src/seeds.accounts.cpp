@@ -303,19 +303,13 @@ void accounts::vouchreward(name account) {
   auto uitr = users.find(account.value);
   name status = uitr->status;
 
-  // For adding community building points
-  bool is_citizen = status.value == name("citizen").value;
-  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
-  int community_building_points = int(config_get(vou_cbp_param));
-
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
 
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1
-    add_cbs(sponsor, community_building_points);
+    send_addrep(sponsor, 1); // TODO: check if this has to be always 1    
     vitr++;
   }
 }
@@ -357,6 +351,7 @@ void accounts::refreward(name account, name new_status) {
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
+    uint64_t community_building_points = 0;
     auto user_type = uitr->type;
 
     // gets number of residents or citizens from the History size table
@@ -366,6 +361,7 @@ void accounts::refreward(name account, name new_status) {
 
     if (user_type == "organisation"_n) 
     {
+      community_building_points = is_citizen ? config_get("refcbp2.org"_n) : config_get("refcbp1.org"_n);
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
       name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
       name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
@@ -400,6 +396,8 @@ void accounts::refreward(name account, name new_status) {
     } 
     else 
     {
+      community_building_points = is_citizen ? config_get("ref.cbp2.ind"_n) : config_get("ref.cbp1.ind"_n);
+
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
       auto rep_points = config_get(reputation_reward_param);
@@ -418,6 +416,9 @@ void accounts::refreward(name account, name new_status) {
 
       send_reward(referrer, quantity);
     }
+
+    add_cbs(referrer, community_building_points); 
+
   }
 
 
@@ -715,7 +716,7 @@ bool accounts::check_can_make_citizen(name user) {
       std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
-    check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
+    check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
 }
