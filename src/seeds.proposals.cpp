@@ -2049,7 +2049,8 @@ ACTION proposals::initcycstats () {
         item.eval_props = migration_itr->eval_props;
       });
     }
+
+    migration_itr++;
   }
 
-  migration_itr++;
 }
