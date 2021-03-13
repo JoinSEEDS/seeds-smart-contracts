@@ -394,7 +394,7 @@ void accounts::refreward(name account, name new_status) {
     } 
     else 
     {
-      community_building_points = is_citizen ? config_get("ref.cbp1.ind"_n) : config_get("ref.cbp2.ind"_n);
+      community_building_points = is_citizen ? config_get("ref.cbp2.ind"_n) : config_get("ref.cbp1.ind"_n);
 
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
