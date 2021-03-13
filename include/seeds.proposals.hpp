@@ -106,6 +106,7 @@ CONTRACT proposals : public contract {
       ACTION migcycstat ();
 
       ACTION testperiod ();
+      ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION initcycstats();
 
@@ -197,6 +198,8 @@ CONTRACT proposals : public contract {
       void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
       void send_punish(name account);
       void send_update_voices();
+
+      void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -422,7 +425,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)
-        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
+        (migrtevotedp)(migrpass)(testperiod)(testevalprop)(migstats)(migcycstat)
         (initcycstats)
         )
       }

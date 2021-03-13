@@ -318,8 +318,6 @@ void proposals::send_punish (name account) {
 void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
   require_auth(get_self());
 
-  print("EVALPROPOSAL:", proposal_id, "\n");
-
   uint64_t prop_majority = config_get(name("propmajority"));
   uint64_t number_active_proposals = 0;
   uint64_t total_eligible_voters = 0;
@@ -339,8 +337,6 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 
   auto pitr = props.find(proposal_id);
   if (pitr == props.end()) { return; }
-
-  print("running proposal: ", pitr->id, "\n");
 
   // active proposals are evaluated
   if (pitr->stage == stage_active) {
@@ -362,9 +358,6 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
     } else { // in open status, quorum is calculated
       valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
     }
-
-    print("PROPOSAL: ", pitr->id, ", PASS: ", passed, ", VALID QUORUM: ", valid_quorum, ", QUORUM: ", quorum, "\n");
-    print("VOTERS NUMBER: ", voters_number, ", TOTAL ELEGIBLE VOTERS: ", total_eligible_voters, "\n");
 
     if (passed && valid_quorum) {
 
@@ -453,7 +446,6 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
   
   } else if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
     // staged proposals become active if there's enough stake
-    print("ACTIVATING THE PROP: ", pitr->id, "\n");
     props.modify(pitr, _self, [&](auto& proposal) {
       proposal.stage = stage_active;
     });
@@ -464,12 +456,6 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 }
 
 void proposals::send_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
-  // action(
-  //   permission_level(get_self(), "active"_n),
-  //   get_self(),
-  //   "evalproposal"_n,
-  //   std::make_tuple(proposal_id)
-  // ).send();
   transaction trx{};
   trx.actions.emplace_back(
     permission_level(get_self(), "active"_n),
@@ -536,73 +522,108 @@ void proposals::onperiod() {
   trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
 }
 
-void proposals::testperiod() {
-    require_auth(_self);
+void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
+  require_auth(get_self());
 
-    auto props_by_status = props.get_index<"bystatus"_n>();
-    uint64_t prop_majority = config_get(name("propmajority"));
-    uint64_t number_active_proposals = get_size(prop_active_size);
-    uint64_t total_eligible_voters = get_size(user_active_size);
-    check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
-    
-    uint64_t quorum =  get_quorum(number_active_proposals);
+  uint64_t prop_majority = config_get(name("propmajority"));
+  uint64_t number_active_proposals = 0;
+  uint64_t total_eligible_voters = 0;
+  
+  auto citr = cyclestats.find(prop_cycle);
+  if (citr !=  cyclestats.end()) {
+    number_active_proposals = citr->num_proposals;
+    total_eligible_voters = citr->total_eligible_voters;
+  } else {
+    number_active_proposals = get_size(prop_active_size);
+    total_eligible_voters = get_size(user_active_size);
+  }
 
-    std::vector<uint64_t> active_props;
-    std::vector<uint64_t> eval_props;
+  check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
+  
+  uint64_t quorum = get_quorum(number_active_proposals);
 
-    // TODO this is not working at the moment, use old way... FIX after this cycle.
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
 
-    // find smallesd prop id that's in open or eval stage
-    // this way we skip all proposals that are definitely already passed or rejected
-    // auto pps_itr = props_by_status.begin();
-    // uint64_t smallest_prop_id = 0;
-    // while (pps_itr != props_by_status.end() && 
-    //   (pps_itr -> status == status_open || pps_itr -> status == status_evaluate) ) {
-    //   smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
-    //   pps_itr++;
-    // }
+  // active proposals are evaluated
+  if (pitr->stage == stage_active) {
 
-    // print("smallest id: "+std::to_string(smallest_prop_id) );
-      
-    // auto pitr = props.find(smallest_prop_id);
-    auto pitr = props.find(50);
+    votes_tables votes(get_self(), pitr->id);
+    uint64_t voters_number = distance(votes.begin(), votes.end());
 
-    while (pitr != props.end()) {
-      uint64_t prop_id = pitr -> id;
+    double majority = double(prop_majority) / 100.0;
+    double fav = double(pitr->favour);
+    bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
+    name prop_type = get_type(pitr->fund);
+    bool is_alliance_type = prop_type == alliance_type;
+    bool is_campaign_type = prop_type == campaign_type;
 
-      print(" checking id: "+std::to_string(prop_id));
+    bool valid_quorum = false;
 
-      // active proposals are evaluated
-      if (pitr->stage == stage_active) {
+    if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+      valid_quorum = true;
+    } else { // in open status, quorum is calculated
+      valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+    }
 
-        votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
-        
-        print(" voters: "+std::to_string(voters_number));
+    if (passed && valid_quorum) {
 
-        double majority = double(prop_majority) / 100.0;
-        double fav = double(pitr->favour);
-        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        bool valid_quorum = false;
-
-        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
-          valid_quorum = true;
-        } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
-        }
-
-        if (passed && valid_quorum) {
-          
-          print(" passed ");
-
-        } else {
-            print(" failed ");
-        }
-      
+      if (pitr -> status == status_open) {
+        print("PROPOSAL: ", pitr->id, ", PASSED, status: from ", pitr->status, " -> to ", status_evaluate, "\n");
+      } else {
+        print("PROPOSAL: ", pitr->id, ", PASSED, status: ", pitr->status, "\n");
       }
-      pitr++;
-    } 
+
+    } else {
+      print("PROPOSAL: ", pitr->id, ", FAILED, status: from ", pitr->status, " -> to ", status_rejected, "\n");
+    }
+    
+  } else if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
+    print("PROPOSAL: ", pitr->id, ", BECAME ACTIVE\n");
+  }
+
 }
+
+void proposals::send_test_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "testevalprop"_n,
+    std::make_tuple(proposal_id, prop_cycle)
+  );
+  // trx.delay_sec = 1;
+  trx.send(proposal_id, _self);
+}
+
+void proposals::testperiod() {
+  require_auth(get_self());
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+
+  auto citr = cyclestats.find(c.propcycle);
+  if (citr != cyclestats.end()) {
+    // This will modify cycle stats, but it's ok as this is true information and it doesn't affect the real onperiod method
+    cyclestats.modify(citr, _self, [&](auto & item){
+      item.total_eligible_voters = get_size(user_active_size);
+    });
+  }
+
+  auto props_by_stage = props.get_index<"bystage"_n>();
+
+  auto spitr = props_by_stage.find(stage_staged.value);
+  while (spitr != props_by_stage.end() && spitr->stage == stage_staged) {
+    send_test_eval_prop(spitr->id, c.propcycle);
+    spitr++;
+  }
+
+  auto apitr = props_by_stage.find(stage_active.value);
+  while (apitr != props_by_stage.end() && apitr->stage == stage_active) {
+    send_test_eval_prop(apitr->id, c.propcycle);
+    apitr++;
+  }
+}
+
 void proposals::updatevoices() {
   require_auth(get_self());
   updatevoice((uint64_t)0);
