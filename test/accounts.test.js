@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser } = names
+const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser, orguser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -46,6 +46,7 @@ const setting_in_seeds = async (key) => {
     upper_bound: key,
     json: true,
   })
+  console.log(key + " setting is ", value.rows[0].value)
   return Math.round(value.rows[0].value / 10000) // not entirely correct but works for now
 }
 
@@ -61,7 +62,7 @@ const get_settings = async (key) => {
   return value.rows[0].value
 }
 
-describe('accounts', async assert => {
+describe('General accounts', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -910,7 +911,7 @@ describe('make resident', async assert => {
 
 })
 
-describe('make citizen', async assert => {
+describe('make citizen test', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1263,6 +1264,7 @@ describe('Referral cbp reward individual', async assert => {
 
   console.log('configure rewards')
 
+
   const cbpRewardResident = 5
   const cbpRewardCitizen = 7
 
@@ -1286,7 +1288,9 @@ describe('Referral cbp reward individual', async assert => {
     json: true
   })
 
-  // console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+  //console.log("should: ", cbpRewardResident, " cbs "+JSON.stringify(cbsAfterResident, null, 2))
+
+
 
   assert({
     given: 'firstuser became resident',
@@ -1297,7 +1301,6 @@ describe('Referral cbp reward individual', async assert => {
 
   console.log("firstuser becomes citizen")
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  const expected_cbp_cit = await get_settings("ref.cbp2.ind")
 
   const cbsAfterCitizen = await getTableRows({
     code: accounts,
@@ -1306,7 +1309,7 @@ describe('Referral cbp reward individual', async assert => {
     json: true
   })
 
-  // console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
+  //console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
 
   assert({
     given: 'firstuser became citizen',
@@ -1317,7 +1320,7 @@ describe('Referral cbp reward individual', async assert => {
 
 })
 
-describe.only('Referral cbp reward organization', async assert => {
+describe('Referral cbp reward organization', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1325,8 +1328,6 @@ describe.only('Referral cbp reward organization', async assert => {
   }
 
   const contracts = await initContracts({ settings, accounts })
-
-  const orguser = "org1"
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -1358,7 +1359,7 @@ describe.only('Referral cbp reward organization', async assert => {
     json: true
   })
 
-  console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
+  //console.log("cbs "+JSON.stringify(cbsAfterResident, null, 2))
 
   assert({
     given: 'firstuser became resident',
@@ -1369,7 +1370,6 @@ describe.only('Referral cbp reward organization', async assert => {
 
   console.log("firstuser becomes citizen")
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  const expected_cbp_cit = await get_settings("ref.cbp2.ind")
 
   const cbsAfterCitizen = await getTableRows({
     code: accounts,
@@ -1378,7 +1378,7 @@ describe.only('Referral cbp reward organization', async assert => {
     json: true
   })
 
-  console.log("cbs "+JSON.stringify(cbsAfterCitizen, null, 2))
+  // console.log("cbs 2 "+JSON.stringify(cbsAfterCitizen, null, 2))
 
   assert({
     given: 'firstuser became citizen',
@@ -1427,7 +1427,7 @@ describe('Vouch reward', async assert => {
     json: true
   })
 
-  console.log("rep "+JSON.stringify(repAfterResident, null, 2))
+  //console.log("rep "+JSON.stringify(repAfterResident, null, 2))
 
   var expectedRepReward = 1
 
@@ -1450,7 +1450,7 @@ describe('Vouch reward', async assert => {
     json: true
   })
 
-  console.log("rep "+JSON.stringify(repAfterCitizen, null, 2))
+  //console.log("rep "+JSON.stringify(repAfterCitizen, null, 2))
 
   var expectedRepCitizenReward = 1
 
