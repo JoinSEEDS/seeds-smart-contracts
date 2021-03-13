@@ -2002,98 +2002,54 @@ ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
 
 }
 
-ACTION proposals::initprops (uint64_t start) {
-
+ACTION proposals::initcycstats () {
   require_auth(get_self());
 
-  auto mpitr = start == 0 ? migrateprops.begin() : migrateprops.find(start);
-  
-  uint64_t batch_size = config_get("batchsize"_n);
-  uint64_t count = 0;
+  cycle_stats_migration_tables migration_cyclestats(get_self(), get_self().value);
 
-  while (mpitr != migrateprops.end() && count < batch_size) {
+  auto migration_itr = migration_cyclestats.begin();
 
-    print("migrating prop: ", mpitr->id, "\n");
+  while (migration_itr != migration_cyclestats.end()) {
 
-    auto pitr = props.find(mpitr->id);
-    
-    if (pitr == props.end()) {
-      props.emplace(_self, [&](auto & item){
-        item.id = mpitr->id;
-        item.creator = mpitr->creator;
-        item.recipient = mpitr->recipient;
-        item.quantity = mpitr->quantity;
-        item.staked = mpitr->staked;
-        item.executed = mpitr->executed;
-        item.total = mpitr->total;
-        item.favour = mpitr->favour;
-        item.against = mpitr->against;
-        item.title = mpitr->title;
-        item.summary = mpitr->summary;
-        item.description = mpitr->description;
-        item.image = mpitr->image;
-        item.url = mpitr->url;
-        item.status = mpitr->status;
-        item.stage = mpitr->stage;
-        item.fund = mpitr->fund;
-        item.creation_date = mpitr->creation_date;
-        item.pay_percentages = mpitr->pay_percentages;
-        item.passed_cycle = mpitr->passed_cycle;
-        item.age = mpitr->age;
-        item.current_payout = mpitr->current_payout;
-        item.campaign_type = mpitr->campaign_type;
-        item.max_amount_per_invite = mpitr->max_amount_per_invite;
-        item.planted = mpitr->planted;
-        item.reward = mpitr->reward;
-        item.campaign_id = mpitr->campaign_id;
+    auto citr = cyclestats.find(migration_itr->propcycle);
+
+    if (citr != cyclestats.end()) {
+      cyclestats.modify(citr, _self, [&](auto & item){
+        item.start_time = migration_itr->start_time;
+        item.end_time = migration_itr->end_time;
+        item.num_proposals = migration_itr->num_proposals;
+        item.num_votes = migration_itr->num_votes;
+        item.total_voice_cast = migration_itr->total_voice_cast;
+        item.total_favour = migration_itr->total_favour;
+        item.total_against = migration_itr->total_against;
+        item.total_citizens = migration_itr->total_citizens;
+        item.quorum_vote_base = migration_itr->quorum_vote_base;
+        item.quorum_votes_needed = migration_itr->quorum_votes_needed;
+        item.total_eligible_voters = migration_itr->total_eligible_voters;
+        item.unity_needed = migration_itr->unity_needed;
+        item.active_props = migration_itr->active_props;
+        item.eval_props = migration_itr->eval_props;
       });
     } else {
-      props.modify(pitr, _self, [&](auto & item){
-        item.creator = mpitr->creator;
-        item.recipient = mpitr->recipient;
-        item.quantity = mpitr->quantity;
-        item.staked = mpitr->staked;
-        item.executed = mpitr->executed;
-        item.total = mpitr->total;
-        item.favour = mpitr->favour;
-        item.against = mpitr->against;
-        item.title = mpitr->title;
-        item.summary = mpitr->summary;
-        item.description = mpitr->description;
-        item.image = mpitr->image;
-        item.url = mpitr->url;
-        item.status = mpitr->status;
-        item.stage = mpitr->stage;
-        item.fund = mpitr->fund;
-        item.creation_date = mpitr->creation_date;
-        item.pay_percentages = mpitr->pay_percentages;
-        item.passed_cycle = mpitr->passed_cycle;
-        item.age = mpitr->age;
-        item.current_payout = mpitr->current_payout;
-        item.campaign_type = mpitr->campaign_type;
-        item.max_amount_per_invite = mpitr->max_amount_per_invite;
-        item.planted = mpitr->planted;
-        item.reward = mpitr->reward;
-        item.campaign_id = mpitr->campaign_id;
+      cyclestats.emplace(_self, [&](auto & item){
+        item.propcycle = migration_itr->propcycle; 
+        item.start_time = migration_itr->start_time;
+        item.end_time = migration_itr->end_time;
+        item.num_proposals = migration_itr->num_proposals;
+        item.num_votes = migration_itr->num_votes;
+        item.total_voice_cast = migration_itr->total_voice_cast;
+        item.total_favour = migration_itr->total_favour;
+        item.total_against = migration_itr->total_against;
+        item.total_citizens = migration_itr->total_citizens;
+        item.quorum_vote_base = migration_itr->quorum_vote_base;
+        item.quorum_votes_needed = migration_itr->quorum_votes_needed;
+        item.total_eligible_voters = migration_itr->total_eligible_voters;
+        item.unity_needed = migration_itr->unity_needed;
+        item.active_props = migration_itr->active_props;
+        item.eval_props = migration_itr->eval_props;
       });
     }
-
-    mpitr++;
-    count++;
   }
 
-  if (mpitr != migrateprops.end()) {
-    action next_execution(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "initprops"_n,
-      std::make_tuple(mpitr->id)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(mpitr->id + 1, _self);
-  }
-
+  migration_itr++;
 }
