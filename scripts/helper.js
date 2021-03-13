@@ -145,7 +145,8 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      orguser: account('org1', '100.0000 SEEDS'),
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -222,7 +223,7 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
       bdc: account(bdc),
