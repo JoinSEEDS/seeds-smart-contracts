@@ -5,7 +5,7 @@ const { equals } = require('ramda')
 
 const publicKey = 'EOS7iYzR2MmQnGga7iD2rPzvm5mEFXx6L1pjFTQYKRtdfDcG9NTTU'
 
-const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser, orguser } = names
+const { accounts, proposals, harvest, token, settings, history, exchange, organization, onboarding, escrow, firstuser, seconduser, thirduser, fourthuser, fifthuser, orguser } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -455,12 +455,12 @@ describe('vouching', async assert => {
   console.log('punish firstuser')
   await contract.vouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
   await contract.punish(firstuser, 10, { authorization: `${accounts}@active` })
-  await checkReps([3, 2, 10, 20], "user punished", "have the correct rep")
+  await checkReps([2, 10, 20], "user punished", "have the correct rep")
   await checkVouch(4, `${firstuser} punished`, 'store the vouch')
 
   await settingscontract.configure("maxvouch", 5, { authorization: `${settings}@active` })
   await contract.vouch(seconduser, fourthuser,{ authorization: `${seconduser}@active` })
-  await checkReps([3, 2, 10, 5], `${seconduser} vouched`, "have the correct rep")
+  await checkReps([2, 10, 5], `${seconduser} vouched`, "have the correct rep")
   await checkVouch(5, `${firstuser} unvouched`, 'store the vouch')
 
 })
@@ -615,6 +615,7 @@ describe('Ambassador and Org rewards', async assert => {
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
   await contracts.exchange.reset({ authorization: `${exchange}@active` })
   await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('add user')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -1535,3 +1536,211 @@ const accept = async (newAccount, inviteSecret, publicKey, contracts) => {
   await contracts.onboarding.accept(newAccount, inviteSecret, publicKey, { authorization: `${onboarding}@application` })        
   console.log("accept success!")
 }
+
+describe('Punishment', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, settings })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change flag threshold')
+  await contracts.settings.configure('flag.thresh', 40, { authorization: `${settings}@active` })
+
+  const checkReps = async (expectedReps) => {
+    const reps = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'rep',
+      json: true
+    })
+    assert({
+      given: 'user punished',
+      should: 'have the correct reputation',
+      actual: reps.rows.map(r => r.rep),
+      expected: expectedReps
+    })
+  }
+
+  const checkFlags = async (user, total) => {
+    const flagPoints = await getTableRows({
+      code: accounts,
+      scope: user,
+      table: 'flagpts',
+      json: true
+    })
+    assert({
+      given: `${user} flagged`,
+      should: 'have the correct flags',
+      actual: flagPoints.rows.map(r => r.flag_points).reduce((acc, current) => acc + current),
+      expected: total
+    })
+    const flagPointsGeneral = await getTableRows({
+      code: accounts,
+      scope: 'flag.total',
+      table: 'flagpts',
+      json: true
+    })
+    assert({
+      given: `${user} flagged`,
+      should: 'have the correct flags (general table)',
+      actual: flagPointsGeneral.rows
+        .filter(r => r.account == user)
+        .map(r => r.flag_points)
+        .reduce((acc, current) => acc + current),
+      expected: total
+    }) 
+  }
+
+  const checkPunishmentPoints = async (user, total) => {
+    const flagRemoved = await getTableRows({
+      code: accounts,
+      scope: 'flag.remove',
+      table: 'flagpts',
+      json: true
+    })
+    assert({
+      given: `${user} punished`,
+      should: 'have the correct removed flags points',
+      actual: flagRemoved.rows[0].flag_points,
+      expected: total
+    })
+  }
+
+  const checkUserStatus = async (user, status) => {
+    const usersTable = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'users',
+      json: true
+    })
+    const userStatus = (usersTable.rows.filter(u => u.account == user)[0]).status
+    assert({
+      given: `${user} punished`,
+      should: 'have the correct status',
+      actual: userStatus,
+      expected: status
+    })
+  }
+
+  console.log('change resident threshold')
+  await contracts.settings.configure('res.rep.pt', 10, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fifthuser, `user`, 'individual', { authorization: `${accounts}@active` })
+
+  console.log('make residents')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await checkUserStatus(firstuser, 'citizen')
+
+  console.log('make citizens')
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
+  console.log('add rep')
+  await contracts.accounts.addrep(firstuser, 40, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(seconduser, 100, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(thirduser, 200, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(fourthuser, 300, { authorization: `${accounts}@active` })
+  // await contracts.accounts.addrep(fifthuser, 20, { authorization: `${accounts}@active` })
+
+  console.log('manipulating the ranking')
+  await contracts.accounts.testsetrs(firstuser, 10, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(seconduser, 33, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(thirduser, 60, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(fourthuser, 99, { authorization: `${accounts}@active` })
+  
+  console.log('vouching')
+  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
+  await contracts.accounts.vouch(thirduser, firstuser, { authorization: `${thirduser}@active` })
+  await contracts.accounts.vouch(seconduser, fifthuser, { authorization: `${seconduser}@active` })
+
+  await checkReps([70, 100, 200, 300, 6])
+
+  console.log('set batchsize')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+  
+  console.log('flag users')
+  await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
+  await contracts.accounts.flag(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
+
+  let onlyOneFlag = true
+  try {
+    await sleep(300)
+    await contracts.accounts.flag(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
+    onlyOneFlag = false
+  } catch (err) {
+    console.log('only one flag (expected)')
+  }
+
+  let onlyResidentCitizen = true
+  try {
+    await sleep(300)
+    await contracts.accounts.flag(fifthuser, firstuser, { authorization: `${fifthuser}@active` })
+    onlyResidentCitizen = false
+  } catch (err) {
+    console.log('only residents or citizens (expected)')
+  }
+
+  await sleep(2000)
+
+  await checkFlags(firstuser, 46)
+  await checkPunishmentPoints(firstuser, 46)
+  await checkReps([24, 77, 177, 300, 6])
+  await checkUserStatus(firstuser, 'resident')
+
+  console.log('remove flag')
+  await contracts.accounts.removeflag(seconduser, firstuser, { authorization: `${seconduser}@active` })
+
+  await checkFlags(firstuser, 40)
+  await checkPunishmentPoints(firstuser, 46)
+  await checkReps([24, 77, 177, 300, 6])
+
+  console.log('flag again')
+  await sleep(300)
+  await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
+  await contracts.accounts.flag(thirduser, firstuser, { authorization: `${thirduser}@active` })
+
+  await sleep(1500)
+
+  await checkFlags(firstuser, 70) // -24
+  await checkPunishmentPoints(firstuser, 70)
+  await checkReps([65, 165, 300, 6])
+  await checkUserStatus(firstuser, 'visitor')
+
+  console.log('flag a user without rep')
+  await contracts.accounts.testcitizen(fifthuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(fifthuser, 50, { authorization: `${accounts}@active` })
+  await contracts.accounts.flag(fifthuser, firstuser, { authorization: `${fifthuser}@active` })
+  await checkFlags(firstuser, 90)
+  await checkPunishmentPoints(firstuser, 70)
+
+  assert({
+    given: 'user has flagged another user',
+    should: 'only allow one flag',
+    actual: onlyOneFlag,
+    expected: true
+  })
+
+  assert({
+    given: 'user is not a resident/citizen',
+    should: 'not allow user to flag another one',
+    actual: onlyResidentCitizen,
+    expected: true
+  })
+
+})
+
