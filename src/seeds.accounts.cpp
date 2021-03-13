@@ -301,9 +301,6 @@ void accounts::vouchreward(name account) {
   auto uitr = users.find(account.value);
   name status = uitr->status;
 
-  // For adding community building points
-  bool is_citizen = status.value == name("citizen").value;
-
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
