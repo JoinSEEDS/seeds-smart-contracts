@@ -98,6 +98,7 @@ CONTRACT proposals : public contract {
 
       ACTION migstats (uint64_t cycle);
       ACTION migcycstat ();
+      ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
       ACTION testperiod ();
 
@@ -353,7 +354,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)
-        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
+        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)(testpropquor)
         )
       }
   }
