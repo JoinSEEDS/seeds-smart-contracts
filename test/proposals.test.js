@@ -1839,8 +1839,8 @@ describe('Voice scope', async assert => {
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.testresident(firstuser, 'firstuser', { authorization: `${accounts}@active` })
-  
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
