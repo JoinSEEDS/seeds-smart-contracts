@@ -305,7 +305,6 @@ void proposals::onperiod() {
       if (pitr->stage == stage_active) {
 
         votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
 
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
@@ -319,7 +318,10 @@ void proposals::onperiod() {
         if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
           valid_quorum = true;
         } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+          auto citr = cyclestats.find(current_cycle);
+          uint64_t quorum_votes_needed = citr != cyclestats.end() ? citr->quorum_votes_needed : 0;
+          valid_quorum = votes_in_favor >= quorum_votes_needed;
         }
 
         if (passed && valid_quorum) {
@@ -436,6 +438,9 @@ void proposals::testperiod() {
     
     uint64_t quorum =  get_quorum(number_active_proposals);
 
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    uint64_t current_cycle = c.propcycle;
+
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
@@ -454,7 +459,7 @@ void proposals::testperiod() {
     // print("smallest id: "+std::to_string(smallest_prop_id) );
       
     // auto pitr = props.find(smallest_prop_id);
-    auto pitr = props.find(50);
+    auto pitr = props.find(70);
 
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
@@ -465,10 +470,7 @@ void proposals::testperiod() {
       if (pitr->stage == stage_active) {
 
         votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
         
-        print(" voters: "+std::to_string(voters_number));
-
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
@@ -477,7 +479,18 @@ void proposals::testperiod() {
         if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
           valid_quorum = true;
         } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+          auto citr = cyclestats.find(current_cycle);
+          uint64_t quorum_votes_needed = citr != cyclestats.end() ? citr->quorum_votes_needed : 0;
+          valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+          print(
+            " prop ID " + std::to_string(pitr->id) +
+            " vp favor " + std::to_string(votes_in_favor) +
+            " needed: " + std::to_string(quorum_votes_needed) +
+            " valid: " + ( valid_quorum ? "YES " : "NO ") 
+          );
+
         }
 
         if (passed && valid_quorum) {
@@ -1784,7 +1797,10 @@ ACTION proposals::migstats (uint64_t cycle) {
 
 }
 
+
 void proposals::migcycstat() {
+  require_auth(get_self());
+
   cycle_table c = cycle.get();
 
   uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
@@ -1799,5 +1815,23 @@ void proposals::migcycstat() {
     item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
   });
+
+}
+
+void proposals::testpropquor(uint64_t current_cycle, uint64_t prop_id) {
+  require_auth(get_self());
+  auto pitr = props.find(prop_id);
+  check(pitr != props.end(), "proposal not found");
+
+  uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+  auto citr = cyclestats.find(current_cycle);
+  uint64_t quorum_votes_needed = citr != cyclestats.end() ? citr->quorum_votes_needed : 0;
+  bool valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+  print(
+    " vp favor " + std::to_string(votes_in_favor) + " " +
+    "needed: " + std::to_string(quorum_votes_needed) + " " + 
+    "valid: " + ( valid_quorum ? "YES " : "NO ") 
+  );
 
 }

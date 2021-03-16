@@ -126,8 +126,6 @@ CONTRACT accounts : public contract {
 
       const name resident_vouch_points = "res.vouch"_n;
       const name citizen_vouch_points = "cit.vouch"_n;
-      const name vou_cbp_reward_resident = "vou.cbp1.ind"_n;
-      const name vou_cbp_reward_citizen = "vou.cbp2.ind"_n;
 
       const name flag_total_scope = "flag.total"_n;
       const name flag_remove_scope = "flag.remove"_n;

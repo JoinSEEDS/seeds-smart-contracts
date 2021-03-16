@@ -145,7 +145,8 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      orguser: account('org1', '100.0000 SEEDS'),
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -222,7 +223,7 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
       bdc: account(bdc),
@@ -677,13 +678,15 @@ if (keyProvider.length == 0 || keyProvider[0] == null) {
   console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
 }
 
+const isLocal = () => { return chainId == networks.local }
+
 const config = {
   keyProvider,
   httpEndpoint,
   chainId
 }
 
-const eos = new Eos(config)
+const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -700,7 +703,7 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return new Eos(config)
+  return new Eos(config, isLocal)
 }
 
 // ===========================================================================
@@ -743,8 +746,6 @@ const initContracts = (accounts) =>
   
 const ecc = require('eosjs-ecc')
 const sha256 = ecc.sha256
-
-const isLocal = () => { return chainId == networks.local }
 
 const ramdom64ByteHexString = async () => {
   let privateKey = await ecc.randomKey()
