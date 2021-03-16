@@ -221,20 +221,42 @@ void settings::reset() {
   // Reputation point reward for vouchers when user becomes citizen
   confwithdesc(name("vouchrep.2"), 1, "Reputation point reward for vouchers when user becomes citizen", medium_impact);
 
+  // =====================================
+  // Community Building Points 
+  // =====================================
+
   // community buiding points for referrer when user becomes resident
-  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", high_impact);
+  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", medium_impact);
 
   // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", high_impact);
+  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", medium_impact);
 
-  // community buiding points for voucher when user referred reputable org
-  confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
+  // community buiding points for referrer when user referred sustainable org
+  // Bob invites Alice, Alice creates org, org becomes sustainable
+  confwithdesc(name("ref.org3.cbp1"), 4, "Referred sustainable organization", medium_impact);
+
+  // community buiding points for referrer when user referred regenerative org
+  // Bob invites Alice, Alice creates org, org becomes regenerative
+  confwithdesc(name("ref.org4.cbp1"), 4, "Referred regenerative organization", medium_impact);
+
+  // community buiding points for referrer when user referred thrivable org
+  // Bob invites Alice, Alice creates org, org becomes thrivable
+  confwithdesc(name("ref.org5.cbp1"), 4, "Referred thrivable organization", medium_impact);
 
   // community buiding points for org referrer when referred user becomes resident
   confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
 
   // community buiding points for org referrer when user becomes citizen
   confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
+
+  // Community Building Point reward for buying from an organisation in your Region. One per lunar cycle.
+  confwithdesc(name("buylocal.cbp"), 1, "Community Building Point reward for buying from local organisation in your Region. One per lunar cycle", high_impact);
+
+  // Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.
+  confwithdesc(name("buyregen.cbp"), 2, "Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.", high_impact);
+
+  // Community Building Point reward for buying from a Thriving Organisation. One award per lunar cycle.
+  confwithdesc(name("buythriv.cbp"), 4, "Community Building Point reward for buying from a Thriving Organisation. One per lunar cycle.", high_impact);
 
   // =====================================
   // flag points
