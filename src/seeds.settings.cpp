@@ -215,6 +215,12 @@ void settings::reset() {
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
 
+  // Reputation point reward for vouchers when user becomes resident
+  confwithdesc(name("vouchrep.1"), 1, "Reputation point reward for vouchers when user becomes resident", medium_impact);
+
+  // Reputation point reward for vouchers when user becomes citizen
+  confwithdesc(name("vouchrep.2"), 1, "Reputation point reward for vouchers when user becomes citizen", medium_impact);
+
   // community buiding points for referrer when user becomes resident
   confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", high_impact);
 

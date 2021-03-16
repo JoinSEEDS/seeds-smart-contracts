@@ -96,6 +96,10 @@ CONTRACT accounts : public contract {
       const name individual = "individual"_n;
       const name organization = "organisation"_n;
 
+      const name citizen = name("citizen");
+      const name resident = name("resident");
+      const name visitor = name("visitor");
+
       const name not_found = ""_n;
 
       const name reputation_reward_resident = "refrep1.ind"_n;
@@ -133,7 +137,7 @@ CONTRACT accounts : public contract {
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
       void rewards(name account, name new_status);
-      void vouchreward(name account);
+      void vouchreward(name account, name new_status);
       void refreward(name account, name new_status);
       void send_reward(name beneficiary, asset quantity);
       void updatestatus(name account, name status);
