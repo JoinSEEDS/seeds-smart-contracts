@@ -51,6 +51,12 @@ void harvest::reset() {
     csitr = cspoints.erase(csitr);
   }
 
+  cs_points_tables cs_points_org(get_self(), organization_scope.value);
+  auto org_csitr = cs_points_org.begin();
+  while (org_csitr != cs_points_org.end()) {
+    org_csitr = cs_points_org.erase(org_csitr);
+  }
+
   cs_points_tables biocspoints(get_self(), name("bio").value);
   auto csbioitr = biocspoints.begin();
   while (csbioitr != biocspoints.end()) {
@@ -609,20 +615,35 @@ void harvest::calc_contribution_score(name account, name type) {
   // CS scrore for org needs to be calculated differently
   // Page 71 constitution
 
+  name scope;
+  name cs_scope;
+  name cs_sz;
+
   if (type == "organisation"_n) {
+    scope = organization_scope;
+    cs_scope = scope;
+    cs_sz = cs_org_size;
+    
     tx_points_tables orgtxpoints(get_self(), "org"_n.value);
     auto titr = orgtxpoints.find(account.value);
     if (titr != orgtxpoints.end()) transactions_score = titr->rank;
+
   } else {
+    scope = individual_scope_accounts;
+    cs_scope = individual_scope_harvest;
+    cs_sz = cs_size;
+
     auto titr = txpoints.find(account.value);
     if (titr != txpoints.end()) transactions_score = titr->rank;
   }
 
-  auto citr = cbs.find(account.value);
-  if (citr != cbs.end()) community_building_score = citr->rank;
+  rep_tables rep_t(contracts::accounts, scope.value);
+  auto ritr = rep_t.find(account.value);
+  if (ritr != rep_t.end()) reputation_score = ritr->rank;
 
-  auto ritr = rep.find(account.value);
-  if (ritr != rep.end()) reputation_score = ritr->rank;
+  cbs_tables cbs_t(contracts::accounts, scope.value);
+  auto citr = cbs_t.find(account.value);
+  if (citr != cbs_t.end()) community_building_score = citr->rank;
 
   // TODO verify this as correct for the constitution pp 71
   // Orgs need to have different scope for rep
@@ -631,25 +652,29 @@ void harvest::calc_contribution_score(name account, name type) {
   // org Planted seeds ranking for orgs may need to be in a different scope (Seeds 2.0 feature)
   // ORG Total Organisation Contribution Point = (CC+EC) * ORM
 
-  uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100; 
+  uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100;
 
-  auto csitr = cspoints.find(account.value);
-  if (csitr == cspoints.end()) {
+  print("ACCOUNT CS: account=", account, ", cs=", contribution_points, ", planted=", planted_score, ", trx=", transactions_score, ", cbs=", community_building_score, ", rep=", reputation_score, "\n");
+
+  cs_points_tables cspoints_t(get_self(), cs_scope.value);
+
+  auto csitr = cspoints_t.find(account.value);
+  if (csitr == cspoints_t.end()) {
     if (contribution_points > 0) {
-      cspoints.emplace(_self, [&](auto& item) {
+      cspoints_t.emplace(_self, [&](auto& item) {
         item.account = account;
         item.contribution_points = contribution_points;
       });
-      size_change(cs_size, 1);
+      size_change(cs_sz, 1);
     }
   } else {
     if (contribution_points > 0) {
-      cspoints.modify(csitr, _self, [&](auto& item) {
+      cspoints_t.modify(csitr, _self, [&](auto& item) {
         item.contribution_points = contribution_points;
       });
     } else {
-      cspoints.erase(csitr);
-      size_change(cs_size, -1);
+      cspoints_t.erase(csitr);
+      size_change(cs_sz, -1);
     }
   }
 
@@ -684,24 +709,41 @@ void harvest::add_cs_to_bioregion(name account, uint32_t points) {
 
 void harvest::rankcss() {
   size_set(sum_rank_users, 0);
-  size_set(sum_rank_orgs, 0);
-  rankcs(0, 0, 200);
+  rankcs(0, 0, 200, individual_scope_harvest);
 }
 
-void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void harvest::rankorgcss() {
+  size_set(sum_rank_orgs, 0);
+  rankcs(0, 0, 200, organization_scope);
+}
+
+void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name cs_scope) {
   require_auth(_self);
 
-  uint64_t total = get_size(cs_size);
+  uint64_t total = 0;
+  name sum_rank_name;
+  if (cs_scope == individual_scope_harvest) {
+    total = get_size(cs_size);
+    sum_rank_name = sum_rank_users;
+  } else if (cs_scope == organization_scope) {
+    total = get_size(cs_org_size);
+    sum_rank_name = sum_rank_orgs;
+    print("yes I am here\n");
+  }
+  print("WE ARE HERE: scope=", cs_scope, ", total=", total, "\n");
   if (total == 0) return;
 
+  cs_points_tables cspoints_t(get_self(), cs_scope.value);
+
   uint64_t current = chunk * chunksize;
-  auto cs_by_points = cspoints.get_index<"bycspoints"_n>();
+  auto cs_by_points = cspoints_t.get_index<"bycspoints"_n>();
   auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
   uint64_t count = 0;
-  uint64_t sum_rank_u = 0;
-  uint64_t sum_rank_o = 0;
+  uint64_t sum_rank = 0;
 
   while (citr != cs_by_points.end() && count < chunksize) {
+
+    print("organization:", citr->account, "\n");
 
     uint64_t rank = utils::rank(current, total);
 
@@ -709,20 +751,14 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
       item.rank = rank;
     });
 
-    auto uitr = users.find(citr -> account.value);
-    if (uitr -> type != "organisation"_n) {
-      sum_rank_u += rank;
-    } else {
-      sum_rank_o += rank;
-    }
+    sum_rank += rank;
 
     current++;
     count++;
     citr++;
   }
 
-  size_change(sum_rank_users, int64_t(sum_rank_u));
-  size_change(sum_rank_orgs, int64_t(sum_rank_o));
+  size_change(sum_rank_name, int64_t(sum_rank));
   
   // print("sum rank users = ", sum_rank, "\n");
 
@@ -735,7 +771,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "rankcs"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, cs_scope)
     );
 
     transaction tx;

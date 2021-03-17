@@ -1128,7 +1128,7 @@ describe('reputation & cbs ranking', async assert => {
 
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
 
-  await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
+  // await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
 
   await contracts.accounts.rankcbs(0, 0, 1, { authorization: `${accounts}@active` })
   await sleep(4000)

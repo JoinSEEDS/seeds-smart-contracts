@@ -90,8 +90,17 @@ class Eos {
     for (let [key, action] of actions) {
       functions[action.name] = async function () {
 
+        let auth
         const { authorization } = arguments[arguments.length - 1]
-        let [actor, permission] = authorization.split('@')
+        if (Array.isArray(authorization)) {
+          auth = authorization
+        } else {
+          let [actor, permission] = authorization.split('@')
+          auth = [{
+            actor,
+            permission,
+          }]
+        }
 
         const data = {}
 
@@ -115,10 +124,7 @@ class Eos {
           {
           account: accountName,
           name: action.name,
-          authorization: [{
-            actor,
-            permission,
-          }],
+          authorization: auth,
             data
           },
           ...nonce

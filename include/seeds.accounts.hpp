@@ -64,10 +64,12 @@ CONTRACT accounts : public contract {
       ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
-      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION rankorgreps();
+      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope);
 
       ACTION rankcbss();
-      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION rankorgcbss();
+      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope);
 
       ACTION changesize(name id, int64_t delta);
 
@@ -95,6 +97,9 @@ CONTRACT accounts : public contract {
 
       const name individual = "individual"_n;
       const name organization = "organisation"_n;
+
+      const name individual_scope = get_self();
+      const name organization_scope = "org"_n;
 
       const name not_found = ""_n;
 
@@ -146,7 +151,7 @@ CONTRACT accounts : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       uint64_t countrefs(name user, int check_num_residents);
       uint64_t rep_score(name user);
-      void add_rep_item(name account, uint64_t reputation);
+      void add_rep_item(name account, uint64_t reputation, name scope);
       uint64_t config_get(name key);
       double config_float_get(name key);
       void size_change(name id, int delta);
@@ -161,6 +166,8 @@ CONTRACT accounts : public contract {
       void send_eval_demote(name to);
       void send_punish_vouchers(name account, uint64_t points);
       void calc_vouch_rep(name account);
+      name get_scope(name type);
+      void send_add_cbs_org(name user, uint64_t amount);
 
       DEFINE_USER_TABLE
 
@@ -359,7 +366,7 @@ CONTRACT accounts : public contract {
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)(unvouch)(pnishvouched)
-(rankreps)(rankrep)(rankcbss)(rankcbs)
+(rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
 );
