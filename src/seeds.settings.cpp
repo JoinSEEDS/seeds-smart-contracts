@@ -219,6 +219,9 @@ void settings::reset() {
   // Reputation point reward for vouchers when user becomes citizen
   confwithdesc(name("vouchrep.2"), 1, "Reputation point reward for vouchers when user becomes citizen", medium_impact);
 
+  // Maximum number of points a user can gain from others vouching for them [NOT YET IMPLEMENTED]
+  confwithdesc(name("sendvouchmax"), 250, "Maximum number of non invite vouches a user can make", medium_impact);
+
   // =====================================
   // Community Building Points 
   // =====================================
@@ -268,8 +271,8 @@ void settings::reset() {
   // =====================================
   // forum 
   // =====================================
-  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
-  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", low_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", low_impact);
   confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
   confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
@@ -279,9 +282,15 @@ void settings::reset() {
   // =====================================
   // transaction multipliers
   // =====================================
-  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
-  conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", medium_impact);
+  conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", medium_impact);
 
+
+  conffloatdsc(name("org1.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 1 organization", medium_impact);
+  conffloatdsc(name("org2.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 2 organization", medium_impact);
+  conffloatdsc(name("org3.trx.mul"), 1.3, "Transaction multiplier for exchanging with a level 3 organization", medium_impact);
+  conffloatdsc(name("org4.trx.mul"), 1.7, "Transaction multiplier for exchanging with a level 4 organization", medium_impact);
+  conffloatdsc(name("org5.trx.mul"), 2.0, "Transaction multiplier for exchanging with a level 5 organization", medium_impact);
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 
