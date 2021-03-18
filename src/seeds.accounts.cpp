@@ -896,13 +896,10 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
 
   uint64_t total = 0;
 
-  print("RANK CBS -----------------------------------\n");
-
   if (scope == individual_scope) {
     total = get_size("cbs.sz"_n);
   } else {
     total = get_size("cbs.org.sz"_n);
-    print("orgs size:", total, "\n");
   }
   if (total == 0) return;
 
@@ -920,8 +917,6 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
     });
-
-    print("account: ", citr->account, ", rank:", rank, "\n");
 
     current++;
     count++;
@@ -1516,3 +1511,164 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
 
 }
 
+ACTION accounts::testmigscope (name account, uint64_t amount) {
+  require_auth(get_self());
+
+  auto citr = cbs.find(account.value);
+  if (citr != cbs.end()) {
+    cbs.modify(citr, _self, [&](auto & item){
+      item.community_building_score = amount;
+      item.rank = amount;
+    });
+  } else {
+    cbs.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.community_building_score = amount;
+      item.rank = amount;
+    });
+  }
+
+  auto ritr = rep.find(account.value);
+  if (ritr != rep.end()) {
+    rep.modify(ritr, _self, [&](auto & item){
+      item.rep = amount;
+      item.rank = amount;
+    });
+  } else {
+    rep.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.rep = amount;
+      item.rank = amount;
+    });
+  }
+
+}
+
+ACTION accounts::migorgs (uint64_t start) {
+  require_auth(get_self());
+
+  cbs_tables cbs_org(get_self(), organization_scope.value);
+  rep_tables rep_org(get_self(), organization_scope.value);
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < batch_size) {
+
+    if (uitr->type != name("organisation")) {
+      uitr++;
+      count++;
+      continue;
+    }
+
+    name org_name = uitr->account;
+
+    // moving cbs from individual scope to org scope
+    auto citr = cbs.find(org_name.value);
+
+    if (citr != cbs.end()) {
+
+      auto cbs_itr_org = cbs_org.find(org_name.value);
+
+      if (cbs_itr_org != cbs_org.end()) {
+        cbs_org.modify(cbs_itr_org, _self, [&](auto & item){
+          item.community_building_score = citr->community_building_score;
+          item.rank = citr->rank;
+        });
+      } else {
+        cbs_org.emplace(_self, [&](auto & item){
+          item.account = org_name;
+          item.community_building_score = citr->community_building_score;
+          item.rank = citr->rank;
+        });
+      }
+
+    }
+
+    // moving rep from individual scope to org scope
+    auto ritr = rep.find(org_name.value);
+
+    if (ritr != rep.end()) {
+
+      auto rep_itr_org = rep_org.find(org_name.value);
+
+      if (rep_itr_org != rep_org.end()) {
+        rep_org.modify(rep_itr_org, _self, [&](auto & item){
+          item.rep = ritr->rep;
+          item.rank = ritr->rank;
+        });
+      } else {
+        rep_org.emplace(_self, [&](auto & item){
+          item.account = org_name;
+          item.rep = ritr->rep;
+          item.rank = ritr->rank;
+        });
+      }
+
+    }
+
+    uitr++;
+    count++;
+
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migorgs"_n,
+      std::make_tuple(uitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value, _self);
+  }
+
+}
+
+ACTION accounts::delcbsreporg (uint64_t start) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < batch_size) {
+
+    if (uitr->type != name("organisation")) {
+      uitr++;
+      count++;
+      continue;
+    }
+
+    name org_name = uitr->account;
+
+    auto citr = cbs.find(org_name.value);
+    if (citr != cbs.end()) { cbs.erase(citr); }
+
+    auto ritr = rep.find(org_name.value);
+    if (ritr != rep.end()) { rep.erase(ritr); }
+
+    uitr++;
+    count++;
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "delcbsreporg"_n,
+      std::make_tuple(uitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value, _self);
+  }
+}

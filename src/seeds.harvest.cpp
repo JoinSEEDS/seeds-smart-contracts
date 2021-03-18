@@ -654,8 +654,6 @@ void harvest::calc_contribution_score(name account, name type) {
 
   uint64_t contribution_points = ( (planted_score + transactions_score + community_building_score) * reputation_score * 2) / 100;
 
-  print("ACCOUNT CS: account=", account, ", cs=", contribution_points, ", planted=", planted_score, ", trx=", transactions_score, ", cbs=", community_building_score, ", rep=", reputation_score, "\n");
-
   cs_points_tables cspoints_t(get_self(), cs_scope.value);
 
   auto csitr = cspoints_t.find(account.value);
@@ -728,9 +726,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   } else if (cs_scope == organization_scope) {
     total = get_size(cs_org_size);
     sum_rank_name = sum_rank_orgs;
-    print("yes I am here\n");
   }
-  print("WE ARE HERE: scope=", cs_scope, ", total=", total, "\n");
   if (total == 0) return;
 
   cs_points_tables cspoints_t(get_self(), cs_scope.value);
@@ -742,8 +738,6 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   uint64_t sum_rank = 0;
 
   while (citr != cs_by_points.end() && count < chunksize) {
-
-    print("organization:", citr->account, "\n");
 
     uint64_t rank = utils::rank(current, total);
 
@@ -759,8 +753,6 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   }
 
   size_change(sum_rank_name, int64_t(sum_rank));
-  
-  // print("sum rank users = ", sum_rank, "\n");
 
   if (citr == cs_by_points.end()) {
     // Done.
@@ -926,60 +918,84 @@ void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
 
 void harvest::testcspoints(name account, uint64_t contribution_points) {
   require_auth(get_self());
-  auto csitr = cspoints.find(account.value);
-  if (csitr == cspoints.end()) {
+
+  auto uitr = users.get(account.value, "account not found");
+  name scope;
+  name cs_sz;
+
+  if (uitr.type == "individual"_n) {
+    scope = individual_scope_harvest;
+    cs_sz = cs_size;
+  } else {
+    scope = organization_scope;
+    cs_sz = cs_org_size;
+  }
+
+  cs_points_tables cspoints_t(get_self(), scope.value);
+
+  auto csitr = cspoints_t.find(account.value);
+  if (csitr == cspoints_t.end()) {
     if (contribution_points > 0) {
-      cspoints.emplace(_self, [&](auto& item) {
+      cspoints_t.emplace(_self, [&](auto& item) {
         item.account = account;
         item.contribution_points = contribution_points;
       });
-      size_change(cs_size, 1);
+      size_change(cs_sz, 1);
     }
   } else {
     if (contribution_points > 0) {
-      cspoints.modify(csitr, _self, [&](auto& item) {
+      cspoints_t.modify(csitr, _self, [&](auto& item) {
         item.contribution_points = contribution_points;
       });
     } else {
-      cspoints.erase(csitr);
-      size_change(cs_size, -1);
+      cspoints_t.erase(csitr);
+      size_change(cs_sz, -1);
     }
   }
 }
 
 void harvest::testupdatecs(name account, uint64_t contribution_score) {
   require_auth(get_self());
-  auto csitr = cspoints.find(account.value);
-  if (csitr == cspoints.end()) {
+
+  auto uitr = users.get(account.value, "account not found");
+  name scope;
+  name cs_sz;
+
+  if (uitr.type == "individual"_n) {
+    scope = individual_scope_harvest;
+    cs_sz = cs_size;
+  } else {
+    scope = organization_scope;
+    cs_sz = cs_org_size;
+  }
+
+  cs_points_tables cspoints_t(get_self(), scope.value);
+
+  auto csitr = cspoints_t.find(account.value);
+  if (csitr == cspoints_t.end()) {
     if (contribution_score > 0) {
-      cspoints.emplace(_self, [&](auto& item) {
+      cspoints_t.emplace(_self, [&](auto& item) {
         item.account = account;
         item.rank = contribution_score;
       });
-      size_change(cs_size, 1);
+      size_change(cs_sz, 1);
     }
   } else {
     if (contribution_score > 0) {
-      cspoints.modify(csitr, _self, [&](auto& item) {
+      cspoints_t.modify(csitr, _self, [&](auto& item) {
         item.rank = contribution_score;
       });
     } else {
-      cspoints.erase(csitr);
-      size_change(cs_size, -1);
+      cspoints_t.erase(csitr);
+      size_change(cs_sz, -1);
     }
   }
 }
 
-  double harvest::get_rep_multiplier(name account) {
-    //return 1.0;  // DEBUg FOR TESTINg otherwise everyone on testnet has 0
-
-    auto ritr = rep.find(account.value);
-    if (ritr == rep.end()) {
-      return 0;
-    }
-    return utils::rep_multiplier_for_score(ritr->rank);
-
-  }
+double harvest::get_rep_multiplier(name account) {
+  //return 1.0;  // DEBUg FOR TESTINg otherwise everyone on testnet has 0
+  return utils::get_rep_multiplier(account);
+}
 
 void harvest::size_change(name id, int delta) {
   auto sitr = sizes.find(id.value);
@@ -1247,11 +1263,11 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
   
   while (csitr != cspoints.end() && count < chunksize) {
 
-    auto uitr = users.find(csitr -> account.value);
-    if (uitr != users.end() && uitr -> type != "organisation"_n && csitr -> rank > 0) {
+    // auto uitr = users.find(csitr -> account.value);
+    if (csitr->rank > 0) {
 
-      print("user:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
-      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+      print("user:", csitr->account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      withdraw_aux(get_self(), csitr->account, asset(csitr->rank * fragment_seeds, test_symbol), "harvest");
     
     }
 
@@ -1315,7 +1331,9 @@ void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amou
 void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
 
-  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  cs_points_tables cspoints_t(get_self(), organization_scope.value);
+
+  auto csitr = start == 0 ? cspoints_t.begin() : cspoints_t.find(start);
   uint64_t count = 0;
 
   uint64_t sum_rank = get_size(sum_rank_orgs);
@@ -1323,12 +1341,12 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
 
   double fragment_seeds = total_amount.amount / double(sum_rank);
   
-  while (csitr != cspoints.end() && count < chunksize) {
+  while (csitr != cspoints_t.end() && count < chunksize) {
 
-    auto uitr = users.find(csitr -> account.value);
-    if (uitr != users.end() && uitr -> type == "organisation"_n && csitr -> rank > 0) {
+    // auto uitr = users.find(csitr -> account.value);
+    if (csitr->rank > 0) {
 
-      print("org:", uitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+      print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
       withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
     
     }
@@ -1337,7 +1355,7 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
     count++;
   }
 
-  if (csitr != cspoints.end()) {
+  if (csitr != cspoints_t.end()) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
@@ -1351,3 +1369,111 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
     tx.send(sum_rank_orgs.value, _self);
   }
 }
+
+
+ACTION harvest::testmigscope (name account, uint64_t amount) {
+  require_auth(get_self());
+
+  auto citr = cspoints.find(account.value);
+  if (citr != cspoints.end()) {
+    cspoints.modify(citr, _self, [&](auto & item){
+      item.contribution_points = amount;
+      item.rank = amount;
+    });
+  } else {
+    cspoints.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.contribution_points = amount;
+      item.rank = amount;
+    });
+  }
+
+}
+
+ACTION harvest::migorgs (uint64_t start) {
+  require_auth(get_self());
+
+  cs_points_tables cspoints_org(get_self(), organization_scope.value);
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (csitr != cspoints.end() && count < batch_size) {
+
+    auto uitr = users.find(csitr->account.value);
+    if (uitr->type == name("organisation")) {
+
+      auto org_itr = cspoints_org.find(uitr->account.value);
+
+      if (org_itr != cspoints_org.end()) {
+        cspoints_org.modify(org_itr, _self, [&](auto & item){
+          item.contribution_points = csitr->contribution_points;
+          item.rank = csitr->rank;
+        });
+      } else {
+        cspoints_org.emplace(_self, [&](auto & item){
+          item.account = uitr->account;
+          item.contribution_points = csitr->contribution_points;
+          item.rank = csitr->rank;
+        });
+      }
+
+    }
+
+    csitr++;
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migorgs"_n,
+      std::make_tuple(csitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(csitr->account.value, _self);
+  }
+
+}
+
+ACTION harvest::delcsorg (uint64_t start) {
+  require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (csitr != cspoints.end() && count < batch_size) {
+    auto uitr = users.find(csitr->account.value);
+    if (uitr->type == name("organisation")) {
+      csitr = cspoints.erase(csitr);
+    } else {
+      csitr++;
+    }
+    count++;
+  }
+
+  if (csitr != cspoints.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "delcsorg"_n,
+      std::make_tuple(csitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(csitr->account.value, _self);
+  }
+
+}
+
+

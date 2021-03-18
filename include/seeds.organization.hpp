@@ -67,13 +67,13 @@ CONTRACT organization : public contract {
 
         ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
-        ACTION rankcbsorgs();
+        // ACTION rankcbsorgs();
 
-        ACTION rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize);
+        // ACTION rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
-        ACTION addcbpoints(name organization, uint32_t cbscore);
+        // ACTION addcbpoints(name organization, uint32_t cbscore);
 
-        ACTION subcbpoints(name organization, uint32_t cbscore);
+        // ACTION subcbpoints(name organization, uint32_t cbscore);
 
         ACTION makeregen(name organization);
 
@@ -352,7 +352,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
-            (rankregens)(rankregen)(rankcbsorgs)(rankcbsorg)(addcbpoints)(subcbpoints)(makeregen)
+            (rankregens)(rankregen)(makeregen)
             (makereptable)(testregen)(testreptable)(scoreorgs)(scoretrxs))
       }
   }
