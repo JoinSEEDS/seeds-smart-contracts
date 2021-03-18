@@ -60,7 +60,7 @@ CONTRACT accounts : public contract {
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
-      ACTION unvouch(name sponsor, name account);
+      // ACTION unvouch(name sponsor, name account);
       ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
@@ -362,7 +362,7 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(requestvouch)(vouch)(unvouch)(pnishvouched)
+(testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankrep)(rankcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)

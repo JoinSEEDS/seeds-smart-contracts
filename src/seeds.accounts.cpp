@@ -173,19 +173,21 @@ void accounts::_vouch(name sponsor, name account) {
   calc_vouch_rep(account); 
 }
 
-void accounts::unvouch (name sponsor, name account) {
-  require_auth(sponsor);
+// There is no uncouching
 
-  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
-  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
-  auto vitr = vouches_by_sponsor_account.find(id);
+// void accounts::unvouch (name sponsor, name account) {
+//   require_auth(sponsor);
 
-  check(vitr != vouches_by_sponsor_account.end(), "vouch not found");
+//   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+//   uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
+//   auto vitr = vouches_by_sponsor_account.find(id);
 
-  vouches_by_sponsor_account.erase(vitr);
+//   check(vitr != vouches_by_sponsor_account.end(), "vouch not found");
+
+//   vouches_by_sponsor_account.erase(vitr);
   
-  calc_vouch_rep(account);
-}
+//   calc_vouch_rep(account);
+// }
 
 void accounts::pnishvouched (name sponsor, uint64_t start_account) {
   require_auth(get_self());
