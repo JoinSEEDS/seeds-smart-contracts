@@ -1193,7 +1193,7 @@ describe('bioregions contribution score', async assert => {
     actual: cspointsBios.rows,
     expected: [
       { account: 'bio2.bdc', contribution_points: 41, rank: 0 },
-      { account: 'bio3.bdc', contribution_points: 82, rank: 27 }
+      { account: 'bio3.bdc', contribution_points: 82, rank: 50 }
     ]
   })
 
