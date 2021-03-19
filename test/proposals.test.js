@@ -51,6 +51,7 @@ describe('Proposals', async assert => {
 
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(fourthuser, { authorization: `${accounts}@active` })
 
   const cyclesTable = await getTableRows({
     code: proposals,
