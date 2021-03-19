@@ -458,7 +458,7 @@ ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksiz
 
     while (rsitr != regen_score_by_avg_regen.end() && count < chunksize) {
 
-        uint64_t rank = utils::rank(current, total);
+        uint64_t rank = utils::spline_rank(current, total);
 
         regen_score_by_avg_regen.modify(rsitr, _self, [&](auto & item) {
             item.rank = rank;
@@ -535,7 +535,7 @@ ACTION organization::rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksi
 
     while (cbsitr != cbs_by_points.end() && count < chunksize) {
 
-        uint64_t rank = utils::rank(current, total);
+        uint64_t rank = utils::spline_rank(current, total);
 
         cbs_by_points.modify(cbsitr, _self, [&](auto & item) {
             item.rank = rank;

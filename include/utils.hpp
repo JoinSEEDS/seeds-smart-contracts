@@ -15,7 +15,7 @@ namespace utils {
 
   symbol seeds_symbol = symbol("SEEDS", 4);
 
-  inline uint64_t rank(uint64_t current, uint64_t total) { 
+  inline uint64_t linear_rank(uint64_t current, uint64_t total) { 
     /**
      * TODO - Table Locks
      * 
@@ -36,7 +36,12 @@ namespace utils {
      * 
      * The cheap way to fix it is to limit rank to 99
     */
+    uint64_t r = (current * 100) / total; 
+    if (r > 99) return 99;
+    return r;
+  }
 
+  inline uint64_t spline_rank(uint64_t current, uint64_t total) {
     // Spline rank table coeficients
     const float rank_coefs[100] = { 0.00,
                             0.00,
