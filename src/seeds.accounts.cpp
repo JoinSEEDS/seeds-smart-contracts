@@ -1348,11 +1348,8 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
-void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
+void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
-
-  uint64_t batch_size = 0.6 * config_get("batchsize"_n);
-  batch_size = batch_size > 0 ? batch_size : 100;
   
   uint64_t count = 0;
   uint64_t current_sponsor = 0;
@@ -1406,7 +1403,7 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(next_user, current_sponsor)
+      std::make_tuple(next_user, current_sponsor, batch_size)
     );
 
     transaction tx;
