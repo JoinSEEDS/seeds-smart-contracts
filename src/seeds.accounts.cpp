@@ -1365,6 +1365,7 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
     vouch_tables vouch(get_self(), uitr->account.value);
     
     auto vitr = start_sponsor == 0 ? vouch.begin() : vouch.find(start_sponsor);
+
     while (vitr != vouch.end() && count < batch_size) {
 
       uint128_t id = (uint128_t(vitr->sponsor.value) << 64) + uitr->account.value;
@@ -1394,6 +1395,9 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
     } else {
       current_sponsor = vitr->sponsor.value;
     }
+
+    count++;
+
   }
 
   if (uitr != users.end()) {
