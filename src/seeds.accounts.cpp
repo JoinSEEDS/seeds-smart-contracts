@@ -1401,7 +1401,7 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(uitr->account.value, current_sponsor.value)
+      std::make_tuple(uitr->account.value, current_sponsor)
     );
 
     transaction tx;
