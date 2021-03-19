@@ -162,6 +162,8 @@ CONTRACT accounts : public contract {
       void send_punish_vouchers(name account, uint64_t points);
       void calc_vouch_rep(name account);
 
+      void migrate_calc_vouch_rep(name account); // migration - remove
+
       DEFINE_USER_TABLE
 
       DEFINE_USER_TABLE_MULTI_INDEX

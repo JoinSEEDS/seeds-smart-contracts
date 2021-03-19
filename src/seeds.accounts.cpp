@@ -1388,7 +1388,7 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     }
 
     if (vitr == vouch.end()) {
-      calc_vouch_rep(uitr->account);
+      migrate_calc_vouch_rep(uitr->account);
       uitr++;
       current_sponsor = "."_n;
     } else {
@@ -1412,3 +1412,51 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
 
 }
 
+
+void accounts::migrate_calc_vouch_rep (name account) {
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t max_vouch = config_get(max_vouch_points);
+  uint64_t total_vouch = 0;
+  uint64_t total_rep = 0;
+
+  while (vitr != vouches_by_account.end() && vitr->account == account) {
+    total_vouch += vitr -> vouch_points;
+    vitr++;
+  }
+
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
+
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+// DO NOT MODIFY REPUTATION FROM THIS
+  // if (total_rep < total_vouch_capped) {
+    
+  //   delta = total_vouch_capped - total_rep;
+  //   send_addrep(account, delta);
+  //   total_rep += delta;
+
+  // } else if (total_rep > total_vouch_capped) {
+
+  //   delta = total_rep - total_vouch_capped;
+  //   send_subrep(account, delta);
+  //   total_rep -= delta;
+
+  // }
+
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  }
+}
