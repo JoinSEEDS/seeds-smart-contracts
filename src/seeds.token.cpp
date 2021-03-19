@@ -181,11 +181,13 @@ void token::check_limit_transactions(name from) {
 
   if (uitr != users.end()) {
     uint64_t max_trx = 0;
+    auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
     if (bitr != balances.end() && bitr -> planted > asset(0, seeds_symbol)) {
       auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
       max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
-    } else {
-      auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
+    } 
+        
+    if (min_trx.value > max_trx) {
       max_trx = min_trx.value;
     }
 
