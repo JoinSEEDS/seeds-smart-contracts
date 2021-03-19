@@ -50,25 +50,7 @@ describe('token.transfer.history', async assert => {
   console.log('transfer token')
   await transfer()
   await sleep(500)
-  
-  const { rows } = await getTableRows({
-    code: history,
-    scope: firstuser,
-    table: 'transactions',
-    json: true
-  })
-  delete rows[0].timestamp
-
-  assert({
-    given: 'transactions table',
-    should: 'have transaction entry',
-    actual: rows,
-    expected: [{
-      id: 0,
-      to: seconduser,
-      quantity: '10.0000 SEEDS',
-    }]
-  })
+  console.log('transfer 2')
 
   await transfer()
   await sleep(500)
@@ -79,8 +61,6 @@ describe('token.transfer.history', async assert => {
     table: 'trxstat',
     json: true
   })
-
-  //console.log("stats: "+JSON.stringify(stats, null, 2))
 
   assert({
     given: 'transactions',
@@ -332,7 +312,7 @@ describe('token.resetweekly', async assert => {
 
 })
 
-describe.only('transaction limits', async assert => {
+describe('transaction limits', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
