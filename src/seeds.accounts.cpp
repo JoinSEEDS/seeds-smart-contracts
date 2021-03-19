@@ -1397,11 +1397,12 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
   }
 
   if (uitr != users.end()) {
+    uint64_t next_user = uitr->account.value;
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(uitr->account.value, current_sponsor)
+      std::make_tuple(next_user, current_sponsor)
     );
 
     transaction tx;
