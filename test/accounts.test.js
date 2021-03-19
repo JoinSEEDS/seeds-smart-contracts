@@ -515,7 +515,7 @@ describe('test vouch migration', async assert => {
 
   console.log('migration')
   await settingscontract.configure('batchsize', 2, { authorization: `${settings}@active` })
-  await contract.migratevouch('.', '.', { authorization: `${accounts}@active` })
+  await contract.migratevouch(0, 0, { authorization: `${accounts}@active` })
   await sleep(8000)
 
   const vouchTable = await getTableRows({
