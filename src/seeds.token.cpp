@@ -186,9 +186,7 @@ void token::check_limit_transactions(name from) {
       auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
       max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
     } 
-
-    // TODO add some unit tests for these limits
-    
+        
     if (min_trx.value > max_trx) {
       max_trx = min_trx.value;
     }
