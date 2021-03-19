@@ -87,7 +87,7 @@ CONTRACT accounts : public contract {
       ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
-      ACTION migratevouch(name start_user, name start_sponsor);
+      ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);

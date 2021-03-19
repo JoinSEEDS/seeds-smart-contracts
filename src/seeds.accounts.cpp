@@ -1348,23 +1348,23 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
-void accounts::migratevouch (name start_user, name start_sponsor) {
+void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor) {
   require_auth(get_self());
 
   uint64_t batch_size = 0.6 * config_get("batchsize"_n);
   batch_size = batch_size > 0 ? batch_size : 100;
   
   uint64_t count = 0;
-  name current_sponsor = "."_n;
+  uint64_t current_sponsor = 0;
 
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
 
-  auto uitr = start_user == "."_n ? users.begin() : users.find(start_user.value);
+  auto uitr = start_user == 0 ? users.begin() : users.find(start_user);
 
   while (uitr != users.end() && count < batch_size) {
     vouch_tables vouch(get_self(), uitr->account.value);
     
-    auto vitr = start_sponsor == "."_n ? vouch.begin() : vouch.find(start_sponsor.value);
+    auto vitr = start_sponsor == 0 ? vouch.begin() : vouch.find(start_sponsor);
     while (vitr != vouch.end() && count < batch_size) {
 
       uint128_t id = (uint128_t(vitr->sponsor.value) << 64) + uitr->account.value;
@@ -1390,9 +1390,9 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     if (vitr == vouch.end()) {
       migrate_calc_vouch_rep(uitr->account);
       uitr++;
-      current_sponsor = "."_n;
+      current_sponsor = 0;
     } else {
-      current_sponsor = vitr->sponsor;
+      current_sponsor = vitr->sponsor.value;
     }
   }
 
