@@ -1451,12 +1451,12 @@ void accounts::migrate_calc_vouch_rep (name account) {
     vouchtotals.emplace(_self, [&](auto & item){
       item.account = account;
       item.total_vouch_points = total_vouch;
-      item.total_rep_points = total_rep;
+      item.total_rep_points = total_vouch_capped;
     });
   } else {
     vouchtotals.modify(vtitr, _self, [&](auto & item){
       item.total_vouch_points = total_vouch;
-      item.total_rep_points = total_rep;
+      item.total_rep_points = total_vouch_capped;
     });
   }
 }
