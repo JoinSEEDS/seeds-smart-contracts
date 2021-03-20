@@ -1,0 +1,777 @@
+{
+  "acascalheir1": {
+    "delta": 0,
+    "old_rep_total": 10,
+    "new_vouch_total_rep_points": 40
+  },
+  "aforest12345": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "agamirecords": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "agnessmkawu1": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "aileenmariec": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "alejandromp1": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "alexcawaxela": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "alexioticha1": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "alix11131415": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "allaboutyou1": {
+    "delta": 16,
+    "old_rep_total": 16,
+    "new_vouch_total_rep_points": 50
+  },
+  "alnaboodah41": {
+    "delta": -34,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 16
+  },
+  "alshehhi3ssh": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "aylamagic215": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "badmortymans": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "barmseekri13": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "belledemoise": {
+    "delta": 30,
+    "old_rep_total": 40,
+    "new_vouch_total_rep_points": 40
+  },
+  "billflowfarm": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "biodesicoins": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "blessings111": {
+    "delta": 16,
+    "old_rep_total": 16,
+    "new_vouch_total_rep_points": 50
+  },
+  "blnxbrg11111": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "borib3arlovw": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "borisbengali": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "brigglyjz251": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "bwldjrkly211": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "carolinamota": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "ccci21terram": {
+    "delta": 17,
+    "old_rep_total": 17,
+    "new_vouch_total_rep_points": 50
+  },
+  "cesarhm12mad": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "chaosurfer23": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "chiaradegiac": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "chibandac221": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "christaseeds": {
+    "delta": 40,
+    "old_rep_total": 40,
+    "new_vouch_total_rep_points": 50
+  },
+  "chrsseedsacc": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "cocococoh444": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "colecp154125": {
+    "delta": -16,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 34
+  },
+  "coreyjdng245": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "crystalseeds": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "csxmctpwa431": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "daansteller1": {
+    "delta": -10,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 40
+  },
+  "dakotakaiser": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "dancingseeds": {
+    "delta": -33,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 17
+  },
+  "danujess2222": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "davidbloom24": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "davidmangwe1": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "donatamaria1": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "dustydigital": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "dweearthltda": {
+    "delta": -10,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 40
+  },
+  "eddyaugusto5": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "edgushungo12": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "edwardwhq111": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "efrnijktt245": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "elinsypdc422": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "elisajftg255": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "emiloerumeng": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "explorerseed": {
+    "delta": -10,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 40
+  },
+  "f123bnnnnnnn": {
+    "delta": -34,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 16
+  },
+  "fedefont2121": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "firebolt1234": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "flowninja111": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "freddnuck311": {
+    "delta": 39,
+    "old_rep_total": 39,
+    "new_vouch_total_rep_points": 50
+  },
+  "funkybrentos": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "gaiagame2121": {
+    "delta": 6,
+    "old_rep_total": 16,
+    "new_vouch_total_rep_points": 40
+  },
+  "geschichten1": {
+    "delta": 40,
+    "old_rep_total": 40,
+    "new_vouch_total_rep_points": 50
+  },
+  "hadrienseeds": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "hagbard23232": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "hedjesim1515": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "iamgrateful2": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "iloverusty12": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "iraentwine24": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "itjeplayseed": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "j4sk4seeds44": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "jakeflowfarm": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "jakopieterse": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "janethuli445": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "javixofkf411": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "jennygrace11": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "jerashfam124": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "jmichaelsims": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "joebabycarro": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "johncitoquad": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "jpgaiavisual": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "jterranseeds": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "kapishdutta1": {
+    "delta": 39,
+    "old_rep_total": 39,
+    "new_vouch_total_rep_points": 50
+  },
+  "kappudutta12": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "kcfrockts211": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "kendraman111": {
+    "delta": 37,
+    "old_rep_total": 37,
+    "new_vouch_total_rep_points": 50
+  },
+  "klozzseeds21": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "kristina1111": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "kunasnature4": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "kwizrak55555": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "lalagardens1": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "laslovelight": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "laureltreees": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "libmonetair3": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "lifeisgooood": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "lilsuprdngrs": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "lindaandrews": {
+    "delta": 10,
+    "old_rep_total": 10,
+    "new_vouch_total_rep_points": 50
+  },
+  "linekeheus55": {
+    "delta": 38,
+    "old_rep_total": 38,
+    "new_vouch_total_rep_points": 50
+  },
+  "litebeam1111": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "littlebird33": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "liviopkdh135": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "lonewolfmoon": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "lucredevrims": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "luiseduardog": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "m2ocommunity": {
+    "delta": 27,
+    "old_rep_total": 38,
+    "new_vouch_total_rep_points": 39
+  },
+  "malqubaisi21": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "marilegacy1o": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "marshalneyer": {
+    "delta": 40,
+    "old_rep_total": 40,
+    "new_vouch_total_rep_points": 50
+  },
+  "mathieuouell": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "maudtonha111": {
+    "delta": 16,
+    "old_rep_total": 16,
+    "new_vouch_total_rep_points": 50
+  },
+  "mcmichael123": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "missviolet11": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "mjantunez525": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "mjlixmshn245": {
+    "delta": 29,
+    "old_rep_total": 39,
+    "new_vouch_total_rep_points": 40
+  },
+  "mohamedbadr1": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "moonsongferg": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "mrewanyasha1": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "mrtinashe111": {
+    "delta": 6,
+    "old_rep_total": 16,
+    "new_vouch_total_rep_points": 40
+  },
+  "niculflor114": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "nikolapelusa": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "omaradrian15": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "oomseedlings": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "oscarlauterb": {
+    "delta": 35,
+    "old_rep_total": 35,
+    "new_vouch_total_rep_points": 50
+  },
+  "paulhynek132": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "perl3sagesse": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "permacultur4": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "peterliseeds": {
+    "delta": -11,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 39
+  },
+  "physicsoscar": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "radergalb523": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "raviresck123": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "realifexapps": {
+    "delta": -10,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 40
+  },
+  "rebeccasseed": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "regeneratego": {
+    "delta": -31,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 19
+  },
+  "rmmakamure15": {
+    "delta": -34,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 16
+  },
+  "rosefromdirt": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "seeeeeeeeedz": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "semillaseeds": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "smoothrivers": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "sophiequad11": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "srleitheiser": {
+    "delta": -32,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 18
+  },
+  "terrence5555": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "thaynames144": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "thefarlander": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "thomaskoch11": {
+    "delta": 27,
+    "old_rep_total": 38,
+    "new_vouch_total_rep_points": 39
+  },
+  "tiboschmitt1": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "tichafaseeds": {
+    "delta": 0,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 50
+  },
+  "tichareva513": {
+    "delta": -13,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 37
+  },
+  "tobycitoquad": {
+    "delta": -35,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 15
+  },
+  "trillium1111": {
+    "delta": -36,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 14
+  },
+  "uptop1jagged": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "vedant531531": {
+    "delta": -12,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 38
+  },
+  "violarose111": {
+    "delta": -34,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 16
+  },
+  "wilsonbiw255": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "zaffiromahli": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "zaykidimitri": {
+    "delta": -50,
+    "old_rep_total": 0,
+    "new_vouch_total_rep_points": 0
+  },
+  "zegilias1234": {
+    "delta": 7,
+    "old_rep_total": 17,
+    "new_vouch_total_rep_points": 40
+  }
+}
