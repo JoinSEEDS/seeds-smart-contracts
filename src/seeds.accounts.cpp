@@ -303,19 +303,13 @@ void accounts::vouchreward(name account) {
   auto uitr = users.find(account.value);
   name status = uitr->status;
 
-  // For adding community building points
-  bool is_citizen = status.value == name("citizen").value;
-  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
-  int community_building_points = int(config_get(vou_cbp_param));
-
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
 
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1
-    add_cbs(sponsor, community_building_points);
+    send_addrep(sponsor, 1); // TODO: check if this has to be always 1    
     vitr++;
   }
 }
@@ -357,6 +351,7 @@ void accounts::refreward(name account, name new_status) {
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
+    uint64_t community_building_points = 0;
     auto user_type = uitr->type;
 
     // gets number of residents or citizens from the History size table
@@ -366,6 +361,7 @@ void accounts::refreward(name account, name new_status) {
 
     if (user_type == "organisation"_n) 
     {
+      community_building_points = is_citizen ? config_get("refcbp2.org"_n) : config_get("refcbp1.org"_n);
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
       name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
       name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
@@ -400,6 +396,8 @@ void accounts::refreward(name account, name new_status) {
     } 
     else 
     {
+      community_building_points = is_citizen ? config_get("ref.cbp2.ind"_n) : config_get("ref.cbp1.ind"_n);
+
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
       auto rep_points = config_get(reputation_reward_param);
@@ -418,6 +416,9 @@ void accounts::refreward(name account, name new_status) {
 
       send_reward(referrer, quantity);
     }
+
+    add_cbs(referrer, community_building_points); 
+
   }
 
 
@@ -715,7 +716,7 @@ bool accounts::check_can_make_citizen(name user) {
       std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
-    check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
+    check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
 }
@@ -1347,23 +1348,21 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
-void accounts::migratevouch (name start_user, name start_sponsor) {
+void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
-
-  uint64_t batch_size = 0.6 * config_get("batchsize"_n);
-  batch_size = batch_size > 0 ? batch_size : 100;
   
   uint64_t count = 0;
-  name current_sponsor = "."_n;
+  uint64_t current_sponsor = 0;
 
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
 
-  auto uitr = start_user == "."_n ? users.begin() : users.find(start_user.value);
+  auto uitr = start_user == 0 ? users.begin() : users.find(start_user);
 
   while (uitr != users.end() && count < batch_size) {
     vouch_tables vouch(get_self(), uitr->account.value);
     
-    auto vitr = start_sponsor == "."_n ? vouch.begin() : vouch.find(start_sponsor.value);
+    auto vitr = start_sponsor == 0 ? vouch.begin() : vouch.find(start_sponsor);
+
     while (vitr != vouch.end() && count < batch_size) {
 
       uint128_t id = (uint128_t(vitr->sponsor.value) << 64) + uitr->account.value;
@@ -1387,20 +1386,24 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     }
 
     if (vitr == vouch.end()) {
-      calc_vouch_rep(uitr->account);
+      migrate_calc_vouch_rep(uitr->account);
       uitr++;
-      current_sponsor = "."_n;
+      current_sponsor = 0;
     } else {
-      current_sponsor = vitr->sponsor;
+      current_sponsor = vitr->sponsor.value;
     }
+
+    count++;
+
   }
 
   if (uitr != users.end()) {
+    uint64_t next_user = uitr->account.value;
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(uitr->account, current_sponsor)
+      std::make_tuple(next_user, current_sponsor, batch_size)
     );
 
     transaction tx;
@@ -1411,3 +1414,51 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
 
 }
 
+
+void accounts::migrate_calc_vouch_rep (name account) {
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t max_vouch = config_get(max_vouch_points);
+  uint64_t total_vouch = 0;
+  uint64_t total_rep = 0;
+
+  while (vitr != vouches_by_account.end() && vitr->account == account) {
+    total_vouch += vitr -> vouch_points;
+    vitr++;
+  }
+
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
+
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+// DO NOT MODIFY REPUTATION FROM THIS
+  // if (total_rep < total_vouch_capped) {
+    
+  //   delta = total_vouch_capped - total_rep;
+  //   send_addrep(account, delta);
+  //   total_rep += delta;
+
+  // } else if (total_rep > total_vouch_capped) {
+
+  //   delta = total_rep - total_vouch_capped;
+  //   send_subrep(account, delta);
+  //   total_rep -= delta;
+
+  // }
+
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  }
+}

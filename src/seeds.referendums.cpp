@@ -292,6 +292,8 @@ void referendums::create(
 ) {
   require_auth(creator);
 
+  check_citizen(creator);
+
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
   asset stake_price = asset(price_amount, seeds_symbol);
 
@@ -448,3 +450,14 @@ void referendums::cancelvote(name voter, uint64_t referendum_id) {
     });
   }
 }
+void referendums::check_citizen(name account)
+{
+  DEFINE_USER_TABLE;
+  DEFINE_USER_TABLE_MULTI_INDEX;
+  user_tables users(contracts::accounts, contracts::accounts.value);
+
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(uitr->status == name("citizen"), "user is not a citizen");
+}
+

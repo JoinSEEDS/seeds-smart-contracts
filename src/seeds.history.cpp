@@ -441,9 +441,6 @@ void history::send_update_txpoints (name from) {
   // delayed update
   cancel_deferred(from.value);
 
-  // delayed update
-  cancel_deferred(from.value);
-
   action a(
       permission_level{contracts::harvest, "active"_n},
       contracts::harvest,
