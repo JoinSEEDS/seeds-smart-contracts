@@ -60,7 +60,6 @@ CONTRACT accounts : public contract {
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
-      // ACTION unvouch(name sponsor, name account);
       ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
