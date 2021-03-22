@@ -304,7 +304,7 @@ void accounts::vouchreward(name account, name new_status) {
 
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1);     
+    send_addrep(sponsor, points);     
     vitr++;
   }
 }

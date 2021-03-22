@@ -465,76 +465,76 @@ describe('vouching', async assert => {
 
 })
 
-describe('test vouch migration', async assert => {
+// describe('test vouch migration', async assert => {
 
-  if (!isLocal()) {
-    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-    return
-  }
+//   if (!isLocal()) {
+//     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//     return
+//   }
 
-  const contract = await eos.contract(accounts)
-  const settingscontract = await eos.contract(settings)
+//   const contract = await eos.contract(accounts)
+//   const settingscontract = await eos.contract(settings)
 
-  console.log('reset accounts')
-  await contract.reset({ authorization: `${accounts}@active` })
+//   console.log('reset accounts')
+//   await contract.reset({ authorization: `${accounts}@active` })
 
-  console.log('reset settings')
-  await settingscontract.reset({ authorization: `${settings}@active` })
+//   console.log('reset settings')
+//   await settingscontract.reset({ authorization: `${settings}@active` })
 
-  console.log('add users')
-  await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
-  await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
-  await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
-  await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
+//   console.log('add users')
+//   await contract.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+//   await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+//   await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
+//   await contract.adduser(fourthuser, 'Fourth user', "individual", { authorization: `${accounts}@active` })
 
-  await contract.testsetrs(firstuser, 50, { authorization: `${accounts}@active` })
-  await contract.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
-  await contract.testsetrs(thirduser, 50, { authorization: `${accounts}@active` })
-  await contract.testsetrs(fourthuser, 50, { authorization: `${accounts}@active` })
+//   await contract.testsetrs(firstuser, 50, { authorization: `${accounts}@active` })
+//   await contract.testsetrs(seconduser, 50, { authorization: `${accounts}@active` })
+//   await contract.testsetrs(thirduser, 50, { authorization: `${accounts}@active` })
+//   await contract.testsetrs(fourthuser, 50, { authorization: `${accounts}@active` })
 
-  console.log('test citizen')
-  await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
-  await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
-  await contract.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+//   console.log('test citizen')
+//   await contract.testcitizen(firstuser, { authorization: `${accounts}@active` })
+//   await contract.testcitizen(seconduser, { authorization: `${accounts}@active` })
+//   await contract.testcitizen(thirduser, { authorization: `${accounts}@active` })
+//   await contract.testcitizen(fourthuser, { authorization: `${accounts}@active` })
 
-  console.log('add vouch information')
-  await contract.testmvouch(firstuser, seconduser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(firstuser, thirduser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(firstuser, fourthuser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(seconduser, thirduser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(seconduser, fourthuser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(thirduser, fourthuser, 20, { authorization: `${accounts}@active` })
-  await sleep(300)
-  await contract.testmvouch(fourthuser, firstuser, 20, { authorization: `${accounts}@active` })
+//   console.log('add vouch information')
+//   await contract.testmvouch(firstuser, seconduser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(firstuser, thirduser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(firstuser, fourthuser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(seconduser, thirduser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(seconduser, fourthuser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(thirduser, fourthuser, 20, { authorization: `${accounts}@active` })
+//   await sleep(300)
+//   await contract.testmvouch(fourthuser, firstuser, 20, { authorization: `${accounts}@active` })
 
-  console.log('migration')
-  await settingscontract.configure('batchsize', 2, { authorization: `${settings}@active` })
-  await contract.migratevouch('.', '.', { authorization: `${accounts}@active` })
-  await sleep(8000)
+//   console.log('migration')
+//   await settingscontract.configure('batchsize', 2, { authorization: `${settings}@active` })
+//   await contract.migratevouch('.', '.', { authorization: `${accounts}@active` })
+//   await sleep(8000)
 
-  const vouchTable = await getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'vouches',
-    json: true
-  })
-  console.log(vouchTable)
+//   const vouchTable = await getTableRows({
+//     code: accounts,
+//     scope: accounts,
+//     table: 'vouches',
+//     json: true
+//   })
+//   console.log(vouchTable)
 
-  const vouchTotalsTable = await getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'vouchtotals',
-    json: true
-  })
-  console.log(vouchTotalsTable)
+//   const vouchTotalsTable = await getTableRows({
+//     code: accounts,
+//     scope: accounts,
+//     table: 'vouchtotals',
+//     json: true
+//   })
+//   console.log(vouchTotalsTable)
 
-})
+// })
 
 describe('vouching with reputation', async assert => {
 
@@ -1389,6 +1389,7 @@ describe('Referral cbp reward organization', async assert => {
   })
 
 })
+
 describe('Vouch reward', async assert => {
 
   if (!isLocal()) {
@@ -1402,6 +1403,11 @@ describe('Vouch reward', async assert => {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   console.log('reset settings')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log("config")
+  var expectedRepReward = 42
+
+  await contracts.settings.configure("vouchrep.1", expectedRepReward, { authorization: `${settings}@active` })
 
   console.log('add users')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -1430,11 +1436,10 @@ describe('Vouch reward', async assert => {
 
   //console.log("rep "+JSON.stringify(repAfterResident, null, 2))
 
-  var expectedRepReward = 1
 
   assert({
     given: 'firstuser became resident',
-    should: 'referrer received rep',
+    should: 'referrer received reputation',
     actual: repAfterResident.rows[0].rep,
     expected: secondUserRep + expectedRepReward
   })
@@ -1457,7 +1462,7 @@ describe('Vouch reward', async assert => {
 
   assert({
     given: 'firstuser became citizen',
-    should: 'referrer received enough cbp',
+    should: 'referrer received enough reputation',
     actual: repAfterCitizen.rows[0].rep,
     expected: secondUserRep + expectedRepReward + expectedRepCitizenReward
   })
