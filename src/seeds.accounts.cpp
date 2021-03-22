@@ -17,7 +17,25 @@ void accounts::reset() {
       vitr = vouch.erase(vitr);
     }
 
+    flag_points_tables flags(get_self(), uitr->account.value);
+    auto fitr = flags.begin();
+    while (fitr != flags.end()) {
+      fitr = flags.erase(fitr);
+    }
+
     uitr = users.erase(uitr);
+  }
+
+  flag_points_tables flags(get_self(), flag_total_scope.value);
+  auto fitr = flags.begin();
+  while (fitr != flags.end()) {
+    fitr = flags.erase(fitr);
+  }
+
+  flag_points_tables flagsremoved(get_self(), flag_remove_scope.value);
+  auto fritr = flagsremoved.begin();
+  while (fritr != flagsremoved.end()) {
+    fritr = flagsremoved.erase(fritr);
   }
 
   auto vitr = vouches.begin();
@@ -274,22 +292,6 @@ void accounts::send_subrep(name user, uint64_t amount) {
   ).send();
 }
 
-void accounts::punish(name account, uint64_t points) {
-  require_auth(get_self());
-  
-  check_user(account);
-
-  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
-  auto vitr = vouches_by_account.find(account.value);
-
-  while (vitr != vouches_by_account.end() && vitr->account == account) {
-    send_subrep(vitr->sponsor, 50);
-    vitr++;
-  }
-
-  pnishvouched(account, uint64_t(0));
-}
-
 void accounts::rewards(name account, name new_status) {
   vouchreward(account);
   refreward(account, new_status);
@@ -301,19 +303,13 @@ void accounts::vouchreward(name account) {
   auto uitr = users.find(account.value);
   name status = uitr->status;
 
-  // For adding community building points
-  bool is_citizen = status.value == name("citizen").value;
-  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
-  int community_building_points = int(config_get(vou_cbp_param));
-
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
 
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1
-    add_cbs(sponsor, community_building_points);
+    send_addrep(sponsor, 1); // TODO: check if this has to be always 1    
     vitr++;
   }
 }
@@ -355,6 +351,7 @@ void accounts::refreward(name account, name new_status) {
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
+    uint64_t community_building_points = 0;
     auto user_type = uitr->type;
 
     // gets number of residents or citizens from the History size table
@@ -364,6 +361,7 @@ void accounts::refreward(name account, name new_status) {
 
     if (user_type == "organisation"_n) 
     {
+      community_building_points = is_citizen ? config_get("refcbp2.org"_n) : config_get("refcbp1.org"_n);
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
       name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
       name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
@@ -398,6 +396,8 @@ void accounts::refreward(name account, name new_status) {
     } 
     else 
     {
+      community_building_points = is_citizen ? config_get("ref.cbp2.ind"_n) : config_get("ref.cbp1.ind"_n);
+
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
       auto rep_points = config_get(reputation_reward_param);
@@ -416,6 +416,9 @@ void accounts::refreward(name account, name new_status) {
 
       send_reward(referrer, quantity);
     }
+
+    add_cbs(referrer, community_building_points); 
+
   }
 
 
@@ -658,6 +661,15 @@ uint64_t accounts::config_get(name key) {
   return citr->value;
 }
 
+double accounts::config_float_get (name key) {
+  auto fitr = configfloat.find(key.value);
+  if (fitr == configfloat.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return fitr->value;
+}
+
 void accounts::cancitizen(name user) {
   check_can_make_citizen(user);
 }
@@ -704,7 +716,7 @@ bool accounts::check_can_make_citizen(name user) {
       std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
-    check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
+    check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
 }
@@ -1065,6 +1077,260 @@ uint64_t accounts::rep_score(name user)
     return ritr->rank;
 }
 
+void accounts::send_punish (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "punish"_n,
+    std::make_tuple(account, points)
+  ).send();
+}
+
+void accounts::punish (name account, uint64_t points) {
+  require_auth(get_self());
+  check_user(account);
+  send_subrep(account, points);
+  pnishvouched(account, uint64_t(0));
+}
+
+void accounts::send_punish_vouchers (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "pnshvouchers"_n,
+    std::make_tuple(account, points, uint64_t(0))
+  ).send();
+}
+
+void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
+  require_auth(get_self());
+
+  auto vouches_by_account_sponsor = vouches.get_index<"byacctspnsor"_n>();
+  uint128_t id = (uint128_t(account.value) << 64) + start;
+
+  auto vitr = vouches_by_account_sponsor.lower_bound(id);
+  uint64_t count = 0;
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t lost_points = points * config_float_get("flag.vouch.p"_n);
+
+  while (vitr != vouches_by_account_sponsor.end() && vitr->account == account && count < batch_size) {
+    send_subrep(vitr -> sponsor, lost_points);
+    vitr++;
+    count++;
+  }
+
+  if (vitr != vouches_by_account_sponsor.end() && vitr->account == account) {
+    uint64_t next_value = (vitr -> sponsor).value;
+    
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "pnshvouchers"_n,
+        std::make_tuple(account, points, next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    // tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
+void accounts::flag (name from, name to) {
+  require_auth(from);
+
+  if (from == to) { return; }
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+  flag_points_tables removed_flags(get_self(), flag_remove_scope.value);
+
+  auto fitr = flags.find(from.value);
+  check(fitr == flags.end(), "a user can only flag another user once");
+
+  uint64_t points = 0;
+  uint64_t base_points = 0;
+  auto uitr = users.get(from.value, "user not found");
+
+  if (uitr.status == name("citizen")) {
+    base_points = config_get("flag.base.c"_n);
+  } else if (uitr.status == name("resident")) {
+    base_points = config_get("flag.base.r"_n);
+  } else {
+    check(false, "user must be a resident or a citizen");
+  }
+
+  auto ritr = rep.get(from.value, (from.to_string() + " needs reputation to flag others").c_str());
+  
+  points = base_points * utils::rep_multiplier_for_score(ritr.rank);
+
+  flags.emplace(_self, [&](auto & item){
+    item.account = from;
+    item.flag_points = points;
+  });
+
+  uint64_t total_flag_points = 0;
+  uint64_t removed_flag_points = 0;
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  if (total_flag_p_itr != total_flags.end()) { total_flag_points = total_flag_p_itr -> flag_points; }
+  total_flag_points += points;
+
+  auto removed_flag_p_itr = removed_flags.find(to.value);
+  if (removed_flag_p_itr != removed_flags.end()) { removed_flag_points = removed_flag_p_itr -> flag_points; }
+
+  uint64_t flag_threshold = config_get("flag.thresh"_n);
+
+  if (total_flag_points >= flag_threshold && removed_flag_points < total_flag_points) {
+
+    auto to_rep_itr = rep.find(to.value);
+    if (to_rep_itr != rep.end()) {
+      uint64_t punishment_points = total_flag_points - removed_flag_points;
+
+      send_punish(to, punishment_points);
+      send_eval_demote(to);
+      send_punish_vouchers(to, punishment_points);
+      
+      if (removed_flag_p_itr == removed_flags.end()) {
+        removed_flags.emplace(_self, [&](auto & item){
+          item.account = to;
+          item.flag_points = total_flag_points;
+        });
+      } else {
+        removed_flags.modify(removed_flag_p_itr, _self, [&](auto & item){
+          item.flag_points = total_flag_points;
+        });
+      }
+    }
+
+  }
+
+  if (total_flag_p_itr == total_flags.end()) {
+    total_flags.emplace(_self, [&](auto & item){
+      item.account = to;
+      item.flag_points = total_flag_points;
+    });
+  } else {
+    total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+      item.flag_points = total_flag_points;
+    });
+  }
+
+}
+
+void accounts::removeflag (name from, name to) {
+  require_auth(from);
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+
+  auto flag_itr = flags.find(from.value);
+  check(flag_itr != flags.end(), "flag not found");
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  check(total_flag_p_itr != flags.end(), to.to_string() + ", has not total flags entry");
+
+  total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+    item.flag_points -= flag_itr -> flag_points;
+  });
+
+  flags.erase(flag_itr);
+}
+
+void accounts::send_eval_demote (name to) {
+  
+  uint64_t batch_size = config_get(name("batchsize"));
+
+  action next_execution(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "evaldemote"_n,
+    std::make_tuple(to, uint64_t(0), uint64_t(0), batch_size)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(to.value + 1, _self);
+
+}
+
+void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uritr = rep.find(to.value);
+  if (uritr == rep.end()) {
+    updatestatus(to, name("visitor"));
+    return;
+  }
+
+  uint64_t total = get_size("rep.sz"_n);
+  if (total == 0) return;
+
+  uint64_t current = chunk * chunksize;
+  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
+  uint64_t count = 0;
+  bool evaluated = false;
+
+  while (ritr != rep_by_rep.end() && count < chunksize) {
+
+    if (ritr->account == to) {
+      uint64_t rank = utils::rank(current, total);
+
+      rep_by_rep.modify(ritr, _self, [&](auto& item) {
+        item.rank = rank;
+      });
+
+      auto uitr = users.find(ritr->account.value);
+
+      uint64_t min_rep_score_citizen = config_get("cit.rep.sc"_n);
+      uint64_t min_rep_score_resident = config_get("res.rep.pt"_n);
+
+      name current_rank = uitr->status;
+
+      if (rank < min_rep_score_resident) {
+        current_rank = name("visitor");
+      } else if (rank < min_rep_score_citizen) {
+        current_rank = name("resident");
+      } else {
+        current_rank = name("citizen");
+      }
+
+      if (uitr->status == name("citizen") && current_rank != name("citizen")) {
+        updatestatus(uitr->account, current_rank);
+      }
+      else if (uitr->status == name("resident") && current_rank == name("visitor")) {
+        updatestatus(uitr->account, name("visitor"));
+      }
+
+      evaluated = true;
+      break;
+    }
+
+    current++;
+    count++;
+    ritr++;
+  }
+
+  if (!evaluated && ritr != rep_by_rep.end()) {
+    uint64_t next_value = ritr->by_rep();
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "evaldemote"_n,
+      std::make_tuple(to, next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self); 
+  }
+
+}
+
+
 void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   require_auth(get_self());
   vouch_tables vouch(get_self(), account.value);
@@ -1082,23 +1348,21 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
-void accounts::migratevouch (name start_user, name start_sponsor) {
+void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
-
-  uint64_t batch_size = 0.6 * config_get("batchsize"_n);
-  batch_size = batch_size > 0 ? batch_size : 100;
   
   uint64_t count = 0;
-  name current_sponsor = "."_n;
+  uint64_t current_sponsor = 0;
 
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
 
-  auto uitr = start_user == "."_n ? users.begin() : users.find(start_user.value);
+  auto uitr = start_user == 0 ? users.begin() : users.find(start_user);
 
   while (uitr != users.end() && count < batch_size) {
     vouch_tables vouch(get_self(), uitr->account.value);
     
-    auto vitr = start_sponsor == "."_n ? vouch.begin() : vouch.find(start_sponsor.value);
+    auto vitr = start_sponsor == 0 ? vouch.begin() : vouch.find(start_sponsor);
+
     while (vitr != vouch.end() && count < batch_size) {
 
       uint128_t id = (uint128_t(vitr->sponsor.value) << 64) + uitr->account.value;
@@ -1122,20 +1386,24 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     }
 
     if (vitr == vouch.end()) {
-      calc_vouch_rep(uitr->account);
+      migrate_calc_vouch_rep(uitr->account);
       uitr++;
-      current_sponsor = "."_n;
+      current_sponsor = 0;
     } else {
-      current_sponsor = vitr->sponsor;
+      current_sponsor = vitr->sponsor.value;
     }
+
+    count++;
+
   }
 
   if (uitr != users.end()) {
+    uint64_t next_user = uitr->account.value;
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(uitr->account, current_sponsor)
+      std::make_tuple(next_user, current_sponsor, batch_size)
     );
 
     transaction tx;
@@ -1144,4 +1412,53 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     tx.send(uitr->account.value, _self);
   }
 
+}
+
+
+void accounts::migrate_calc_vouch_rep (name account) {
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t max_vouch = config_get(max_vouch_points);
+  uint64_t total_vouch = 0;
+  uint64_t total_rep = 0;
+
+  while (vitr != vouches_by_account.end() && vitr->account == account) {
+    total_vouch += vitr -> vouch_points;
+    vitr++;
+  }
+
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
+
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+// DO NOT MODIFY REPUTATION FROM THIS
+  // if (total_rep < total_vouch_capped) {
+    
+  //   delta = total_vouch_capped - total_rep;
+  //   send_addrep(account, delta);
+  //   total_rep += delta;
+
+  // } else if (total_rep > total_vouch_capped) {
+
+  //   delta = total_rep - total_vouch_capped;
+  //   send_subrep(account, delta);
+  //   total_rep -= delta;
+
+  // }
+
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  }
 }

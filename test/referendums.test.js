@@ -159,9 +159,19 @@ describe('Referendums', async assert => {
     console.log('referendums reset')
     await contracts.referendums.reset({ authorization: `${referendums}@active` })
 
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
     console.log('settings configure')
     await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
 
+  }
+  const addUsers = () => async () => {
+    console.log('add users')
+    await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   }
 
   const fail = (fn) => async () => {
@@ -205,6 +215,7 @@ describe('Referendums', async assert => {
 
   await runTransactions({
     'reset': reset(),
+    'addUsers': addUsers(),
     'addVoice': addVoice(),
     'failedReferendum': fail(createReferendums()),
     'stake': stake(),

@@ -1,7 +1,6 @@
 const eosjs = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const { TextEncoder, TextDecoder } = require('util')
-
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
 const { option } = require('commander')
@@ -12,33 +11,39 @@ const { Api, JsonRpc, Serialize } = eosjs
 
 let rpc
 let api
+let isUnitTest
 
 function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// TODO: We need to only use nonce in testnet, not in mainnet. Mainnet its causing 
+// errors, and we don't need it. It's only for unit tests. 
 async function getNonce () {
   try {
-    await rpc.getRawAbi('policy.seeds')
-    const random = Math.random().toString(36).substring(10);
-    return [{
-      // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
-      account:"policy.seeds",
-      name:"create",
-      authorization: [
-        {
-          actor: 'policy.seeds',
-          permission: 'active'
-        }
-      ],
-      data:{
+    if (isUnitTest) {
+      await rpc.getRawAbi('policy.seeds')
+      const random = Math.random().toString(36).substring(4);
+      return [{
+        // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
         account:"policy.seeds",
-        backend_user_id: random,
-        device_id: random,
-        signature: "",
-        policy: ""
-      }
-    }]
+        name:"create",
+        authorization: [
+          {
+            actor: 'policy.seeds',
+            permission: 'active'
+          }
+        ],
+        data:{
+          account:"policy.seeds",
+          backend_user_id: random,
+          device_id: random,
+          signature: "",
+          policy: ""
+        }
+      }]
+    }
+    return []
   } catch (err) {
     return []
   }
@@ -46,7 +51,7 @@ async function getNonce () {
 
 class Eos {
 
-  constructor (config) {
+  constructor (config, isLocal=null) {
     const {
       keyProvider,
       httpEndpoint,
@@ -59,6 +64,8 @@ class Eos {
     api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() })
 
     this.api = api
+
+    isUnitTest = isLocal ? isLocal() : false
 
   }
 
@@ -103,7 +110,7 @@ class Eos {
           }
         }
 
-        const nonce = await getNonce()
+        const nonce = await getNonce() 
         const actions = [
           {
           account: accountName,
