@@ -43,8 +43,8 @@ CONTRACT harvest : public contract {
         rep(contracts::accounts, contracts::accounts.value),
         cbs(contracts::accounts, contracts::accounts.value),
         circulating(contracts::token, contracts::token.value),
-        bioregions(contracts::bioregion, contracts::bioregion.value),
-        members(contracts::bioregion, contracts::bioregion.value)
+        regions(contracts::region, contracts::region.value),
+        members(contracts::region, contracts::region.value)
         {}
         
     ACTION reset();
@@ -139,7 +139,7 @@ CONTRACT harvest : public contract {
     void sub_planted(name account, asset quantity);
     void change_total(bool add, asset quantity);
     void calc_contribution_score(name account, name type);
-    void add_cs_to_bioregion(name account, uint32_t points);
+    void add_cs_to_region(name account, uint32_t points);
 
     void size_change(name id, int delta);
     void size_set(name id, uint64_t newsize);
@@ -238,7 +238,7 @@ CONTRACT harvest : public contract {
 
     DEFINE_CBS_TABLE_MULTI_INDEX
 
-    TABLE bioregion_table {
+    TABLE region_table {
         name id;
         name founder;
         name status; // "active" "inactive"
@@ -254,10 +254,10 @@ CONTRACT harvest : public contract {
         uint64_t by_count() const { return members_count; }
     };
 
-    typedef eosio::multi_index <"bioregions"_n, bioregion_table,
-        indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
-        indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
-    > bioregion_tables;
+    typedef eosio::multi_index <"regions"_n, region_table,
+        indexed_by<"bystatus"_n,const_mem_fun<region_table, uint64_t, &region_table::by_status>>,
+        indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>
+    > region_tables;
 
 
     TABLE total_table {
@@ -312,12 +312,12 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return id; }
     };
 
-    TABLE bioregion_cs_temporal_table {
-      name bioregion;
+    TABLE region_cs_temporal_table {
+      name region;
       uint32_t points;
 
-      uint64_t primary_key()const { return bioregion.value; }
-      uint64_t by_cs_points() const { return (uint64_t(points) << 32) +  ( (bioregion.value <<32) >> 32) ; }
+      uint64_t primary_key()const { return region.value; }
+      uint64_t by_cs_points() const { return (uint64_t(points) << 32) +  ( (region.value <<32) >> 32) ; }
     };
 
     typedef eosio::multi_index<"trxpoints"_n, transaction_points_table,
@@ -338,10 +338,10 @@ CONTRACT harvest : public contract {
     typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
     typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
 
-    typedef eosio::multi_index<"biocstemp"_n, bioregion_cs_temporal_table,
+    typedef eosio::multi_index<"biocstemp"_n, region_cs_temporal_table,
       indexed_by<"bycspoints"_n,
-      const_mem_fun<bioregion_cs_temporal_table, uint64_t, &bioregion_cs_temporal_table::by_cs_points>>
-    > bioregion_cs_temporal_tables;
+      const_mem_fun<region_cs_temporal_table, uint64_t, &region_cs_temporal_table::by_cs_points>>
+    > region_cs_temporal_tables;
 
     TABLE mint_rate_table {
       uint64_t id;
@@ -355,12 +355,12 @@ CONTRACT harvest : public contract {
     typedef eosio::multi_index<"mintrate"_n, mint_rate_table> mint_rate_tables;
 
     TABLE members_table {
-      name bioregion;
+      name region;
       name account;
       time_point joined_date = current_block_time().to_time_point();
 
       uint64_t primary_key() const { return account.value; }
-      uint64_t by_bio() const { return bioregion.value; }
+      uint64_t by_bio() const { return region.value; }
     };
     typedef eosio::multi_index <"members"_n, members_table,
         indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
@@ -376,7 +376,7 @@ CONTRACT harvest : public contract {
     size_tables sizes;
     monthly_qev_tables monthlyqevs;
     mint_rate_tables mintrate;
-    bioregion_cs_temporal_tables biocstemp;
+    region_cs_temporal_tables biocstemp;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -391,7 +391,7 @@ CONTRACT harvest : public contract {
     rep_tables rep;
     total_tables total;
     circulating_supply_tables circulating;
-    bioregion_tables bioregions;
+    region_tables regions;
     members_tables members;
 
 };

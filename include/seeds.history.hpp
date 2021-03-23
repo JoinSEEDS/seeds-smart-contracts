@@ -28,7 +28,7 @@ CONTRACT history : public contract {
           regens(receiver, receiver.value),
           totals(receiver, receiver.value),
           organizations(contracts::organization, contracts::organization.value),
-          members(contracts::bioregion, contracts::bioregion.value)
+          members(contracts::region, contracts::region.value)
         {}
 
         ACTION reset(name account);
@@ -222,12 +222,12 @@ CONTRACT history : public contract {
       };
 
       TABLE members_table {
-          name bioregion;
+          name region;
           name account;
           time_point joined_date = current_block_time().to_time_point();
 
           uint64_t primary_key() const { return account.value; }
-          uint64_t by_bio() const { return bioregion.value; }
+          uint64_t by_bio() const { return region.value; }
       };
 
       typedef eosio::multi_index<"citizens"_n, citizen_table,

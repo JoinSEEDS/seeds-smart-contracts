@@ -677,19 +677,19 @@ void harvest::calc_contribution_score(name account, name type) {
   }
 
   if (type != "organisation"_n) {
-    add_cs_to_bioregion(account, uint32_t(contribution_points));
+    add_cs_to_region(account, uint32_t(contribution_points));
   }
 }
 
-void harvest::add_cs_to_bioregion(name account, uint32_t points) {
+void harvest::add_cs_to_region(name account, uint32_t points) {
   auto bitr = members.find(account.value);
   if (bitr == members.end()) { return; }
 
-  auto csitr = biocstemp.find(bitr -> bioregion.value);
+  auto csitr = biocstemp.find(bitr -> region.value);
   if (csitr == biocstemp.end()) {
     if (points > 0) {
       biocstemp.emplace(_self, [&](auto & item){
-        item.bioregion = bitr -> bioregion;
+        item.region = bitr -> region;
         item.points = points;
       });
       size_change(cs_bio_size, 1);
@@ -801,10 +801,10 @@ void harvest::rankbiocs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
 
     uint64_t rank = utils::rank(current, total);
 
-    auto csitr = biocspoints.find(bitr -> bioregion.value);
+    auto csitr = biocspoints.find(bitr -> region.value);
     if (csitr == biocspoints.end()) {
       biocspoints.emplace(_self, [&](auto & item){
-        item.account = bitr -> bioregion;
+        item.account = bitr -> region;
         item.contribution_points = bitr -> points;
         item.rank = rank;
       });
@@ -1294,17 +1294,17 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
 void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
 
-  auto bitr = start == 0 ? bioregions.begin() : bioregions.find(start);
+  auto bitr = start == 0 ? regions.begin() : regions.find(start);
 
-  uint64_t number_bioregions = distance(bioregions.begin(), bioregions.end());
+  uint64_t number_regions = distance(regions.begin(), regions.end());
   uint64_t count = 0;
 
-  check(number_bioregions > 0, "number of bioregions must be greater than zero");
-  double fragment_seeds = total_amount.amount / double(number_bioregions);
+  check(number_regions > 0, "number of regions must be greater than zero");
+  double fragment_seeds = total_amount.amount / double(number_regions);
 
-  while (bitr != bioregions.end() && count < chunksize) {
+  while (bitr != regions.end() && count < chunksize) {
 
-    // for the moment, all bioregions have rank 1
+    // for the moment, all regions have rank 1
     print("bio:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
     withdraw_aux(get_self(), name(bitr -> id), asset(fragment_seeds, test_symbol), "harvest");
 
@@ -1312,7 +1312,7 @@ void harvest::disthvstbios (uint64_t start, uint64_t chunksize, asset total_amou
     count++;
   }
 
-  if (bitr != bioregions.end()) {
+  if (bitr != regions.end()) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),

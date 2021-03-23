@@ -3,7 +3,7 @@ const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance, sleep } = require('../scripts/helper')
 const { filter } = require('ramda')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion, settings } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, region, settings } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -674,14 +674,14 @@ describe('Campaign reward for existing user', async assert => {
 })
 
 
-describe('Create bioregion', async assert => {
+describe('Create region', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
     
-    const contracts = await initContracts({ onboarding, bioregion })
+    const contracts = await initContracts({ onboarding, region })
     
     const newAccount = randomAccountNameBDC()
     console.log("New account "+newAccount)
@@ -700,7 +700,7 @@ describe('Create bioregion', async assert => {
     }
 
     assert({
-        given: 'created bioregion',
+        given: 'created region',
         should: 'have account',
         actual: hasNewDomain,
         expected: true

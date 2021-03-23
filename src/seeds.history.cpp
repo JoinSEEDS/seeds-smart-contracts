@@ -124,7 +124,7 @@ double history::get_transaction_multiplier (name account, name other) {
   if (
     bitr_account != members.end() && 
     bitr_other != members.end() && 
-    bitr_account -> bioregion == bitr_other -> bioregion
+    bitr_account -> region == bitr_other -> region
   ) {
     multiplier *= config_float_get("local.mul"_n);
   }

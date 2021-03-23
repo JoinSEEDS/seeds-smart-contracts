@@ -67,7 +67,7 @@ void settings::reset() {
 
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
-  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Bioregions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
@@ -253,16 +253,16 @@ void settings::reset() {
   // =====================================
   // transaction multipliers
   // =====================================
-  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same region", high_impact);
   conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
 
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 
   // =====================================
-  // bioregion
+  // region
   // =====================================
-  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
+  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
 
   // =====================================
   // gratitude 

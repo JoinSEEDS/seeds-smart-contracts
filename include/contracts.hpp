@@ -22,7 +22,7 @@ namespace contracts {
   name organization = "orgs.seeds"_n;
   name exchange = "tlosto.seeds"_n;
   name escrow = "escrow.seeds"_n;
-  name bioregion = "bio.seeds"_n;
+  name region = "bio.seeds"_n;
   name gratitude = "gratz.seeds"_n;
   name pouch = "pouch.seeds"_n;
 }
