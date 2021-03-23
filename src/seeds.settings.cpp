@@ -269,6 +269,12 @@ void settings::reset() {
   // =====================================
   confwithdesc(name("gratz.gen"), 100 * 10000, "Base quantity of gratitude tokens received per cycle", high_impact);
 
+  // =====================================
+  // onboarding/invite
+  // =====================================
+  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
+
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
   setcontract(name("harvest"), "harvst.seeds"_n);
