@@ -1447,23 +1447,21 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
-void accounts::migratevouch (name start_user, name start_sponsor) {
+void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
-
-  uint64_t batch_size = 0.6 * config_get("batchsize"_n);
-  batch_size = batch_size > 0 ? batch_size : 100;
   
   uint64_t count = 0;
-  name current_sponsor = "."_n;
+  uint64_t current_sponsor = 0;
 
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
 
-  auto uitr = start_user == "."_n ? users.begin() : users.find(start_user.value);
+  auto uitr = start_user == 0 ? users.begin() : users.find(start_user);
 
   while (uitr != users.end() && count < batch_size) {
     vouch_tables vouch(get_self(), uitr->account.value);
     
-    auto vitr = start_sponsor == "."_n ? vouch.begin() : vouch.find(start_sponsor.value);
+    auto vitr = start_sponsor == 0 ? vouch.begin() : vouch.find(start_sponsor);
+
     while (vitr != vouch.end() && count < batch_size) {
 
       uint128_t id = (uint128_t(vitr->sponsor.value) << 64) + uitr->account.value;
@@ -1487,20 +1485,24 @@ void accounts::migratevouch (name start_user, name start_sponsor) {
     }
 
     if (vitr == vouch.end()) {
-      calc_vouch_rep(uitr->account);
+      migrate_calc_vouch_rep(uitr->account);
       uitr++;
-      current_sponsor = "."_n;
+      current_sponsor = 0;
     } else {
-      current_sponsor = vitr->sponsor;
+      current_sponsor = vitr->sponsor.value;
     }
+
+    count++;
+
   }
 
   if (uitr != users.end()) {
+    uint64_t next_user = uitr->account.value;
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "migratevouch"_n,
-      std::make_tuple(uitr->account, current_sponsor)
+      std::make_tuple(next_user, current_sponsor, batch_size)
     );
 
     transaction tx;
@@ -1670,5 +1672,53 @@ ACTION accounts::delcbsreporg (uint64_t start) {
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(uitr->account.value, _self);
+  }
+}
+
+void accounts::migrate_calc_vouch_rep (name account) {
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t max_vouch = config_get(max_vouch_points);
+  uint64_t total_vouch = 0;
+  uint64_t total_rep = 0;
+
+  while (vitr != vouches_by_account.end() && vitr->account == account) {
+    total_vouch += vitr -> vouch_points;
+    vitr++;
+  }
+
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
+
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+// DO NOT MODIFY REPUTATION FROM THIS
+  // if (total_rep < total_vouch_capped) {
+    
+  //   delta = total_vouch_capped - total_rep;
+  //   send_addrep(account, delta);
+  //   total_rep += delta;
+
+  // } else if (total_rep > total_vouch_capped) {
+
+  //   delta = total_rep - total_vouch_capped;
+  //   send_subrep(account, delta);
+  //   total_rep -= delta;
+
+  // }
+
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_vouch_capped;
+    });
   }
 }

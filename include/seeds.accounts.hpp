@@ -89,7 +89,7 @@ CONTRACT accounts : public contract {
       ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
-      ACTION migratevouch(name start_user, name start_sponsor);
+      ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size);
 
       ACTION migorgs(uint64_t start_org);
       ACTION delcbsreporg(uint64_t start_org);
@@ -172,6 +172,8 @@ CONTRACT accounts : public contract {
       void calc_vouch_rep(name account);
       name get_scope(name type);
       void send_add_cbs_org(name user, uint64_t amount);
+
+      void migrate_calc_vouch_rep(name account); // migration - remove
 
       DEFINE_USER_TABLE
 

@@ -23,7 +23,7 @@ async function getNonce () {
   try {
     if (isUnitTest) {
       await rpc.getRawAbi('policy.seeds')
-      const random = Math.random().toString(36).substring(10);
+      const random = Math.random().toString(36).substring(4);
       return [{
         // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
         account:"policy.seeds",
