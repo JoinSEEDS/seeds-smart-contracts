@@ -1348,6 +1348,7 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
+// TODO: remove
 void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
   
@@ -1414,7 +1415,7 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64
 
 }
 
-
+// TDDO: remove along with migratevouch
 void accounts::migrate_calc_vouch_rep (name account) {
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vitr = vouches_by_account.find(account.value);
