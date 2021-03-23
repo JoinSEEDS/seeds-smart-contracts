@@ -431,13 +431,6 @@ describe('vouching', async assert => {
   await checkReps([3, 22, 30, 3], "max vouch reached", "not gain reputation")
   await checkVouch(5, `${thirduser} vouched for ${fourthuser}`, 'store the vouch')
 
-  console.log('unvoching')
-  await settingscontract.configure("maxvouch", 50, { authorization: `${settings}@active` })
-  await contract.unvouch(firstuser, fourthuser,{ authorization: `${firstuser}@active` })
-  await contract.unvouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
-  await checkReps([3, 2, 30, 20], "unvouch", "have the correct rep")
-  await checkVouch(3, `${firstuser} unvouched`, 'store the vouch')
-
   assert({
     given: 'vouch sponsor is not resident or citizen',
     should: 'not be able to vouch',
@@ -452,16 +445,16 @@ describe('vouching', async assert => {
     expected: true
   })
 
-  console.log('punish firstuser')
-  await contract.vouch(firstuser, seconduser,{ authorization: `${firstuser}@active` })
+  console.log('punish firstuser '+await get_reps())
   await contract.punish(firstuser, 10, { authorization: `${accounts}@active` })
-  await checkReps([2, 10, 20], "user punished", "have the correct rep")
-  await checkVouch(4, `${firstuser} punished`, 'store the vouch')
+
+  await checkReps([2, 3, 3], "user punished", "have the correct rep")
+  await checkVouch(5, `${firstuser} punished`, 'store the vouch')
 
   await settingscontract.configure("maxvouch", 5, { authorization: `${settings}@active` })
   await contract.vouch(seconduser, fourthuser,{ authorization: `${seconduser}@active` })
-  await checkReps([2, 10, 5], `${seconduser} vouched`, "have the correct rep")
-  await checkVouch(5, `${firstuser} unvouched`, 'store the vouch')
+  await checkReps([2, 3, 5], `${seconduser} vouched`, "have the correct rep")
+  await checkVouch(6, `${seconduser} vouched`, 'store the vouch')
 
 })
 
