@@ -76,7 +76,8 @@ CONTRACT harvest : public contract {
     ACTION calccs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
 
     ACTION rankcss(); // rank contribution score //
-    ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+    ACTION rankorgcss();
+    ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name cs_scope);
 
     ACTION rankbiocss();
     ACTION rankbiocs(uint64_t start, uint64_t chunk, uint64_t chunksize);
@@ -103,6 +104,10 @@ CONTRACT harvest : public contract {
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstbios(uint64_t start, uint64_t chunksize, asset total_amount);
 
+    ACTION migorgs(uint64_t start);
+    ACTION delcsorg(uint64_t start);
+    ACTION testmigscope(name account, uint64_t amount);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol test_symbol = symbol("TESTS", 4);
@@ -116,6 +121,11 @@ CONTRACT harvest : public contract {
     name sum_rank_orgs = "org.rnk.sz"_n;
     name sum_rank_bios = "bio.rnk.sz"_n;
     name cs_bio_size = "bio.cs.sz"_n;
+    name cs_org_size = "org.cs.sz"_n;
+
+    const name individual_scope_accounts = contracts::accounts;
+    const name individual_scope_harvest = get_self();
+    const name organization_scope = "org"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
@@ -394,12 +404,13 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)
           (unplant)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankbiocss)(rankbiocs)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankorgcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankbiocss)(rankbiocs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstbios)
+          (delcsorg)(migorgs)(testmigscope)
         )
       }
   }

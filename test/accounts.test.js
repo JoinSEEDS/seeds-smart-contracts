@@ -1127,9 +1127,9 @@ describe('reputation & cbs ranking', async assert => {
 
   await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
 
-  await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
+  // await contracts.accounts.rankrep(0, 0, 200, { authorization: `${accounts}@active` })
 
-  await contracts.accounts.rankcbs(0, 0, 1, { authorization: `${accounts}@active` })
+  await contracts.accounts.rankcbs(0, 0, 1, accounts, { authorization: `${accounts}@active` })
   await sleep(4000)
 
   const repsAfter = await getTableRows({
@@ -1146,7 +1146,7 @@ describe('reputation & cbs ranking', async assert => {
     json: true
   })
   
-  await contracts.accounts.rankcbs(0, 0, 40, { authorization: `${accounts}@active` })
+  await contracts.accounts.rankcbs(0, 0, 40, accounts, { authorization: `${accounts}@active` })
 
   const cbsAfter2 = await getTableRows({
     code: accounts,
@@ -1354,7 +1354,7 @@ describe('Referral cbp reward organization', async assert => {
 
   const cbsAfterResident = await getTableRows({
     code: accounts,
-    scope: accounts,
+    scope: 'org',
     table: 'cbs',
     json: true
   })
@@ -1373,7 +1373,7 @@ describe('Referral cbp reward organization', async assert => {
 
   const cbsAfterCitizen = await getTableRows({
     code: accounts,
-    scope: accounts,
+    scope: 'org',
     table: 'cbs',
     json: true
   })
@@ -1743,3 +1743,109 @@ describe('Punishment', async assert => {
 
 })
 
+describe('Migrate cbs and rep for orgs', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+
+  const contracts = await initContracts({ accounts, token, organization, settings, harvest })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset settings')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testmigscope(firstuser, 90, { authorization: `${accounts}@active` })
+  await contracts.accounts.testmigscope(seconduser, 90, { authorization: `${accounts}@active` })
+  await contracts.harvest.testmigscope(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testmigscope(seconduser, 90, { authorization: `${harvest}@active` })
+
+  const printAccountTables = async (scope) => {
+    const cbs = await getTableRows({
+      code: accounts,
+      scope,
+      table: 'cbs',
+      json: true
+    })
+    console.log(`cbs (${scope}):`, cbs)
+    const rep = await getTableRows({
+      code: accounts,
+      scope,
+      table: 'rep',
+      json: true
+    })
+    console.log(`rep (${scope}):`, rep)
+  }
+
+  const printHarvestTables = async (scope) => {
+    const cspoints = await getTableRows({
+      code: harvest,
+      scope,
+      table: 'cspoints',
+      json: true
+    })
+    console.log(`cspoints (${scope}):`, cspoints)
+  }
+
+  console.log('add organizations')
+  const orgs = ['org1', 'org2', 'org3', 'org4', 'org5']
+
+  await contracts.token.transfer(firstuser, organization, '1000.0000 SEEDS', 'orgs supply', { authorization: `${firstuser}@active` })
+
+  for (let i = 0; i < orgs.length; i++) {
+    const org = orgs[i]
+    await contracts.organization.create(firstuser, org, `Org Number ${i+1}`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.accounts.testmigscope(org, 10*(i+1), { authorization: `${accounts}@active` })
+    await contracts.harvest.testmigscope(org, 10*(i+1), { authorization: `${harvest}@active` })
+  }
+
+  await printAccountTables(accounts)
+  await printAccountTables('org')
+  await printHarvestTables(harvest)
+  await printHarvestTables('org')
+  
+  console.log('migrating orgs')
+  await contracts.accounts.migorgs(0, { authorization: `${accounts}@active` })
+  await contracts.harvest.migorgs(0, { authorization: `${harvest}@active` })
+  await sleep(3000)
+
+  console.log('----------------------------------------------')
+
+  await printAccountTables(accounts)
+  await printAccountTables('org')
+  await printHarvestTables(harvest)
+  await printHarvestTables('org')
+
+  console.log('----------------------------------------------')
+
+  console.log('deleting orgs from individual scope')
+  await contracts.accounts.delcbsreporg(0, { authorization: `${accounts}@active` })
+  await contracts.harvest.delcsorg(0, { authorization: `${harvest}@active` })
+  await sleep(3000)
+
+  await printAccountTables(accounts)
+  await printAccountTables('org')
+  await printHarvestTables(harvest)
+  await printHarvestTables('org')
+
+})

@@ -642,6 +642,15 @@ var permissions = [{
   target: `${accounts.service.account}@invite`,
   action: 'createinvite'
 }, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgreps'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgcbss'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'rankorgcss'
+}, {
   // target: `${accounts.bank.account}@active`,
   // actor: `${accounts.pouch.account}@active`
 }]

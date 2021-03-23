@@ -141,8 +141,8 @@ describe('organization', async assert => {
     })
 
     console.log('add regen')
-    await contracts.organization.addregen('testorg1', firstuser, 1, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen('testorg3', seconduser, 1, { authorization: `${seconduser}@active` })
+    // await contracts.organization.addregen('testorg1', firstuser, 1, { authorization: `${firstuser}@active` })
+    // await contracts.organization.subregen('testorg3', seconduser, 1, { authorization: `${seconduser}@active` })
     
     const regen = await getTableRows({
         code: organization,
@@ -678,21 +678,21 @@ describe('organization scores', async assert => {
     await contracts.organization.create(seconduser, org5, "Org 5 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
 
     console.log('modify regen')
-    await contracts.organization.subregen(org1, firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen(org1, seconduser, 3, { authorization: `${seconduser}@active` })
+    // await contracts.organization.subregen(org1, firstuser, 2, { authorization: `${firstuser}@active` })
+    // await contracts.organization.subregen(org1, seconduser, 3, { authorization: `${seconduser}@active` })
 
-    await contracts.organization.addregen(org2, firstuser, 4, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org2, seconduser, 4, { authorization: `${seconduser}@active` })
+    // await contracts.organization.addregen(org2, firstuser, 4, { authorization: `${firstuser}@active` })
+    // await contracts.organization.addregen(org2, seconduser, 4, { authorization: `${seconduser}@active` })
 
-    await contracts.organization.addregen(org3, firstuser, 1, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen(org3, seconduser, 1, { authorization: `${seconduser}@active` })
-    await contracts.organization.subregen(org3, thirduser, 1, { authorization: `${thirduser}@active` })
+    // await contracts.organization.addregen(org3, firstuser, 1, { authorization: `${firstuser}@active` })
+    // await contracts.organization.subregen(org3, seconduser, 1, { authorization: `${seconduser}@active` })
+    // await contracts.organization.subregen(org3, thirduser, 1, { authorization: `${thirduser}@active` })
 
-    await contracts.organization.addregen(org4, firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org4, seconduser, 2, { authorization: `${seconduser}@active` })
+    // await contracts.organization.addregen(org4, firstuser, 2, { authorization: `${firstuser}@active` })
+    // await contracts.organization.addregen(org4, seconduser, 2, { authorization: `${seconduser}@active` })
 
-    await contracts.organization.addregen(org5, firstuser, 7, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org5, seconduser, 7, { authorization: `${seconduser}@active` })
+    // await contracts.organization.addregen(org5, firstuser, 7, { authorization: `${firstuser}@active` })
+    // await contracts.organization.addregen(org5, seconduser, 7, { authorization: `${seconduser}@active` })
     
     await contracts.accounts.testsetcbs(org1, 100, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org2, 75, { authorization: `${accounts}@active` })
@@ -700,7 +700,7 @@ describe('organization scores', async assert => {
     await contracts.accounts.testsetcbs(org4, 25, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org5, 1, { authorization: `${accounts}@active` })
 
-    await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
+    await contracts.accounts.rankorgreps({ authorization: `${accounts}@active` })
     await sleep(200)
 
     console.log('transfer volume of seeds')
@@ -739,7 +739,7 @@ describe('organization scores', async assert => {
     await sleep(100)
 
     await contracts.organization.rankregens({ authorization: `${organization}@active` })
-    await contracts.organization.rankcbsorgs({ authorization: `${organization}@active` })
+    await contracts.accounts.rankorgcbss({ authorization: `${accounts}@active` })
     await contracts.harvest.rankorgtxs({ authorization: `${harvest}@active` })
 
     await sleep(5000)
@@ -760,9 +760,9 @@ describe('organization scores', async assert => {
     })
 
     const cbsRanks = await getTableRows({
-        code: organization,
-        scope: organization,
-        table: 'cbsorgs',
+        code: accounts,
+        scope: 'org',
+        table: 'cbs',
         json: true
     })
 
@@ -780,7 +780,7 @@ describe('organization scores', async assert => {
         json: true
     })
 
-    await contracts.organization.addregen(org1, firstuser, 10, { authorization: `${firstuser}@active` })
+    // await contracts.organization.addregen(org1, firstuser, 10, { authorization: `${firstuser}@active` })
     
     const avgsAfter = await getTableRows({
         code: organization,
