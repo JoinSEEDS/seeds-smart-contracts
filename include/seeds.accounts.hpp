@@ -86,7 +86,7 @@ CONTRACT accounts : public contract {
       ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
-      ACTION migratevouch(name start_user, name start_sponsor);
+      ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -164,6 +164,8 @@ CONTRACT accounts : public contract {
       void send_eval_demote(name to);
       void send_punish_vouchers(name account, uint64_t points);
       void calc_vouch_rep(name account);
+
+      void migrate_calc_vouch_rep(name account); // migration - remove
 
       DEFINE_USER_TABLE
 
