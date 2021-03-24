@@ -119,8 +119,8 @@ ACTION region::create(
 
     check(sitr->balance >= quantity, "The user does not have enough credit to create an organization" + sitr->balance.to_string() + " min: "+quantity.to_string());
 
-    auto bitr = regions.find(rgnaccount.value);
-    check(bitr == regions.end(), "This region already exists.");
+    auto ritr = regions.find(rgnaccount.value);
+    check(ritr == regions.end(), "This region already exists.");
     
     auto uitr = users.find(founder.value);
     check(uitr != users.end(), "Founder is not a Seeds account.");
@@ -137,7 +137,7 @@ ACTION region::create(
     regions.emplace(_self, [&](auto & item) {
         item.id = rgnaccount;
         item.founder = founder;
-        item.status = "inactive"_n;
+        item.status = status_inactive;
         item.description = description;
         item.locationjson = locationJson;
         item.latitude = latitude;
@@ -159,8 +159,8 @@ ACTION region::join(name region, name account) {
     require_auth(account);
     check_user(account);
 
-    auto bitr = regions.find(region.value);
-    check(bitr != regions.end(), "no region");
+    auto ritr = regions.find(region.value);
+    check(ritr != regions.end(), "no region");
 
     auto mitr = members.find(account.value);
 
@@ -235,8 +235,8 @@ ACTION region::removemember(name region, name admin, name account) {
     require_auth(admin);
     is_admin(region, admin);
 
-    auto bitr = regions.find(region.value);
-    check(bitr -> founder != account, "Change the organization's owner before removing this account.");
+    auto ritr = regions.find(region.value);
+    check(ritr -> founder != account, "Change the organization's owner before removing this account.");
 
     remove_member(account);
 }
@@ -261,7 +261,6 @@ void region::remove_member(name account) {
     size_change(mitr->region, -1);
 
     members.erase(mitr);
-
 }
 
 ACTION region::setfounder(name region, name founder, name new_founder) {
@@ -271,18 +270,18 @@ ACTION region::setfounder(name region, name founder, name new_founder) {
     delete_role(region, founder);
     addrole(region, founder, founder, "admin"_n);
 
-    auto bitr = regions.find(region.value);
-    check(bitr != regions.end(), "The region does not exist.");
-    regions.modify(bitr, _self, [&](auto& item) {
+    auto ritr = regions.find(region.value);
+    check(ritr != regions.end(), "The region does not exist.");
+    regions.modify(ritr, _self, [&](auto& item) {
       item.founder = new_founder;
     });
 }
 
-ACTION region::removebr(name region) {
+ACTION region::removerdc(name region) {
     require_auth(get_self());
-    auto bitr = regions.find(region.value);
-    check(bitr != regions.end(), "The region does not exist.");
-    regions.erase(bitr);
+    auto itr = regions.find(region.value);
+    check(itr != regions.end(), "The region does not exist.");
+    regions.erase(itr);
 
     roles_tables roles(get_self(), region.value);
     auto ritr = roles.begin();
@@ -308,24 +307,40 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
 }
 
 void region::size_change(name region, int delta) {
-    auto bitr = regions.find(region.value);
+    auto ritr = regions.find(region.value);
 
-    check(bitr != regions.end(), "region not found");
+    check(ritr != regions.end(), "region not found");
   
-    uint64_t newsize = bitr->members_count + delta; 
+    uint64_t newsize = ritr->members_count + delta; 
     if (delta < 0) {
-      if (bitr->members_count < -delta) {
+      if (ritr->members_count < -delta) {
         newsize = 0;
       }
     }
-    regions.modify(bitr, _self, [&](auto& item) {
+
+    uint64_t active_cutoff = config_get("rdc.cit"_n);
+
+    regions.modify(ritr, _self, [&](auto& item) {
       item.members_count = newsize;
+      if (item.members_count >= active_cutoff) {
+        item.status = status_active;
+      } else {
+        item.status = status_inactive;
+      }
     });
 }
 
 double region::config_float_get(name key) {
   auto citr = configfloat.find(key.value);
   if (citr == configfloat.end()) { 
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return citr->value;
+}
+
+uint64_t region::config_get(name key) {
+  auto citr = config.find(key.value);
+  if (citr == config.end()) { 
     check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
   }
   return citr->value;

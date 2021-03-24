@@ -46,7 +46,7 @@ CONTRACT region : public contract {
 
         ACTION reset();
 
-        ACTION removebr(name region);
+        ACTION removerdc(name region);
 
 
         void deposit(name from, name to, asset quantity, std::string memo);
@@ -57,6 +57,8 @@ CONTRACT region : public contract {
         name founder_role = name("founder");
         name admin_role = name("admin");
         
+        const name status_inactive = name("inactive");
+        const name status_active = name("active");
 
         void auth_founder(name region, name founder);
         void init_balance(name account);
@@ -68,6 +70,7 @@ CONTRACT region : public contract {
         bool is_member(name region, name account);
         bool is_admin(name region, name account);
         double config_float_get(name key);
+        uint64_t config_get(name key);
 
         TABLE region_table {
             name id;
@@ -170,7 +173,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removebr))
+          (removemember)(leaverole)(setfounder)(removerdc))
       }
   }
 }

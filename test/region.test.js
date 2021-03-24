@@ -43,6 +43,27 @@ describe("regions general", async assert => {
   console.log('configure - 1 Seeds feee')
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
 
+  console.log('configure - rdc.cit')
+  await contracts.settings.configure("rdc.cit", 2, { authorization: `${settings}@active` })
+
+  const statusInactive = 'inactive'
+  const statusActive = 'active'
+
+  const checkStatus = async (rgn, status, given, should) => {
+    const regions = await getTableRows({
+      code: region,
+      scope: region,
+      table: 'regions',
+      json: true
+    })
+    assert({
+      given,
+      should,
+      actual: regions.rows.filter(r => r.id == rgn)[0].status,
+      expected: status
+    })
+  }
+
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
@@ -100,17 +121,21 @@ describe("regions general", async assert => {
     } catch {
   
     }
+
+  await checkStatus(rdcname, statusInactive, 'region created', 'have the correct status')
   
   console.log('join a region')
   await contracts.region.join(rdcname, seconduser, { authorization: `${seconduser}@active` })
 
   const members = await getMembers()
   //console.log("members "+JSON.stringify(members, null, 2))
+  await checkStatus(rdcname, statusActive, `${seconduser} joined`, 'have the correct status')
 
   console.log('leave a region')
   await contracts.region.leave(rdcname, seconduser, { authorization: `${seconduser}@active` })
 
   const membersAfter = await getMembers()
+  await checkStatus(rdcname, statusInactive, `${seconduser} left`, 'have the correct status')
 
   //console.log("membersAfter "+JSON.stringify(membersAfter, null, 2))
 
@@ -120,6 +145,7 @@ describe("regions general", async assert => {
 
   const membersAfterRemove = await getMembers()
   //console.log("membersAfterRemove "+JSON.stringify(membersAfterRemove, null, 2))
+  await checkStatus(rdcname, statusInactive, `${thirduser} joined`, 'have the correct status')
 
   const admin = seconduser
 
@@ -136,6 +162,7 @@ describe("regions general", async assert => {
 
   console.log('add role')
   await contracts.region.join(rdcname, seconduser, { authorization: `${seconduser}@active` })
+  await checkStatus(rdcname, statusActive, `${seconduser} joined`, 'have the correct status')
 
   await contracts.region.addrole(rdcname, firstuser, admin, "admin", { authorization: `${firstuser}@active` })
 
@@ -148,6 +175,8 @@ describe("regions general", async assert => {
   //console.log("rolesAfter "+JSON.stringify(rolesAfter, null, 2))
 
   await contracts.region.join(rdcname, fourthuser, { authorization: `${fourthuser}@active` })
+  await checkStatus(rdcname, statusActive, `${fourthuser} joined`, 'have the correct status')
+
   await contracts.region.addrole(rdcname, firstuser, fourthuser, "admin", { authorization: `${firstuser}@active` })
   await contracts.region.leaverole(rdcname, fourthuser, { authorization: `${fourthuser}@active` })
   const rolesAfter2 = await getRoles()
@@ -391,7 +420,7 @@ describe("regions Test Delete", async assert => {
   // console.log("roles1before "+JSON.stringify(roles1before, null, 2))
   // console.log("roles2before "+JSON.stringify(roles2before, null, 2))
 
-  await contracts.region.removebr(rdcname2, { authorization: `${region}@active` })
+  await contracts.region.removerdc(rdcname2, { authorization: `${region}@active` })
 
   const roles1After = await getRoles(rdcname)
   const roles2After = await getRoles(rdcname2)
