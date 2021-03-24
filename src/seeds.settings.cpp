@@ -74,8 +74,8 @@ void settings::reset() {
   // Organizations
   confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
   
-  confwithdesc(name("org.minsub"), 7, "Minimum amount of rating points a user can take from an org", high_impact);
-  confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
+  confwithdesc(name("org.minsub"), 5, "Minimum amount of rating points a user can take from an org", medium_impact);
+  confwithdesc(name("org.maxadd"), 5, "Maximum amount of rating points a user can give to an org", medium_impact);
 
   // replace this single rating with the below
   // confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
