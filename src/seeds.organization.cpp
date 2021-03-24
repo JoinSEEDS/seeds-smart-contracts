@@ -396,17 +396,21 @@ void organization::vote(name organization, name account, int64_t regen) {
         });
     }
 
-    int64_t min_regen = (int64_t)config.get(name("orgvote.min").value, "The orgvote.min parameter has not been initialized yet").value;
+    int64_t min_regen = (int64_t)config.get(name("orgratethrsh").value, "The orgratethrsh parameter has not been initialized yet").value;
     if (org_regen >= min_regen) {
+        int64_t rate_cap = (int64_t)config.get(name("orgratecap").value, "The orgratecap parameter has not been initialized yet").value;
+        org_regen = std::min(org_regen, rate_cap);
         auto itr_regen = regenscores.find(organization.value);
+        int64_t score = org_regen * average;
+        if (org_regen < 0 && score > 0) score *= -1; // negative scores stay negative
         if (itr_regen != regenscores.end()) {
             regenscores.modify(itr_regen, _self, [&](auto & rs){
-                rs.regen_avg = average;
+                rs.regen_avg = score;
             });
         } else {
             regenscores.emplace(_self, [&](auto & rs){
                 rs.org_name = organization;
-                rs.regen_avg = average;
+                rs.regen_avg = score;
                 rs.rank = 0;
             });
             increase_size_by_one(regen_score_size);
