@@ -81,18 +81,37 @@ void settings::reset() {
   // confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
   
   // user rating threshold when an org can become a (reputable/sustainable/regenerative/thrivable) org
-  confwithdesc(name("org.rated.5"), 1000, "Thrivable organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.4"), 200, "Regenerative organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.3"), 100, "Sustainable organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.2"), 50, "Reputable organization rating threshold", low_impact);
+  confwithdesc(name("org.rated.2"), 50, "Reputable organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.3"), 100, "Sustainable organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.4"), 200, "Regenerative organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.5"), 1000, "Thrivable organization minimum number of rating points required.", low_impact);
+
+  // Reputable orgs
+  confwithdesc(name("orgminplnt.1"), 200 * 10000, "Minimum amount planted to become a Status 1 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.2"), 400 * 10000, "Minimum amount planted to become a Status 2 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.3"), 800 * 10000, "Minimum amount planted to become a Status 3 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.4"), 1000 * 10000, "Minimum amount planted to become a Status 4 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.5"), 2000 * 10000, "Minimum amount planted to become a Status 5 Organization (in Seeds)", medium_impact);
+  
+  confwithdesc(name("orgminrank.2"), 20, "Minimum reputation score an organization must have to become a Status 2 Organization", medium_impact);
+  confwithdesc(name("orgminrank.3"), 50, "Minimum reputation score an organization must have to become a Status 3 Organization", medium_impact);
+  confwithdesc(name("orgminrank.4"), 75, "Minimum reputation score an organization must have to become a Status 4 Organization", medium_impact);
+  confwithdesc(name("orgminrank.5"), 90, "Minimum reputation score an organization must have to become a Status 5 Organization", medium_impact);
 
 
-  // Resident orgs
-  confwithdesc(name("rep.minplnt"), 400 * 10000, "Minimum amount planted to become a Reputable Organization (in Seeds)", high_impact);
-  confwithdesc(name("rep.minrank"), 50, "Minimum rank an organization must have to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.refrred"), 10, "Minimum number of referrals to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.resref"), 5, "Minimum number of residents or citizens referred to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.mintrx"), 5, "Minimum number of exchanged transactions with Reputable/Regenerative organizations or Citizens to become a Reputable Organization", high_impact);
+  //confwithdesc(name("rep.refrred"), 10, "Minimum number of referrals to become a Reputable Organization", high_impact);
+  // -> change to org.visref.1
+  confwithdesc(name("org.visref.2"), 1, "Minimum number of referrals to become a Status 2 organization", medium_impact);
+  confwithdesc(name("org.visref.3"), 10, "Minimum number of referrals to become a Status 3 organization", medium_impact);
+  confwithdesc(name("org.visref.4"), 50, "Minimum number of referrals to become a Status 4 organization", medium_impact);
+  confwithdesc(name("org.visref.5"), 100, "Minimum number of referrals to become a Status 5 organization", medium_impact);
+
+  // confwithdesc(name("rep.resref"), 5, "Minimum number of residents or citizens referred to become a Reputable Organization", high_impact);
+  // -> change to org.resref.1
+  confwithdesc(name("org.resref.2"), 0, "Minimum number of residents or citizens referred to become a Status 2 Organization", medium_impact);
+  confwithdesc(name("org.resref.3"), 5, "Minimum number of residents or citizens referred to become a Status 3 Organization", medium_impact);
+  confwithdesc(name("org.resref.4"), 25, "Minimum number of residents or citizens referred to become a Status 4 Organization", medium_impact);
+  confwithdesc(name("org.resref.5"), 50, "Minimum number of residents or citizens referred to become a Status 5 Organization", medium_impact);
 
   // Regenerative orgs
   confwithdesc(name("rgen.minplnt"), 400 * 10000, "Minimum amount planted to become a Regenerative Organization (in Seeds)", high_impact);
@@ -242,12 +261,12 @@ void settings::reset() {
   // =====================================
   // forum 
   // =====================================
-  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
-  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
-  confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
-  confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
-  confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
-  confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", high_impact);
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", medium_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", medium_impact);
+  confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", low_impact);
+  confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", low_impact);
+  confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", low_impact);
+  confwithdesc(name("forum.dps"), 5, "Depreciation frequency (in days)", low_impact);
 
 
   // =====================================
