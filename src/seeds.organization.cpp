@@ -405,7 +405,7 @@ void organization::vote(name organization, name account, int64_t regen) {
         if (org_regen < 0 && score > 0) score *= -1; // negative scores stay negative
         if (itr_regen != regenscores.end()) {
             regenscores.modify(itr_regen, _self, [&](auto & rs){
-                rs.regen_avg = score;
+                rs.regen_avg = score; // rename this to score - it's no longer an average, it's T*T/N 
             });
         } else {
             regenscores.emplace(_self, [&](auto & rs){
@@ -416,7 +416,6 @@ void organization::vote(name organization, name account, int64_t regen) {
             increase_size_by_one(regen_score_size);
         }
     }
-
 }
 
 ACTION organization::addregen(name organization, name account, uint64_t amount) {
