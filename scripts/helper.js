@@ -11,8 +11,7 @@ const networks = {
   mainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
   jungle: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473',
   kylin: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191',
-  // local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
-  local: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
+  local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
@@ -85,7 +84,7 @@ const payForCPUKeys = {
 const payForCPUPublicKey = payForCPUKeys[chainId]
 
 const applicationKeys = {
-  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
 }
@@ -134,13 +133,13 @@ const token = (accountName, issuer, supply) => ({
   supply
 })
 
-const bdc = 'bdc'
+const rdc = 'rdc'
 
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rdc: account(rdc),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
@@ -184,7 +183,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rdc: account(rdc),
       campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -227,7 +226,7 @@ const accountsMetadata = (network) => {
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
-      bdc: account(bdc),
+      rdc: account(rdc),
 
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -495,7 +494,7 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.bdc.account}@owner`,
+  target: `${accounts.rdc.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.region.account}@active`,
@@ -625,7 +624,7 @@ var permissions = [{
   actor: `${accounts.organization.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'rankbiocss'
+  action: 'rankrdccss'
 }, {
   target: `${accounts.gratitude.account}@active`,
   actor: `${accounts.gratitude.account}@eosio.code`

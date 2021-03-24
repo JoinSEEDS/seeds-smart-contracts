@@ -36,7 +36,7 @@ CONTRACT harvest : public contract {
         harveststat(receiver, receiver.value),
         monthlyqevs(receiver, receiver.value),
         mintrate(receiver, receiver.value),
-        biocstemp(receiver, receiver.value),
+        regioncstemp(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value),
         configfloat(contracts::settings, contracts::settings.value),
         users(contracts::accounts, contracts::accounts.value),
@@ -79,8 +79,8 @@ CONTRACT harvest : public contract {
     ACTION rankorgcss();
     ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name cs_scope);
 
-    ACTION rankbiocss();
-    ACTION rankbiocs(uint64_t start, uint64_t chunk, uint64_t chunksize);
+    ACTION rankrdccss();
+    ACTION rankrdccs(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
     ACTION updatetxpt(name account);
     ACTION calctotal(uint64_t startval);
@@ -102,7 +102,7 @@ CONTRACT harvest : public contract {
 
     ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
-    ACTION disthvstbios(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstrdcs(uint64_t start, uint64_t chunksize, asset total_amount);
 
     ACTION migorgs(uint64_t start);
     ACTION delcsorg(uint64_t start);
@@ -119,8 +119,8 @@ CONTRACT harvest : public contract {
     name cs_size = "cs.sz"_n;
     name sum_rank_users = "usr.rnk.sz"_n;
     name sum_rank_orgs = "org.rnk.sz"_n;
-    name sum_rank_bios = "bio.rnk.sz"_n;
-    name cs_bio_size = "bio.cs.sz"_n;
+    name sum_rank_rdcs = "rdc.rnk.sz"_n;
+    name cs_rdc_size = "rdc.cs.sz"_n;
     name cs_org_size = "org.cs.sz"_n;
 
     const name individual_scope_accounts = contracts::accounts;
@@ -239,24 +239,26 @@ CONTRACT harvest : public contract {
     DEFINE_CBS_TABLE_MULTI_INDEX
 
     TABLE region_table {
-        name id;
-        name founder;
-        name status; // "active" "inactive"
-        string description;
-        string locationjson; // json description of the area
-        float latitude;
-        float longitude;
-        uint64_t members_count;
-        time_point created_at = current_block_time().to_time_point();
+      name id;
+      name founder;
+      name status; // "active" "inactive"
+      string description;
+      string locationjson; // json description of the area
+      float latitude;
+      float longitude;
+      uint64_t members_count;
+      time_point created_at = current_block_time().to_time_point();
 
-        uint64_t primary_key() const { return id.value; }
-        uint64_t by_status() const { return status.value; }
-        uint64_t by_count() const { return members_count; }
+      uint64_t primary_key() const { return id.value; }
+      uint64_t by_status() const { return status.value; }
+      uint64_t by_count() const { return members_count; }
+      uint128_t by_status_id() const { return (uint128_t(status.value) << 64) + id.value; }
     };
 
     typedef eosio::multi_index <"regions"_n, region_table,
-        indexed_by<"bystatus"_n,const_mem_fun<region_table, uint64_t, &region_table::by_status>>,
-        indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>
+      indexed_by<"bystatus"_n,const_mem_fun<region_table, uint64_t, &region_table::by_status>>,
+      indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>,
+      indexed_by<"bystatusid"_n,const_mem_fun<region_table, uint128_t, &region_table::by_status_id>>
     > region_tables;
 
 
@@ -338,7 +340,7 @@ CONTRACT harvest : public contract {
     typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
     typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
 
-    typedef eosio::multi_index<"biocstemp"_n, region_cs_temporal_table,
+    typedef eosio::multi_index<"regioncstemp"_n, region_cs_temporal_table,
       indexed_by<"bycspoints"_n,
       const_mem_fun<region_cs_temporal_table, uint64_t, &region_cs_temporal_table::by_cs_points>>
     > region_cs_temporal_tables;
@@ -360,10 +362,10 @@ CONTRACT harvest : public contract {
       time_point joined_date = current_block_time().to_time_point();
 
       uint64_t primary_key() const { return account.value; }
-      uint64_t by_bio() const { return region.value; }
+      uint64_t by_region() const { return region.value; }
     };
     typedef eosio::multi_index <"members"_n, members_table,
-        indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
+        indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
     > members_tables;
 
 
@@ -376,7 +378,7 @@ CONTRACT harvest : public contract {
     size_tables sizes;
     monthly_qev_tables monthlyqevs;
     mint_rate_tables mintrate;
-    region_cs_temporal_tables biocstemp;
+    region_cs_temporal_tables regioncstemp;
 
     // DEPRECATED - remove
     typedef eosio::multi_index<"harvest"_n, harvest_table> harvest_tables;
@@ -404,12 +406,12 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)
           (unplant)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankorgcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankbiocss)(rankbiocs)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankorgcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankrdccss)(rankrdccs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
-          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstbios)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrdcs)
           (delcsorg)(migorgs)(testmigscope)
         )
       }

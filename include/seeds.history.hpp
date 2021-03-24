@@ -227,7 +227,7 @@ CONTRACT history : public contract {
           time_point joined_date = current_block_time().to_time_point();
 
           uint64_t primary_key() const { return account.value; }
-          uint64_t by_bio() const { return region.value; }
+          uint64_t by_region() const { return region.value; }
       };
 
       typedef eosio::multi_index<"citizens"_n, citizen_table,
@@ -278,7 +278,7 @@ CONTRACT history : public contract {
       typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
 
       typedef eosio::multi_index <"members"_n, members_table,
-        indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
+        indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
       > members_tables;
       
       DEFINE_USER_TABLE

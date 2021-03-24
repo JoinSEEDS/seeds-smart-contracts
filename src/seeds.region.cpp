@@ -27,9 +27,9 @@ ACTION region::reset() {
         sitr = sponsors.erase(sitr);
     }
 
-    auto ditr = biodelays.begin();
-    while(ditr != biodelays.end()) {
-        ditr = biodelays.erase(ditr);
+    auto ditr = regiondelays.begin();
+    while(ditr != regiondelays.end()) {
+        ditr = regiondelays.erase(ditr);
     }
 }
 
@@ -98,7 +98,7 @@ void region::deposit(name from, name to, asset quantity, string memo) {
 
 ACTION region::create(
     name founder, 
-    name bioaccount, 
+    name rgnaccount, 
     string description, 
     string locationJson, 
     float latitude, 
@@ -108,18 +108,18 @@ ACTION region::create(
     require_auth(founder);
     check_user(founder);
 
-    //string acct_string = bioaccount.to_string();
-    check(bioaccount.suffix().to_string() == "bdc", "region name must end in '.bdc' Your suffix: " + bioaccount.suffix().to_string());
+    //string acct_string = rgnaccount.to_string();
+    check(rgnaccount.suffix().to_string() == "rdc", "region name must end in '.rdc' Your suffix: " + rgnaccount.suffix().to_string());
 
     auto sitr = sponsors.find(founder.value);
     check(sitr != sponsors.end(), "The founder account does not have a balance entry in this contract.");
 
-    auto feeparam = config.get("bio.fee"_n.value, "The bio.fee parameter has not been initialized yet.");
+    auto feeparam = config.get("region.fee"_n.value, "The region.fee parameter has not been initialized yet.");
     asset quantity(feeparam.value, seeds_symbol);
 
     check(sitr->balance >= quantity, "The user does not have enough credit to create an organization" + sitr->balance.to_string() + " min: "+quantity.to_string());
 
-    auto bitr = regions.find(bioaccount.value);
+    auto bitr = regions.find(rgnaccount.value);
     check(bitr == regions.end(), "This region already exists.");
     
     auto uitr = users.find(founder.value);
@@ -128,14 +128,14 @@ ACTION region::create(
     auto mitr = members.find(founder.value);
     check(mitr == members.end(), "Founder is part of another region. Leave the other region first.");
 
-    create_telos_account(founder, bioaccount, publicKey);
+    create_telos_account(founder, rgnaccount, publicKey);
 
     sponsors.modify(sitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
     regions.emplace(_self, [&](auto & item) {
-        item.id = bioaccount;
+        item.id = rgnaccount;
         item.founder = founder;
         item.status = "inactive"_n;
         item.description = description;
@@ -145,9 +145,9 @@ ACTION region::create(
         item.members_count = 0;
     });
 
-    join(bioaccount, founder);
+    join(rgnaccount, founder);
 
-    roles_tables roles(get_self(), bioaccount.value);
+    roles_tables roles(get_self(), rgnaccount.value);
     roles.emplace(_self, [&](auto & item) {
         item.account = founder;
         item.role = founder_role;
@@ -168,16 +168,16 @@ ACTION region::join(name region, name account) {
 
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
-    auto ditr = biodelays.find(account.value);
-    if (ditr == biodelays.end()) {
-        biodelays.emplace(_self, [&](auto & item){
+    auto ditr = regiondelays.find(account.value);
+    if (ditr == regiondelays.end()) {
+        regiondelays.emplace(_self, [&](auto & item){
             item.account = account;
             item.apply_vote_delay = false;
             item.joined_date_timestamp = now;
         });
     } else {
-        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("bio.vote.del"_n)), "user needs to wait until the delay ends");
-        biodelays.modify(ditr, _self, [&](auto & item){
+        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("rdc.vote.del"_n)), "user needs to wait until the delay ends");
+        regiondelays.modify(ditr, _self, [&](auto & item){
             item.apply_vote_delay = true;
             item.joined_date_timestamp = now;
         });
@@ -289,12 +289,12 @@ ACTION region::removebr(name region) {
     while(ritr != roles.end()) {
         ritr = roles.erase(ritr);
     }
-    auto biomembers = members.get_index<"bybio"_n>();
+    auto rdcmembers = members.get_index<"byregion"_n>();
     uint64_t current_user = 0;
 
-    auto mitr = biomembers.find(region.value);
-    while (mitr != biomembers.end() && mitr->region.value == region.value) {
-        mitr = biomembers.erase(mitr);
+    auto mitr = rdcmembers.find(region.value);
+    while (mitr != rdcmembers.end() && mitr->region.value == region.value) {
+        mitr = rdcmembers.erase(mitr);
     }
 }
 
@@ -302,7 +302,7 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
 {
     action(
         permission_level{contracts::onboarding, "active"_n},
-        contracts::onboarding, "createbio"_n,
+        contracts::onboarding, "createrdc"_n,
         make_tuple(sponsor, orgaccount, publicKey)
     ).send();
 }

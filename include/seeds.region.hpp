@@ -18,7 +18,7 @@ CONTRACT region : public contract {
               regions(receiver, receiver.value),
               members(receiver, receiver.value),
               sponsors(receiver, receiver.value),
-              biodelays(receiver, receiver.value),
+              regiondelays(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
               configfloat(contracts::settings, contracts::settings.value)
@@ -27,7 +27,7 @@ CONTRACT region : public contract {
         
         ACTION create(
             name founder, 
-            name bioaccount, 
+            name rgnaccount, 
             string description, 
             string locationJson, 
             float latitude, 
@@ -83,11 +83,13 @@ CONTRACT region : public contract {
             uint64_t primary_key() const { return id.value; }
             uint64_t by_status() const { return status.value; }
             uint64_t by_count() const { return members_count; }
+            uint128_t by_status_id() const { return (uint128_t(status.value) << 64) + id.value; }
         };
 
         typedef eosio::multi_index <"regions"_n, region_table,
             indexed_by<"bystatus"_n,const_mem_fun<region_table, uint64_t, &region_table::by_status>>,
-            indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>
+            indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>,
+            indexed_by<"bystatusid"_n,const_mem_fun<region_table, uint128_t, &region_table::by_status_id>>
         > region_tables;
 
 
@@ -97,11 +99,11 @@ CONTRACT region : public contract {
             time_point joined_date = current_block_time().to_time_point();
 
             uint64_t primary_key() const { return account.value; }
-            uint64_t by_bio() const { return region.value; }
+            uint64_t by_region() const { return region.value; }
 
         };
         typedef eosio::multi_index <"members"_n, members_table,
-            indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
+            indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
         > members_tables;
 
 
@@ -119,7 +121,7 @@ CONTRACT region : public contract {
         > roles_tables;
 
 
-        TABLE sponsors_table { // is it posible to have a negative balance?
+        TABLE sponsors_table {
             name account;
             asset balance;
 
@@ -134,7 +136,7 @@ CONTRACT region : public contract {
 
             uint64_t primary_key() const { return account.value; }
         };
-        typedef eosio::multi_index <"biodelays"_n, delay_table> delay_tables;
+        typedef eosio::multi_index <"regiondelays"_n, delay_table> delay_tables;
 
         // External tables
 
@@ -158,7 +160,7 @@ CONTRACT region : public contract {
         region_tables regions;
         members_tables members;
         sponsors_tables sponsors;
-        delay_tables biodelays;
+        delay_tables regiondelays;
 };
 
 

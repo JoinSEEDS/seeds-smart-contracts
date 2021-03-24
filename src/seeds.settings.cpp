@@ -43,7 +43,7 @@ void settings::reset() {
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
-  confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
+  confwithdesc(name("region.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a region (in Seeds)", high_impact);
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
@@ -67,7 +67,7 @@ void settings::reset() {
 
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
-  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.rdcs"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
@@ -262,7 +262,7 @@ void settings::reset() {
   // =====================================
   // region
   // =====================================
-  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
+  conffloatdsc(name("rdc.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
 
   // =====================================
   // gratitude 

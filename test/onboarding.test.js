@@ -16,7 +16,7 @@ const randomAccountName = () => {
     return result;
  }
  
- const randomAccountNameBDC = () => {
+ const randomAccountNameRDC = () => {
     let length = 8
     var result           = '';
     var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
@@ -24,7 +24,7 @@ const randomAccountName = () => {
     for ( var i = 0; i < length; i++ ) {
        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-    return result + ".bdc";
+    return result + ".rdc";
   }
   
 const getNumInvites = async () => {
@@ -683,13 +683,13 @@ describe('Create region', async assert => {
     
     const contracts = await initContracts({ onboarding, region })
     
-    const newAccount = randomAccountNameBDC()
+    const newAccount = randomAccountNameRDC()
     console.log("New account "+newAccount)
     const keyPair = await createKeypair()
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
   
-    await contracts.onboarding.createbio(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+    await contracts.onboarding.createrdc(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
 
     var hasNewDomain = false
     try {
