@@ -76,9 +76,7 @@ void settings::reset() {
   
   confwithdesc(name("org.minsub"), 5, "Minimum amount of rating points a user can take from an org", medium_impact);
   confwithdesc(name("org.maxadd"), 5, "Maximum amount of rating points a user can give to an org", medium_impact);
-
-  // replace this single rating with the below
-  // confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
+  confwithdesc(name("orgvote.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
   
   // user rating threshold when an org can become a (reputable/sustainable/regenerative/thrivable) org
   confwithdesc(name("org.rated.2"), 50, "Reputable organization minimum number of rating points required.", low_impact);

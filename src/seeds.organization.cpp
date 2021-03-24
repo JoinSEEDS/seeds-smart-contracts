@@ -396,7 +396,7 @@ void organization::vote(name organization, name account, int64_t regen) {
         });
     }
 
-    int64_t min_regen = (int64_t)config.get(name("org.rgen.min").value, "The org.rgen.min parameter has not been initialized yet").value;
+    int64_t min_regen = (int64_t)config.get(name("orgvote.min").value, "The orgvote.min parameter has not been initialized yet").value;
     if (org_regen >= min_regen) {
         auto itr_regen = regenscores.find(organization.value);
         if (itr_regen != regenscores.end()) {
