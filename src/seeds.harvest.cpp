@@ -1294,30 +1294,36 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
 void harvest::disthvstrdcs (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
 
-  auto bitr = start == 0 ? regions.begin() : regions.find(start);
+  auto regions_by_status_id = regions.get_index<"bystatusid"_n>();
+  uint128_t rid = (uint128_t(rdc_status_active.value) << 64) + start;
 
-  uint64_t number_regions = distance(regions.begin(), regions.end());
+  auto ritr = regions_by_status_id.lower_bound(rid);
+
+  size_tables rdc_sizes(contracts::region, contracts::region.value);
+  auto sitr = rdc_sizes.get(name("active.sz").value, "active.sz not found in region's sizes");
+
+  uint64_t number_regions = sitr.size;
   uint64_t count = 0;
 
   check(number_regions > 0, "number of regions must be greater than zero");
   double fragment_seeds = total_amount.amount / double(number_regions);
 
-  while (bitr != regions.end() && count < chunksize) {
+  while (ritr != regions_by_status_id.end() && ritr->status == rdc_status_active && count < chunksize) {
 
     // for the moment, all regions have rank 1
-    print("rdc:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
-    withdraw_aux(get_self(), name(bitr -> id), asset(fragment_seeds, test_symbol), "harvest");
+    print("rdc:", ritr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
+    withdraw_aux(get_self(), contracts::region, asset(fragment_seeds, test_symbol), (ritr -> id).to_string());
 
-    bitr++;
+    ritr++;
     count++;
   }
 
-  if (bitr != regions.end()) {
+  if (ritr != regions_by_status_id.end() && ritr->status == rdc_status_active) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "disthvstrdcs"_n,
-      std::make_tuple(bitr -> id, chunksize, total_amount)
+      std::make_tuple(ritr->id, chunksize, total_amount)
     );
 
     transaction tx;

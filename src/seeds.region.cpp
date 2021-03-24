@@ -31,6 +31,22 @@ ACTION region::reset() {
     while(ditr != regiondelays.end()) {
         ditr = regiondelays.erase(ditr);
     }
+
+    auto szitr = sizes.begin();
+    while (szitr != sizes.end()) {
+        szitr = sizes.erase(szitr);
+    }
+
+    auto hitr = harvestbalances.begin();
+    while (hitr != harvestbalances.end()) {
+        hitr = harvestbalances.erase(hitr);
+    }
+
+    harvest_balance_tables hbalances(get_self(), name("test").value);
+    auto htitr = hbalances.begin();
+    while (htitr != hbalances.end()) {
+        htitr = hbalances.erase(htitr);
+    }
 }
 
 void region::auth_founder(name region, name founder) {
@@ -73,26 +89,55 @@ void region::check_user(name account) {
     check(uitr != users.end(), "region: no user.");
 }
 
+void region::add_harvest_balance (name region, asset amount) {
+
+    name scope = amount.symbol == test_symbol ? "test"_n : get_self();
+    if (scope == get_self()) {
+        check (amount.symbol == seeds_symbol, "region: invalid symbol");
+    }
+
+    harvest_balance_tables hbalances(get_self(), scope.value);
+
+    auto hbitr = hbalances.find(region.value);
+
+    if (hbitr != hbalances.end()) {
+        hbalances.modify(hbitr, _self, [&](auto & item){
+            item.balance += amount;
+        });
+    } else {
+        hbalances.emplace(_self, [&](auto & item){
+            item.region = region;
+            item.balance = amount;
+        });
+    }
+}
+
 void region::deposit(name from, name to, asset quantity, string memo) {
     if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
-        to  ==  get_self() &&                     // to here
-        quantity.symbol == seeds_symbol) {        // SEEDS symbol
+        to  ==  get_self()) {                     // to here
 
-        utils::check_asset(quantity);
-        check_user(from);
+        if (from == contracts::harvest) {
+            name rdc = name(memo);
+            add_harvest_balance(rdc, quantity);
+        } else {
+            if (quantity.symbol != seeds_symbol) { return; }
 
-        init_balance(from);
-        init_balance(to);
+            utils::check_asset(quantity);
+            check_user(from);
 
-        auto fitr = sponsors.find(from.value);
-        sponsors.modify(fitr, _self, [&](auto & mbalance) {
-            mbalance.balance += quantity;
-        });
+            init_balance(from);
+            init_balance(to);
 
-        auto titr = sponsors.find(to.value);
-        sponsors.modify(titr, _self, [&](auto & mbalance) {
-            mbalance.balance += quantity;
-        });
+            auto fitr = sponsors.find(from.value);
+            sponsors.modify(fitr, _self, [&](auto & mbalance) {
+                mbalance.balance += quantity;
+            });
+
+            auto titr = sponsors.find(to.value);
+            sponsors.modify(titr, _self, [&](auto & mbalance) {
+                mbalance.balance += quantity;
+            });
+        }
     }
 }
 
@@ -187,7 +232,7 @@ ACTION region::join(name region, name account) {
         item.region = region;
         item.account = account;
     });
-    size_change(region, 1);
+    update_members_count(region, 1);
 
 }
 
@@ -258,7 +303,7 @@ void region::remove_member(name account) {
         roles.erase(ritr);
     }
 
-    size_change(mitr->region, -1);
+    update_members_count(mitr->region, -1);
 
     members.erase(mitr);
 }
@@ -306,10 +351,31 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
     ).send();
 }
 
-void region::size_change(name region, int delta) {
-    auto ritr = regions.find(region.value);
+void region::size_change(name id, int delta) {
+  auto sitr = sizes.find(id.value);
+  if (sitr == sizes.end()) {
+    sizes.emplace(_self, [&](auto& item) {
+      item.id = id;
+      item.size = delta;
+    });
+  } else {
+    uint64_t newsize = sitr->size + delta; 
+    if (delta < 0) {
+      if (sitr->size < -delta) {
+        newsize = 0;
+      }
+    }
+    sizes.modify(sitr, _self, [&](auto& item) {
+      item.size = newsize;
+    });
+  }
+}
 
+void region::update_members_count(name region, int delta) {
+    auto ritr = regions.find(region.value);
     check(ritr != regions.end(), "region not found");
+
+    name current_status = ritr->status;
   
     uint64_t newsize = ritr->members_count + delta; 
     if (delta < 0) {
@@ -319,14 +385,19 @@ void region::size_change(name region, int delta) {
     }
 
     uint64_t active_cutoff = config_get("rdc.cit"_n);
+    name new_status = newsize >= active_cutoff ? status_active : status_inactive;
+
+    if (new_status != current_status) {
+        if (new_status == status_active) {
+            size_change(active_size, 1);
+        } else {
+            size_change(active_size, -1);
+        }
+    }
 
     regions.modify(ritr, _self, [&](auto& item) {
-      item.members_count = newsize;
-      if (item.members_count >= active_cutoff) {
-        item.status = status_active;
-      } else {
-        item.status = status_inactive;
-      }
+        item.members_count = newsize;
+        item.status = new_status;
     });
 }
 
