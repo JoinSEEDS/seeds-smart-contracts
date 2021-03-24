@@ -535,7 +535,6 @@ void organization::check_can_make_reputable(name organization) {
     uint64_t regen_min_rank = get_config(name("rep.minrank"));
     uint64_t min_invited = get_config(name("rep.refrred"));
     uint64_t min_residents_invited = get_config(name("rep.resref"));
-    uint64_t min_trx = get_config(name("rep.mintrx"));
 
     uint64_t invited_users_number = count_refs(organization, min_residents_invited);
     uint64_t regen_score = get_regen_score(organization);
@@ -545,8 +544,6 @@ void organization::check_can_make_reputable(name organization) {
     check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
     check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
         std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
-    check(valid_trxs >= min_trx, 
-        "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
 }
 
 void organization::check_can_make_regen(name organization) {
