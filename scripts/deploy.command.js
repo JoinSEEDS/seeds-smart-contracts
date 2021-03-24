@@ -18,15 +18,6 @@ const deploy = async (name) => {
     if (!abi)
       throw new Error('abi not found')
 
-    await eos.setabi({
-        account: account.account,
-        abi: JSON.parse(abi)
-      }, {
-        authorization: `${account.account}@owner`
-      })
-  
-    console.log("abi deployed")
-
     await eos.setcode({
       account: account.account,
       code,
@@ -35,8 +26,18 @@ const deploy = async (name) => {
     }, {
       authorization: `${account.account}@owner`
     })
+    console.log("code deployed")
 
-    console.log(`Success: ${name} deployed to ${account.account}`)
+    await eos.setabi({
+      account: account.account,
+      abi: JSON.parse(abi)
+    }, {
+      authorization: `${account.account}@owner`
+    })
+
+  console.log("abi deployed")
+
+  console.log(`Success: ${name} deployed to ${account.account}`)
 }
 
 const source = async (name) => {
