@@ -442,7 +442,7 @@ void token::fixmaxsup() {
 
     auto sym = seeds_symbol;
 
-    asset unlimited_supply = asset(-1, seeds_symbol);
+    asset unlimited_supply = asset(-10000, seeds_symbol);
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
