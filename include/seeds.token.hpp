@@ -182,6 +182,8 @@ namespace eosio {
 
          ACTION minttst(const name& to, const asset& quantity, const string& memo);
 
+         ACTION fixmaxsup();
+
          using create_action = eosio::action_wrapper<"create"_n, &token::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &token::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &token::retire>;

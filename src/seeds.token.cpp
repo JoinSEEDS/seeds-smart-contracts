@@ -406,7 +406,6 @@ uint64_t token::balance_for( const name& owner ) {
    }
 }
 
-
 void token::minttst (const name& to, const asset& quantity, const string& memo) {
 
   require_auth(get_self());
@@ -438,7 +437,23 @@ void token::minttst (const name& to, const asset& quantity, const string& memo) 
 
 }
 
+void token::fixmaxsup() {
+    require_auth( get_self() );
+
+    auto sym = seeds_symbol;
+
+    asset unlimited_supply = asset(-1, seeds_symbol);
+
+    stats statstable( get_self(), sym.code().raw() );
+    auto existing = statstable.find( sym.code().raw() );
+    check(existing != statstable.end(), "error SEEDS symbol does not exist");
+    
+    statstable.modify(existing, _self, [&](auto & item) {
+       item.initial_supply = unlimited_supply;
+    });
+}
+
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minttst) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minttst)(fixmaxsup) )
