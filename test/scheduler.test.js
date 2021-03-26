@@ -212,6 +212,9 @@ describe('scheduler, organization scores', async assert => {
 
     let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
+    console.log('token reset')
+    await contracts.token.resetweekly({ authorization: `${token}@active` })
+    
     console.log('scheduler reset')
     await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
