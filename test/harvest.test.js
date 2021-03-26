@@ -1103,7 +1103,7 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('reset orgs')
   await contracts.organization.reset({ authorization: `${organization}@active` })
 
-  console.log('reset rdcs')
+  console.log('reset rgns')
   await contracts.region.reset({ authorization: `${region}@active` })
 
   console.log('reset weekly')
@@ -1112,12 +1112,12 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('configure percentages')
   const percentageForUsers = 0.3
   const percentageForOrgs = 0.2
-  const percentageForRdcs = 0.3
+  const percentageForrgns = 0.3
   const percentageForGlobal = 0.2
 
   await contracts.settings.configure('hrvst.users', parseInt(percentageForUsers*1000000), { authorization: `${settings}@active` })
   await contracts.settings.configure('hrvst.orgs', parseInt(percentageForOrgs*1000000), { authorization: `${settings}@active` })
-  await contracts.settings.configure('hrvst.rdcs', parseInt(percentageForRdcs*1000000), { authorization: `${settings}@active` })
+  await contracts.settings.configure('hrvst.rgns', parseInt(percentageForrgns*1000000), { authorization: `${settings}@active` })
   await contracts.settings.configure('hrvst.global', parseInt(percentageForGlobal*1000000), { authorization: `${settings}@active` })
 
 
@@ -1186,14 +1186,14 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('add regions')
   const keypair = await createKeypair();
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const rdcs = ['rdc1.rdc', 'rdc2.rdc']
-  for (let index = 0; index < rdcs.length; index++) {
-    const rdc = rdcs[index]
+  const rgns = ['rgn1.rgn', 'rgn2.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
     await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
     await contracts.region.create(
       users[index], 
-      rdc, 
-      'test rdc region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -1266,7 +1266,7 @@ describe('Mint Rate and Harvest', async assert => {
   
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rdcBalancesBefore = await Promise.all(rdcs.map(rdc => getTestBalance(rdc)))
+  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
   const globalBalanceBefore = await getTestBalance(globaldho)
 
   console.log('run harvest')
@@ -1277,23 +1277,23 @@ describe('Mint Rate and Harvest', async assert => {
 
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rdcBalancesAfter = await Promise.all(rdcs.map(rdc => getTestBalance(rdc)))
+  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
   const globalBalanceAfter = await getTestBalance(globaldho)
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
   const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index])
-  const rdcsHarvest = rdcBalancesAfter.map((seeds, index) => seeds - rdcBalancesBefore[index])
+  const rgnsHarvest = rgnBalancesAfter.map((seeds, index) => seeds - rgnBalancesBefore[index])
   const globalHarvest = globalBalanceAfter - globalBalanceBefore
 
   console.log('users:', userHarvest)
   console.log('orgs:', orgsHarvest)
-  console.log('rdcs:', rdcsHarvest)
+  console.log('rgns:', rgnsHarvest)
   console.log('global:', globalHarvest)
 
   console.log('check expected values')
   checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
   checkHarvestValues('orgs', csOrgTable.rows.filter(row => orgs.includes(row.account)).map(row => row.rank), mintRate * percentageForOrgs, orgsHarvest)
-  checkHarvestValues('rdcs', new Array(rdcs.length).fill(1), mintRate * percentageForRdcs, rdcsHarvest)
+  checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintRate * percentageForrgns, rgnsHarvest)
   checkHarvestValues('global', [1], mintRate * percentageForGlobal, [globalHarvest])
 
   const stats = await getTableRows({
@@ -1354,7 +1354,7 @@ describe('regions contribution score', async assert => {
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
-  console.log('reset rdcs')
+  console.log('reset rgns')
   await contracts.region.reset({ authorization: `${region}@active` })
 
   console.log('reset settings')
@@ -1372,14 +1372,14 @@ describe('regions contribution score', async assert => {
   console.log('add regions')
   const keypair = await createKeypair();
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const rdcs = ['rdc1.rdc', 'rdc2.rdc', 'rdc3.rdc']
-  for (let index = 0; index < rdcs.length; index++) {
-    const rdc = rdcs[index]
+  const rgns = ['rgn1.rgn', 'rgn2.rgn', 'rgn3.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
     await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
     await contracts.region.create(
       users[index], 
-      rdc, 
-      'test rdc region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -1387,8 +1387,8 @@ describe('regions contribution score', async assert => {
       { authorization: `${users[index]}@active` })
   }
 
-  await contracts.region.join('rdc2.rdc', fourthuser,{ authorization: `${fourthuser}@active` })
-  await contracts.region.join('rdc3.rdc', fifthuser,{ authorization: `${fifthuser}@active` })
+  await contracts.region.join('rgn2.rgn', fourthuser,{ authorization: `${fourthuser}@active` })
+  await contracts.region.join('rgn3.rgn', fifthuser,{ authorization: `${fifthuser}@active` })
 
   console.log('transfer')
   for (let i = 0; i < users.length; i++) {
@@ -1412,17 +1412,17 @@ describe('regions contribution score', async assert => {
   await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
   console.log('calc contribution score')
-  await contracts.harvest.rankrdccss({ authorization: `${harvest}@active` })
+  await contracts.harvest.rankrgncss({ authorization: `${harvest}@active` })
   await sleep(5000)
 
-  const cspointsRdcs = await getTableRows({
+  const cspointsrgns = await getTableRows({
     code: harvest,
-    scope: 'rdc',
+    scope: 'rgn',
     table: 'cspoints',
     json: true
   })
 
-  const cspointsRdcsTemp = await getTableRows({
+  const cspointsrgnsTemp = await getTableRows({
     code: harvest,
     scope: harvest,
     table: 'regioncstemp',
@@ -1432,17 +1432,17 @@ describe('regions contribution score', async assert => {
   assert({
     given: 'cs for regions',
     should: 'have the correct ranks',
-    actual: cspointsRdcs.rows,
+    actual: cspointsrgns.rows,
     expected: [
-      { account: 'rdc2.rdc', contribution_points: 77, rank: 0 },
-      { account: 'rdc3.rdc', contribution_points: 117, rank: 50 }
+      { account: 'rgn2.rgn', contribution_points: 77, rank: 0 },
+      { account: 'rgn3.rgn', contribution_points: 117, rank: 50 }
     ]
   })
 
   assert({
     given: 'cs for regions, the table regioncstemp',
     should: 'not have entries',
-    actual: cspointsRdcsTemp.rows,
+    actual: cspointsrgnsTemp.rows,
     expected: []
   })
 

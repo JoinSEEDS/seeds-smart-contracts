@@ -1266,10 +1266,10 @@ describe('Referral cbp reward individual', async assert => {
 
 
   const cbpRewardResident = 5
-  const cbpRewardCitizen = 7
+  const cbpRewargnitizen = 7
 
   await contracts.settings.configure("ref.cbp1.ind", cbpRewardResident, { authorization: `${settings}@active` })
-  await contracts.settings.configure("ref.cbp2.ind", cbpRewardCitizen, { authorization: `${settings}@active` })
+  await contracts.settings.configure("ref.cbp2.ind", cbpRewargnitizen, { authorization: `${settings}@active` })
 
   console.log('add users')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -1315,7 +1315,7 @@ describe('Referral cbp reward individual', async assert => {
     given: 'firstuser became citizen',
     should: 'sponsor received enough cbp',
     actual: cbsAfterCitizen.rows[0].community_building_score,
-    expected: cbpRewardResident + cbpRewardCitizen
+    expected: cbpRewardResident + cbpRewargnitizen
   })
 
 })
@@ -1337,10 +1337,10 @@ describe('Referral cbp reward organization', async assert => {
 
   console.log('set up rewards')
   const cbpRewardResident = 3
-  const cbpRewardCitizen = 4
+  const cbpRewargnitizen = 4
 
   await contracts.settings.configure("refcbp1.org", cbpRewardResident, { authorization: `${settings}@active` })
-  await contracts.settings.configure("refcbp2.org", cbpRewardCitizen, { authorization: `${settings}@active` })
+  await contracts.settings.configure("refcbp2.org", cbpRewargnitizen, { authorization: `${settings}@active` })
 
   console.log('add users')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
@@ -1384,7 +1384,7 @@ describe('Referral cbp reward organization', async assert => {
     given: 'firstuser became citizen',
     should: 'sponsor received enough cbp',
     actual: cbsAfterCitizen.rows[0].community_building_score,
-    expected: cbpRewardResident + cbpRewardCitizen
+    expected: cbpRewardResident + cbpRewargnitizen
   })
 
 })

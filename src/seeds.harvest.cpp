@@ -57,10 +57,10 @@ void harvest::reset() {
     org_csitr = cs_points_org.erase(org_csitr);
   }
 
-  cs_points_tables rdccspoints(get_self(), name("rdc").value);
-  auto csrdcitr = rdccspoints.begin();
-  while (csrdcitr != rdccspoints.end()) {
-    csrdcitr = rdccspoints.erase(csrdcitr);
+  cs_points_tables rgncspoints(get_self(), name("rgn").value);
+  auto csrgnitr = rgncspoints.begin();
+  while (csrgnitr != rgncspoints.end()) {
+    csrgnitr = rgncspoints.erase(csrgnitr);
   }
 
   auto bcsitr = regioncstemp.begin();
@@ -692,7 +692,7 @@ void harvest::add_cs_to_region(name account, uint32_t points) {
         item.region = bitr -> region;
         item.points = points;
       });
-      size_change(cs_rdc_size, 1);
+      size_change(cs_rgn_size, 1);
     }
   } else {
     if (points > 0) {
@@ -776,40 +776,40 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
 }
 
 
-void harvest::rankrdccss() {
+void harvest::rankrgncss() {
   uint64_t batch_size = config_get("batchsize"_n);
-  size_set(sum_rank_rdcs, 0);
-  rankrdccs(uint64_t(0), uint64_t(0), batch_size);
+  size_set(sum_rank_rgns, 0);
+  rankrgncs(uint64_t(0), uint64_t(0), batch_size);
 }
 
-void harvest::rankrdccs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
+void harvest::rankrgncs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
   require_auth(get_self());
 
-  uint64_t total = get_size(cs_rdc_size);
+  uint64_t total = get_size(cs_rgn_size);
   if (total == 0) return;
 
-  cs_points_tables rdccspoints(get_self(), name("rdc").value);
+  cs_points_tables rgncspoints(get_self(), name("rgn").value);
 
-  auto rdcs_by_points = regioncstemp.get_index<"bycspoints"_n>();
-  auto bitr = start == 0 ? rdcs_by_points.begin() : rdcs_by_points.find(start);
+  auto rgns_by_points = regioncstemp.get_index<"bycspoints"_n>();
+  auto bitr = start == 0 ? rgns_by_points.begin() : rgns_by_points.find(start);
   
   uint64_t current = chunk * chunksize;
   uint64_t count = 0;
   uint64_t sum_rank_b = 0;
 
-  while (bitr != rdcs_by_points.end() && count < chunksize) {
+  while (bitr != rgns_by_points.end() && count < chunksize) {
 
     uint64_t rank = utils::rank(current, total);
 
-    auto csitr = rdccspoints.find(bitr -> region.value);
-    if (csitr == rdccspoints.end()) {
-      rdccspoints.emplace(_self, [&](auto & item){
+    auto csitr = rgncspoints.find(bitr -> region.value);
+    if (csitr == rgncspoints.end()) {
+      rgncspoints.emplace(_self, [&](auto & item){
         item.account = bitr -> region;
         item.contribution_points = bitr -> points;
         item.rank = rank;
       });
     } else {
-      rdccspoints.modify(csitr, _self, [&](auto & item){
+      rgncspoints.modify(csitr, _self, [&](auto & item){
         item.contribution_points = bitr -> points;
         item.rank = rank;
       });
@@ -817,19 +817,19 @@ void harvest::rankrdccs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
 
     sum_rank_b += rank;
 
-    bitr = rdcs_by_points.erase(bitr);
+    bitr = rgns_by_points.erase(bitr);
     count++;
     current++;
   }
 
-  size_change(sum_rank_rdcs, int64_t(sum_rank_b));
+  size_change(sum_rank_rgns, int64_t(sum_rank_b));
 
-  if (bitr != rdcs_by_points.end()) {
+  if (bitr != rgns_by_points.end()) {
     uint64_t next_value = bitr -> by_cs_points();
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
-      "rankrdccs"_n,
+      "rankrgncs"_n,
       std::make_tuple(next_value, chunk + 1, chunksize)
     );
 
@@ -838,7 +838,7 @@ void harvest::rankrdccs(uint64_t start, uint64_t chunk, uint64_t chunksize) {
     tx.delay_sec = 1;
     tx.send(next_value, _self);
   } else {
-    size_set(cs_rdc_size, 0);
+    size_set(cs_rgn_size, 0);
   }
 
 }
@@ -1233,17 +1233,17 @@ void harvest::runharvest() {
   t_issue.send(get_self(), quantity, memo);
 
   double users_percentage = config_get("hrvst.users"_n) / 1000000.0;
-  double rdcs_percentage = config_get("hrvst.rdcs"_n) / 1000000.0;
+  double rgns_percentage = config_get("hrvst.rgns"_n) / 1000000.0;
   double orgs_percentage = config_get("hrvst.orgs"_n) / 1000000.0;
   double global_percentage = config_get("hrvst.global"_n) / 1000000.0;
 
   print("amount for users: ", asset(mitr -> mint_rate * users_percentage, test_symbol), "\n");
-  print("amount for rdcs: ", asset(mitr -> mint_rate * rdcs_percentage, test_symbol), "\n");
+  print("amount for rgns: ", asset(mitr -> mint_rate * rgns_percentage, test_symbol), "\n");
   print("amount for orgs: ", asset(mitr -> mint_rate * orgs_percentage, test_symbol), "\n");
   print("amount for global: ", asset(mitr -> mint_rate * global_percentage, test_symbol), "\n");
 
   send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
-  send_distribute_harvest("disthvstrdcs"_n, asset(mitr -> mint_rate * rdcs_percentage, test_symbol));
+  send_distribute_harvest("disthvstrgns"_n, asset(mitr -> mint_rate * rgns_percentage, test_symbol));
   send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
 
   withdraw_aux(get_self(), bankaccts::globaldho, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
@@ -1291,7 +1291,7 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
 
 }
 
-void harvest::disthvstrdcs (uint64_t start, uint64_t chunksize, asset total_amount) {
+void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
 
   auto bitr = start == 0 ? regions.begin() : regions.find(start);
@@ -1305,7 +1305,7 @@ void harvest::disthvstrdcs (uint64_t start, uint64_t chunksize, asset total_amou
   while (bitr != regions.end() && count < chunksize) {
 
     // for the moment, all regions have rank 1
-    print("rdc:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
+    //print("rgn:", bitr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
     withdraw_aux(get_self(), name(bitr -> id), asset(fragment_seeds, test_symbol), "harvest");
 
     bitr++;
@@ -1316,14 +1316,14 @@ void harvest::disthvstrdcs (uint64_t start, uint64_t chunksize, asset total_amou
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
-      "disthvstrdcs"_n,
+      "disthvstrgns"_n,
       std::make_tuple(bitr -> id, chunksize, total_amount)
     );
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(sum_rank_rdcs.value, _self);
+    tx.send(sum_rank_rgns.value, _self);
   }
 
 }

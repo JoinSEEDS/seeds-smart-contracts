@@ -67,7 +67,7 @@ void settings::reset() {
 
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
-  confwithdesc(name("hrvst.rdcs"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
@@ -262,7 +262,7 @@ void settings::reset() {
   // =====================================
   // region
   // =====================================
-  conffloatdsc(name("rdc.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
+  conffloatdsc(name("rgn.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
 
   // =====================================
   // gratitude 

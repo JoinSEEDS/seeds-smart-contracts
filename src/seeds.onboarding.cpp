@@ -171,13 +171,13 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
 }
 
-ACTION onboarding::createrdc(name sponsor, name region, string publicKey) {
+ACTION onboarding::createregion(name sponsor, name region, string publicKey) {
   require_auth(get_self());
 
   bool is_existing_telos_user = is_account(region);
 
   if (!is_existing_telos_user) {
-    create_account(region, publicKey, "rdc"_n);
+    create_account(region, publicKey, "rgn"_n);
   }
   
 }

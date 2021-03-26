@@ -133,13 +133,13 @@ const token = (accountName, issuer, supply) => ({
   supply
 })
 
-const rdc = 'rdc'
+const rgn = 'rgn'
 
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      rdc: account(rdc),
+      rgn: account(rgn),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
@@ -183,7 +183,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      rdc: account(rdc),
+      rgn: account(rgn),
       campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -226,7 +226,7 @@ const accountsMetadata = (network) => {
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
-      rdc: account(rdc),
+      rgn: account(rgn),
 
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -494,7 +494,7 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.rdc.account}@owner`,
+  target: `${accounts.rgn.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.region.account}@active`,
@@ -624,7 +624,7 @@ var permissions = [{
   actor: `${accounts.organization.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'rankrdccss'
+  action: 'rankrgncss'
 }, {
   target: `${accounts.gratitude.account}@active`,
   actor: `${accounts.gratitude.account}@eosio.code`
