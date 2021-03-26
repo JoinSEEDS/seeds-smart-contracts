@@ -58,7 +58,9 @@ void settings::reset() {
   confwithdesc(name("i.trx.div"), 26, "Individuals: Transaction diversity not more than 26 from 1 user is counted", high_impact);
   
   confwithdesc(name("org.trx.max"), uint64_t(1777) * uint64_t(10000), "Organization: Maximum points for a transaction", high_impact);
-  confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
+
+  // not used remove
+  // confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
 
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
@@ -224,11 +226,9 @@ void settings::reset() {
   // community buiding points for voucher when user referred reputable org
   confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
 
-  // community buiding points for org referrer when referred user becomes resident
   confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
-
-  // community buiding points for org referrer when user becomes citizen
   confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
+  confwithdesc(name("cbp.wane"), 2, "Degrading % over 1 cycle for org cbp points", high_impact);
 
   // =====================================
   // flag points
