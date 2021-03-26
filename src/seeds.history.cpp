@@ -175,8 +175,6 @@ void history::trxentry(name from, name to, asset quantity) {
     std::min(max_transaction_points_organizations, quantity.amount) : 
     std::min(max_transaction_points_individuals, quantity.amount)
   ) / 10000.0;
-
-  double from_multiplier = get_transaction_multiplier(to, from);
   
   double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
