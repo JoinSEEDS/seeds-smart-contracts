@@ -97,6 +97,11 @@ void settings::reset() {
   confwithdesc(name("orgminrank.4"), 75, "Minimum reputation score an organization must have to become a Status 4 Organization", medium_impact);
   confwithdesc(name("orgminrank.5"), 90, "Minimum reputation score an organization must have to become a Status 5 Organization", medium_impact);
 
+  // Daily Active Users - Organisations
+  confwithdesc(name("dau.cyc"), 3, "Only use that occurs in the preceding [N] lunar cycles are counted.", high_impact);
+  confwithdesc(name("dau.res.pt"), 2, "Base Points an Organisation Receives when a Resident uses their App/Dapp in a given 24/hr period.", high_impact);
+  confwithdesc(name("dau.cit.pt"), 4, "Base Points an Organisation Receives when a Citizen uses their App/Dapp in a given 24/hr period.", high_impact);
+  confwithdesc(name("dau.thresh"), 333, "Only applications that would receive at least [N] Use Points within a given 24/hr period qualify for earning those points.", high_impact);
 
   //confwithdesc(name("rep.refrred"), 10, "Minimum number of referrals to become a Reputable Organization", high_impact);
   // -> change to org.visref.1
