@@ -173,7 +173,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      region: contract('bio.seeds', 'region'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -209,7 +209,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      region: contract('bio.seeds', 'region'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -253,7 +253,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      region: contract('bio.seeds', 'region'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -650,10 +650,11 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'rankorgcss'
-}, {
+}//, {
   // target: `${accounts.bank.account}@active`,
   // actor: `${accounts.pouch.account}@active`
-}]
+//}
+]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local

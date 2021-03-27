@@ -326,8 +326,8 @@ describe("regions Test Delete", async assert => {
   await contracts.token.transfer(firstuser, region, "1.0000 SEEDS", "test", { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, region, "1.0000 SEEDS", "test", { authorization: `${seconduser}@active` })
 
-  const rgnname = "rgn1.bdc"
-  const rgnname2 = "rgn2.bdc"
+  const rgnname = "rgn1.rgn"
+  const rgnname2 = "rgn2.rgn"
 
   const getMembers = async () => {
     return await getTableRows({
