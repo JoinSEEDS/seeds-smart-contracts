@@ -1087,7 +1087,10 @@ void harvest::calcmqevs () {
   uint64_t cutoff = day - utils::moon_cycle;
   
   qev_tables qevs(contracts::history, contracts::history.value);
-  check(qevs.begin() != qevs.end(), "The qevs table for " + contracts::history.to_string() + " is empty");
+  if (qevs.begin() == qevs.end()) {
+    print("QEVs table is empty, no op. ");
+    return;
+  }
 
   auto qitr = qevs.rbegin();
   uint64_t total_volume = 0;

@@ -28,11 +28,11 @@ const getContractLocation = (contract) => {
 const compileAction = async (contract) => {
     try {
       var { source, include } = getContractLocation(contract)
-      // await compile({
-      //   contract: contract,
-      //   source,
-      //   include
-      // })
+      await compile({
+        contract: contract,
+        source,
+        include
+      })
       console.log(`${contract} compiled`)
     } catch (err) {
         console.log("compile failed for " + contract + " error: " + err)
