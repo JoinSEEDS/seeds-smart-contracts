@@ -150,12 +150,17 @@ void history::historyentry(name account, string action, uint64_t amount, string 
 void history::trxentry(name from, name to, asset quantity) {
   require_auth(get_self());
   
+  if (quantity.symbol != utils::seeds_symbol) {
+    return;
+  }
+
   auto from_user = users.find(from.value);
   auto to_user = users.find(to.value);
   
   if (from_user == users.end() || to_user == users.end()) {
     return;
   }
+
 
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
