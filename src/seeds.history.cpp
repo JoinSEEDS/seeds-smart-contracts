@@ -114,7 +114,7 @@ double history::get_transaction_multiplier (name account, name other) {
   double multiplier = utils::get_rep_multiplier(account);
   
   auto oitr = organizations.find(account.value);
-  if (oitr != organizations.end() && oitr -> status == regenerative_org) {
+  if (oitr != organizations.end() && oitr -> status == status_sustainable) {
     multiplier *= config_float_get("regen.mul"_n);
   }
 

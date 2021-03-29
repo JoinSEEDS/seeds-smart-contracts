@@ -5,6 +5,7 @@
 #include <utils.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
+#include <tables/rep_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -23,11 +24,13 @@ CONTRACT organization : public contract {
               cbsorgs(receiver, receiver.value),
               sizes(receiver, receiver.value),
               avgvotes(receiver, receiver.value),
+              rep(contracts::accounts, contracts::accounts.value),
               refs(contracts::accounts, contracts::accounts.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value),
-              totals(contracts::history, contracts::history.value)
+              totals(contracts::history, contracts::history.value),
+              planted(contracts::harvest, contracts::harvest.value)
               {}
         
         
@@ -91,6 +94,26 @@ CONTRACT organization : public contract {
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
+
+        const name min_planted = "org.minplant"_n;
+        const name regen_score_size = "rs.sz"_n;
+        const name cb_score_size = "cbs.sz"_n;
+        const name tx_score_size = "txs.sz"_n;
+        const name regen_avg = "org.rgnavg"_n;
+
+        const uint64_t status_regular = 0;
+        const uint64_t status_reputable = 1;
+        const uint64_t status_sustainable = 2;
+        const uint64_t status_regenerative = 3;
+        const uint64_t status_thrivable = 4;
+
+        std::vector<string> status_names = {
+            "Regular",
+            "Reputable",
+            "Sustainable",
+            "Regenerative",
+            "Thrivable"
+        };
 
         TABLE organization_table {
             name org_name;
@@ -203,6 +226,10 @@ CONTRACT organization : public contract {
 
         DEFINE_SIZE_TABLE_MULTI_INDEX
 
+        DEFINE_REP_TABLE
+
+        DEFINE_REP_TABLE_MULTI_INDEX
+
 
         TABLE totals_table {
             name account;
@@ -245,6 +272,16 @@ CONTRACT organization : public contract {
             uint64_t primary_key() const { return dau_history_id; }
             uint64_t by_account() const { return account.value; }
             uint64_t by_date() const { return date; }
+        };
+
+        TABLE planted_table { // from harvest
+            name account;
+            asset planted;
+            uint64_t rank;  
+
+            uint64_t primary_key()const { return account.value; }
+            uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
+            uint64_t by_rank() const { return rank; } 
         };
 
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
@@ -298,6 +335,11 @@ CONTRACT organization : public contract {
             const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_rank>>
         > cbs_organization_tables;
 
+        typedef eosio::multi_index<"planted"_n, planted_table,
+            indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
+            indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
+        > planted_tables;
+
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
@@ -306,19 +348,12 @@ CONTRACT organization : public contract {
         regen_score_tables regenscores;
         cbs_organization_tables cbsorgs;
         size_tables sizes;
+        rep_tables rep;
         balance_tables balances;
         ref_tables refs;
         avg_vote_tables avgvotes;
         totals_tables totals;
-
-        const name min_planted = "org.minplant"_n;
-        const name regen_score_size = "rs.sz"_n;
-        const name cb_score_size = "cbs.sz"_n;
-        const name tx_score_size = "txs.sz"_n;
-        const name regen_avg = "org.rgnavg"_n;
-        const uint64_t regular_org = 0;
-        const uint64_t reputable_org = 1;
-        const uint64_t regenerative_org = 2;
+        planted_tables planted;
 
         uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
@@ -342,6 +377,7 @@ CONTRACT organization : public contract {
         void history_add_regenerative(name organization);
         void history_add_reputable(name organization);
         uint64_t count_transactions(name organization);
+        uint64_t config_get(name key);
 };
 
 

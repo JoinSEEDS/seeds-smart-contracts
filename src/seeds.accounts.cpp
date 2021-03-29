@@ -1,4 +1,3 @@
- 
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>

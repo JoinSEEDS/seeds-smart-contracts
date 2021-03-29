@@ -58,7 +58,7 @@ CONTRACT history : public contract {
 
 
     private:
-      const uint64_t regenerative_org = 2;
+      const uint64_t status_sustainable = 2;
 
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
