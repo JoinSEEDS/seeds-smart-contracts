@@ -1200,7 +1200,7 @@ void harvest::send_distribute_harvest (name key, asset amount) {
     permission_level{get_self(), "active"_n},
     get_self(),
     key,
-    std::make_tuple(uint64_t(0), config_get("batchsize"_n), amount)
+    std::make_tuple(uint64_t(0), uint64_t(10), amount)
   );
 
   transaction tx;
