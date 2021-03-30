@@ -1142,7 +1142,8 @@ void harvest::calcmintrate () {
   require_auth(get_self());
 
   uint64_t day = utils::get_beginning_of_day_in_seconds();
-  auto previous_day_temp = eosio::time_point_sec((day - (3 * utils::moon_cycle)) / 86400 * 86400);
+  double economic_comparison_period_days = config_float_get("eco.cmp.per");
+  auto previous_day_temp = eosio::time_point_sec((day - (economic_comparison_period * utils::moon_cycle)) / 86400 * 86400);
   uint64_t previous_day = previous_day_temp.utc_seconds;
 
   auto current_qev_itr = monthlyqevs.find(day);
