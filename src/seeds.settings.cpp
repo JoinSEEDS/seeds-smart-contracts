@@ -25,7 +25,7 @@ void settings::reset() {
   confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.low"), 80, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 20, "High threshold for quorum (in percentage of total citizens)", high_impact);
+  confwithdesc(name("quorum.high"), 15, "High threshold for quorum (in percentage of total citizens)", high_impact);
   confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
   confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
