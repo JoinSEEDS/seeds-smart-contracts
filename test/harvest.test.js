@@ -3,7 +3,7 @@ const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLoc
 const { equals } = require("ramda")
 const { parse } = require("commander")
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, bioregion, globaldho, fifthuser } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, region, globaldho, fifthuser } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -1068,9 +1068,9 @@ describe('Mint Rate and Harvest', async assert => {
     eos.contract(settings),
     eos.contract(history),
     eos.contract(organization),
-    eos.contract(bioregion)
-  ]).then(([token, accounts, harvest, settings, history, organization, bioregion]) => ({
-    token, accounts, harvest, settings, history, organization, bioregion
+    eos.contract(region)
+  ]).then(([token, accounts, harvest, settings, history, organization, region]) => ({
+    token, accounts, harvest, settings, history, organization, region
   }))
 
   const day = getBeginningOfDayInSeconds()
@@ -1103,8 +1103,8 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('reset orgs')
   await contracts.organization.reset({ authorization: `${organization}@active` })
 
-  console.log('reset bios')
-  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+  console.log('reset rgns')
+  await contracts.region.reset({ authorization: `${region}@active` })
 
   console.log('reset weekly')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -1112,12 +1112,12 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('configure percentages')
   const percentageForUsers = 0.3
   const percentageForOrgs = 0.2
-  const percentageForBios = 0.3
+  const percentageForrgns = 0.3
   const percentageForGlobal = 0.2
 
   await contracts.settings.configure('hrvst.users', parseInt(percentageForUsers*1000000), { authorization: `${settings}@active` })
   await contracts.settings.configure('hrvst.orgs', parseInt(percentageForOrgs*1000000), { authorization: `${settings}@active` })
-  await contracts.settings.configure('hrvst.bios', parseInt(percentageForBios*1000000), { authorization: `${settings}@active` })
+  await contracts.settings.configure('hrvst.rgns', parseInt(percentageForrgns*1000000), { authorization: `${settings}@active` })
   await contracts.settings.configure('hrvst.global', parseInt(percentageForGlobal*1000000), { authorization: `${settings}@active` })
 
 
@@ -1183,17 +1183,17 @@ describe('Mint Rate and Harvest', async assert => {
     await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
   }
 
-  console.log('add bioregions')
+  console.log('add regions')
   const keypair = await createKeypair();
-  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const bios = ['bio1.bdc', 'bio2.bdc']
-  for (let index = 0; index < bios.length; index++) {
-    const bio = bios[index]
-    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
-    await contracts.bioregion.create(
+  await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const rgns = ['rgn1.rgn', 'rgn2.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
+    await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.region.create(
       users[index], 
-      bio, 
-      'test bio region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -1222,13 +1222,13 @@ describe('Mint Rate and Harvest', async assert => {
   })
   console.log(csOrgTable)
 
-  const bioregions = await getTableRows({
-    code: bioregion,
-    scope: bioregion,
-    table: 'bioregions',
+  const regions = await getTableRows({
+    code: region,
+    scope: region,
+    table: 'regions',
     json: true,
   })
-  //console.log(bioregions)
+  //console.log(regions)
   // ----------------------------------------- //
 
 
@@ -1266,7 +1266,7 @@ describe('Mint Rate and Harvest', async assert => {
   
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const bioBalancesBefore = await Promise.all(bios.map(bio => getTestBalance(bio)))
+  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
   const globalBalanceBefore = await getTestBalance(globaldho)
 
   console.log('run harvest')
@@ -1277,23 +1277,23 @@ describe('Mint Rate and Harvest', async assert => {
 
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const bioBalancesAfter = await Promise.all(bios.map(bio => getTestBalance(bio)))
+  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
   const globalBalanceAfter = await getTestBalance(globaldho)
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
   const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index])
-  const biosHarvest = bioBalancesAfter.map((seeds, index) => seeds - bioBalancesBefore[index])
+  const rgnsHarvest = rgnBalancesAfter.map((seeds, index) => seeds - rgnBalancesBefore[index])
   const globalHarvest = globalBalanceAfter - globalBalanceBefore
 
   console.log('users:', userHarvest)
   console.log('orgs:', orgsHarvest)
-  console.log('bios:', biosHarvest)
+  console.log('rgns:', rgnsHarvest)
   console.log('global:', globalHarvest)
 
   console.log('check expected values')
   checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
   checkHarvestValues('orgs', csOrgTable.rows.filter(row => orgs.includes(row.account)).map(row => row.rank), mintRate * percentageForOrgs, orgsHarvest)
-  checkHarvestValues('bios', new Array(bios.length).fill(1), mintRate * percentageForBios, biosHarvest)
+  checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintRate * percentageForrgns, rgnsHarvest)
   checkHarvestValues('global', [1], mintRate * percentageForGlobal, [globalHarvest])
 
   const stats = await getTableRows({
@@ -1317,7 +1317,7 @@ describe('Mint Rate and Harvest', async assert => {
 
 })
 
-describe('bioregions contribution score', async assert => {
+describe('regions contribution score', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1335,9 +1335,9 @@ describe('bioregions contribution score', async assert => {
     eos.contract(settings),
     eos.contract(history),
     eos.contract(organization),
-    eos.contract(bioregion)
-  ]).then(([token, accounts, harvest, settings, history, organization, bioregion]) => ({
-    token, accounts, harvest, settings, history, organization, bioregion
+    eos.contract(region)
+  ]).then(([token, accounts, harvest, settings, history, organization, region]) => ({
+    token, accounts, harvest, settings, history, organization, region
   }))
 
   const day = getBeginningOfDayInSeconds()
@@ -1354,8 +1354,8 @@ describe('bioregions contribution score', async assert => {
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
-  console.log('reset bios')
-  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+  console.log('reset rgns')
+  await contracts.region.reset({ authorization: `${region}@active` })
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -1369,17 +1369,17 @@ describe('bioregions contribution score', async assert => {
     await contracts.history.reset(user, { authorization: `${history}@active` })
   }
 
-  console.log('add bioregions')
+  console.log('add regions')
   const keypair = await createKeypair();
-  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const bios = ['bio1.bdc', 'bio2.bdc', 'bio3.bdc']
-  for (let index = 0; index < bios.length; index++) {
-    const bio = bios[index]
-    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
-    await contracts.bioregion.create(
+  await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const rgns = ['rgn1.rgn', 'rgn2.rgn', 'rgn3.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
+    await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.region.create(
       users[index], 
-      bio, 
-      'test bio region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -1387,8 +1387,8 @@ describe('bioregions contribution score', async assert => {
       { authorization: `${users[index]}@active` })
   }
 
-  await contracts.bioregion.join('bio2.bdc', fourthuser,{ authorization: `${fourthuser}@active` })
-  await contracts.bioregion.join('bio3.bdc', fifthuser,{ authorization: `${fifthuser}@active` })
+  await contracts.region.join('rgn2.rgn', fourthuser,{ authorization: `${fourthuser}@active` })
+  await contracts.region.join('rgn3.rgn', fifthuser,{ authorization: `${fifthuser}@active` })
 
   console.log('transfer')
   for (let i = 0; i < users.length; i++) {
@@ -1412,37 +1412,37 @@ describe('bioregions contribution score', async assert => {
   await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
   console.log('calc contribution score')
-  await contracts.harvest.rankbiocss({ authorization: `${harvest}@active` })
+  await contracts.harvest.rankrgncss({ authorization: `${harvest}@active` })
   await sleep(5000)
 
-  const cspointsBios = await getTableRows({
+  const cspointsrgns = await getTableRows({
     code: harvest,
-    scope: 'bio',
+    scope: 'rgn',
     table: 'cspoints',
     json: true
   })
 
-  const cspointsBiosTemp = await getTableRows({
+  const cspointsrgnsTemp = await getTableRows({
     code: harvest,
     scope: harvest,
-    table: 'biocstemp',
+    table: 'regioncstemp',
     json: true
   })
 
   assert({
-    given: 'cs for bioregions',
+    given: 'cs for regions',
     should: 'have the correct ranks',
-    actual: cspointsBios.rows,
+    actual: cspointsrgns.rows,
     expected: [
-      { account: 'bio2.bdc', contribution_points: 77, rank: 0 },
-      { account: 'bio3.bdc', contribution_points: 117, rank: 50 }
+      { account: 'rgn2.rgn', contribution_points: 77, rank: 0 },
+      { account: 'rgn3.rgn', contribution_points: 117, rank: 50 }
     ]
   })
 
   assert({
-    given: 'cs for bioregions, the table biocstemp',
+    given: 'cs for regions, the table regioncstemp',
     should: 'not have entries',
-    actual: cspointsBiosTemp.rows,
+    actual: cspointsrgnsTemp.rows,
     expected: []
   })
 
