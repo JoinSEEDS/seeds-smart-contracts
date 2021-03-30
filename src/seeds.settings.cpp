@@ -65,8 +65,11 @@ void settings::reset() {
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
-  confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
+  confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum qualifying volume", high_impact);
 
+  // QEV calculation
+  conffloatdsc(name("eco.cmp.per"), 3.0, "Economic comparison period in moon cycles - compare economy to [N] moon cycles ago");
+  
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
