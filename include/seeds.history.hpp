@@ -24,8 +24,6 @@ CONTRACT history : public contract {
           sizes(receiver, receiver.value),
           residents(receiver, receiver.value),
           citizens(receiver, receiver.value),
-          reputables(receiver, receiver.value),
-          regens(receiver, receiver.value),
           totals(receiver, receiver.value),
           organizations(contracts::organization, contracts::organization.value),
           members(contracts::bioregion, contracts::bioregion.value)
@@ -42,10 +40,6 @@ CONTRACT history : public contract {
         ACTION addresident(name account);
         
         ACTION numtrx(name account);
-
-        ACTION addreputable(name organization);
-
-        ACTION addregen(name organization);
 
         ACTION updatestatus(name account, name scope);
 
@@ -132,24 +126,6 @@ CONTRACT history : public contract {
       
       // --------------------------------------------------- //
       // old tables
-
-      TABLE reputable_table {
-        uint64_t id;
-        name organization;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
-      };
-
-      TABLE regenerative_table {
-        uint64_t id;
-        name organization;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
-      };
 
       TABLE transaction_table {
         uint64_t id;
@@ -273,16 +249,6 @@ CONTRACT history : public contract {
         const_mem_fun<account_status_table, uint64_t, &account_status_table::by_timestamp>>
       > account_status_tables;
 
-      typedef eosio::multi_index<"reputables"_n, reputable_table,
-        indexed_by<"byorg"_n,
-        const_mem_fun<reputable_table, uint64_t, &reputable_table::by_org>>
-      > reputable_tables;
-
-      typedef eosio::multi_index<"regens"_n, regenerative_table,
-        indexed_by<"byorg"_n,
-        const_mem_fun<regenerative_table, uint64_t, &regenerative_table::by_org>>
-      > regenerative_tables;
-
       typedef eosio::multi_index<"dailytrxs"_n, daily_transactions_table,
         indexed_by<"byfrom"_n,
         const_mem_fun<daily_transactions_table, uint64_t, &daily_transactions_table::by_from>>,
@@ -323,8 +289,6 @@ CONTRACT history : public contract {
       user_tables users;
       resident_tables residents;
       citizen_tables citizens;
-      reputable_tables reputables;
-      regenerative_tables regens;
       totals_tables totals;
       size_tables sizes;
       organization_tables organizations;
@@ -335,7 +299,7 @@ EOSIO_DISPATCH(history,
   (reset)
   (historyentry)(trxentry)
   (addcitizen)(addresident)
-  (addreputable)(addregen)(updatestatus)
+  (updatestatus)
   (numtrx)
   (deldailytrx)(savepoints)
   (testtotalqev)
