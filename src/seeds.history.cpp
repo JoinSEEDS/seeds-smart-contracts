@@ -44,6 +44,15 @@ void history::reset(name account) {
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
   }
+
+  for (name s : status_names) {
+    account_status_tables accstatus(get_self(), s.value);
+    auto aitr = accstatus.begin();
+    while (aitr != accstatus.end()) {
+      aitr = accstatus.erase(aitr);
+    }
+  }
+
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -110,12 +119,27 @@ void history::addregen(name organization) {
   size_change("regens.sz"_n, 1);
 }
 
+void history::updatestatus (name account, name scope) {
+  require_auth(get_self());
+
+  account_status_tables acctstatus(get_self(), scope.value);
+  
+  acctstatus.emplace(_self, [&](auto & item){
+    item.id = acctstatus.available_primary_key();
+    item.account = account;
+    item.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+
+  size_change(scope, 1);
+}
+
 double history::get_transaction_multiplier (name account, name other) {
   double multiplier = utils::get_rep_multiplier(account);
   
   auto oitr = organizations.find(account.value);
-  if (oitr != organizations.end() && oitr -> status == status_sustainable) {
-    multiplier *= config_float_get("regen.mul"_n);
+
+  if (oitr != organizations.end()) {
+    multiplier *= config_float_get(name("org" + std::to_string(oitr->status+1) + "trx.mul"));
   }
 
   auto bitr_account = members.find(account.value);
@@ -175,8 +199,6 @@ void history::trxentry(name from, name to, asset quantity) {
     std::min(max_transaction_points_organizations, quantity.amount) : 
     std::min(max_transaction_points_individuals, quantity.amount)
   ) / 10000.0;
-
-  double from_multiplier = get_transaction_multiplier(to, from);
   
   double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 

@@ -24,7 +24,6 @@ CONTRACT organization : public contract {
               cbsorgs(receiver, receiver.value),
               sizes(receiver, receiver.value),
               avgvotes(receiver, receiver.value),
-              rep(contracts::accounts, contracts::accounts.value),
               refs(contracts::accounts, contracts::accounts.value),
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
@@ -70,27 +69,22 @@ CONTRACT organization : public contract {
 
         ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
-        // ACTION rankcbsorgs();
-
-        // ACTION rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize);
-
-        // ACTION addcbpoints(name organization, uint32_t cbscore);
-
-        // ACTION subcbpoints(name organization, uint32_t cbscore);
+        ACTION makethrivble(name organization);
 
         ACTION makeregen(name organization);
 
+        ACTION makesustnble(name organization);
+
         ACTION makereptable(name organization);
-
-        ACTION testregen(name organization);
-
-        ACTION testreptable(name organization);
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
         ACTION scoretrxs();
 
         ACTION scoreorgs(name next);
+
+        ACTION testregensc(name organization, uint64_t score);
+        ACTION teststatus(name organization, uint64_t status);
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
@@ -107,12 +101,12 @@ CONTRACT organization : public contract {
         const uint64_t status_regenerative = 3;
         const uint64_t status_thrivable = 4;
 
-        std::vector<string> status_names = {
-            "Regular",
-            "Reputable",
-            "Sustainable",
-            "Regenerative",
-            "Thrivable"
+        std::vector<name> status_names = {
+            "regular"_n,
+            "reputable"_n,
+            "sustainable"_n,
+            "regenerative"_n,
+            "thrivable"_n
         };
 
         TABLE organization_table {
@@ -348,14 +342,12 @@ CONTRACT organization : public contract {
         regen_score_tables regenscores;
         cbs_organization_tables cbsorgs;
         size_tables sizes;
-        rep_tables rep;
         balance_tables balances;
         ref_tables refs;
         avg_vote_tables avgvotes;
         totals_tables totals;
         planted_tables planted;
 
-        uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
         void init_balance(name account);
@@ -369,15 +361,11 @@ CONTRACT organization : public contract {
         void increase_size_by_one(name id);
         void decrease_size_by_one(name id);
         uint32_t calc_transaction_points(name organization);
-        void check_can_make_regen(name organization);
-        void check_can_make_reputable(name organization);
-        uint64_t count_refs(name user, uint32_t check_num_residents);
         void update_status(name organization, uint64_t status);
-        uint64_t get_regen_score(name organization);
-        void history_add_regenerative(name organization);
-        void history_add_reputable(name organization);
-        uint64_t count_transactions(name organization);
         uint64_t config_get(name key);
+        void check_referrals(name organization, uint64_t min_visitors_invited, uint64_t min_residents_invited);
+        void check_status_requirements(name organization, uint64_t status);
+        void history_update_org_status(name organization, uint64_t status);
 };
 
 
@@ -388,8 +376,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
-            (rankregens)(rankregen)(makeregen)
-            (makereptable)(testregen)(testreptable)(scoreorgs)(scoretrxs))
+            (rankregens)(rankregen)(scoreorgs)(scoretrxs)
+            (makethrivble)(makeregen)(makesustnble)(makereptable)(testregensc)(teststatus))
       }
   }
 }
