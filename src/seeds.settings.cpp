@@ -43,7 +43,7 @@ void settings::reset() {
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
-  confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
+  confwithdesc(name("region.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a region (in Seeds)", high_impact);
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
@@ -58,7 +58,9 @@ void settings::reset() {
   confwithdesc(name("i.trx.div"), 26, "Individuals: Transaction diversity not more than 26 from 1 user is counted", high_impact);
   
   confwithdesc(name("org.trx.max"), uint64_t(1777) * uint64_t(10000), "Organization: Maximum points for a transaction", high_impact);
-  confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
+
+  // not used remove
+  // confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
 
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
@@ -67,7 +69,7 @@ void settings::reset() {
 
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
-  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Bioregions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
@@ -236,11 +238,9 @@ void settings::reset() {
   // community buiding points for voucher when user referred reputable org
   confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
 
-  // community buiding points for org referrer when referred user becomes resident
   confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
-
-  // community buiding points for org referrer when user becomes citizen
   confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
+  confwithdesc(name("cbp.wane"), 2, "Degrading % over 1 cycle for org cbp points", high_impact);
 
   // =====================================
   // flag points
@@ -265,16 +265,16 @@ void settings::reset() {
   // =====================================
   // transaction multipliers
   // =====================================
-  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same region", high_impact);
   conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
 
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 
   // =====================================
-  // bioregion
+  // region
   // =====================================
-  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
+  conffloatdsc(name("rgn.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
 
   // =====================================
   // gratitude 

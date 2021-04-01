@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, thirduser, history, accounts, organization, token, settings, bioregion } = names
+const { firstuser, seconduser, thirduser, history, accounts, organization, token, settings, region } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -765,7 +765,7 @@ describe('individual transactions', async assert => {
   const firstorg = 'firstorg'
   const secondorg = 'secondorg'
 
-  const contracts = await initContracts({ token, history, accounts, settings, organization, bioregion })
+  const contracts = await initContracts({ token, history, accounts, settings, organization, region })
 
   const day = getBeginningOfDayInSeconds()
 
@@ -790,8 +790,8 @@ describe('individual transactions', async assert => {
   console.log('reset orgs')
   await contracts.organization.reset({ authorization: `${organization}@active` })
 
-  console.log('reset bios')
-  await contracts.bioregion.reset({ authorization: `${bioregion}@active` })
+  console.log('reset rgns')
+  await contracts.region.reset({ authorization: `${region}@active` })
 
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
@@ -816,17 +816,17 @@ describe('individual transactions', async assert => {
   await contracts.accounts.testsetrs(secondorg, 49, { authorization: `${accounts}@active` })
   await contracts.organization.teststatus(firstorg, 4, { authorization: `${organization}@active` })
     
-  console.log('add bioregions')
+  console.log('add regions')
   const keypair = await createKeypair();
-  await contracts.settings.configure("bio.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const bios = ['bio1.bdc']
-  for (let index = 0; index < bios.length; index++) {
-    const bio = bios[index]
-    await contracts.token.transfer(users[index], bioregion, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
-    await contracts.bioregion.create(
+  await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const rgns = ['rgn1.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
+    await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.region.create(
       users[index], 
-      bio, 
-      'test bio region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -834,7 +834,7 @@ describe('individual transactions', async assert => {
       { authorization: `${users[index]}@active` })
   }
 
-  await contracts.bioregion.join(bios[0], thirduser, { authorization: `${thirduser}@active` })
+  await contracts.region.join(rgns[0], thirduser, { authorization: `${thirduser}@active` })
 
   await transfer(firstuser, thirduser, 1)
   await transfer(thirduser, seconduser, 1)

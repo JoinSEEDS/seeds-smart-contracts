@@ -83,7 +83,7 @@ void scheduler::reset_aux(bool destructive) {
         name("hrvst.rankcs"), 
         name("hrvst.rorgcs"),
         name("hrvst.calctx"), // 24h
-        name("hrvst.biocs"),
+        name("hrvst.rgncs"),
 
         name("org.clndaus"),
         name("org.rankregn"),
@@ -116,7 +116,7 @@ void scheduler::reset_aux(bool destructive) {
         name("rankcss"),
         name("rankorgcss"),
         name("calctrxpts"),
-        name("rankbiocss"),
+        name("rankrgncss"),
 
         name("cleandaus"),
         name("rankregens"),
