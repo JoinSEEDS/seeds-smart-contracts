@@ -68,7 +68,7 @@ void settings::reset() {
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum qualifying volume", high_impact);
 
   // QEV calculation
-  conffloatdsc(name("eco.cmp.per"), 3.0, "Economic comparison period in moon cycles - compare economy to [N] moon cycles ago");
+  conffloatdsc(name("eco.cmp.per"), 3.0, "Economic comparison period in moon cycles - compare economy to [N] moon cycles ago", high_impact);
   
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
