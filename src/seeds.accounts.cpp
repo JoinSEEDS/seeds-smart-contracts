@@ -1,4 +1,3 @@
- 
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>
@@ -203,7 +202,7 @@ void accounts::pnishvouched (name sponsor, uint64_t start_account) {
   require_auth(get_self());
 
   uint64_t batch_size = config_get("batchsize"_n);
-  uint128_t id = uint128_t(sponsor.value) << 64;
+  uint128_t id = (uint128_t(sponsor.value) << 64) + start_account;
 
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
