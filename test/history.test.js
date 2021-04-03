@@ -814,7 +814,7 @@ describe('individual transactions', async assert => {
   await contracts.organization.create(seconduser, secondorg, "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
   await contracts.accounts.testsetrs(firstorg, 49, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(secondorg, 49, { authorization: `${accounts}@active` })
-  await contracts.organization.testregen(firstorg, { authorization: `${organization}@active` })
+  await contracts.organization.teststatus(firstorg, 4, { authorization: `${organization}@active` })
     
   console.log('add regions')
   const keypair = await createKeypair();
