@@ -526,10 +526,6 @@ void organization::check_status_requirements (name organization, uint64_t status
 
     if (status == status_regular) { return; }
 
-    uint64_t planted_min = get_config(name("rep.minplnt"));
-    uint64_t regen_min_rank = get_config(name("rep.minrank"));
-    uint64_t min_invited = get_config(name("rep.refrred"));
-    uint64_t min_residents_invited = get_config(name("rep.resref"));
     check(oitr->status == status-1, 
         "organization is not " + (status_names[status-1]).to_string() + ", it can not become " + (status_names[status]).to_string());
 
