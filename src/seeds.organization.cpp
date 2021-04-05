@@ -2,11 +2,11 @@
 #include <eosio/system.hpp>
 
 
-uint64_t organization::get_config(name key) {
-    auto citr = config.find(key.value);
-    check(citr != config.end(), ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
-    return citr -> value;
-}
+// uint64_t organization::get_config(name key) {
+//     auto citr = config.find(key.value);
+//     check(citr != config.end(), ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+//     return citr -> value;
+// }
 
 void organization::check_owner(name organization, name owner) {
     require_auth(owner);
@@ -73,6 +73,16 @@ void organization::decrease_size_by_one(name id) {
         });
     }
 }
+
+uint64_t organization::config_get (name key) {
+    auto citr = config.find(key.value);
+        if (citr == config.end()) { 
+        // only create the error message string in error case for efficiency
+        eosio::check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+    }
+    return citr->value;
+}
+
 
 void organization::deposit(name from, name to, asset quantity, string memo) {
     if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
@@ -178,13 +188,13 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
 {
     require_auth(sponsor);
 
-    auto bitr = sponsors.find(sponsor.value);
-    check(bitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
+    auto sitr = sponsors.find(sponsor.value);
+    check(sitr != sponsors.end(), "The sponsor account does not have a balance entry in this contract.");
 
-    auto feeparam = config.get(min_planted.value, "The org.minplant parameter has not been initialized yet.");
-    asset quantity(feeparam.value, seeds_symbol);
+    asset quantity(config_get("orgminplnt.1"_n), seeds_symbol);
 
-    check(bitr->balance >= quantity, "The user does not have enough credit to create an organization" + bitr->balance.to_string() + " min: "+quantity.to_string());
+    check(sitr->balance >= quantity, 
+        "The user does not have enough credit to create an organization" + sitr->balance.to_string() + " min: "+quantity.to_string());
 
     auto orgitr = organizations.find(orgaccount.value);
     check(orgitr == organizations.end(), "This organization already exists.");
@@ -204,7 +214,7 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
     ).send();
 
 
-    sponsors.modify(bitr, _self, [&](auto & mbalance) {
+    sponsors.modify(sitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
 
@@ -212,7 +222,7 @@ ACTION organization::create(name sponsor, name orgaccount, string orgfullname, s
         norg.org_name = orgaccount;
         norg.owner = sponsor;
         norg.planted = quantity;
-        norg.status = regular_org;
+        norg.status = status_regular;
     });
 
     addmember(orgaccount, sponsor, sponsor, ""_n);
@@ -396,7 +406,7 @@ void organization::vote(name organization, name account, int64_t regen) {
         });
     }
 
-    int64_t min_regen = (int64_t)config.get(name("org.rgen.min").value, "The org.rgen.min parameter has not been initialized yet").value;
+    int64_t min_regen = (int64_t)config_get("orgratethrsh"_n);
     if (org_regen >= min_regen) {
         auto itr_regen = regenscores.find(organization.value);
         if (itr_regen != regenscores.end()) {
@@ -423,7 +433,7 @@ ACTION organization::addregen(name organization, name account, uint64_t amount) 
     amount = std::min(amount, maxAmount);
 
     revert_previous_vote(organization, account);
-    vote(organization, account, amount * getregenp(account));
+    vote(organization, account, amount * utils::get_rep_multiplier(account));
 }
 
 
@@ -435,7 +445,7 @@ ACTION organization::subregen(name organization, name account, uint64_t amount) 
     amount = std::min(amount, minAmount);
 
     revert_previous_vote(organization, account);
-    vote(organization, account, -1 * amount * getregenp(account));
+    vote(organization, account, -1 * int64_t(amount) * utils::get_rep_multiplier(account));
 }
 
 ACTION organization::rankregens() {
@@ -483,224 +493,98 @@ ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksiz
     }
 }
 
-ACTION organization::addcbpoints(name organization, uint32_t cbscore) {
-    require_auth(get_self());
-    auto itr_cbs = cbsorgs.find(organization.value);
-    if (itr_cbs != cbsorgs.end()) {
-        cbsorgs.modify(itr_cbs, _self, [&](auto & cbs){
-            cbs.community_building_score += cbscore;
-        });
-    } else {
-        cbsorgs.emplace(_self, [&](auto & cbs){
-            cbs.org_name = organization;
-            cbs.community_building_score = cbscore;
-        });
-        increase_size_by_one(cb_score_size);
-    }
-}
-
-ACTION organization::subcbpoints(name organization, uint32_t cbscore) {
-    require_auth(get_self());
-    auto itr_cbs = cbsorgs.find(organization.value);
-    if (itr_cbs != cbsorgs.end()) {
-        if (itr_cbs -> community_building_score > cbscore) {
-            cbsorgs.modify(itr_cbs, _self, [&](auto & cbs){
-                cbs.community_building_score -= cbscore;
-            });
-        } else {
-            cbsorgs.erase(itr_cbs);
-            decrease_size_by_one(cb_score_size);
-        }
-    }
-}
-
-ACTION organization::rankcbsorgs() {
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet");
-    rankcbsorg((uint64_t)0, (uint64_t)0, batch_size.value);
-}
-
-ACTION organization::rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize) {
-    require_auth(get_self());
-
-    check(chunksize > 0, "chunk size must be > 0");
-    
-    uint64_t total = get_size(cb_score_size);
-
-    if (total == 0) return;
-
-    uint64_t current = chunk * chunksize;
-    auto cbs_by_points = cbsorgs.get_index<"bycbs"_n>();
-    auto cbsitr = start == 0 ? cbs_by_points.begin() : cbs_by_points.lower_bound(start);
-    uint64_t count = 0;
-
-    while (cbsitr != cbs_by_points.end() && count < chunksize) {
-
-        uint64_t rank = utils::rank(current, total);
-
-        cbs_by_points.modify(cbsitr, _self, [&](auto & item) {
-            item.rank = rank;
-        });
-
-        current++;
-        count++;
-        cbsitr++;
-    }
-
-    if (cbsitr != cbs_by_points.end()) {
-        uint64_t next_value = (cbsitr -> org_name).value;
-        action next_execution(
-            permission_level("active"_n, get_self()),
-            get_self(),
-            "rankcbsorg"_n,
-            std::make_tuple(next_value, chunk + 1, chunksize)
-        );
-        transaction tx;
-        tx.actions.emplace_back(next_execution);
-        tx.delay_sec = 1;
-        tx.send(cb_score_size.value, _self);
-    }
-}
-
-uint64_t organization::get_regen_score(name organization) {
-    auto ritr = regenscores.find(organization.value);
-    if (ritr == regenscores.end()) {
-        return 0;
-    }
-    return ritr -> rank;
-}
-
-uint64_t organization::count_refs(name organization, uint32_t check_num_residents) {
+void organization::check_referrals (name organization, uint64_t min_visitors_invited, uint64_t min_residents_invited) {
     auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
-    if (check_num_residents == 0) {
-      return std::distance(refs_by_referrer.lower_bound(organization.value), refs_by_referrer.upper_bound(organization.value));
-    } else {
-      uint64_t count = 0;
-      int residents = 0;
-      auto ritr = refs_by_referrer.lower_bound(organization.value);
-      while (ritr != refs_by_referrer.end() && ritr->referrer == organization) {
+
+    uint64_t residents = 0;
+    uint64_t visitors = 0;
+
+    auto ritr = refs_by_referrer.find(organization.value);
+
+    while (ritr != refs_by_referrer.end() && ritr->referrer == organization && 
+        (residents < min_residents_invited || visitors < min_visitors_invited)) {
         auto uitr = users.find(ritr->invited.value);
         if (uitr != users.end()) {
           if (uitr->status == "resident"_n || uitr->status == "citizen"_n) {
             residents++;
           }
+          visitors++;
         }
         ritr++;
-        count++;
-      }
-      check(residents >= check_num_residents, "organization has not referred enough residents or citizens: "+std::to_string(residents));
-      return count;
-    }
-}
-
-uint64_t organization::count_transactions(name organization) {
-    auto totals_itr = totals.find(organization.value);
-
-    if (totals_itr == totals.end()) {
-        return 0;
     }
 
-    return totals_itr -> total_number_of_transactions;
+    check(residents >= min_residents_invited, "organization has less than the required number of referred residents");
+    check(visitors >= min_visitors_invited, "organization has less than the required number of referred visitors");
 }
 
-void organization::check_can_make_reputable(name organization) {
+void organization::check_status_requirements (name organization, uint64_t status) {
     auto oitr = organizations.find(organization.value);
-    check(oitr != organizations.end(), "the organization does not exist");
-    check(oitr->status == regular_org, "the organization is not a regular organization");
+    check(oitr != organizations.end(), "organization not found");
 
-    auto bitr = balances.find(organization.value);
+    if (status == status_regular) { return; }
 
-    uint64_t planted_min = get_config(name("rep.minplnt"));
-    uint64_t regen_min_rank = get_config(name("rep.minrank"));
-    uint64_t min_invited = get_config(name("rep.refrred"));
-    uint64_t min_residents_invited = get_config(name("rep.resref"));
-    uint64_t min_trx = get_config(name("rep.mintrx"));
+    check(oitr->status == status-1, 
+        "organization is not " + (status_names[status-1]).to_string() + ", it can not become " + (status_names[status]).to_string());
 
-    uint64_t invited_users_number = count_refs(organization, min_residents_invited);
-    uint64_t regen_score = get_regen_score(organization);
-    uint64_t valid_trxs = count_transactions(organization);
+    string status_str = std::to_string(status+1);
 
-    check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
-    check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
-    check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
-        std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
-    check(valid_trxs >= min_trx, 
-        "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
+    uint64_t min_planted = config_get(name("orgminplnt." + status_str));
+    uint64_t min_rep_rank = config_get(name("orgminrank." + status_str));
+    uint64_t min_regen_score = config_get(name("org.rated." + status_str));
+    uint64_t min_visitors_invited = config_get(name("org.visref." + status_str));
+    uint64_t min_residents_invited = config_get(name("org.resref." + status_str));
+
+    auto pitr = planted.get(organization.value, "organization does not have seeds planted");
+    check(pitr.planted.amount >= min_planted, "organization has less than the required amount of seeds planted");
+
+    rep_tables rep_t(contracts::accounts, name("org").value);
+    auto repitr = rep_t.get(organization.value, "organization does not have reputation");
+    check(repitr.rank >= min_rep_rank, "organization has less than the required reputation rank");
+
+    check(oitr->regen >= min_regen_score, "organization has less than the required regen score");
+
+    check_referrals(organization, min_visitors_invited, min_residents_invited);
 }
 
-void organization::check_can_make_regen(name organization) {
-    auto oitr = organizations.find(organization.value);
-    check(oitr != organizations.end(), "the organization does not exist");
-    check(oitr->status == reputable_org, "the organization is not reputable");
-
-    auto bitr = balances.find(organization.value);
-
-    uint64_t planted_min = get_config(name("rgen.minplnt"));
-    uint64_t regen_min_rank = get_config(name("rgen.minrank"));
-    uint64_t min_invited = get_config(name("rgen.refrred"));
-    uint64_t min_residents_invited = get_config(name("rgen.resref"));
-    uint64_t min_trx = get_config(name("rgen.mintrx"));
-
-    uint64_t invited_users_number = count_refs(organization, min_residents_invited);
-    uint64_t regen_score = get_regen_score(organization);
-    uint64_t valid_trxs = count_transactions(organization);
-
-    check(bitr -> planted.amount >= planted_min, "organization has less than the required amount of seeds planted");
-    check(regen_score >= regen_min_rank, "organization has less than the required regenerative score");
-    check(invited_users_number >= min_invited, "organization has less than required referrals. required: " + 
-        std::to_string(min_invited) + " actual: " + std::to_string(invited_users_number));
-    check(valid_trxs >= min_trx, 
-        "organization has exchanged less than the required transactions with other Reputable/Regenerative organizations or Citizens");
-}
-
-void organization::update_status(name organization, uint64_t status) {
+void organization::update_status (name organization, uint64_t status) {
   auto oitr = organizations.find(organization.value);
-
   check(oitr != organizations.end(), "the organization does not exist");
-  check(status == regenerative_org || status == reputable_org, "invalid organization status");
-
   organizations.modify(oitr, _self, [&](auto& org) {
     org.status = status;
   });
 }
 
-void organization::history_add_regenerative(name organization) {
+void organization::history_update_org_status (name organization, uint64_t status) {
     action(
-        permission_level{contracts::history, "active"_n},
-        contracts::history, "addregen"_n,
-        std::make_tuple(organization)
+        permission_level(contracts::history, "active"_n),
+        contracts::history,
+        "updatestatus"_n,
+        std::make_tuple(organization, status_names[status])
     ).send();
 }
 
-void organization::history_add_reputable(name organization) {
-    action(
-        permission_level{contracts::history, "active"_n},
-        contracts::history, "addreputable"_n,
-        std::make_tuple(organization)
-    ).send();
+ACTION organization::makethrivble (name organization) {
+    check_status_requirements(organization, status_thrivable);
+    update_status(organization, status_thrivable);
+    history_update_org_status(organization, status_thrivable);
 }
 
-ACTION organization::makeregen(name organization) {
-    check_can_make_regen(organization);
-    update_status(organization, regenerative_org);
-    history_add_regenerative(organization);
+ACTION organization::makeregen (name organization) {
+    check_status_requirements(organization, status_regenerative);
+    update_status(organization, status_regenerative);
+    history_update_org_status(organization, status_regenerative);
+}
+
+ACTION organization::makesustnble (name organization) {
+    check_status_requirements(organization, status_sustainable);
+    update_status(organization, status_sustainable);
+    history_update_org_status(organization, status_sustainable);
 }
 
 ACTION organization::makereptable(name organization) {
-    check_can_make_reputable(organization);
-    update_status(organization, reputable_org);
-    history_add_reputable(organization);
-}
-
-ACTION organization::testregen(name organization) {
-    require_auth(get_self());
-    update_status(organization, regenerative_org);
-    history_add_regenerative(organization);
-}
-
-ACTION organization::testreptable(name organization) {
-    require_auth(get_self());
-    update_status(organization, reputable_org);
-    history_add_reputable(organization);
+    check_status_requirements(organization, status_reputable);
+    update_status(organization, status_reputable);
+    history_update_org_status(organization, status_reputable);
 }
 
 ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
@@ -887,4 +771,21 @@ ACTION organization::scoreorgs(name next) {
     //         tx.send(next.value+2, _self);
     //     }
     // }
+}
+
+ACTION organization::testregensc (name organization, uint64_t score) {
+    require_auth(get_self());
+
+    auto oitr = organizations.find(organization.value);
+    if (oitr != organizations.end()) {
+        organizations.modify(oitr, _self, [&](auto & item){
+            item.regen = score;
+        });
+    }
+}
+
+ACTION organization::teststatus (name organization, uint64_t status) {
+    require_auth(get_self());
+    update_status(organization, status);
+    history_update_org_status(organization, status);
 }

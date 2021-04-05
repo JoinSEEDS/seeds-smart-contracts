@@ -72,19 +72,21 @@ void scheduler::reset_aux(bool destructive) {
         name("tokn.resetw"),
 
         name("acct.rankrep"),
+        name("acct.rorgrep"),
         name("acct.rankcbs"),
+        name("acct.rorgcbs"),
 
         name("hrvst.ranktx"),
         name("hrvst.rankpl"),
 
         name("hrvst.calccs"), // after the above 4
         name("hrvst.rankcs"), 
+        name("hrvst.rorgcs"),
         name("hrvst.calctx"), // 24h
-        name("hrvst.biocs"),
+        name("hrvst.rgncs"),
 
         name("org.clndaus"),
         name("org.rankregn"),
-        name("org.rankcbs"),
 
         name("hrvst.orgtxs"),
 
@@ -103,19 +105,21 @@ void scheduler::reset_aux(bool destructive) {
         name("resetweekly"),
 
         name("rankreps"),
+        name("rankorgreps"),
         name("rankcbss"),
+        name("rankorgcbss"),
         
         name("ranktxs"),
         name("rankplanteds"),
 
         name("calccss"),
         name("rankcss"),
+        name("rankorgcss"),
         name("calctrxpts"),
-        name("rankbiocss"),
+        name("rankrgncss"),
 
         name("cleandaus"),
         name("rankregens"),
-        name("rankcbsorgs"),
 
         name("rankorgtxs"),
 
@@ -135,6 +139,8 @@ void scheduler::reset_aux(bool destructive) {
 
         contracts::accounts,
         contracts::accounts,
+        contracts::accounts,
+        contracts::accounts,
 
         contracts::harvest,
         contracts::harvest,
@@ -143,8 +149,8 @@ void scheduler::reset_aux(bool destructive) {
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
+        contracts::harvest,
 
-        contracts::organization,
         contracts::organization,
         contracts::organization,
 
@@ -166,17 +172,19 @@ void scheduler::reset_aux(bool destructive) {
 
         utils::seconds_per_hour,
         utils::seconds_per_hour,
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
 
         utils::seconds_per_hour,
         utils::seconds_per_hour,
 
+        utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_day,
         utils::seconds_per_day,
 
         utils::seconds_per_day / 2,
-        utils::seconds_per_day,
         utils::seconds_per_day,
 
         utils::seconds_per_day,
@@ -198,12 +206,15 @@ void scheduler::reset_aux(bool destructive) {
         now,
 
         now - utils::seconds_per_hour, 
-        now - utils::seconds_per_hour, 
+        now - utils::seconds_per_hour,
+        now - utils::seconds_per_hour,
+        now - utils::seconds_per_hour,
 
         now - utils::seconds_per_hour, 
         now - utils::seconds_per_hour, 
 
         now + 300 - utils::seconds_per_hour, // kicks off 5 minutes later
+        now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
