@@ -261,6 +261,34 @@ bool proposals::is_active(name account, uint64_t cutoff_date) {
   return aitr != actives.end() && aitr->timestamp > cutoff_date;
 }
 
+void proposals::send_create_invite (
+  name origin_account, 
+  name owner, 
+  asset max_amount_per_invite, 
+  asset planted, 
+  name reward_owner, 
+  asset reward, 
+  asset total_amount,
+  uint64_t proposal_id
+) {
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "createcampg"_n,
+    std::make_tuple(origin_account, owner, max_amount_per_invite, planted, reward_owner, reward, total_amount, proposal_id)
+  ).send();
+}
+
+void proposals::send_return_funds_campaign (uint64_t campaign_id) {
+  if (campaign_id == 0) { return; }
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "returnfunds"_n,
+    std::make_tuple(campaign_id)
+  ).send();
+}
+
 void proposals::onperiod() {
     require_auth(_self);
 
@@ -301,6 +329,8 @@ void proposals::onperiod() {
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
 
+      print("running proposal: ", pitr->id, "\n");
+
       // active proposals are evaluated
       if (pitr->stage == stage_active) {
 
@@ -324,6 +354,8 @@ void proposals::onperiod() {
           valid_quorum = votes_in_favor >= quorum_votes_needed;
         }
 
+        print("proposal id: ", pitr->id, ", passed: ", passed, ", valid_quorum: ", valid_quorum, ", quorum: ", quorum, "\n");
+
         if (passed && valid_quorum) {
 
           if (pitr -> status == status_open) {
@@ -336,7 +368,13 @@ void proposals::onperiod() {
             if (is_alliance_type) {
               send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
             } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+              if (pitr->campaign_type == campaign_invite_type) {
+                withdraw(get_self(), payout_amount, pitr->fund, "invites");
+                withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+                send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+              } else {
+                withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+              }
             }
 
             // TODO: if we allow num_cycles == 1, this needs to go into passed instead of evaluate.
@@ -382,6 +420,10 @@ void proposals::onperiod() {
         } else {
           if (pitr->status != status_evaluate) {
             burn(pitr->staked);
+          }
+
+          if (pitr->campaign_type == campaign_invite_type) {
+            send_return_funds_campaign(pitr->campaign_id);
           }
 
           props.modify(pitr, _self, [&](auto& proposal) {
@@ -714,41 +756,30 @@ void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vect
 
 }
 
-void proposals::create(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
-  string summary, 
-  string description, 
-  string image, 
-  string url, 
-  name fund
-) {
-  require_auth(creator);
-  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
-
-  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc );
-}
-
-void proposals::createx(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
+void proposals::create_aux (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
   string summary, 
   string description, 
   string image, 
   string url, 
   name fund,
-  std::vector<uint64_t> pay_percentages
-) {
-  
+  name campaign_type,
+  std::vector<uint64_t> pay_percentages,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
+) {  
+
   require_auth(creator);
 
   check_resident(creator);
   
-  check_percentages(pay_percentages);
+  if (campaign_type != campaign_invite_type) {
+    check_percentages(pay_percentages);
+  }
 
   check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
@@ -759,8 +790,8 @@ void proposals::createx(
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
-  utils::check_asset(quantity);
 
+  utils::check_asset(quantity);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -794,6 +825,11 @@ void proposals::createx(
       proposal.passed_cycle = 0;
       proposal.age = 0;
       proposal.current_payout = asset(0, seeds_symbol);
+      proposal.campaign_type = campaign_type;
+      proposal.max_amount_per_invite = max_amount_per_invite;
+      proposal.planted = planted;
+      proposal.reward = reward;
+      proposal.campaign_id = 0;
   });
 
   auto litr = lastprops.find(creator.value);
@@ -809,6 +845,87 @@ void proposals::createx(
     });
   }
   update_min_stake(propKey);
+}
+
+void proposals::createinvite (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
+) {
+
+  require_auth(creator);
+
+  check(fund == bankaccts::campaigns, "the bank must be " + bankaccts::campaigns.to_string() + " for invite campaign proposals");
+
+  utils::check_asset(max_amount_per_invite);
+  utils::check_asset(planted);
+  utils::check_asset(reward);
+
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(planted.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted));
+
+  uint64_t max_reward = config_get("inv.max.rwrd"_n);
+  check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
+  
+  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
+
+}
+
+void proposals::create(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund
+) {
+  require_auth(creator);
+  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
+}
+
+void proposals::createx(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  std::vector<uint64_t> pay_percentages
+) {
+  
+  require_auth(creator);
+  asset cero_value = asset(0, utils::seeds_symbol);
+
+  name type;
+
+  if (fund == bankaccts::alliances) {
+    type = alliance_type;
+  } else if (fund == bankaccts::milestone) {
+    type = milestone_type;
+  } else {
+    type = campaign_funding_type;
+  }
+
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, type, pay_percentages, cero_value, cero_value, cero_value);
+
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
@@ -839,6 +956,10 @@ void proposals::updatex(uint64_t id, string title, string summary, string descri
   require_auth(pitr->creator);
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
+  
+  if (pitr->campaign_type == campaign_invite_type) {
+    pay_percentages = { 100, 0, 0, 0, 0, 0 };
+  }
 
   check_percentages(pay_percentages);
 
@@ -872,6 +993,9 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
       utils::check_asset(quantity);
       //check_user(from);
+
+      if (from == contracts::onboarding) { return; }
+      if (from == bankaccts::campaigns) { return; }
 
       uint64_t id = 0;
 
@@ -1825,6 +1949,114 @@ void proposals::migcycstat() {
     item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
   });
+
+}
+
+ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
+  require_auth(get_self());
+
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
+
+  props.modify(pitr, _self, [&](auto & item){
+    item.campaign_id = campaign_id;
+  });
+
+}
+
+ACTION proposals::initprops (uint64_t start) {
+
+  require_auth(get_self());
+
+  auto mpitr = start == 0 ? migrateprops.begin() : migrateprops.find(start);
+  
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t count = 0;
+
+  while (mpitr != migrateprops.end() && count < batch_size) {
+
+    print("migrating prop: ", mpitr->id, "\n");
+
+    auto pitr = props.find(mpitr->id);
+    
+    if (pitr == props.end()) {
+      props.emplace(_self, [&](auto & item){
+        item.id = mpitr->id;
+        item.creator = mpitr->creator;
+        item.recipient = mpitr->recipient;
+        item.quantity = mpitr->quantity;
+        item.staked = mpitr->staked;
+        item.executed = mpitr->executed;
+        item.total = mpitr->total;
+        item.favour = mpitr->favour;
+        item.against = mpitr->against;
+        item.title = mpitr->title;
+        item.summary = mpitr->summary;
+        item.description = mpitr->description;
+        item.image = mpitr->image;
+        item.url = mpitr->url;
+        item.status = mpitr->status;
+        item.stage = mpitr->stage;
+        item.fund = mpitr->fund;
+        item.creation_date = mpitr->creation_date;
+        item.pay_percentages = mpitr->pay_percentages;
+        item.passed_cycle = mpitr->passed_cycle;
+        item.age = mpitr->age;
+        item.current_payout = mpitr->current_payout;
+        item.campaign_type = mpitr->campaign_type;
+        item.max_amount_per_invite = mpitr->max_amount_per_invite;
+        item.planted = mpitr->planted;
+        item.reward = mpitr->reward;
+        item.campaign_id = mpitr->campaign_id;
+      });
+    } else {
+      props.modify(pitr, _self, [&](auto & item){
+        item.creator = mpitr->creator;
+        item.recipient = mpitr->recipient;
+        item.quantity = mpitr->quantity;
+        item.staked = mpitr->staked;
+        item.executed = mpitr->executed;
+        item.total = mpitr->total;
+        item.favour = mpitr->favour;
+        item.against = mpitr->against;
+        item.title = mpitr->title;
+        item.summary = mpitr->summary;
+        item.description = mpitr->description;
+        item.image = mpitr->image;
+        item.url = mpitr->url;
+        item.status = mpitr->status;
+        item.stage = mpitr->stage;
+        item.fund = mpitr->fund;
+        item.creation_date = mpitr->creation_date;
+        item.pay_percentages = mpitr->pay_percentages;
+        item.passed_cycle = mpitr->passed_cycle;
+        item.age = mpitr->age;
+        item.current_payout = mpitr->current_payout;
+        item.campaign_type = mpitr->campaign_type;
+        item.max_amount_per_invite = mpitr->max_amount_per_invite;
+        item.planted = mpitr->planted;
+        item.reward = mpitr->reward;
+        item.campaign_id = mpitr->campaign_id;
+      });
+    }
+
+    mpitr++;
+    count++;
+  }
+
+  if (mpitr != migrateprops.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "initprops"_n,
+      std::make_tuple(mpitr->id)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(mpitr->id + 1, _self);
+  }
 
 }
 

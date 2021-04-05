@@ -650,11 +650,13 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'rankorgcss'
-}//, {
-  // target: `${accounts.bank.account}@active`,
-  // actor: `${accounts.pouch.account}@active`
-//}
-]
+}, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.onboarding.account}@active`,
+}]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
