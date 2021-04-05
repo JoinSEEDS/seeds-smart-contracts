@@ -57,12 +57,8 @@ void settings::reset() {
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 
   confwithdesc(name("i.trx.max"), uint64_t(1777) * uint64_t(10000), "Individuals: Maximum points for a transaction", high_impact);
-  confwithdesc(name("i.trx.div"), 26, "Individuals: Transaction diversity not more than 26 from 1 user is counted", high_impact);
   
   confwithdesc(name("org.trx.max"), uint64_t(1777) * uint64_t(10000), "Organization: Maximum points for a transaction", high_impact);
-
-  // not used remove
-  // confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
 
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
@@ -231,18 +227,49 @@ void settings::reset() {
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
 
+  // Reputation point reward for vouchers when user becomes resident
+  confwithdesc(name("vouchrep.1"), 1, "Reputation point reward for vouchers when user becomes resident", medium_impact);
+
+  // Reputation point reward for vouchers when user becomes citizen
+  confwithdesc(name("vouchrep.2"), 1, "Reputation point reward for vouchers when user becomes citizen", medium_impact);
+
+  // Maximum number of points a user can gain from others vouching for them [NOT YET IMPLEMENTED]
+  confwithdesc(name("sendvouchmax"), 250, "Maximum number of non invite vouches a user can make", medium_impact);
+
+  // =====================================
+  // Community Building Points 
+  // =====================================
+
   // community buiding points for referrer when user becomes resident
-  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", high_impact);
+  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", medium_impact);
 
   // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", high_impact);
+  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", medium_impact);
 
-  // community buiding points for voucher when user referred reputable org
-  confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
+  // community buiding points for referrer when user referred sustainable org
+  // Bob invites Alice, Alice creates org, org becomes sustainable
+  confwithdesc(name("ref.org3.cbp1"), 4, "Referred sustainable organization", medium_impact);
+
+  // community buiding points for referrer when user referred regenerative org
+  // Bob invites Alice, Alice creates org, org becomes regenerative
+  confwithdesc(name("ref.org4.cbp1"), 4, "Referred regenerative organization", medium_impact);
+
+  // community buiding points for referrer when user referred thrivable org
+  // Bob invites Alice, Alice creates org, org becomes thrivable
+  confwithdesc(name("ref.org5.cbp1"), 4, "Referred thrivable organization", medium_impact);
 
   confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
   confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
   confwithdesc(name("cbp.wane"), 2, "Degrading % over 1 cycle for org cbp points", high_impact);
+
+  // Community Building Point reward for buying from an organisation in your Region. One per lunar cycle.
+  confwithdesc(name("buylocal.cbp"), 1, "Community Building Point reward for buying from local organisation in your Region. One per lunar cycle", high_impact);
+
+  // Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.
+  confwithdesc(name("buyregen.cbp"), 2, "Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.", high_impact);
+
+  // Community Building Point reward for buying from a Thriving Organisation. One award per lunar cycle.
+  confwithdesc(name("buythriv.cbp"), 4, "Community Building Point reward for buying from a Thriving Organisation. One per lunar cycle.", high_impact);
 
   // =====================================
   // flag points
@@ -256,8 +283,8 @@ void settings::reset() {
   // =====================================
   // forum 
   // =====================================
-  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
-  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", low_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", low_impact);
   confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
   confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
@@ -270,6 +297,11 @@ void settings::reset() {
   conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same region", high_impact);
   conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
 
+  conffloatdsc(name("org1.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 1 organization", medium_impact);
+  conffloatdsc(name("org2.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 2 organization", medium_impact);
+  conffloatdsc(name("org3.trx.mul"), 1.3, "Transaction multiplier for exchanging with a level 3 organization", medium_impact);
+  conffloatdsc(name("org4.trx.mul"), 1.7, "Transaction multiplier for exchanging with a level 4 organization", medium_impact);
+  conffloatdsc(name("org5.trx.mul"), 2.0, "Transaction multiplier for exchanging with a level 5 organization", medium_impact);
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 

@@ -109,7 +109,7 @@ void accounts::adduser(name account, string nickname, name type)
 
   users.emplace(_self, [&](auto& user) {
       user.account = account;
-      user.status = name("visitor");
+      user.status = visitor;
       user.reputation = 0;
       user.type = type;
       user.nickname = nickname;
@@ -137,7 +137,7 @@ void accounts::vouch(name sponsor, name account) {
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
 
-  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
+  check(sponsor_status == citizen || sponsor_status == resident, "sponsor must be a citizen or resident to vouch.");
   _vouch(sponsor, account);
 }
 
@@ -166,8 +166,8 @@ void accounts::_vouch(name sponsor, name account) {
 
     uint64_t vouch_points = 0;
 
-    if (sponsor_status == name("resident")) vouch_points = resident_basepoints;
-    if (sponsor_status == name("citizen")) vouch_points = citizen_basepoints;
+    if (sponsor_status == resident) vouch_points = resident_basepoints;
+    if (sponsor_status == citizen) vouch_points = citizen_basepoints;
 
     vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
 
@@ -182,20 +182,6 @@ void accounts::_vouch(name sponsor, name account) {
   }
 
   calc_vouch_rep(account); 
-}
-
-void accounts::unvouch (name sponsor, name account) {
-  require_auth(sponsor);
-
-  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
-  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
-  auto vitr = vouches_by_sponsor_account.find(id);
-
-  check(vitr != vouches_by_sponsor_account.end(), "vouch not found");
-
-  vouches_by_sponsor_account.erase(vitr);
-  
-  calc_vouch_rep(account);
 }
 
 void accounts::pnishvouched (name sponsor, uint64_t start_account) {
@@ -304,23 +290,32 @@ void accounts::send_subrep(name user, uint64_t amount) {
 }
 
 void accounts::rewards(name account, name new_status) {
-  vouchreward(account);
+  vouchreward(account, new_status);
   refreward(account, new_status);
 }
 
-void accounts::vouchreward(name account) {
+void accounts::vouchreward(name account, name new_status) {
   check_user(account);
-
-  auto uitr = users.find(account.value);
-  name status = uitr->status;
 
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
 
+  uint64_t points = 0;
+
+  if (new_status == resident) {
+    points = config_get("vouchrep.1"_n);
+  } else if (new_status == citizen) {
+    points = config_get("vouchrep.2"_n);
+  }
+
+  if (points == 0) { 
+    return; 
+  }
+
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1    
+    send_addrep(sponsor, points);     
     vitr++;
   }
 }
@@ -352,7 +347,7 @@ uint64_t calc_decaying_rewards(int num, int min, int max, int decay) {
 void accounts::refreward(name account, name new_status) {
   check_user(account);
 
-  bool is_citizen = new_status.value == name("citizen").value;
+  bool is_citizen = new_status.value == citizen.value;
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
@@ -640,7 +635,7 @@ void accounts::makeresident(name user)
 {
     check_can_make_resident(user);
 
-    auto new_status = name("resident");
+    auto new_status = resident;
 
     updatestatus(user, new_status);
 
@@ -652,7 +647,7 @@ void accounts::makeresident(name user)
 bool accounts::check_can_make_resident(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("visitor"), "user is not a visitor");
+    check(uitr->status == visitor, "user is not a visitor");
 
     auto bitr = balances.find(user.value);
 
@@ -687,7 +682,7 @@ void accounts::updatestatus(name user, name status)
     user.status = status;
   });
 
-  bool trust = status == name("citizen");
+  bool trust = status == citizen;
 
   action(
     permission_level{contracts::proposals, "active"_n},
@@ -723,7 +718,7 @@ void accounts::makecitizen(name user)
 {
     check_can_make_citizen(user);
     
-    auto new_status = name("citizen");
+    auto new_status = citizen;
 
     updatestatus(user, new_status);
 
@@ -739,7 +734,7 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("resident"), "user is not a resident");
+    check(uitr->status == resident, "user is not a resident");
 
     auto bitr = balances.find(user.value);
 
@@ -779,7 +774,7 @@ void accounts::testresident(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("resident");
+  auto new_status = resident;
   updatestatus(user, new_status);
 
   rewards(user, new_status);
@@ -791,7 +786,7 @@ void accounts::testvisitor(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("visitor");
+  auto new_status = visitor;
   updatestatus(user, new_status);
   
 }
@@ -800,7 +795,7 @@ void accounts::testcitizen(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("citizen");
+  auto new_status = citizen;
 
   updatestatus(user, new_status);
 
@@ -1250,9 +1245,9 @@ void accounts::flag (name from, name to) {
   uint64_t base_points = 0;
   auto uitr = users.get(from.value, "user not found");
 
-  if (uitr.status == name("citizen")) {
+  if (uitr.status == citizen) {
     base_points = config_get("flag.base.c"_n);
-  } else if (uitr.status == name("resident")) {
+  } else if (uitr.status == resident) {
     base_points = config_get("flag.base.r"_n);
   } else {
     check(false, "user must be a resident or a citizen");
@@ -1358,7 +1353,7 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
 
   auto uritr = rep.find(to.value);
   if (uritr == rep.end()) {
-    updatestatus(to, name("visitor"));
+    updatestatus(to, visitor);
     return;
   }
 
@@ -1388,18 +1383,18 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
       name current_rank = uitr->status;
 
       if (rank < min_rep_score_resident) {
-        current_rank = name("visitor");
+        current_rank = visitor;
       } else if (rank < min_rep_score_citizen) {
-        current_rank = name("resident");
+        current_rank = resident;
       } else {
-        current_rank = name("citizen");
+        current_rank = citizen;
       }
 
-      if (uitr->status == name("citizen") && current_rank != name("citizen")) {
+      if (uitr->status == citizen && current_rank != citizen) {
         updatestatus(uitr->account, current_rank);
       }
-      else if (uitr->status == name("resident") && current_rank == name("visitor")) {
-        updatestatus(uitr->account, name("visitor"));
+      else if (uitr->status == resident && current_rank == visitor) {
+        updatestatus(uitr->account, visitor);
       }
 
       evaluated = true;
