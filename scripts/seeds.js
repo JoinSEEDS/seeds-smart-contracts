@@ -125,8 +125,6 @@ const updateSettingsAction = async () => {
   console.log(`UPDATE Settings on ${settings}`)
   const name = "settings"
   
-  await deployAction(name)
-
   const contract = await eos.contract(settings)
 
   console.log(`reset settings`)
@@ -139,8 +137,6 @@ const updateSettingsAction = async () => {
 const updateSchedulerAction = async () => {
   console.log(`UPDATE Scheduler on ${scheduler}`)
   const name = "scheduler"
-
-  await deployAction(name)
 
   const contract = await eos.contract(scheduler)
 
