@@ -3,7 +3,7 @@ const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance, sleep } = require('../scripts/helper')
 const { filter } = require('ramda')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion, settings } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, region, settings } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -16,7 +16,7 @@ const randomAccountName = () => {
     return result;
  }
  
- const randomAccountNameBDC = () => {
+ const randomAccountNamergn = () => {
     let length = 8
     var result           = '';
     var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
@@ -24,7 +24,7 @@ const randomAccountName = () => {
     for ( var i = 0; i < length; i++ ) {
        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-    return result + ".bdc";
+    return result + ".rgn";
   }
   
 const getNumInvites = async () => {
@@ -674,22 +674,22 @@ describe('Campaign reward for existing user', async assert => {
 })
 
 
-describe('Create bioregion', async assert => {
+describe('Create region', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
     
-    const contracts = await initContracts({ onboarding, bioregion })
+    const contracts = await initContracts({ onboarding, region })
     
-    const newAccount = randomAccountNameBDC()
+    const newAccount = randomAccountNamergn()
     console.log("New account "+newAccount)
     const keyPair = await createKeypair()
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
   
-    await contracts.onboarding.createbio(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+    await contracts.onboarding.createregion(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
 
     var hasNewDomain = false
     try {
@@ -700,7 +700,7 @@ describe('Create bioregion', async assert => {
     }
 
     assert({
-        given: 'created bioregion',
+        given: 'created region',
         should: 'have account',
         actual: hasNewDomain,
         expected: true

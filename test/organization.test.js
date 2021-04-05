@@ -1,8 +1,8 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts } = require("../scripts/helper")
-const { equals } = require("ramda")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, ramdom64ByteHexString, sha256, fromHexString } = require("../scripts/helper")
+const { equals, any, or } = require("ramda")
 
-const { organization, accounts, token, firstuser, seconduser, thirduser, bank, settings, harvest, history, exchange } = names
+const { organization, accounts, token, firstuser, seconduser, thirduser, fourthuser, fifthuser, bank, settings, harvest, history, exchange, onboarding } = names
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
@@ -13,7 +13,18 @@ function getBeginningOfDayInSeconds () {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-}  
+}
+
+const randomAccountName = () => {
+    let length = 12
+    var result           = '';
+    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
 
 describe('organization', async assert => {
 
@@ -54,8 +65,8 @@ describe('organization', async assert => {
     await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
 
     console.log('add rep')
-    await contracts.accounts.addrep(firstuser, 10000, { authorization: `${accounts}@active` })
-    await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(firstuser, 49, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(seconduser, 99, { authorization: `${accounts}@active` })
 
     console.log('create balance')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
@@ -141,7 +152,7 @@ describe('organization', async assert => {
     })
 
     console.log('add regen')
-    await contracts.organization.addregen('testorg1', firstuser, 1, { authorization: `${firstuser}@active` })
+    await contracts.organization.addregen('testorg1', firstuser, 15, { authorization: `${firstuser}@active` })
     await contracts.organization.subregen('testorg3', seconduser, 1, { authorization: `${seconduser}@active` })
     
     const regen = await getTableRows({
@@ -339,7 +350,7 @@ describe('organization', async assert => {
                 org_name: 'testorg1',
                 owner: 'seedsuseraaa',
                 status: 0,
-                regen: 10000,
+                regen: 6,
                 reputation: 0,
                 voice: 0,
                 planted: "200.0000 SEEDS"
@@ -348,7 +359,7 @@ describe('organization', async assert => {
                 org_name: 'testorg3',
                 owner: 'seedsuseraaa',
                 status: 0,
-                regen: -13000,
+                regen: -2,
                 reputation: 0,
                 voice: 0,
                 planted: "200.0000 SEEDS"
@@ -623,7 +634,8 @@ describe('organization scores', async assert => {
     }))
     
     console.log('settings reset')
-    //await contracts.settings.reset({ authorization: `${settings}@active` })
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+    await contracts.settings.configure('orgratethrsh', 0, { authorization: `${settings}@active` })
 
     console.log('reset organization')
     await contracts.organization.reset({ authorization: `${organization}@active` })
@@ -658,13 +670,9 @@ describe('organization scores', async assert => {
     await contracts.accounts.adduser(thirduser, 'third user', 'individual', { authorization: `${accounts}@active` })
 
     console.log('add rep')
-    await contracts.accounts.addrep(firstuser, 20000, { authorization: `${accounts}@active` })
-    await contracts.accounts.addrep(seconduser, 13000, { authorization: `${accounts}@active` })
-    await contracts.accounts.addrep(thirduser, 1000, { authorization: `${accounts}@active` })
-
-    await contracts.accounts.testsetrs(firstuser, 66, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(seconduser, 33, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(thirduser, 0, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(seconduser, 66, { authorization: `${accounts}@active` })
+    await contracts.accounts.testsetrs(thirduser, 33, { authorization: `${accounts}@active` })
     
     console.log('create balance')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
@@ -678,21 +686,21 @@ describe('organization scores', async assert => {
     await contracts.organization.create(seconduser, org5, "Org 5 - Test, Inc.", eosDevKey, { authorization: `${seconduser}@active` })
 
     console.log('modify regen')
-    await contracts.organization.subregen(org1, firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen(org1, seconduser, 3, { authorization: `${seconduser}@active` })
+    await contracts.organization.subregen(org1, firstuser, 1, { authorization: `${firstuser}@active` })
+    await contracts.organization.subregen(org1, seconduser, 1, { authorization: `${seconduser}@active` })
 
     await contracts.organization.addregen(org2, firstuser, 4, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org2, seconduser, 4, { authorization: `${seconduser}@active` })
+    await contracts.organization.addregen(org2, seconduser, 3, { authorization: `${seconduser}@active` })
 
-    await contracts.organization.addregen(org3, firstuser, 1, { authorization: `${firstuser}@active` })
-    await contracts.organization.subregen(org3, seconduser, 1, { authorization: `${seconduser}@active` })
-    await contracts.organization.subregen(org3, thirduser, 1, { authorization: `${thirduser}@active` })
+    await contracts.organization.addregen(org3, firstuser, 6, { authorization: `${firstuser}@active` })
+    await contracts.organization.subregen(org3, seconduser, 6, { authorization: `${seconduser}@active` })
+    await contracts.organization.subregen(org3, thirduser, 6, { authorization: `${thirduser}@active` })
 
-    await contracts.organization.addregen(org4, firstuser, 2, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org4, seconduser, 2, { authorization: `${seconduser}@active` })
+    await contracts.organization.addregen(org4, firstuser, 7, { authorization: `${firstuser}@active` })
+    await contracts.organization.addregen(org4, seconduser, 5, { authorization: `${seconduser}@active` })
 
-    await contracts.organization.addregen(org5, firstuser, 7, { authorization: `${firstuser}@active` })
-    await contracts.organization.addregen(org5, seconduser, 7, { authorization: `${seconduser}@active` })
+    await contracts.organization.addregen(org5, firstuser, 12, { authorization: `${firstuser}@active` })
+    await contracts.organization.addregen(org5, seconduser, 12, { authorization: `${seconduser}@active` })
     
     await contracts.accounts.testsetcbs(org1, 100, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org2, 75, { authorization: `${accounts}@active` })
@@ -700,7 +708,9 @@ describe('organization scores', async assert => {
     await contracts.accounts.testsetcbs(org4, 25, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetcbs(org5, 1, { authorization: `${accounts}@active` })
 
-    await contracts.accounts.rankreps({ authorization: `${accounts}@active` })
+    Promise.all(orgs.map(org => contracts.accounts.testsetrs(org, 49, { authorization: `${accounts}@active` })))
+
+    await contracts.accounts.rankorgreps({ authorization: `${accounts}@active` })
     await sleep(200)
 
     console.log('transfer volume of seeds')
@@ -734,12 +744,11 @@ describe('organization scores', async assert => {
     await transfer(org5, seconduser, 200)
     await transfer(org5, thirduser, 200)
 
-    // let txt = await contracts.organization.scoreorgs("", { authorization: `${organization}@active` })
     await contracts.harvest.calctrxpts({ authorization: `${harvest}@active` })
     await sleep(100)
 
     await contracts.organization.rankregens({ authorization: `${organization}@active` })
-    await contracts.organization.rankcbsorgs({ authorization: `${organization}@active` })
+    await contracts.accounts.rankorgcbss({ authorization: `${accounts}@active` })
     await contracts.harvest.rankorgtxs({ authorization: `${harvest}@active` })
 
     await sleep(5000)
@@ -750,7 +759,15 @@ describe('organization scores', async assert => {
         table: 'txpoints',
         json: true
     })
-    console.log('prro:', orgTxScore)
+    console.log('orgTxScore:', orgTxScore)
+
+    const orgsTable = await getTableRows({
+        code: organization,
+        scope: organization,
+        table: 'organization',
+        json: true
+    })
+    console.log(orgsTable)
 
     const regenScores = await getTableRows({
         code: organization,
@@ -758,11 +775,12 @@ describe('organization scores', async assert => {
         table: 'regenscores',
         json: true
     })
+    console.log('Regen Scores:', regenScores)
 
     const cbsRanks = await getTableRows({
-        code: organization,
-        scope: organization,
-        table: 'cbsorgs',
+        code: accounts,
+        scope: 'org',
+        table: 'cbs',
         json: true
     })
 
@@ -811,10 +829,10 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: regenScores.rows,
         expected: [
-            { org_name: org2, regen_avg: 66000, rank: 50 },
-            { org_name: org3, regen_avg: 2000, rank: 0 },
-            { org_name: org4, regen_avg: 33000, rank: 25 },
-            { org_name: org5, regen_avg: 115500, rank: 75 }
+            { org_name: org2, regen_avg: 6, rank: 25 },
+            { org_name: org3, regen_avg: 0, rank: 0 },
+            { org_name: org4, regen_avg: 10, rank: 50 },
+            { org_name: org5, regen_avg: 11, rank: 75 }
         ]
     })
 
@@ -823,26 +841,26 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: cbsRanks.rows,
         expected: [
-            { org_name: org1, community_building_score: 100, rank: 80 },
-            { org_name: org2, community_building_score: 75, rank: 60 },
-            { org_name: org3, community_building_score: 50, rank: 40 },
-            { org_name: org4, community_building_score: 25, rank: 20 },
-            { org_name: org5, community_building_score: 1, rank: 0 }
+            { account: org1, community_building_score: 100, rank: 80 },
+            { account: org2, community_building_score: 75, rank: 60 },
+            { account: org3, community_building_score: 50, rank: 40 },
+            { account: org4, community_building_score: 25, rank: 20 },
+            { account: org5, community_building_score: 1, rank: 0 }
         ]
     })
 
-    console.log('cbs', cbsRanks.rows)
+    // console.log('cbs', cbsRanks.rows)
 
     assert({
         given: 'txs calculated',
         should: 'rank thr orgs properly',
         actual: txRanks.rows,
         expected: [
-            { account: org1, points: 301, rank: 0 },
-            { account: org2, points: 601, rank: 20 },
-            { account: org3, points: 1201, rank: 40 },
-            { account: org4, points: 1534, rank: 60 },
-            { account: org5, points: 1601, rank: 80 }
+            { account: org1, points: 501, rank: 0 },
+            { account: org2, points: 1001, rank: 20 },
+            { account: org3, points: 2001, rank: 40 },
+            { account: org4, points: 2600, rank: 60 },
+            { account: org5, points: 2935, rank: 80 }      
         ]
     })
     console.log('trxs', txRanks.rows)
@@ -853,34 +871,34 @@ describe('organization scores', async assert => {
         actual: avgsBefore.rows,
         expected: [
             {
-                org_name: 'testorg1',
-                total_sum: -79000,
+                org_name: org1,
+                total_sum: -3,
                 num_votes: 2,
-                average: -39500
+                average: -1
             },
             {
-                org_name: 'testorg2',
-                total_sum: 132000,
+                org_name: org2,
+                total_sum: 12,
                 num_votes: 2,
-                average: 66000
+                average: 6
             },
             {
-                org_name: 'testorg3',
-                total_sum: 6000,
+                org_name: org3,
+                total_sum: 0,
                 num_votes: 3,
-                average: 2000
+                average: 0
             },
             {
-                org_name: 'testorg4',
-                total_sum: 66000,
+                org_name: org4,
+                total_sum: 20,
                 num_votes: 2,
-                average: 33000
+                average: 10
             },
             {
-                org_name: 'testorg5',
-                total_sum: 231000,
+                org_name: org5,
+                total_sum: 23,
                 num_votes: 2,
-                average: 115500
+                average: 11
             }
         ]
     })
@@ -891,34 +909,34 @@ describe('organization scores', async assert => {
         actual: avgsAfter.rows,
         expected: [
             {
-                org_name: 'testorg1',
-                total_sum: 101000,
+                org_name: org1,
+                total_sum: 13,
                 num_votes: 2,
-                average: 50500
+                average: 6
             },
             {
-                org_name: 'testorg2',
-                total_sum: 132000,
+                org_name: org2,
+                total_sum: 12,
                 num_votes: 2,
-                average: 66000
+                average: 6
             },
             {
-                org_name: 'testorg3',
-                total_sum: 6000,
+                org_name: org3,
+                total_sum: 0,
                 num_votes: 3,
-                average: 2000
+                average: 0
             },
             {
-                org_name: 'testorg4',
-                total_sum: 66000,
+                org_name: org4,
+                total_sum: 20,
                 num_votes: 2,
-                average: 33000
+                average: 10
             },
             {
-                org_name: 'testorg5',
-                total_sum: 231000,
+                org_name: org5,
+                total_sum: 23,
                 num_votes: 2,
-                average: 115500
+                average: 11
             }
         ]
     })
@@ -926,22 +944,171 @@ describe('organization scores', async assert => {
 })
 
 describe('organization status', async assert => {
+
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
 
-    const contracts = await Promise.all([
-        eos.contract(organization),
-        eos.contract(token),
-        eos.contract(accounts),
-        eos.contract(settings),
-        eos.contract(harvest),
-        eos.contract(history),
-        eos.contract(exchange)
-    ]).then(([organization, token, accounts, settings, harvest, history, exchange]) => ({
-        organization, token, accounts, settings, harvest, history, exchange
-    }))
+    const contracts = await initContracts({ organization, settings, harvest, accounts, token, exchange, onboarding, history })
+
+    const checkOrgStatus = async (expectedStatus, n=null) => {
+        const orgTable = await getTableRows({
+            code: organization,
+            scope: organization,
+            table: 'organization',
+            json: true
+        })
+        assert({
+            given: 'orgs changed status' + (n==null ? '' : ` (index ${n})`),
+            should: 'have the correct status',
+            actual: orgTable.rows.map(r => r.status),
+            expected: expectedStatus
+        })
+    }
+
+    const minPlanted = 'orgminplnt.'
+    const minRepRank = 'orgminrank.'
+    const minRegenScore = 'org.rated.'
+    const minVisitor = 'org.visref.'
+    const minResidents = 'org.resref.'
+
+    const org1 = 'testorg1'
+    const org2 = 'testorg2'
+    const org3 = 'testorg3'
+    const org4 = 'testorg4'
+    const org5 = 'testorg5'
+
+    const regular = 0
+    const reputable = 1
+    const sustainable = 2
+    const regenerative = 3
+    const thrivable = 4
+
+    const statusStrings = ['regular', 'reputable', 'sustainable', 'regenerative', 'thrivable']
+
+    const orgs = [ org1, org2, org3, org4, org5 ]
+
+    const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
+
+    const getSetting = async (key) => {
+        const sttgs = await getTableRows({
+            code: settings,
+            scope: settings,
+            table: 'config',
+            json: true,
+            limit: 10000
+        })
+        const param = sttgs.rows.filter(r => r.param == key)
+        return param[0].value
+    }
+
+    const makeStatus = async (org, status, ignore=[]) => {
+        if (!ignore.includes(minPlanted)) {
+            const mPlanted = (await getSetting(minPlanted + (status+1))) / 10000
+            await contracts.token.transfer(firstuser, org, `${mPlanted}.0000 SEEDS`, "for harvest", { authorization: `${firstuser}@active` })
+            await contracts.token.transfer(org, harvest, `${mPlanted}.0000 SEEDS`, `sow ${org}`, { authorization: `${org}@active` })
+        }
+        if (!ignore.includes(minRepRank)) {
+            const mRepRank = await getSetting(minRepRank + (status+1))
+            await contracts.accounts.testsetrs(org, mRepRank, { authorization: `${accounts}@active` })
+        }
+        if (!ignore.includes(minRegenScore)) {
+            const mRegenScore = await getSetting(minRegenScore + (status+1))
+            await contracts.organization.testregensc(org, mRegenScore, { authorization: `${organization}@active` })
+        }
+        if (!ignore.includes(minVisitor)) {
+            const mVisitor = await getSetting(minVisitor + (status+1))
+            const refsTable = await getTableRows({
+                code: settings,
+                scope: settings,
+                table: 'config',
+                json: true
+            })
+            const orgRefs = refsTable.rows.filter(r => r.referrer == org)
+
+            for (let i = orgRefs.length; i < mVisitor; i++) {
+                const inviteSecret = await ramdom64ByteHexString()
+                const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+                const newAccount = randomAccountName()
+                await contracts.token.transfer(seconduser, org, '15.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+                await contracts.token.transfer(org, onboarding, '15.0000 SEEDS', '', { authorization: `${org}@active` })
+                await contracts.onboarding.invite(org, '10.0000 SEEDS', '5.0000 SEEDS', inviteHash, { authorization: `${org}@active` })
+                await contracts.onboarding.accept(newAccount, inviteSecret, eosDevKey, { authorization: `${onboarding}@active` })
+            }
+        }
+        if (!ignore.includes(minResidents)) {
+            const mResidents = await getSetting(minResidents + (status+1))
+            const refsTable = await getTableRows({
+                code: accounts,
+                scope: accounts,
+                table: 'refs',
+                json: true,
+                limit: 10000
+            })
+            const orgRefs = refsTable.rows.filter(r => r.referrer == org).map(r => r.invited)
+            const usersTable = await getTableRows({
+                code: accounts,
+                scope: accounts,
+                table: 'users',
+                json: true,
+                limit: 10000
+            })
+            const usrs = usersTable.rows.filter(r => orgRefs.includes(r.account))
+            usrs.sort((a, b) => {
+                if (a.status == 'visitor') {
+                    return 1
+                }
+                return -1
+            })
+            for (let i=0, j=0; i < usrs.length; i++) {
+                if (usrs[i].status == 'visitor') {
+                    if (j < mResidents) {
+                        await contracts.accounts.testresident(usrs[i].account, { authorization: `${accounts}@active` })
+                    }
+                }
+                j += 1
+            }
+        }
+    }
+
+    const handleError = (wrapped) => {
+        return async function() {
+            try {
+                await wrapped.apply(this, arguments);
+                return false
+            } catch (err) {
+                console.log(err.json.error.details[0])
+                return true
+            }
+        }
+    }
+
+    const assertFailure = async ({ given, should, actual }) => {
+        assert({
+            given,
+            should,
+            actual,
+            expected: true
+        })
+    }
+
+    const checkHistoryRecords = async (scope, expected) => {
+        const historyTables = await getTableRows({
+            code: history,
+            scope: scope,
+            table: 'acctstatus',
+            json: true,
+            limit: 10000
+        })
+        const entries = historyTables.rows.map(r => r.account)
+        assert({
+            given: 'orgs updated status',
+            should: 'be in the entries',
+            actual: entries,
+            expected
+        })
+    }
 
     console.log('reset token stats')
     await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -950,152 +1117,160 @@ describe('organization status', async assert => {
     await contracts.exchange.reset({ authorization: `${exchange}@active` })
     await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
 
-    console.log('configure')
-    //await contracts.settings.reset({ authorization: `${settings}@active` })
+    console.log('reset settings')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+    await contracts.settings.configure('txlimit.min', 1000, { authorization: `${settings}@active` })
 
-    const org1 = 'testorg1'
-    const org2 = 'testorg2'
-    const org3 = 'testorg3'
+    console.log('reset accounts')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-    let hasLessInvitationsResidents
-    try {
-        await contracts.organization.makeregen(org2, { authorization: `${organization}@active` })
-        hasLessInvitationsResidents = false
-    } catch (err) {
-        hasLessInvitationsResidents = true
+    console.log('reset harvest')
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+    console.log('reset organization')
+    await contracts.organization.reset({ authorization: `${organization}@active` })
+
+    console.log('reset onboarding')
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+
+    orgs.map(async org => { await contracts.history.reset(org, { authorization: `${history}@active` }) })
+    users.map( async user => { await contracts.history.reset(user, { authorization: `${history}@active` }) })
+
+    const day = getBeginningOfDayInSeconds()
+    await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+
+    console.log('join users')
+    await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
+
+    console.log('create organizations')
+    for (let index = 0; index < orgs.length; index++) {
+        const user = users[index%2]
+        const org = orgs[index]
+        await contracts.token.transfer(user, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${user}@active` })
+        await contracts.organization.create(user, org, `Org Number ${index}`, eosDevKey, { authorization: `${user}@active` })
     }
 
-    await contracts.settings.configure('rep.resref', 1, { authorization: `${settings}@active` })
+    await checkOrgStatus([regular, regular, regular, regular, regular])
 
-    await contracts.accounts.addref(org2, firstuser, { authorization: `${accounts}@api` })
-    await contracts.accounts.addref(org2, seconduser, { authorization: `${accounts}@api` })
-    await contracts.accounts.addref(org2, thirduser, { authorization: `${accounts}@api` })
-    await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+    const makereptableWithError = handleError(contracts.organization.makereptable)
+    const makesustnbleWithError = handleError(contracts.organization.makesustnble)
+    const makeregenWithError = handleError(contracts.organization.makeregen)
+    const makethrivbleWithError = handleError(contracts.organization.makethrivble)
 
-    let hasLessSeeds
-    try {
-        await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
-        hasLessSeeds = false
-    } catch (err) {
-        hasLessSeeds = true
+    const ignore = [minPlanted, minRepRank, minRegenScore, minVisitor, minResidents]
+
+    console.log('trying to update status without meeting the requirements')
+    for (let i = 0; i < ignore.length-1; i++) {
+        await makeStatus(org1, reputable, ignore.slice(i))
+        await assertFailure({
+            given: `${org1} trying to upgrade to ${statusStrings[reputable]}`,
+            should: 'fail',
+            actual: await makereptableWithError(org1, { authorization: `${org1}@active` })
+        })
     }
 
-    await contracts.token.transfer(seconduser, org2, "200.0000 SEEDS", "Regen supply", { authorization: `${seconduser}@active` })
-    await contracts.token.transfer(org2, harvest, "200.0000 SEEDS", `sow ${org2}`, { authorization: `${org2}@active` })
+    console.log(`make ${org1} ${statusStrings[reputable]}`)
+    await makeStatus(org1, reputable)
+    await makereptableWithError(org1, { authorization: `${org1}@active` })
+    await checkOrgStatus([reputable, regular, regular, regular, regular])
+    await checkHistoryRecords(statusStrings[reputable], [org1])
 
-    let hasLessInvitations
-    try {
-        await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
-        hasLessInvitations = false
-    } catch (err) {
-        hasLessInvitations = true
+    console.log(`make ${org1} regenerative`)
+    await makeStatus(org1, regenerative)
+    await assertFailure({
+        given: `${org1} trying to upgrade to ${statusStrings[regenerative]}`,
+        should: `fail because ${org1} is not ${statusStrings[sustainable]}`,
+        actual: await makeregenWithError(org1, { authorization: `${org1}@active` })
+    })
+    await makesustnbleWithError(org1, { authorization: `${org1}@active` })
+    await checkOrgStatus([sustainable, regular, regular, regular, regular])
+    await checkHistoryRecords(statusStrings[sustainable], [org1])
+
+    await contracts.organization.makeregen(org1, { authorization: `${org1}@active` })
+    await checkOrgStatus([regenerative, regular, regular, regular, regular])
+    await checkHistoryRecords(statusStrings[regenerative], [org1])
+
+    console.log()
+    for (let i = 0; i < ignore.length-1; i++) {
+        await makeStatus(org2, thrivable, ignore.slice(i))
+        await assertFailure({
+            given: `${org2} trying to upgrade to ${statusStrings[thrivable]}`,
+            should: 'fail',
+            actual: await makereptableWithError(org2, { authorization: `${org2}@active` })
+        })
+    }
+    await makeStatus(org2, thrivable)
+    
+    await contracts.organization.makereptable(org2, { authorization: `${org2}@active` })
+    await checkHistoryRecords(statusStrings[reputable], [org1, org2])
+
+    await contracts.organization.makesustnble(org2, { authorization: `${org2}@active` })
+    await checkHistoryRecords(statusStrings[sustainable], [org1, org2])
+
+    await contracts.organization.makeregen(org2, { authorization: `${org2}@active` })
+    await checkHistoryRecords(statusStrings[regenerative], [org1, org2])
+
+    await contracts.organization.makethrivble(org2, { authorization: `${org2}@active` })
+    await checkHistoryRecords(statusStrings[thrivable], [org2])
+
+    await checkOrgStatus([regenerative, thrivable, regular, regular, regular])
+
+    const checkTrxpoints = async (user, expectedValue) => {
+        const trxtables = await getTableRows({
+            code: history,
+            scope: day,
+            table: 'dailytrxs',
+            json: true,
+            limit: 10000
+        })
+        const orgTrx = trxtables.rows.filter(r => r.from == user)
+        assert({
+            given: 'org with status',
+            should: 'use its multiplier',
+            actual: orgTrx[orgTrx.length-1].from_points,
+            expected: parseInt(Math.ceil(expectedValue))
+        })
     }
 
-    await contracts.settings.configure('rep.refrred', 3, { authorization: `${settings}@active` })
+    console.log('transfer to org')
+    await contracts.accounts.testsetrs(fourthuser, 49, { authorization: `${accounts}@active` })
+    await makeStatus(org5, thrivable)
 
-    let hasLessTransactions
-    try {
-        await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
-        hasLessTransactions = false
-    } catch (err) {
-        hasLessTransactions = true
-    }
+    const multiplier = 0.98989898989899
 
-    console.log('test reputable')
+    await contracts.accounts.testsetrs(org5, 49, { authorization: `${accounts}@active` })
+    await contracts.token.transfer(fourthuser, org5, "100.0000 SEEDS", "Initial supply 1", { authorization: `${fourthuser}@active` })
+    await sleep(3000)
+    await checkTrxpoints(fourthuser, 100 * multiplier * 1.0)
 
-    await contracts.organization.testregen(org1, { authorization: `${organization}@active` })
-    await contracts.organization.testreptable(org3, { authorization: `${organization}@active` })
+    await makeStatus(org5, reputable)
+    await contracts.organization.makereptable(org5, { authorization: `${org5}@active` })
+    await contracts.accounts.testsetrs(org5, 49, { authorization: `${accounts}@active` })
+    await contracts.token.transfer(fourthuser, org5, "110.0000 SEEDS", "Initial supply 2", { authorization: `${fourthuser}@active` })
+    await sleep(3000)
+    await checkTrxpoints(fourthuser, 110 * multiplier * 1.0)
 
-    await contracts.token.transfer(seconduser, org2, "10.0000 SEEDS", "Regen supply", { authorization: `${seconduser}@active` })
-    await contracts.token.transfer(org2, seconduser, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
-    await sleep(300)
-    await contracts.token.transfer(org2, seconduser, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
-    await sleep(300)
-    await contracts.token.transfer(org2, seconduser, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
-    await sleep(300)
-    await contracts.token.transfer(org2, org1, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
-    await sleep(300)
-    await contracts.token.transfer(org2, org3, "2.0000 SEEDS", '', { authorization: `${org2}@active` })
-    await sleep(300)
+    await makeStatus(org5, sustainable)
+    await contracts.organization.makesustnble(org5, { authorization: `${org5}@active` })
+    await contracts.accounts.testsetrs(org5, 49, { authorization: `${accounts}@active` })
+    await contracts.token.transfer(fourthuser, org5, "120.0000 SEEDS", "Initial supply 3", { authorization: `${fourthuser}@active` })
+    await sleep(3000)
+    await checkTrxpoints(fourthuser, 120 * multiplier * 1.3)
 
-    console.log('make reputable')
+    await makeStatus(org5, regenerative)
+    await contracts.organization.makeregen(org5, { authorization: `${org5}@active` })
+    await contracts.accounts.testsetrs(org5, 49, { authorization: `${accounts}@active` })
+    await contracts.token.transfer(fourthuser, org5, "130.0000 SEEDS", "Initial supply 4", { authorization: `${fourthuser}@active` })
+    await sleep(3000)
+    await checkTrxpoints(fourthuser, 130 * multiplier * 1.7)
 
-    await contracts.organization.makereptable(org2, { authorization: `${organization}@active` })
-
-    const organizationsReputable = await getTableRows({
-        code: organization,
-        scope: organization,
-        table: 'organization',
-        json: true
-    })
-
-    await contracts.settings.configure('rgen.resref', 1, { authorization: `${settings}@active` })
-    await contracts.settings.configure('rgen.refrred', 3, { authorization: `${settings}@active` })
-
-    console.log('make regen')
-
-    await contracts.organization.makeregen(org2, { authorization: `${organization}@active` })
-
-    const organizationsRegen = await getTableRows({
-        code: organization,
-        scope: organization,
-        table: 'organization',
-        json: true
-    })
-
-    assert({
-        given: 'makereptable called without enough invitations for citizens/residents',
-        should: 'fail',
-        actual: hasLessInvitationsResidents,
-        expected: true
-    })
-
-    assert({
-        given: 'makereptable called without enough seeds',
-        should: 'fail',
-        actual: hasLessSeeds,
-        expected: true
-    })
-
-    assert({
-        given: 'makereptable called without enough invitations',
-        should: 'fail',
-        actual: hasLessInvitations,
-        expected: true
-    })
-
-    assert({
-        given: 'makereptable called without enough transactions',
-        should: 'fail',
-        actual: hasLessTransactions,
-        expected: true
-    })
-
-    assert({
-        given: 'makereptable called',
-        should: 'give reputable status',
-        actual: organizationsReputable.rows.map(org => org.status),
-        expected: [
-            2,
-            1,
-            1,
-            0,
-            0
-        ]
-    })
-
-    assert({
-        given: 'makeregen called',
-        should: 'give regenerative status',
-        actual: organizationsRegen.rows.map(org => org.status),
-        expected: [
-            2,
-            2,
-            1,
-            0,
-            0
-        ]
-    })
+    await makeStatus(org5, thrivable)
+    await contracts.organization.makethrivble(org5, { authorization: `${org5}@active` })
+    await contracts.accounts.testsetrs(org5, 49, { authorization: `${accounts}@active` })
+    await contracts.token.transfer(fourthuser, org5, "140.0000 SEEDS", "Initial supply 5", { authorization: `${fourthuser}@active` })
+    await sleep(3000)
+    await checkTrxpoints(fourthuser, 140 * multiplier * 2.0)
 
 })
 
