@@ -3,8 +3,12 @@
 #include <eosio/system.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
+#include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 
 using namespace eosio;
+using std::string;
 
 namespace utils {
   const uint64_t seconds_per_day = 86400;
@@ -68,9 +72,24 @@ namespace utils {
 
     DEFINE_REP_TABLE
     DEFINE_REP_TABLE_MULTI_INDEX
-    
-    rep_tables rep(contracts::accounts, contracts::accounts.value);
 
+    DEFINE_USER_TABLE
+    DEFINE_USER_TABLE_MULTI_INDEX
+
+    user_tables users(contracts::accounts, contracts::accounts.value);
+    auto uitr = users.find(account.value);
+    name scope;
+
+    if (uitr == users.end()) { return 0; }
+
+    if (uitr->type == "individual"_n) {
+      scope = contracts::accounts;
+    } else if (uitr->type == "organisation"_n) {
+      scope = "org"_n;
+    }
+    
+    rep_tables rep(contracts::accounts, scope.value);
+    
     auto ritr = rep.find(account.value);
 
     if (ritr == rep.end()) {

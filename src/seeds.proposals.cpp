@@ -859,8 +859,8 @@ void proposals::create_aux (
   asset max_amount_per_invite,
   asset planted,
   asset reward
-) {
-  
+) {  
+
   require_auth(creator);
 
   check_resident(creator);

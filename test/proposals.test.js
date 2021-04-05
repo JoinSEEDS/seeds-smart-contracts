@@ -1234,7 +1234,7 @@ describe('Proposals Quorum', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
+  await sleep(2000)
 
   await sleep(1000)
 
@@ -1630,6 +1630,7 @@ describe('Active count and vote power', async assert => {
 
   console.log('set propmajority to 80')
   await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('batchsize', 10, { authorization: `${settings}@active` })
 
   console.log('token reset')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
