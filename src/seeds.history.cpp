@@ -44,6 +44,15 @@ void history::reset(name account) {
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
   }
+
+  for (name s : status_names) {
+    account_status_tables accstatus(get_self(), s.value);
+    auto aitr = accstatus.begin();
+    while (aitr != accstatus.end()) {
+      aitr = accstatus.erase(aitr);
+    }
+  }
+
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -80,42 +89,27 @@ void history::addcitizen(name account) {
   size_change("citizens.sz"_n, 1);
 }
 
-void history::addreputable(name organization) {
+void history::updatestatus (name account, name scope) {
   require_auth(get_self());
 
-  auto uitr = users.find(organization.value);
-  check(uitr != users.end(), "no user found");
-  check(uitr -> type == name("organisation"), "the user type must be organization");
-
-  reputables.emplace(_self, [&](auto & org){
-    org.id = reputables.available_primary_key();
-    org.organization = organization;
-    org.timestamp = eosio::current_time_point().sec_since_epoch();
+  account_status_tables acctstatus(get_self(), scope.value);
+  
+  acctstatus.emplace(_self, [&](auto & item){
+    item.id = acctstatus.available_primary_key();
+    item.account = account;
+    item.timestamp = eosio::current_time_point().sec_since_epoch();
   });
-  size_change("reptables.sz"_n, 1);
-}
 
-void history::addregen(name organization) {
-  require_auth(get_self());
-
-  auto uitr = users.find(organization.value);
-  check(uitr != users.end(), "no user found");
-  check(uitr -> type == name("organisation"), "the user type must be organization");
-
-  regens.emplace(_self, [&](auto & org){
-    org.id = regens.available_primary_key();
-    org.organization = organization;
-    org.timestamp = eosio::current_time_point().sec_since_epoch();
-  });
-  size_change("regens.sz"_n, 1);
+  size_change(scope, 1);
 }
 
 double history::get_transaction_multiplier (name account, name other) {
   double multiplier = utils::get_rep_multiplier(account);
   
   auto oitr = organizations.find(account.value);
-  if (oitr != organizations.end() && oitr -> status == regenerative_org) {
-    multiplier *= config_float_get("regen.mul"_n);
+
+  if (oitr != organizations.end()) {
+    multiplier *= config_float_get(name("org" + std::to_string(oitr->status+1) + "trx.mul"));
   }
 
   auto bitr_account = members.find(account.value);
@@ -124,7 +118,7 @@ double history::get_transaction_multiplier (name account, name other) {
   if (
     bitr_account != members.end() && 
     bitr_other != members.end() && 
-    bitr_account -> bioregion == bitr_other -> bioregion
+    bitr_account -> region == bitr_other -> region
   ) {
     multiplier *= config_float_get("local.mul"_n);
   }
@@ -150,12 +144,17 @@ void history::historyentry(name account, string action, uint64_t amount, string 
 void history::trxentry(name from, name to, asset quantity) {
   require_auth(get_self());
   
+  if (quantity.symbol != utils::seeds_symbol) {
+    return;
+  }
+
   auto from_user = users.find(from.value);
   auto to_user = users.find(to.value);
   
   if (from_user == users.end() || to_user == users.end()) {
     return;
   }
+
 
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
@@ -175,8 +174,6 @@ void history::trxentry(name from, name to, asset quantity) {
     std::min(max_transaction_points_organizations, quantity.amount) : 
     std::min(max_transaction_points_individuals, quantity.amount)
   ) / 10000.0;
-
-  double from_multiplier = get_transaction_multiplier(to, from);
   
   double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
 
@@ -376,22 +373,6 @@ void history::migrate() {
     count++;
   }
   size_set("residents.sz"_n, count);
-
-  count = 0;
-  auto reptr = reputables.begin();
-  while(reptr != reputables.end()) {
-    reptr++;
-    count++;
-  }
-  size_set("reptables.sz"_n, count);
-
-  count = 0;
-  auto regtr = regens.begin();
-  while(regtr != regens.end()) {
-    regtr++;
-    count++;
-  }
-  size_set("regens.sz"_n, count);
 }
 
 void history::size_change(name id, int delta) {
@@ -438,9 +419,6 @@ uint64_t history::get_size(name id) {
 }
 
 void history::send_update_txpoints (name from) {
-  // delayed update
-  cancel_deferred(from.value);
-
   // delayed update
   cancel_deferred(from.value);
 

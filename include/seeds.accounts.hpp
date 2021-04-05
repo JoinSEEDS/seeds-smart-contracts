@@ -64,10 +64,12 @@ CONTRACT accounts : public contract {
       ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
-      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION rankorgreps();
+      ACTION rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope);
 
       ACTION rankcbss();
-      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION rankorgcbss();
+      ACTION rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope);
 
       ACTION changesize(name id, int64_t delta);
 
@@ -87,7 +89,11 @@ CONTRACT accounts : public contract {
       ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
-      ACTION migratevouch(name start_user, name start_sponsor);
+      ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size);
+
+      ACTION migorgs(uint64_t start_org);
+      ACTION delcbsreporg(uint64_t start_org);
+      ACTION testmigscope(name account, uint64_t amount);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -95,6 +101,9 @@ CONTRACT accounts : public contract {
 
       const name individual = "individual"_n;
       const name organization = "organisation"_n;
+
+      const name individual_scope = get_self();
+      const name organization_scope = "org"_n;
 
       const name not_found = ""_n;
 
@@ -126,8 +135,6 @@ CONTRACT accounts : public contract {
 
       const name resident_vouch_points = "res.vouch"_n;
       const name citizen_vouch_points = "cit.vouch"_n;
-      const name vou_cbp_reward_resident = "vou.cbp1.ind"_n;
-      const name vou_cbp_reward_citizen = "vou.cbp2.ind"_n;
 
       const name flag_total_scope = "flag.total"_n;
       const name flag_remove_scope = "flag.remove"_n;
@@ -148,7 +155,7 @@ CONTRACT accounts : public contract {
       void send_to_escrow(name fromfund, name recipient, asset quantity, string memo);
       uint64_t countrefs(name user, int check_num_residents);
       uint64_t rep_score(name user);
-      void add_rep_item(name account, uint64_t reputation);
+      void add_rep_item(name account, uint64_t reputation, name scope);
       uint64_t config_get(name key);
       double config_float_get(name key);
       void size_change(name id, int delta);
@@ -163,6 +170,10 @@ CONTRACT accounts : public contract {
       void send_eval_demote(name to);
       void send_punish_vouchers(name account, uint64_t points);
       void calc_vouch_rep(name account);
+      name get_scope(name type);
+      void send_add_cbs_org(name user, uint64_t amount);
+
+      void migrate_calc_vouch_rep(name account); // migration - remove
 
       DEFINE_USER_TABLE
 
@@ -361,7 +372,8 @@ CONTRACT accounts : public contract {
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)(unvouch)(pnishvouched)
-(rankreps)(rankrep)(rankcbss)(rankcbs)
+(rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
+(migorgs)(delcbsreporg)(testmigscope)
 );

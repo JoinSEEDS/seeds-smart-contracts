@@ -3,7 +3,7 @@ const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, sha256, fromHexString, isLocal, ramdom64ByteHexString, createKeypair, getBalance, sleep } = require('../scripts/helper')
 const { filter } = require('ramda')
 
-const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, bioregion, settings } = names
+const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, fourthuser, region, settings } = names
 
 const randomAccountName = () => {
     let length = 12
@@ -16,7 +16,7 @@ const randomAccountName = () => {
     return result;
  }
  
- const randomAccountNameBDC = () => {
+ const randomAccountNamergn = () => {
     let length = 8
     var result           = '';
     var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
@@ -24,7 +24,7 @@ const randomAccountName = () => {
     for ( var i = 0; i < length; i++ ) {
        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-    return result + ".bdc";
+    return result + ".rgn";
   }
   
 const getNumInvites = async () => {
@@ -674,22 +674,22 @@ describe('Campaign reward for existing user', async assert => {
 })
 
 
-describe('Create bioregion', async assert => {
+describe('Create region', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
     
-    const contracts = await initContracts({ onboarding, bioregion })
+    const contracts = await initContracts({ onboarding, region })
     
-    const newAccount = randomAccountNameBDC()
+    const newAccount = randomAccountNamergn()
     console.log("New account "+newAccount)
     const keyPair = await createKeypair()
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
   
-    await contracts.onboarding.createbio(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+    await contracts.onboarding.createregion(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
 
     var hasNewDomain = false
     try {
@@ -700,7 +700,7 @@ describe('Create bioregion', async assert => {
     }
 
     assert({
-        given: 'created bioregion',
+        given: 'created region',
         should: 'have account',
         actual: hasNewDomain,
         expected: true
@@ -821,6 +821,7 @@ describe('Private campaign', async assert => {
 
     console.log('create campaign')
     const maxAmount1 = '20.0000 SEEDS'
+    const maxAmount2 = '30.0000 SEEDS'
     await deposit(firstuser, onboarding, '5.0000 SEEDS')
 
     let cantCreateCampWithNotEnoughFunds = true
@@ -831,19 +832,19 @@ describe('Private campaign', async assert => {
         console.log('not enough funds (expected)')
     }
 
-    await deposit(firstuser, onboarding, '35.0000 SEEDS')
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '50.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+    await deposit(firstuser, onboarding, '45.0000 SEEDS')
+    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, 0, { authorization: `${firstuser}@active` })
 
     await checkCampaignFunds(1, maxAmount1)
-    await checkCampaignFunds(2, maxAmount1)
+    await checkCampaignFunds(2, maxAmount2)
 
     console.log(`invite ${seconduser}`)
     const firstuserBalanceBeforeAccept = await getBalance(firstuser)
-    await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '4.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '3.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
     await contracts.onboarding.accept(seconduser, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
-    await checkCampaignFunds(1, '9.0000 SEEDS')
+    await checkCampaignFunds(1, '10.0000 SEEDS')
     await checkCampaignInvites(1, 1, 0)
     await checkUsers(seconduser, 2)
     await checkVouches(seconduser, 1)
@@ -855,14 +856,14 @@ describe('Private campaign', async assert => {
 
     let cantExceedMaxInviteAmount = true
     try {
-        await contracts.onboarding.campinvite(1, seconduser, '5.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
+        await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
         cantExceedMaxInviteAmount = false
     } catch (err) {
         console.log('can not exceed max invitation amount (expected)')
     }
 
     console.log(`${seconduser} invites ${thirduser}`)
-    await contracts.onboarding.campinvite(1, seconduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
+    await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
     await contracts.onboarding.accept(thirduser, inviteSecret2, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
     const firstuserBalanceAfterAccept = await getBalance(firstuser)
@@ -878,7 +879,7 @@ describe('Private campaign', async assert => {
     console.log('invite without permission')
     let cantInviteWithoutPermission = true
     try {
-        await contracts.onboarding.campinvite(1, seconduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${seconduser}@active` })
+        await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${seconduser}@active` })
         cantInviteWithoutPermission = false
     } catch (err) {
         console.log('can not invite without permission (expected)')
@@ -888,7 +889,7 @@ describe('Private campaign', async assert => {
 
     let cantExceedRemainingAmount = true
     try {
-        await contracts.onboarding.campinvite(1, thirduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${thirduser}@active` })
+        await contracts.onboarding.campinvite(1, thirduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${thirduser}@active` })
         cantExceedRemainingAmount = false
     } catch (err) {
         console.log('can not exceed the remaining amount (expected)')
@@ -906,12 +907,12 @@ describe('Private campaign', async assert => {
 
     await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${firstuser}@active` })
     await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${firstuser}@active` })
-    await checkCampaignFunds(2, '8.0000 SEEDS')
+    await checkCampaignFunds(2, '14.0000 SEEDS')
 
     await contracts.onboarding.addauthorized(2, thirduser, { authorization: `${firstuser}@active` })
     await contracts.onboarding.cancel(thirduser, inviteHash4, { authorization: `${thirduser}@active` })
     await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${thirduser}@active` })
-    await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash5, { authorization: `${thirduser}@active` })
+    await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '5.0000 SEEDS', inviteHash5, { authorization: `${thirduser}@active` })
     await checkCampaignFunds(2, '2.0000 SEEDS')
 
     await contracts.onboarding.returnfunds(2, { authorization: `${firstuser}@active` })
@@ -987,7 +988,7 @@ describe('Private campaign', async assert => {
         given: `${firstuser} call returnfunds for camapaign 2`,
         should: 'cancel the campaign, the invites and return all the funds',
         actual: firstuserBalanceAfterCancel2 - firstuserBalanceBeforeCancel2,
-        expected: 20
+        expected: 30
     })
 
     assert({

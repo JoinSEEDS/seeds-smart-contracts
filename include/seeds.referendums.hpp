@@ -6,6 +6,7 @@
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
+#include <tables/user_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -87,6 +88,7 @@ CONTRACT referendums : public contract {
     void send_refund_stake(name account, asset quantity);
     void send_burn_stake(asset quantity);
     void send_change_setting(name setting_name, uint64_t setting_value);
+    void check_citizen(name account);
 
     uint64_t get_quorum(const name & setting);
     uint64_t get_unity(const name & setting);

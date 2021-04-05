@@ -177,13 +177,13 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
 }
 
-ACTION onboarding::createbio(name sponsor, name bioregion, string publicKey) {
+ACTION onboarding::createregion(name sponsor, name region, string publicKey) {
   require_auth(get_self());
 
-  bool is_existing_telos_user = is_account(bioregion);
+  bool is_existing_telos_user = is_account(region);
 
   if (!is_existing_telos_user) {
-    create_account(bioregion, publicKey, "bdc"_n);
+    create_account(region, publicKey, "rgn"_n);
   }
   
 }
@@ -282,6 +282,8 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
     auto citr = campaigns.find(campaign_id);
     check(citr != campaigns.end(), "campaign not found");
 
+    total_quantity += citr->reward;
+
     check(total_quantity <= citr->max_amount_per_invite, "max amount per invite exceeded");
     check(total_quantity <= citr->remaining_amount, "remaining amount exceeded");
 
@@ -345,7 +347,7 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
         sponsor.to_string() + " is not authorized in this campaign");
 
       campaigns.modify(citr, _self, [&](auto & item){
-        item.remaining_amount += total_quantity;
+        item.remaining_amount += total_quantity + citr->reward;
       });
 
       campinvites.erase(ciitr);
@@ -601,6 +603,8 @@ ACTION onboarding::rtrnfundsaux (uint64_t campaign_id) {
 
   invite_tables invites(get_self(), get_self().value);
 
+  auto citr = campaigns.find(campaign_id);
+
   auto campinvites_by_campaigns = campinvites.get_index<"bycampaign"_n>();
   auto itr = campinvites_by_campaigns.find(campaign_id);
 
@@ -613,14 +617,12 @@ ACTION onboarding::rtrnfundsaux (uint64_t campaign_id) {
   while (itr != campinvites_by_campaigns.end() && itr->campaign_id == campaign_id && count < batch_size) {
     auto iitr = invites.find(itr->invite_id);
     if (iitr != invites.end() && iitr->invite_secret == empty_checksum) {
-      total_refund += iitr->transfer_quantity + iitr->sow_quantity;
+      total_refund += iitr->transfer_quantity + iitr->sow_quantity + citr->reward;
       invites.erase(iitr);
     }
     itr = campinvites_by_campaigns.erase(itr);
     count++;
   }
-
-  auto citr = campaigns.find(campaign_id);
 
   if (itr != campinvites_by_campaigns.end() && itr->campaign_id == campaign_id) {
 

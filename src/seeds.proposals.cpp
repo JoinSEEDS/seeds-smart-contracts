@@ -280,6 +280,7 @@ void proposals::send_create_invite (
 }
 
 void proposals::send_return_funds_campaign (uint64_t campaign_id) {
+  if (campaign_id == 0) { return; }
   action(
     permission_level(get_self(), "active"_n),
     contracts::onboarding,
@@ -334,7 +335,6 @@ void proposals::onperiod() {
       if (pitr->stage == stage_active) {
 
         votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
 
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
@@ -348,7 +348,10 @@ void proposals::onperiod() {
         if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
           valid_quorum = true;
         } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+          auto citr = cyclestats.find(current_cycle);
+          uint64_t quorum_votes_needed = citr != cyclestats.end() ? citr->quorum_votes_needed : 0;
+          valid_quorum = votes_in_favor >= quorum_votes_needed;
         }
 
         print("proposal id: ", pitr->id, ", passed: ", passed, ", valid_quorum: ", valid_quorum, ", quorum: ", quorum, "\n");
@@ -477,6 +480,9 @@ void proposals::testperiod() {
     
     uint64_t quorum =  get_quorum(number_active_proposals);
 
+    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+    uint64_t current_cycle = c.propcycle;
+
     std::vector<uint64_t> active_props;
     std::vector<uint64_t> eval_props;
 
@@ -495,7 +501,7 @@ void proposals::testperiod() {
     // print("smallest id: "+std::to_string(smallest_prop_id) );
       
     // auto pitr = props.find(smallest_prop_id);
-    auto pitr = props.find(50);
+    auto pitr = props.find(70);
 
     while (pitr != props.end()) {
       uint64_t prop_id = pitr -> id;
@@ -506,10 +512,7 @@ void proposals::testperiod() {
       if (pitr->stage == stage_active) {
 
         votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
         
-        print(" voters: "+std::to_string(voters_number));
-
         double majority = double(prop_majority) / 100.0;
         double fav = double(pitr->favour);
         bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
@@ -518,7 +521,18 @@ void proposals::testperiod() {
         if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
           valid_quorum = true;
         } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
+          uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+          auto citr = cyclestats.find(current_cycle);
+          uint64_t quorum_votes_needed = citr != cyclestats.end() ? citr->quorum_votes_needed : 0;
+          valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+          print(
+            " prop ID " + std::to_string(pitr->id) +
+            " vp favor " + std::to_string(votes_in_favor) +
+            " needed: " + std::to_string(quorum_votes_needed) +
+            " valid: " + ( valid_quorum ? "YES " : "NO ") 
+          );
+
         }
 
         if (passed && valid_quorum) {
@@ -757,8 +771,11 @@ void proposals::create_aux (
   asset max_amount_per_invite,
   asset planted,
   asset reward
-) {
-  check_user(creator);
+) {  
+
+  require_auth(creator);
+
+  check_resident(creator);
   
   if (campaign_type != campaign_invite_type) {
     check_percentages(pay_percentages);
@@ -1428,6 +1445,16 @@ void proposals::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
+void proposals::check_resident(name account)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(
+    uitr->status == name("citizen") || 
+    uitr->status == name("resident"), 
+    "user is not a resident or citizen");
+}
+
 void proposals::addactive(name account) {
   require_auth(get_self());
 
@@ -1904,7 +1931,10 @@ ACTION proposals::migstats (uint64_t cycle) {
 
 }
 
+
 void proposals::migcycstat() {
+  require_auth(get_self());
+
   cycle_table c = cycle.get();
 
   uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);

@@ -35,7 +35,7 @@ CONTRACT onboarding : public contract {
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
-    ACTION createbio(name sponsor, name bioregion, string publicKey);
+    ACTION createregion(name sponsor, name region, string publicKey);
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
@@ -179,7 +179,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createbio)(acceptnew)(acceptexist)(cancel)(cleanup)
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(cancel)(cleanup)
       (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux)
       )
       }

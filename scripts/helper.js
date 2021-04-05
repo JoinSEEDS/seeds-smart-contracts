@@ -133,19 +133,20 @@ const token = (accountName, issuer, supply) => ({
   supply
 })
 
-const bdc = 'bdc'
+const rgn = 'rgn'
 
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      orguser: account('org1', '100.0000 SEEDS'),
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -172,7 +173,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -182,7 +183,7 @@ const accountsMetadata = (network) => {
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
       campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -208,7 +209,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -222,10 +223,10 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
 
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
 
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -252,7 +253,7 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
@@ -393,7 +394,7 @@ var permissions = [{
   actor: `${accounts.organization.account}@active`,
 }, {
   target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.bioregion.account}@active`,
+  actor: `${accounts.region.account}@active`,
 }, {
   target: `${accounts.onboarding.account}@application`,
   key: applicationPublicKey,
@@ -493,11 +494,11 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.bdc.account}@owner`,
+  target: `${accounts.rgn.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
-  target: `${accounts.bioregion.account}@active`,
-  actor: `${accounts.bioregion.account}@eosio.code`
+  target: `${accounts.region.account}@active`,
+  actor: `${accounts.region.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -623,7 +624,7 @@ var permissions = [{
   actor: `${accounts.organization.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'rankbiocss'
+  action: 'rankrgncss'
 }, {
   target: `${accounts.gratitude.account}@active`,
   actor: `${accounts.gratitude.account}@eosio.code`
@@ -641,8 +642,14 @@ var permissions = [{
   target: `${accounts.service.account}@invite`,
   action: 'createinvite'
 }, {
-  // target: `${accounts.bank.account}@active`,
-  // actor: `${accounts.pouch.account}@active`
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgreps'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgcbss'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'rankorgcss'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.proposals.account}@active`
@@ -683,13 +690,15 @@ if (keyProvider.length == 0 || keyProvider[0] == null) {
   console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
 }
 
+const isLocal = () => { return chainId == networks.local }
+
 const config = {
   keyProvider,
   httpEndpoint,
   chainId
 }
 
-const eos = new Eos(config)
+const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -706,7 +715,7 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return new Eos(config)
+  return new Eos(config, isLocal)
 }
 
 // ===========================================================================
@@ -749,8 +758,6 @@ const initContracts = (accounts) =>
   
 const ecc = require('eosjs-ecc')
 const sha256 = ecc.sha256
-
-const isLocal = () => { return chainId == networks.local }
 
 const ramdom64ByteHexString = async () => {
   let privateKey = await ecc.randomKey()

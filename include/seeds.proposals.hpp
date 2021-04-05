@@ -21,6 +21,7 @@ CONTRACT proposals : public contract {
       proposals(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
+          migrateprops(receiver, receiver.value),
           voice(receiver, receiver.value),
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
@@ -102,6 +103,7 @@ CONTRACT proposals : public contract {
 
       ACTION migstats (uint64_t cycle);
       ACTION migcycstat ();
+      ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
       ACTION testperiod ();
 
@@ -153,6 +155,7 @@ CONTRACT proposals : public contract {
 
       void check_user(name account);
       void check_citizen(name account);
+      void check_resident(name account);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity, name sender, string memo);
       void refund_staked(name beneficiary, asset quantity);
@@ -370,6 +373,24 @@ CONTRACT proposals : public contract {
       indexed_by<"bycmptypeid"_n,
       const_mem_fun<proposal_table, uint128_t, &proposal_table::by_campaign_type_id>>
     > proposal_tables;
+    
+    typedef eosio::multi_index<"migrateprops"_n, proposal_migration_table,
+      indexed_by<"bystatus"_n,
+      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_status>>,
+      indexed_by<"bystage"_n,
+      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_stage>>,
+      indexed_by<"bycampaign"_n,
+      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_campaign>>,
+      indexed_by<"bycreator"_n,
+      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_creator>>,
+      indexed_by<"bystatusid"_n,
+      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_status_id>>,
+      indexed_by<"bystageid"_n,
+      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_stage_id>>,
+      indexed_by<"bycmptypeid"_n,
+      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_campaign_type_id>>
+    > proposal_migration_tables;
+
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
@@ -393,6 +414,7 @@ CONTRACT proposals : public contract {
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
     proposal_tables props;
+    proposal_migration_tables migrateprops;
     participant_tables participants;
     user_tables users;
     voice_tables voice;

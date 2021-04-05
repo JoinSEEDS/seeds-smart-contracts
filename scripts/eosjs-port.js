@@ -21,26 +21,29 @@ function sleep (ms) {
 // errors, and we don't need it. It's only for unit tests. 
 async function getNonce () {
   try {
-    await rpc.getRawAbi('policy.seeds')
-    const random = Math.random().toString(36).substring(10);
-    return [{
-      // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
-      account:"policy.seeds",
-      name:"create",
-      authorization: [
-        {
-          actor: 'policy.seeds',
-          permission: 'active'
-        }
-      ],
-      data:{
+    if (isUnitTest) {
+      await rpc.getRawAbi('policy.seeds')
+      const random = Math.random().toString(36).substring(4);
+      return [{
+        // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
         account:"policy.seeds",
-        backend_user_id: random,
-        device_id: random,
-        signature: "",
-        policy: ""
-      }
-    }]
+        name:"create",
+        authorization: [
+          {
+            actor: 'policy.seeds',
+            permission: 'active'
+          }
+        ],
+        data:{
+          account:"policy.seeds",
+          backend_user_id: random,
+          device_id: random,
+          signature: "",
+          policy: ""
+        }
+      }]
+    }
+    return []
   } catch (err) {
     return []
   }
@@ -48,7 +51,7 @@ async function getNonce () {
 
 class Eos {
 
-  constructor (config) {
+  constructor (config, isLocal=null) {
     const {
       keyProvider,
       httpEndpoint,
@@ -61,6 +64,8 @@ class Eos {
     api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() })
 
     this.api = api
+
+    isUnitTest = isLocal ? isLocal() : false
 
   }
 
@@ -85,8 +90,17 @@ class Eos {
     for (let [key, action] of actions) {
       functions[action.name] = async function () {
 
+        let auth
         const { authorization } = arguments[arguments.length - 1]
-        let [actor, permission] = authorization.split('@')
+        if (Array.isArray(authorization)) {
+          auth = authorization
+        } else {
+          let [actor, permission] = authorization.split('@')
+          auth = [{
+            actor,
+            permission,
+          }]
+        }
 
         const data = {}
 
@@ -110,10 +124,7 @@ class Eos {
           {
           account: accountName,
           name: action.name,
-          authorization: [{
-            actor,
-            permission,
-          }],
+          authorization: auth,
             data
           },
           ...nonce
