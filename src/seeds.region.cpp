@@ -119,8 +119,8 @@ ACTION region::create(
 
     check(sitr->balance >= quantity, "The user does not have enough credit to create an organization" + sitr->balance.to_string() + " min: "+quantity.to_string());
 
-    auto bitr = regions.find(rgnaccount.value);
-    check(bitr == regions.end(), "This region already exists.");
+    auto ritr = regions.find(rgnaccount.value);
+    check(ritr == regions.end(), "This region already exists.");
     
     auto uitr = users.find(founder.value);
     check(uitr != users.end(), "Founder is not a Seeds account.");
@@ -279,9 +279,9 @@ ACTION region::setfounder(name region, name founder, name new_founder) {
 
 ACTION region::removebr(name region) {
     require_auth(get_self());
-    auto bitr = regions.find(region.value);
-    check(bitr != regions.end(), "The region does not exist.");
-    regions.erase(bitr);
+    auto rgnitr = regions.find(region.value);
+    check(rgnitr != regions.end(), "The region does not exist.");
+    regions.erase(rgnitr);
 
     roles_tables roles(get_self(), region.value);
     auto ritr = roles.begin();
@@ -307,9 +307,9 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
 }
 
 void region::size_change(name region, int delta) {
-    auto bitr = regions.find(region.value);
+    auto ritr = regions.find(region.value);
 
-    check(bitr != regions.end(), "region not found");
+    check(ritr != regions.end(), "region not found");
   
     uint64_t newsize = ritr->members_count + delta; 
     if (delta < 0) {
@@ -317,7 +317,10 @@ void region::size_change(name region, int delta) {
         newsize = 0;
       }
     }
-    regions.modify(bitr, _self, [&](auto& item) {
+
+    auto active_cutoff = config_get("rgn.cit"_n);
+
+    regions.modify(ritr, _self, [&](auto& item) {
       item.members_count = newsize;
       if (item.members_count >= active_cutoff) {
         item.status = status_active;
