@@ -112,8 +112,6 @@ CONTRACT proposals : public contract {
 
       ACTION initcycstats();
 
-      ACTION initprops(uint64_t start);
-
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
