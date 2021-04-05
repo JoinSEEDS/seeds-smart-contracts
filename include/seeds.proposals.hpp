@@ -64,6 +64,8 @@ CONTRACT proposals : public contract {
 
       ACTION onperiod();
 
+      ACTION evalproposal(uint64_t proposal_id, uint64_t prop_cycle);
+
       ACTION updatevoices();
 
       ACTION updatevoice(uint64_t start);
@@ -106,8 +108,9 @@ CONTRACT proposals : public contract {
       ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
       ACTION testperiod ();
+      ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
-      ACTION initprops(uint64_t start);
+      ACTION initcycstats();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -187,12 +190,19 @@ CONTRACT proposals : public contract {
 
       void increase_voice_cast(name voter, uint64_t amount, name option);
       uint64_t calc_quorum_base(uint64_t propcycle);
-      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
         name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
       void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
       void send_return_funds_campaign(uint64_t campaign_id);
+
+      void send_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void init_cycle_new_stats();
+      void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
+      void send_punish(name account);
+      void send_update_voices();
+
+      void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -359,6 +369,7 @@ CONTRACT proposals : public contract {
         uint64_t total_citizens;
         uint64_t quorum_vote_base;
         uint64_t quorum_votes_needed;
+        uint64_t total_eligible_voters;
         float unity_needed;
 
         std::vector<uint64_t> active_props;
@@ -366,6 +377,29 @@ CONTRACT proposals : public contract {
 
         uint64_t primary_key()const { return propcycle; }
       };
+
+      TABLE cycle_stats_migration_table {
+        uint64_t propcycle; 
+
+        uint64_t start_time; 
+        uint64_t end_time; 
+        uint64_t num_proposals;
+        uint64_t num_votes;
+        uint64_t total_voice_cast;
+        uint64_t total_favour;
+        uint64_t total_against; 
+        uint64_t total_citizens;
+        uint64_t quorum_vote_base;
+        uint64_t quorum_votes_needed;
+        uint64_t total_eligible_voters;
+        float unity_needed;
+
+        std::vector<uint64_t> active_props;
+        std::vector<uint64_t> eval_props;
+
+        uint64_t primary_key()const { return propcycle; }
+      };
+
 
       TABLE voted_proposals_table { // scoped by cycle
         uint64_t proposal_id;
@@ -423,8 +457,9 @@ CONTRACT proposals : public contract {
       const_mem_fun<delegate_trust_table, uint128_t, &delegate_trust_table::by_delegatee_delegator>>
     > delegate_trust_tables;
     typedef eosio::multi_index<"cyclestats"_n, cycle_stats_table> cycle_stats_tables;
+    typedef eosio::multi_index<"mcyclestats"_n, cycle_stats_migration_table> cycle_stats_migration_tables;
     typedef eosio::multi_index<"cycvotedprps"_n, voted_proposals_table> voted_proposals_tables;
- 
+
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
@@ -447,12 +482,12 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)
-        (initprops)
-        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)(testpropquor)
+        (migrtevotedp)(migrpass)(testperiod)(testevalprop)(migstats)(migcycstat)(testpropquor)
+        (initcycstats)
         )
       }
   }

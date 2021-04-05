@@ -20,6 +20,8 @@ void settings::reset() {
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
 
   confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
+
+  confwithdesc(name("prop.evl.psh"), 100, "Rep points the proposer will lose if the proposal fails in evaluate state", high_impact);
   
   confwithdesc(name("unity.high"), 90, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
