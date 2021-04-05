@@ -730,6 +730,7 @@ void proposals::createx(
   name fund,
   std::vector<uint64_t> pay_percentages
 ) {
+  check(false, "contract is paused");
   
   require_auth(creator);
 
