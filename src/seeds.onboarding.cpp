@@ -171,13 +171,13 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   }
 }
 
-ACTION onboarding::createrdc(name sponsor, name region, string publicKey) {
+ACTION onboarding::createregion(name sponsor, name region, string publicKey) {
   require_auth(get_self());
 
   bool is_existing_telos_user = is_account(region);
 
   if (!is_existing_telos_user) {
-    create_account(region, publicKey, "rdc"_n);
+    create_account(region, publicKey, "rgn"_n);
   }
   
 }
@@ -453,7 +453,8 @@ ACTION onboarding::createcampg (
   asset planted, 
   name reward_owner,
   asset reward,
-  asset total_amount
+  asset total_amount,
+  uint64_t proposal_id
 ) {
 
   require_auth(origin_account);
@@ -481,15 +482,21 @@ ACTION onboarding::createcampg (
   });
 
   name type = private_campaign;
+  uint64_t key = campaigns.available_primary_key();
+  key = key > 0 ? key : 1;
 
-  if (origin_account == bankaccts::campaigns || origin_account == contracts::proposals) {
+  if (origin_account == contracts::proposals) {
     type = invite_campaign;
+    action(
+      permission_level(contracts::proposals, "active"_n),
+      contracts::proposals,
+      "addcampaign"_n,
+      std::make_tuple(proposal_id, key)
+    ).send();
   }
 
-  uint64_t key = campaigns.available_primary_key(); 
-
   campaigns.emplace(_self, [&](auto & item){
-    item.campaign_id = key > 0 ? key : 1;
+    item.campaign_id = key;
     item.type = type;
     item.origin_account = origin_account;
     item.owner = owner;

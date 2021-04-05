@@ -5,6 +5,7 @@
 #include <utils.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
+#include <tables/rep_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -27,7 +28,8 @@ CONTRACT organization : public contract {
               users(contracts::accounts, contracts::accounts.value),
               balances(contracts::harvest, contracts::harvest.value),
               config(contracts::settings, contracts::settings.value),
-              totals(contracts::history, contracts::history.value)
+              totals(contracts::history, contracts::history.value),
+              planted(contracts::harvest, contracts::harvest.value)
               {}
         
         
@@ -67,21 +69,13 @@ CONTRACT organization : public contract {
 
         ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
-        // ACTION rankcbsorgs();
-
-        // ACTION rankcbsorg(uint64_t start, uint64_t chunk, uint64_t chunksize);
-
-        // ACTION addcbpoints(name organization, uint32_t cbscore);
-
-        // ACTION subcbpoints(name organization, uint32_t cbscore);
+        ACTION makethrivble(name organization);
 
         ACTION makeregen(name organization);
 
+        ACTION makesustnble(name organization);
+
         ACTION makereptable(name organization);
-
-        ACTION testregen(name organization);
-
-        ACTION testreptable(name organization);
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
@@ -89,8 +83,31 @@ CONTRACT organization : public contract {
 
         ACTION scoreorgs(name next);
 
+        ACTION testregensc(name organization, uint64_t score);
+        ACTION teststatus(name organization, uint64_t status);
+
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
+
+        const name min_planted = "org.minplant"_n;
+        const name regen_score_size = "rs.sz"_n;
+        const name cb_score_size = "cbs.sz"_n;
+        const name tx_score_size = "txs.sz"_n;
+        const name regen_avg = "org.rgnavg"_n;
+
+        const uint64_t status_regular = 0;
+        const uint64_t status_reputable = 1;
+        const uint64_t status_sustainable = 2;
+        const uint64_t status_regenerative = 3;
+        const uint64_t status_thrivable = 4;
+
+        std::vector<name> status_names = {
+            "regular"_n,
+            "reputable"_n,
+            "sustainable"_n,
+            "regenerative"_n,
+            "thrivable"_n
+        };
 
         TABLE organization_table {
             name org_name;
@@ -203,6 +220,10 @@ CONTRACT organization : public contract {
 
         DEFINE_SIZE_TABLE_MULTI_INDEX
 
+        DEFINE_REP_TABLE
+
+        DEFINE_REP_TABLE_MULTI_INDEX
+
 
         TABLE totals_table {
             name account;
@@ -245,6 +266,16 @@ CONTRACT organization : public contract {
             uint64_t primary_key() const { return dau_history_id; }
             uint64_t by_account() const { return account.value; }
             uint64_t by_date() const { return date; }
+        };
+
+        TABLE planted_table { // from harvest
+            name account;
+            asset planted;
+            uint64_t rank;  
+
+            uint64_t primary_key()const { return account.value; }
+            uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
+            uint64_t by_rank() const { return rank; } 
         };
 
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
@@ -298,6 +329,11 @@ CONTRACT organization : public contract {
             const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_rank>>
         > cbs_organization_tables;
 
+        typedef eosio::multi_index<"planted"_n, planted_table,
+            indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
+            indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
+        > planted_tables;
+
         organization_tables organizations;
         sponsors_tables sponsors;
         user_tables users;
@@ -310,17 +346,8 @@ CONTRACT organization : public contract {
         ref_tables refs;
         avg_vote_tables avgvotes;
         totals_tables totals;
+        planted_tables planted;
 
-        const name min_planted = "org.minplant"_n;
-        const name regen_score_size = "rs.sz"_n;
-        const name cb_score_size = "cbs.sz"_n;
-        const name tx_score_size = "txs.sz"_n;
-        const name regen_avg = "org.rgnavg"_n;
-        const uint64_t regular_org = 0;
-        const uint64_t reputable_org = 1;
-        const uint64_t regenerative_org = 2;
-
-        uint64_t get_config(name key);
         void create_account(name sponsor, name orgaccount, string fullname, string publicKey);
         void check_owner(name organization, name owner);
         void init_balance(name account);
@@ -334,14 +361,11 @@ CONTRACT organization : public contract {
         void increase_size_by_one(name id);
         void decrease_size_by_one(name id);
         uint32_t calc_transaction_points(name organization);
-        void check_can_make_regen(name organization);
-        void check_can_make_reputable(name organization);
-        uint64_t count_refs(name user, uint32_t check_num_residents);
         void update_status(name organization, uint64_t status);
-        uint64_t get_regen_score(name organization);
-        void history_add_regenerative(name organization);
-        void history_add_reputable(name organization);
-        uint64_t count_transactions(name organization);
+        uint64_t config_get(name key);
+        void check_referrals(name organization, uint64_t min_visitors_invited, uint64_t min_residents_invited);
+        void check_status_requirements(name organization, uint64_t status);
+        void history_update_org_status(name organization, uint64_t status);
 };
 
 
@@ -352,8 +376,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
             (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
-            (rankregens)(rankregen)(makeregen)
-            (makereptable)(testregen)(testreptable)(scoreorgs)(scoretrxs))
+            (rankregens)(rankregen)(scoreorgs)(scoretrxs)
+            (makethrivble)(makeregen)(makesustnble)(makereptable)(testregensc)(teststatus))
       }
   }
 }

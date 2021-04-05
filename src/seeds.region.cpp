@@ -109,7 +109,7 @@ ACTION region::create(
     check_user(founder);
 
     //string acct_string = rgnaccount.to_string();
-    check(rgnaccount.suffix().to_string() == "rdc", "region name must end in '.rdc' Your suffix: " + rgnaccount.suffix().to_string());
+    check(rgnaccount.suffix().to_string() == "rgn", "region name must end in '.rgn' Your suffix: " + rgnaccount.suffix().to_string());
 
     auto sitr = sponsors.find(founder.value);
     check(sitr != sponsors.end(), "The founder account does not have a balance entry in this contract.");
@@ -119,8 +119,8 @@ ACTION region::create(
 
     check(sitr->balance >= quantity, "The user does not have enough credit to create an organization" + sitr->balance.to_string() + " min: "+quantity.to_string());
 
-    auto ritr = regions.find(rgnaccount.value);
-    check(ritr == regions.end(), "This region already exists.");
+    auto bitr = regions.find(rgnaccount.value);
+    check(bitr == regions.end(), "This region already exists.");
     
     auto uitr = users.find(founder.value);
     check(uitr != users.end(), "Founder is not a Seeds account.");
@@ -176,7 +176,7 @@ ACTION region::join(name region, name account) {
             item.joined_date_timestamp = now;
         });
     } else {
-        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("rdc.vote.del"_n)), "user needs to wait until the delay ends");
+        check(ditr -> joined_date_timestamp < now - (utils::moon_cycle * config_float_get("rgn.vote.del"_n)), "user needs to wait until the delay ends");
         regiondelays.modify(ditr, _self, [&](auto & item){
             item.apply_vote_delay = true;
             item.joined_date_timestamp = now;
@@ -277,23 +277,23 @@ ACTION region::setfounder(name region, name founder, name new_founder) {
     });
 }
 
-ACTION region::removerdc(name region) {
+ACTION region::removebr(name region) {
     require_auth(get_self());
-    auto itr = regions.find(region.value);
-    check(itr != regions.end(), "The region does not exist.");
-    regions.erase(itr);
+    auto bitr = regions.find(region.value);
+    check(bitr != regions.end(), "The region does not exist.");
+    regions.erase(bitr);
 
     roles_tables roles(get_self(), region.value);
     auto ritr = roles.begin();
     while(ritr != roles.end()) {
         ritr = roles.erase(ritr);
     }
-    auto rdcmembers = members.get_index<"byregion"_n>();
+    auto rgnmembers = members.get_index<"byregion"_n>();
     uint64_t current_user = 0;
 
-    auto mitr = rdcmembers.find(region.value);
-    while (mitr != rdcmembers.end() && mitr->region.value == region.value) {
-        mitr = rdcmembers.erase(mitr);
+    auto mitr = rgnmembers.find(region.value);
+    while (mitr != rgnmembers.end() && mitr->region.value == region.value) {
+        mitr = rgnmembers.erase(mitr);
     }
 }
 
@@ -301,15 +301,15 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
 {
     action(
         permission_level{contracts::onboarding, "active"_n},
-        contracts::onboarding, "createrdc"_n,
+        contracts::onboarding, "createregion"_n,
         make_tuple(sponsor, orgaccount, publicKey)
     ).send();
 }
 
 void region::size_change(name region, int delta) {
-    auto ritr = regions.find(region.value);
+    auto bitr = regions.find(region.value);
 
-    check(ritr != regions.end(), "region not found");
+    check(bitr != regions.end(), "region not found");
   
     uint64_t newsize = ritr->members_count + delta; 
     if (delta < 0) {
@@ -317,10 +317,7 @@ void region::size_change(name region, int delta) {
         newsize = 0;
       }
     }
-
-    uint64_t active_cutoff = config_get("rdc.cit"_n);
-
-    regions.modify(ritr, _self, [&](auto& item) {
+    regions.modify(bitr, _self, [&](auto& item) {
       item.members_count = newsize;
       if (item.members_count >= active_cutoff) {
         item.status = status_active;

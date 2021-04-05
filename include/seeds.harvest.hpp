@@ -79,8 +79,8 @@ CONTRACT harvest : public contract {
     ACTION rankorgcss();
     ACTION rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name cs_scope);
 
-    ACTION rankrdccss();
-    ACTION rankrdccs(uint64_t start, uint64_t chunk, uint64_t chunksize);
+    ACTION rankrgncss();
+    ACTION rankrgncs(uint64_t start, uint64_t chunk, uint64_t chunksize);
 
     ACTION updatetxpt(name account);
     ACTION calctotal(uint64_t startval);
@@ -102,7 +102,7 @@ CONTRACT harvest : public contract {
 
     ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
-    ACTION disthvstrdcs(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount);
 
     ACTION migorgs(uint64_t start);
     ACTION delcsorg(uint64_t start);
@@ -119,8 +119,8 @@ CONTRACT harvest : public contract {
     name cs_size = "cs.sz"_n;
     name sum_rank_users = "usr.rnk.sz"_n;
     name sum_rank_orgs = "org.rnk.sz"_n;
-    name sum_rank_rdcs = "rdc.rnk.sz"_n;
-    name cs_rdc_size = "rdc.cs.sz"_n;
+    name sum_rank_rgns = "rgn.rnk.sz"_n;
+    name cs_rgn_size = "rgn.cs.sz"_n;
     name cs_org_size = "org.cs.sz"_n;
 
     const name individual_scope_accounts = contracts::accounts;
@@ -406,12 +406,12 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(harvest, 
           (payforcpu)(reset)
           (unplant)(claimrefund)(cancelrefund)(sow)
-          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankorgcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankrdccss)(rankrdccs)
+          (ranktx)(calctrxpt)(calctrxpts)(rankplanted)(rankplanteds)(calccss)(calccs)(rankcss)(rankorgcss)(rankcs)(ranktxs)(rankorgtxs)(updatecs)(rankrgncss)(rankrgncs)
           (updatetxpt)(updtotal)(calctotal)
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
-          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrdcs)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
           (delcsorg)(migorgs)(testmigscope)
         )
       }

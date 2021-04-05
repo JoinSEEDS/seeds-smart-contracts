@@ -790,7 +790,7 @@ describe('individual transactions', async assert => {
   console.log('reset orgs')
   await contracts.organization.reset({ authorization: `${organization}@active` })
 
-  console.log('reset rdcs')
+  console.log('reset rgns')
   await contracts.region.reset({ authorization: `${region}@active` })
 
   const transfer = async (from, to, quantity) => {
@@ -814,19 +814,19 @@ describe('individual transactions', async assert => {
   await contracts.organization.create(seconduser, secondorg, "Org Number 2", eosDevKey, { authorization: `${seconduser}@active` })
   await contracts.accounts.testsetrs(firstorg, 49, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(secondorg, 49, { authorization: `${accounts}@active` })
-  await contracts.organization.testregen(firstorg, { authorization: `${organization}@active` })
+  await contracts.organization.teststatus(firstorg, 4, { authorization: `${organization}@active` })
     
   console.log('add regions')
   const keypair = await createKeypair();
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
-  const rdcs = ['rdc1.rdc']
-  for (let index = 0; index < rdcs.length; index++) {
-    const rdc = rdcs[index]
+  const rgns = ['rgn1.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
     await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
     await contracts.region.create(
       users[index], 
-      rdc, 
-      'test rdc region',
+      rgn, 
+      'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
@@ -834,7 +834,7 @@ describe('individual transactions', async assert => {
       { authorization: `${users[index]}@active` })
   }
 
-  await contracts.region.join(rdcs[0], thirduser, { authorization: `${thirduser}@active` })
+  await contracts.region.join(rgns[0], thirduser, { authorization: `${thirduser}@active` })
 
   await transfer(firstuser, thirduser, 1)
   await transfer(thirduser, seconduser, 1)

@@ -4,6 +4,8 @@
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/user_table.hpp>
+#include <tables/config_table.hpp>
+#include <tables/config_float_table.hpp>
 
 using namespace eosio;
 using std::string;
