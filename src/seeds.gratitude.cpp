@@ -9,6 +9,11 @@ ACTION gratitude::reset () {
     bitr = balances.erase(bitr);
   }
 
+  auto actr = acks.begin();
+  while (actr != acks.end()) {
+    actr = acks.erase(actr);
+  }
+
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
@@ -65,18 +70,33 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   }
 }
 
-
 ACTION gratitude::newround() {
   require_auth(get_self());
-  auto generated_gratz = config_get(gratzgen);
+
+  uint64_t generated_gratz = 0;
 
   auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
+  // TODO: before reset redistribute acks
+
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
     uint64_t my_received = bitr->received.amount;
+    auto uitr = users.find(bitr->account.value);
+    if (uitr != users.end()) {
+      switch (uitr->status)
+      {
+      case "citizen"_n:
+        generated_gratz = config_get(gratzgen_cit);;
+        break;
+      
+      case "resident"_n:
+        generated_gratz = config_get(gratzgen_res);;
+        break;
+      }
+    }
     balances.modify(bitr, _self, [&](auto& item) {
         item.received = asset(0, gratitude_symbol);
         item.remaining = asset(generated_gratz, gratitude_symbol);
@@ -118,7 +138,20 @@ void gratitude::update_stats(name from, name to, asset quantity) {
 void gratitude::init_balances (name account) {
   auto bitr = balances.find(account.value);
 
-  auto generated_gratz = config_get(gratzgen);
+  uint64_t generated_gratz = 0;
+  auto uitr = users.find(account.value);
+  if (uitr != users.end()) {
+    switch (uitr->status)
+    {
+    case "citizen"_n:
+      generated_gratz = config_get(gratzgen_cit);;
+      break;
+    
+    case "resident"_n:
+      generated_gratz = config_get(gratzgen_res);;
+      break;
+    }
+  }
 
   if (bitr == balances.end()) {
     balances.emplace(_self, [&](auto & item){

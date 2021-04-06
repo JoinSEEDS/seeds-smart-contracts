@@ -114,7 +114,8 @@ CONTRACT gratitude : public contract {
     config_tables config;
     size_tables sizes;
 
-    const name gratzgen = "gratz.gen"_n; // Gratitude generated per cycle setting
+    const name gratzgen_res = "gratz1.gen"_n; // Gratitude generated per cycle for residents
+    const name gratzgen_cit = "gratz2.gen"_n; // Gratitude generated per cycle for citizens
 };
 
 EOSIO_DISPATCH(gratitude, 
