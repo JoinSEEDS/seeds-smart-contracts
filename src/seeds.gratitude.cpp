@@ -46,6 +46,26 @@ ACTION gratitude::give (name from, name to, asset quantity, string memo) {
   update_stats(from, to, quantity);
 }
 
+ACTION gratitude::acknowledge (name from, name to, string memo) {
+  require_auth(from);
+
+  check( from != to, "gratitude: cannot give to self" );
+  check( is_account( to ), "gratitude: to account does not exist");
+
+  auto actr = acks.find(to.value);
+  if (actr == acks.end()) {
+    acks.emplace(_self, [&](auto& item) {
+      item.receiver = to;
+      item.donors = vector{from};
+    });
+  } else {
+    acks.modify(actr, get_self(), [&](auto &item) {
+        item.donors.push_back(from);
+    });
+  }
+}
+
+
 ACTION gratitude::newround() {
   require_auth(get_self());
   auto generated_gratz = config_get(gratzgen);
