@@ -288,6 +288,22 @@ void proposals::send_return_funds_campaign (uint64_t campaign_id) {
   ).send();
 }
 
+void proposals::send_cancel_lock (name fromfund, uint64_t campaign_id, asset quantity) {
+  action(
+    permission_level(fromfund, "active"_n),
+    contracts::escrow,
+    "cancellock"_n,
+    std::make_tuple(campaign_id)
+  ).send();
+
+  action(
+    permission_level(fromfund, "active"_n),
+    contracts::escrow,
+    "withdraw"_n,
+    std::make_tuple(fromfund, quantity)
+  ).send();
+}
+
 void proposals::update_cycle_stats_from_proposal (uint64_t proposal_id, name array) {
   cycle_table c = cycle.get();
 
@@ -315,10 +331,35 @@ void proposals::send_punish (name account) {
   ).send();
 }
 
+bool proposals::check_prop_majority (uint64_t favour, uint64_t against) {
+  uint64_t prop_majority = config_get(name("propmajority"));
+  double majority = double(prop_majority) / 100.0;
+  double fav = double(favour);
+  return favour > 0 && fav >= double(favour + against) * majority;
+}
+
+ACTION proposals::checkprop (uint64_t proposal_id, string message) {
+  auto pitr = props.get(proposal_id, "propsal not found");
+  string msg = message.length() > 0 ? message : "proposal is not passing";
+  check(check_prop_majority(pitr.favour, pitr.against), msg);
+}
+
+ACTION proposals::doneprop (uint64_t proposal_id) {
+  require_auth(get_self());
+  
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
+
+  props.modify(pitr, _self, [&](auto & item){
+    item.executed = true;
+    item.status = status_passed;
+    item.stage = stage_done;
+  });
+}
+
 void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
   require_auth(get_self());
 
-  uint64_t prop_majority = config_get(name("propmajority"));
   uint64_t number_active_proposals = 0;
   uint64_t total_eligible_voters = 0;
   uint64_t quorum_votes_needed = 0;
@@ -343,12 +384,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
   // active proposals are evaluated
   if (pitr->stage == stage_active) {
 
-    // votes_tables votes(get_self(), pitr->id);
-    // uint64_t voters_number = distance(votes.begin(), votes.end());
-
-    double majority = double(prop_majority) / 100.0;
-    double fav = double(pitr->favour);
-    bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
     name prop_type = get_type(pitr->fund);
     bool is_alliance_type = prop_type == alliance_type;
     bool is_campaign_type = prop_type == campaign_type;
@@ -369,11 +405,13 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
         refund_staked(pitr->creator, pitr->staked);
         change_rep(pitr->creator, true);
 
-        asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-        
+        asset payout_amount;
+
         if (is_alliance_type) {
+          payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
         } else {
+          payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
           if (pitr->campaign_type == campaign_invite_type) {
             withdraw(get_self(), payout_amount, pitr->fund, "invites");
             withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
@@ -400,19 +438,20 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
         
         uint64_t age = pitr -> age + 1;
 
-        asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
+        asset payout_amount;
 
-        if (is_alliance_type) {
-          send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-        } else {
+        if (!is_alliance_type) {
+          payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
           withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+        } else {
+          payout_amount = asset(0, utils::seeds_symbol);
         }
 
         uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
 
         props.modify(pitr, _self, [&](auto & proposal){
           proposal.age = age;
-          if (age == num_cycles) {
+          if (age == num_cycles && !is_alliance_type) {
             proposal.executed = true;
             proposal.status = status_passed;
             proposal.stage = stage_done;
@@ -428,10 +467,14 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
         burn(pitr->staked);
       } else {
         send_punish(pitr->creator);
-      }
 
-      if (pitr->campaign_type == campaign_invite_type) {
-        send_return_funds_campaign(pitr->campaign_id);
+        if (pitr->campaign_type == campaign_invite_type) {
+          send_return_funds_campaign(pitr->campaign_id);
+        }
+
+        if (is_alliance_type) {
+          send_cancel_lock(pitr->fund, pitr->campaign_id, pitr->quantity);
+        }
       }
 
       props.modify(pitr, _self, [&](auto& proposal) {
@@ -528,7 +571,6 @@ void proposals::onperiod() {
 void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
   require_auth(get_self());
 
-  uint64_t prop_majority = config_get(name("propmajority"));
   uint64_t number_active_proposals = 0;
   uint64_t total_eligible_voters = 0;
   uint64_t quorum_votes_needed = 0;
@@ -556,9 +598,7 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     // votes_tables votes(get_self(), pitr->id);
     // uint64_t voters_number = distance(votes.begin(), votes.end());
 
-    double majority = double(prop_majority) / 100.0;
-    double fav = double(pitr->favour);
-    bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
     name prop_type = get_type(pitr->fund);
     bool is_alliance_type = prop_type == alliance_type;
     bool is_campaign_type = prop_type == campaign_type;
@@ -866,7 +906,11 @@ void proposals::create_aux (
   check_resident(creator);
   
   if (campaign_type != campaign_invite_type) {
-    check_percentages(pay_percentages);
+    if (campaign_type == alliance_type) {
+      pay_percentages = { 100 };
+    } else {
+      check_percentages(pay_percentages);
+    }
   }
 
   check(get_type(fund) != "none"_n, 

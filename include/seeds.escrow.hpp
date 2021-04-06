@@ -37,6 +37,12 @@ CONTRACT escrow : public contract {
 
         ACTION withdraw(name sponsor, asset quantity);
 
+        ACTION resettrigger(const name & trigger_source);
+
+        ACTION triggertest( const name&     trigger_source,
+                            const name&     event_name,
+                            const string&   notes);
+
         [[eosio::on_notify("*::transfer")]]
         void ontransfer(name from, name to, asset quantity, string memo);
 
