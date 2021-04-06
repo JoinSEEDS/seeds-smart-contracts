@@ -73,34 +73,17 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
 ACTION gratitude::newround() {
   require_auth(get_self());
 
-  uint64_t generated_gratz = 0;
-
   auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
-  // TODO: before reset redistribute acks
+  // TODO: before reset redistribute acks then reset acks
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
     uint64_t my_received = bitr->received.amount;
-    auto uitr = users.find(bitr->account.value);
-    if (uitr != users.end()) {
-      switch (uitr->status)
-      {
-      case "citizen"_n:
-        generated_gratz = config_get(gratzgen_cit);;
-        break;
-      
-      case "resident"_n:
-        generated_gratz = config_get(gratzgen_res);;
-        break;
-      }
-    }
-    balances.modify(bitr, _self, [&](auto& item) {
-        item.received = asset(0, gratitude_symbol);
-        item.remaining = asset(generated_gratz, gratitude_symbol);
-    });
+    // reset gratitude for account
+    init_balances(bitr->account);
     float split_factor = my_received / (float)volume;
     uint64_t payout = contract_balance.amount * split_factor;
     // Pay out SEEDS in store
@@ -160,6 +143,11 @@ void gratitude::init_balances (name account) {
       item.remaining = asset(generated_gratz, gratitude_symbol);
     });
     size_change("balances.sz"_n, 1);
+  } else {
+    balances.modify(bitr, _self, [&](auto& item) {
+        item.received = asset(0, gratitude_symbol);
+        item.remaining = asset(generated_gratz, gratitude_symbol);
+    });
   }
 }
 
