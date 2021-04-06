@@ -77,7 +77,12 @@ ACTION gratitude::newround() {
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
-  // TODO: before reset redistribute acks then reset acks
+  // TODO: calculate acks, redistribute then reset them
+  auto actr = acks.begin();
+  while (actr != acks.end()) {
+    calc_acks(actr->donor);
+    actr = acks.erase(actr);
+  }
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
@@ -97,6 +102,35 @@ ACTION gratitude::newround() {
 void gratitude::check_user (name account) {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "gratitude: user not found");
+}
+
+void gratitude::calc_acks (name donor) {
+  auto bitr = balances.find(donor.value);
+  uint64_t remaining = bitr->remaining.amount;
+
+  auto min_acks = config_get(gratz_acks);
+
+  auto actr = acks.find(donor.value);
+  if (actr != acks.end()) {
+    std::map<name, uint64_t> unique_recs;
+    for (std::size_t i = 0; i < actr->receivers.size(); i++) {
+      unique_recs[actr->receivers[i]]++;
+    }
+    auto uritr = unique_recs.begin();
+    while (uritr != unique_recs.end()) {
+      uint64_t received = 0;
+      if (actr->receivers.size() < min_acks) {
+        received = (remaining / min_acks) * uritr->second;
+      } else {
+        received = (remaining / actr->receivers.size()) * uritr->second;
+      }
+
+      sub_gratitude(donor, asset(received, gratitude_symbol));
+      add_gratitude(uritr->first, asset(received, gratitude_symbol));
+      update_stats(donor, uritr->first, asset(received, gratitude_symbol));
+      uritr++;
+    }
+  }
 }
 
 uint64_t gratitude::get_current_volume() {
@@ -127,11 +161,11 @@ void gratitude::init_balances (name account) {
     switch (uitr->status)
     {
     case "citizen"_n:
-      generated_gratz = config_get(gratzgen_cit);;
+      generated_gratz = config_get(gratzgen_cit);
       break;
     
     case "resident"_n:
-      generated_gratz = config_get(gratzgen_res);;
+      generated_gratz = config_get(gratzgen_res);
       break;
     }
   }

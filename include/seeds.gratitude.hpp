@@ -44,6 +44,7 @@ CONTRACT gratitude : public contract {
 
     void check_user(name account);
     void init_balances(name account);
+    void calc_acks(name account);
     void add_gratitude(name account, asset quantity);
     void sub_gratitude(name account, asset quantity);
     uint64_t get_current_volume();
@@ -82,10 +83,10 @@ CONTRACT gratitude : public contract {
     };
 
     TABLE acks_table {
-      name receiver;
-      vector<name> donors; // can have duplicates
+      name donor;
+      vector<name> receivers; // can have duplicates
 
-      uint64_t primary_key() const { return receiver.value; }
+      uint64_t primary_key() const { return donor.value; }
     };
 
     TABLE stats_table {
@@ -116,6 +117,7 @@ CONTRACT gratitude : public contract {
 
     const name gratzgen_res = "gratz1.gen"_n; // Gratitude generated per cycle for residents
     const name gratzgen_cit = "gratz2.gen"_n; // Gratitude generated per cycle for citizens
+    const name gratz_acks = "gratz.acks"_n; // Gratitude generated per cycle for citizens
 };
 
 EOSIO_DISPATCH(gratitude, 

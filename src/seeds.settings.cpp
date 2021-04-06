@@ -269,6 +269,7 @@ void settings::reset() {
   // =====================================
   confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
   confwithdesc(name("gratz2.gen"), 200 * 10000, "Base quantity of gratitude tokens received for citizens per cycle", medium_impact);
+  confwithdesc(name("gratz.acks"), 10, "Minumum number of gratitude acks to fully use your tokens", medium_impact);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
