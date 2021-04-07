@@ -116,7 +116,7 @@ void accounts::adduser(name account, string nickname, name type)
       user.timestamp = eosio::current_time_point().sec_since_epoch();
   });
 
-  size_change("users.sz"_n, 1);
+  size_change(users_size, 1);
 
 }
 
@@ -141,6 +141,64 @@ void accounts::vouch(name sponsor, name account) {
   _vouch(sponsor, account);
 }
 
+void accounts::updcounts(uint64_t start, uint64_t total_users) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  if (start == 0) {
+    size_set(orgs_size, 0);
+    size_set(citizens_size, 0);
+    size_set(residents_size, 0);
+  }
+
+  uint64_t num_users = start == 0 ? 0 : total_users;
+  uint64_t num_orgs = 0;
+  uint64_t num_citizens = 0;
+  uint64_t num_residents = 0;
+  
+  while (uitr != users.end() && count < batch_size) {
+
+    num_users++;
+
+    if (uitr->type == name("organisation")) {
+      num_orgs++;
+    } else if (uitr->status == citizen) {
+      num_citizens++;
+    } else if (uitr->status == resident) {
+      num_residents++;
+    } 
+
+    uitr++;
+    count++;
+
+  }
+
+  if (num_orgs != 0) size_change(orgs_size, num_orgs);
+  if (num_citizens != 0) size_change(citizens_size, num_citizens);
+  if (num_residents != 0) size_change(residents_size, num_residents);
+
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "updcounts"_n,
+      std::make_tuple(uitr->account.value, num_users)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value, _self);
+  } else {
+    print("total users: "+std::to_string(num_users));
+  }
+
+}
 /*
 * Internal vouch function
 */
@@ -1028,7 +1086,7 @@ void accounts::testremove(name user)
   ).send();
 
   users.erase(uitr);
-  size_change("users.sz"_n, -1);
+  size_change(users_size, -1);
   
 }
 

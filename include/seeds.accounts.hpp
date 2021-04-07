@@ -93,6 +93,7 @@ CONTRACT accounts : public contract {
       ACTION migorgs(uint64_t start_org);
       ACTION delcbsreporg(uint64_t start_org);
       ACTION testmigscope(name account, uint64_t amount);
+      ACTION updcounts(uint64_t start, uint64_t total_users);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -106,6 +107,11 @@ CONTRACT accounts : public contract {
       const name visitor = name("visitor");
       const name individual_scope = get_self();
       const name organization_scope = "org"_n;
+
+      const name citizens_size = name("citizen.sz");
+      const name residents_size = name("residents.sz");
+      const name users_size = name("users.sz");
+      const name orgs_size = name("orgs.sz");
 
       const name not_found = ""_n;
 
@@ -376,6 +382,6 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
-(testmvouch)(migratevouch)
+(testmvouch)(migratevouch)(updcounts)
 (migorgs)(delcbsreporg)(testmigscope)
 );
