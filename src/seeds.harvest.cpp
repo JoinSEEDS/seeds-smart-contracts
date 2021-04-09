@@ -1298,7 +1298,7 @@ void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amou
   require_auth(get_self());
 
   auto regions_by_status_id = regions.get_index<"bystatusid"_n>();
-  uint128_t rid = (uint128_t(rdc_status_active.value) << 64) + start;
+  uint128_t rid = (uint128_t(rgn_status_active.value) << 64) + start;
 
   auto ritr = regions_by_status_id.lower_bound(rid);
 
@@ -1311,7 +1311,7 @@ void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amou
   if (number_regions == 0, "number of regions must be greater than zero");
   double fragment_seeds = total_amount.amount / double(number_regions);
 
-  while (ritr != regions_by_status_id.end() && ritr->status == rdc_status_active && count < chunksize) {
+  while (ritr != regions_by_status_id.end() && ritr->status == rgn_status_active && count < chunksize) {
 
     // for the moment, all regions have rank 1
     print("rgn:", ritr -> id, ", rank:", 1, ", amount:", asset(fragment_seeds, test_symbol), "\n");
@@ -1321,7 +1321,7 @@ void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amou
     count++;
   }
 
-  if (ritr != regions_by_status_id.end() && ritr->status == rdc_status_active) {
+  if (ritr != regions_by_status_id.end() && ritr->status == rgn_status_active) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),

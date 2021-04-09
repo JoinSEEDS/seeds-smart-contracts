@@ -127,7 +127,7 @@ CONTRACT harvest : public contract {
     const name individual_scope_harvest = get_self();
     const name organization_scope = "org"_n;
 
-    const name rdc_status_active = "active"_n;
+    const name rgn_status_active = "active"_n;
 
     void init_balance(name account);
     void init_harvest_stat(name account);
