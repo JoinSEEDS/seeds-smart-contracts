@@ -1141,7 +1141,7 @@ describe('Mint Rate and Harvest', async assert => {
     const hbalances = await getTableRows({
       code: region,
       scope,
-      table: 'hrvstrdcblnc',
+      table: 'hrvstrgnblnc',
       json: true
     })
     let value = 0.0
@@ -1336,7 +1336,7 @@ describe('Mint Rate and Harvest', async assert => {
   const harvestBalances = await getTableRows({
     code: region,
     scope: 'test',
-    table: 'hrvstrdcblnc',
+    table: 'hrvstrgnblnc',
     json: true
   })
   console.log('harvestBalances:', harvestBalances)

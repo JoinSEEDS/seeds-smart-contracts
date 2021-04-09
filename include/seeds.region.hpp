@@ -155,7 +155,7 @@ CONTRACT region : public contract {
 
             uint64_t primary_key() const { return region.value; }
         };
-        typedef eosio::multi_index <"hrvstrdcblnc"_n, harvest_balance_table> harvest_balance_tables;
+        typedef eosio::multi_index <"hrvstrgnblnc"_n, harvest_balance_table> harvest_balance_tables;
 
         // External tables
 
