@@ -15,7 +15,7 @@ const randomAccountNamergn = () => {
   for ( var i = 0; i < length; i++ ) {
      result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
-  return result + ".rdc";
+  return result + ".rgn";
 }
 
 describe("regions general", async assert => {
@@ -122,20 +122,20 @@ describe("regions general", async assert => {
   
     }
 
-  await checkStatus(rdcname, statusInactive, 'region created', 'have the correct status')
+  await checkStatus(rgnname, statusInactive, 'region created', 'have the correct status')
   
   console.log('join a region')
   await contracts.region.join(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
   const members = await getMembers()
   //console.log("members "+JSON.stringify(members, null, 2))
-  await checkStatus(rdcname, statusActive, `${seconduser} joined`, 'have the correct status')
+  await checkStatus(rgnname, statusActive, `${seconduser} joined`, 'have the correct status')
 
   console.log('leave a region')
   await contracts.region.leave(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
   const membersAfter = await getMembers()
-  await checkStatus(rdcname, statusInactive, `${seconduser} left`, 'have the correct status')
+  await checkStatus(rgnname, statusInactive, `${seconduser} left`, 'have the correct status')
 
   //console.log("membersAfter "+JSON.stringify(membersAfter, null, 2))
 
@@ -145,7 +145,7 @@ describe("regions general", async assert => {
 
   const membersAfterRemove = await getMembers()
   //console.log("membersAfterRemove "+JSON.stringify(membersAfterRemove, null, 2))
-  await checkStatus(rdcname, statusInactive, `${thirduser} joined`, 'have the correct status')
+  await checkStatus(rgnname, statusInactive, `${thirduser} joined`, 'have the correct status')
 
   const admin = seconduser
 
