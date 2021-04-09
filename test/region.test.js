@@ -417,7 +417,7 @@ describe("regions Test Delete", async assert => {
   // console.log("roles1before "+JSON.stringify(roles1before, null, 2))
   // console.log("roles2before "+JSON.stringify(roles2before, null, 2))
 
-  await contracts.region.removebr(rgnname2, { authorization: `${region}@active` })
+  await contracts.region.removergn(rgnname2, { authorization: `${region}@active` })
 
   const roles1After = await getRoles(rgnname)
   const roles2After = await getRoles(rgnname2)
