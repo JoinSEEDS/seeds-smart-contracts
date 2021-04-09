@@ -16,7 +16,7 @@ const randomAccountName = () => {
     return result;
  }
  
- const randomAccountNameRDC = () => {
+ const randomAccountNamergn = () => {
     let length = 8
     var result           = '';
     var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
@@ -24,7 +24,7 @@ const randomAccountName = () => {
     for ( var i = 0; i < length; i++ ) {
        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-    return result + ".rdc";
+    return result + ".rgn";
   }
   
 const getNumInvites = async () => {
@@ -683,13 +683,13 @@ describe('Create region', async assert => {
     
     const contracts = await initContracts({ onboarding, region })
     
-    const newAccount = randomAccountNameRDC()
+    const newAccount = randomAccountNamergn()
     console.log("New account "+newAccount)
     const keyPair = await createKeypair()
     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
   
-    await contracts.onboarding.createrdc(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+    await contracts.onboarding.createregion(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
 
     var hasNewDomain = false
     try {
@@ -826,15 +826,15 @@ describe('Private campaign', async assert => {
 
     let cantCreateCampWithNotEnoughFunds = true
     try {
-        await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
+        await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
         cantCreateCampWithNotEnoughFunds = false
     } catch (err) {
         console.log('not enough funds (expected)')
     }
 
     await deposit(firstuser, onboarding, '45.0000 SEEDS')
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, 0, { authorization: `${firstuser}@active` })
 
     await checkCampaignFunds(1, maxAmount1)
     await checkCampaignFunds(2, maxAmount2)

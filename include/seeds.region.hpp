@@ -49,7 +49,7 @@ CONTRACT region : public contract {
 
         ACTION reset();
 
-        ACTION removerdc(name region);
+        ACTION removebr(name region);
 
 
         void deposit(name from, name to, asset quantity, std::string memo);
@@ -195,7 +195,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removerdc))
+          (removemember)(leaverole)(setfounder)(removebr))
       }
   }
 }

@@ -35,13 +35,13 @@ CONTRACT onboarding : public contract {
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
     ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
-    ACTION createrdc(name sponsor, name region, string publicKey);
+    ACTION createregion(name sponsor, name region, string publicKey);
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
-    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount);
+    ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
     ACTION campinvite(uint64_t id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash);
     ACTION addauthorized(uint64_t id, name account);
     ACTION remauthorized(uint64_t id, name account);
@@ -179,7 +179,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createrdc)(acceptnew)(acceptexist)(cancel)(cleanup)
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(cancel)(cleanup)
       (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux)
       )
       }

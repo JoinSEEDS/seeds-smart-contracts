@@ -24,8 +24,6 @@ CONTRACT history : public contract {
           sizes(receiver, receiver.value),
           residents(receiver, receiver.value),
           citizens(receiver, receiver.value),
-          reputables(receiver, receiver.value),
-          regens(receiver, receiver.value),
           totals(receiver, receiver.value),
           organizations(contracts::organization, contracts::organization.value),
           members(contracts::region, contracts::region.value)
@@ -43,9 +41,7 @@ CONTRACT history : public contract {
         
         ACTION numtrx(name account);
 
-        ACTION addreputable(name organization);
-
-        ACTION addregen(name organization);
+        ACTION updatestatus(name account, name scope);
 
         ACTION deldailytrx(uint64_t day);
 
@@ -58,7 +54,19 @@ CONTRACT history : public contract {
 
 
     private:
-      const uint64_t regenerative_org = 2;
+      const uint64_t status_regular = 0;
+      const uint64_t status_reputable = 1;
+      const uint64_t status_sustainable = 2;
+      const uint64_t status_regenerative = 3;
+      const uint64_t status_thrivable = 4;
+
+      std::vector<name> status_names = {
+        "regular"_n,
+        "reputable"_n,
+        "sustainable"_n,
+        "regenerative"_n,
+        "thrivable"_n
+      };
 
       void check_user(name account);
       uint32_t num_transactions(name account, uint32_t limit);
@@ -95,24 +103,6 @@ CONTRACT history : public contract {
         uint64_t by_account()const { return account.value; }
       };
 
-      TABLE reputable_table {
-        uint64_t id;
-        name organization;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
-      };
-
-      TABLE regenerative_table {
-        uint64_t id;
-        name organization;
-        uint64_t timestamp;
-
-        uint64_t primary_key()const { return id; }
-        uint64_t by_org()const { return organization.value; }
-      };
-
       TABLE history_table {
         uint64_t history_id;
         name account;
@@ -122,6 +112,16 @@ CONTRACT history : public contract {
         uint64_t timestamp;
 
         uint64_t primary_key()const { return history_id; }
+      };
+
+      TABLE account_status_table {
+        uint64_t id;
+        name account;
+        uint64_t timestamp;
+
+        uint64_t primary_key()const { return id; }
+        uint64_t by_account()const { return account.value; }
+        uint64_t by_timestamp()const { return timestamp; }
       };
       
       // --------------------------------------------------- //
@@ -242,15 +242,12 @@ CONTRACT history : public contract {
       
       typedef eosio::multi_index<"history"_n, history_table> history_tables;
 
-      typedef eosio::multi_index<"reputables"_n, reputable_table,
-        indexed_by<"byorg"_n,
-        const_mem_fun<reputable_table, uint64_t, &reputable_table::by_org>>
-      > reputable_tables;
-
-      typedef eosio::multi_index<"regens"_n, regenerative_table,
-        indexed_by<"byorg"_n,
-        const_mem_fun<regenerative_table, uint64_t, &regenerative_table::by_org>>
-      > regenerative_tables;
+      typedef eosio::multi_index<"acctstatus"_n, account_status_table,
+        indexed_by<"byaccount"_n,
+        const_mem_fun<account_status_table, uint64_t, &account_status_table::by_account>>,
+        indexed_by<"bytimestamp"_n,
+        const_mem_fun<account_status_table, uint64_t, &account_status_table::by_timestamp>>
+      > account_status_tables;
 
       typedef eosio::multi_index<"dailytrxs"_n, daily_transactions_table,
         indexed_by<"byfrom"_n,
@@ -292,8 +289,6 @@ CONTRACT history : public contract {
       user_tables users;
       resident_tables residents;
       citizen_tables citizens;
-      reputable_tables reputables;
-      regenerative_tables regens;
       totals_tables totals;
       size_tables sizes;
       organization_tables organizations;
@@ -304,7 +299,7 @@ EOSIO_DISPATCH(history,
   (reset)
   (historyentry)(trxentry)
   (addcitizen)(addresident)
-  (addreputable)(addregen)
+  (updatestatus)
   (numtrx)
   (deldailytrx)(savepoints)
   (testtotalqev)
