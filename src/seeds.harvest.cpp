@@ -1289,7 +1289,7 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(sum_rank_users.value, _self);
+    tx.send(csitr -> account.value, _self);
   }
 
 }
@@ -1322,17 +1322,18 @@ void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amou
   }
 
   if (ritr != regions_by_status_id.end() && ritr->status == rgn_status_active) {
+    uint64_t next = ritr->id.value;
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
       "disthvstrgns"_n,
-      std::make_tuple(ritr->id, chunksize, total_amount)
+      std::make_tuple(next, chunksize, total_amount)
     );
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(sum_rank_rdcs.value, _self);
+    tx.send(next, _self);
   }
 
 }
