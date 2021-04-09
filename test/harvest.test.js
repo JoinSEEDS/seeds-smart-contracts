@@ -1140,7 +1140,7 @@ describe.only('Mint Rate and Harvest', async assert => {
   const getHarvestBalance = async (rgn, scope='test') => {
     const hbalances = await getTableRows({
       code: region,
-      scope,
+      scope: scope,
       table: 'hrvstrgnblnc',
       json: true
     })
