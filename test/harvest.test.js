@@ -1050,7 +1050,7 @@ describe('Monthly QEV', async assert => {
 
 })
 
-describe('Mint Rate and Harvest', async assert => {
+describe.only('Mint Rate and Harvest', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1084,8 +1084,8 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
-  console.log('configure - rdc.cit')
-  await contracts.settings.configure("rdc.cit", 1, { authorization: `${settings}@active` })
+  console.log('configure - rgn.cit')
+  await contracts.settings.configure("rgn.cit", 1, { authorization: `${settings}@active` })
 
   console.log('reset history')
   await contracts.history.reset(history, { authorization: `${history}@active` })
@@ -1137,7 +1137,7 @@ describe('Mint Rate and Harvest', async assert => {
     return Number.parseFloat(balance[0]) || 0
   }
 
-  const getHarvestBalance = async (rdc, scope='test') => {
+  const getHarvestBalance = async (rgn, scope='test') => {
     const hbalances = await getTableRows({
       code: region,
       scope,
@@ -1145,7 +1145,7 @@ describe('Mint Rate and Harvest', async assert => {
       json: true
     })
     let value = 0.0
-    const hbalance = hbalances.rows.filter(r => r.region == rdc)
+    const hbalance = hbalances.rows.filter(r => r.region == rgn)
     if (hbalance.length > 0) {
       value = parseFloat(hbalance[0].balance.split(' ')[0])
     }
@@ -1386,6 +1386,9 @@ describe('regions contribution score', async assert => {
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  // console.log('configure - rgn.cit')
+  // await contracts.settings.configure("rgn.cit", 2, { authorization: `${settings}@active` })
 
   console.log('join users')
   const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
