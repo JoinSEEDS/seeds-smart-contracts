@@ -101,8 +101,26 @@ describe('gratitude general', async assert => {
   checkRemainingGratitude(firstuser, initialGratitude-transferAmount)
   checkReceivedGratitude(seconduser, transferAmount)
 
-  // console.log('acknowledge')
-  // await contracts.gratitude.acknowledge(firstuser, seconduser, 'Thanks!', { authorization: `${firstuser}@active` })
+  console.log('test acknowledge')
+  await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
+
+  console.log('calc acks')
+  await contracts.gratitude.testacks({ authorization: `${gratitude}@active` })
+
+  console.log("DEBUG: acks should have been processed!")
+
+  const acksTable = await getTableRows({
+    code: gratitude,
+    scope: gratitude,
+    table: 'acks',
+    json: true
+  })
+  console.log(acksTable)
+
+  const gratzAcks = await get_settings("gratz.acks")
+  const transferPerAckAmount = initialGratitude / gratzAcks
+  checkRemainingGratitude(seconduser, initialGratitude-transferPerAckAmount)
+  checkReceivedGratitude(firstuser, transferPerAckAmount)
 
   console.log('restart gratitude round')
 
@@ -125,5 +143,6 @@ describe('gratitude general', async assert => {
     actual: secondBalanceAfter,
     expected: secondBalanceBefore + amount
   })
+
 
 })

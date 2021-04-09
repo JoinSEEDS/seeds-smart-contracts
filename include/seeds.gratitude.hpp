@@ -40,6 +40,8 @@ CONTRACT gratitude : public contract {
     // Generates a new gratitude round, regenerating gratitude and splitting stored SEEDS
     ACTION newround();
 
+    ACTION testacks();
+
   private:
 
     void check_user(name account);

@@ -70,6 +70,23 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   }
 }
 
+ACTION gratitude::testacks() {
+  require_auth(get_self());
+
+  check(false, "DEBUG: !!!!");
+
+  auto actr = acks.begin();
+  while (actr != acks.end()) {
+    calc_acks(actr->donor);
+    actr++;
+  }
+
+  auto actr2 = acks.begin();
+  while (actr2 != acks.end()) {
+    actr2 = acks.erase(actr2);
+  }
+}
+
 ACTION gratitude::newround() {
   require_auth(get_self());
 
@@ -77,11 +94,11 @@ ACTION gratitude::newround() {
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
-  auto actr = acks.begin();
-  while (actr != acks.end()) {
-    calc_acks(actr->donor);
-    actr = acks.erase(actr);
-  }
+  // auto actr = acks.begin();
+  // while (actr != acks.end()) {
+  //   calc_acks(actr->donor);
+  //   actr = acks.erase(actr);
+  // }
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
