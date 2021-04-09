@@ -1308,7 +1308,7 @@ void harvest::disthvstrgns (uint64_t start, uint64_t chunksize, asset total_amou
   uint64_t number_regions = sitr.size;
   uint64_t count = 0;
 
-  if (number_regions == 0, "number of regions must be greater than zero");
+  check(number_regions > 0, "number of regions must be greater than zero");
   double fragment_seeds = total_amount.amount / double(number_regions);
 
   while (ritr != regions_by_status_id.end() && ritr->status == rgn_status_active && count < chunksize) {
