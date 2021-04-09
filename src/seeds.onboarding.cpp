@@ -406,6 +406,11 @@ void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size
       if (refitr != referrers.end()) {
         referrers.erase(refitr);
       }
+      auto ciitr = campinvites.find(iitr->invite_id);
+      if (ciitr != campinvites.end()) {
+        campinvites.erase(ciitr);
+      }
+
       count += 4;
     } else {
       iitr++;
