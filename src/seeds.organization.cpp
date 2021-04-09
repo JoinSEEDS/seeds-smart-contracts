@@ -581,13 +581,13 @@ ACTION organization::makesustnble (name organization) {
     history_update_org_status(organization, status_sustainable);
 }
 
-ACTION organization::makereptable(name organization) {
+ACTION organization::makereptable (name organization) {
     check_status_requirements(organization, status_reputable);
     update_status(organization, status_reputable);
     history_update_org_status(organization, status_reputable);
 }
 
-ACTION organization::registerapp(name owner, name organization, name appname, string applongname) {
+ACTION organization::registerapp (name owner, name organization, name appname, string applongname) {
     require_auth(owner);
     check_owner(organization, owner);
 
@@ -606,15 +606,75 @@ ACTION organization::registerapp(name owner, name organization, name appname, st
     });
 }
 
-ACTION organization::banapp(name appname) {
+ACTION organization::banapp (name appname) {
     require_auth(get_self());
 
     auto appitr = apps.find(appname.value);
-    check(appitr != apps.end(), "This application does not exists.");
+    check(appitr != apps.end(), "This application does not exist.");
     
     apps.modify(appitr, _self, [&](auto & app){
         app.is_banned = true;
     });
+}
+
+ACTION organization::appuse (name appname, name account) {
+    require_auth(account);
+
+    auto uitr = users.get(account.value, "User not found");
+
+    auto appitr = apps.find(appname.value);
+    check(appitr != apps.end(), "This application does not exist.");
+    check(!(appitr -> is_banned), "Can not use a banned app.");
+
+    daus_tables daus(get_self(), appname.value);
+    daus_totals_tables daus_totals(get_self(), appname.value);
+
+    auto daus_by_day_account = daus.get_index<"bydayacct"_n>();
+    uint64_t day = utils::get_beginning_of_day_in_seconds();
+    uint128_t id = (uint128_t(day) << 64) + account.value;
+
+    auto dtitr = daus_totals.find(day);
+    auto ditr = daus_by_day_account.find(id);
+
+
+    // MUST EDIT THE REP MULTIPLIER TO USE THE SECOND CURVE
+
+    uint64_t points = 0;
+    if (uitr.status != "visitor") {
+        points = uitr.status == "citizen" ? config_get("dau.cit.pt"_n) : config_get("dau.res.pt"_n);
+        points *= utils::get_rep_multiplier(account);
+    }
+
+    if (ditr != daus_by_day_account.end()) {
+        uint64_t max_uses = config_get("dau.maxuse"_n);
+        if (ditr->number_app_uses < max_uses) {
+            daus_by_day_account.modify(ditr, _self, [&](auto & item){
+                item.number_app_uses += 1;
+                item.points += points;
+            });
+            daus_totals.modify(dtitr, _self, [&](auto & item){
+                item.daily_points += points;
+            });
+        }
+    } else {
+        daus_by_day_account.emplace(_self, [&](auto & item){
+            item.number_app_uses = 1;
+            item.points = points;
+        });
+
+        if (dtitr != daus_totals.end()) {
+            daus_totals.modify(dtitr, _self, [&](auto & item){
+                item.daily_points += points;
+                item.daily_uses += 1;
+            });
+        } else {
+            daus_totals.emplace(_self, [&](auto & item){
+                item.daily_points = points;
+                item.daily_uses = 1;
+            });
+        }
+
+    }
 }
 
 ACTION organization::appuse(name appname, name account) {
@@ -622,7 +682,7 @@ ACTION organization::appuse(name appname, name account) {
     check_user(account);
 
     auto appitr = apps.find(appname.value);
-    check(appitr != apps.end(), "This application does not exists.");
+    check(appitr != apps.end(), "This application does not exist.");
     check(!(appitr -> is_banned), "Can not use a banned app.");
     
     dau_tables daus(get_self(), appname.value);
@@ -663,78 +723,7 @@ ACTION organization::appuse(name appname, name account) {
     });
 }
 
-ACTION organization::cleandaus () {
-    require_auth(get_self());
 
-    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
-
-    auto appitr = apps.begin();
-    while (appitr != apps.end()) {
-        if (appitr -> is_banned) {
-            appitr++;
-            continue; 
-        }
-        action clean_dau_action(
-            permission_level{get_self(), "active"_n},
-            get_self(),
-            "cleandau"_n,
-            std::make_tuple(appitr -> app_name, today_timestamp, (uint64_t)0)
-        );
-
-        transaction tx;
-        tx.actions.emplace_back(clean_dau_action);
-        tx.delay_sec = 1;
-        tx.send((appitr -> app_name).value + 1, _self);
-
-        appitr++;
-    }
-}
-
-ACTION organization::cleandau (name appname, uint64_t todaytimestamp, uint64_t start) {
-    require_auth(get_self());
-
-    auto appitr = apps.get(appname.value, "This application does not exist.");
-    if (appitr.is_banned) { return; }
-
-    auto batch_size = config.get(name("batchsize").value, "The batchsize parameter has not been initialized yet.").value;
-
-    dau_tables daus(get_self(), appname.value);
-    dau_history_tables dau_history(get_self(), appname.value); 
-
-    auto dauitr = start == 0 ? daus.begin() : daus.lower_bound(start);
-    uint64_t count = 0;
-
-    while (dauitr != daus.end() && count < batch_size) {
-        if (dauitr -> date != todaytimestamp) {
-            dau_history.emplace(_self, [&](auto & dau_h){
-                dau_h.dau_history_id = dau_history.available_primary_key();
-                dau_h.account = dauitr -> account;
-                dau_h.date = dauitr -> date;
-                dau_h.number_app_uses = dauitr -> number_app_uses;
-            });
-            daus.modify(dauitr, _self, [&](auto & dau){
-                dau.date = todaytimestamp;
-                dau.number_app_uses = 0;
-            });
-        }
-        count++;
-        dauitr++;
-    }
-
-    if (dauitr != daus.end()) {
-        action clean_dau_action(
-            permission_level{get_self(), "active"_n},
-            get_self(),
-            "cleandau"_n,
-            std::make_tuple(appname, todaytimestamp, (dauitr -> account).value)
-        );
-
-        transaction tx;
-        tx.actions.emplace_back(clean_dau_action);
-        tx.delay_sec = 1;
-        tx.send((appitr.app_name).value + 1, _self);
-    }
-}
 
 ACTION organization::scoretrxs() {
     scoreorgs(""_n);

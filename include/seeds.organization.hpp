@@ -61,10 +61,6 @@ CONTRACT organization : public contract {
 
         ACTION appuse(name appname, name account);
 
-        ACTION cleandaus();
-
-        ACTION cleandau(name appname, uint64_t timestamp, uint64_t start);
-
         ACTION rankregens();
 
         ACTION rankregen(uint64_t start, uint64_t chunk, uint64_t chunksize);
@@ -249,24 +245,53 @@ CONTRACT organization : public contract {
             uint64_t by_org() const { return org_name.value; }
         };
 
-        TABLE dau_table {
+        TABLE daus_table { // scoped by appname
+            uint64_t id;
             name account;
-            uint64_t date;
+            uint64_t day; // beginning of day
             uint64_t number_app_uses;
-
-            uint64_t primary_key() const { return account.value; }
-        };
-
-        TABLE dau_history_table {
-            uint64_t dau_history_id;
-            name account;
-            uint64_t date;
-            uint64_t number_app_uses;
-
-            uint64_t primary_key() const { return dau_history_id; }
+            int64_t points; // number of points the user gives to the app during this day
+            
+            uint64_t primary_key() const { return id; }
             uint64_t by_account() const { return account.value; }
-            uint64_t by_date() const { return date; }
+            uint64_t by_day() const { return day; }
+            uint128_t by_day_account() const { return (uint128_t(day) << 64) + account.value; }
+            uint128_t by_account_day() const { return (uint128_t(account.value) << 64) + day; }
         };
+
+        TABLE daus_totals_table { // scoped by appname
+            uint64_t day;
+            int64_t daily_points;
+            uint64_t daily_uses;
+
+            uint64_t primary_key() const { return day; }
+        };
+
+        TABLE daus_score {
+            name app_name;
+            int64_t total_points;
+            uint64_t total_uses;
+            uint64_t rank;
+
+            uint64_t primary_key() const { return app_name.value; }
+            uint64_t by_total_points() const {
+                uint64_t points_id = 1;
+                points_id <<= 63;
+                return points_id + ((total_points < 0) ? -1 : 0) + total_points;
+            }
+            uint64_t by_total_uses() const { return total_uses; }
+        };
+
+        // TABLE dau_history_table {
+        //     uint64_t dau_history_id;
+        //     name account;
+        //     uint64_t date;
+        //     uint64_t number_app_uses;
+
+        //     uint64_t primary_key() const { return dau_history_id; }
+        //     uint64_t by_account() const { return account.value; }
+        //     uint64_t by_date() const { return date; }
+        // };
 
         TABLE planted_table { // from harvest
             name account;
@@ -306,14 +331,23 @@ CONTRACT organization : public contract {
             const_mem_fun<app_table, uint64_t, &app_table::by_org>>
         > app_tables;
 
-        typedef eosio::multi_index<"daus"_n, dau_table> dau_tables;
-
-        typedef eosio::multi_index<"dauhistory"_n, dau_history_table,
+        typedef eosio::multi_index<"daus"_n, daus_table,
             indexed_by<"byaccount"_n,
-            const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_account>>,
-            indexed_by<"bydate"_n,
-            const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_date>>
-        > dau_history_tables;
+            const_mem_fun<daus_table, uint64_t, &daus_table::by_account>>,
+            indexed_by<"byday"_n,
+            const_mem_fun<daus_table, uint64_t, &daus_table::by_account>>,
+            indexed_by<"bydayacct"_n,
+            const_mem_fun<daus_table, uint128_t, &daus_table::by_day_account>>,
+            indexed_by<"byacctday"_n,
+            const_mem_fun<daus_table, uint128_t, &daus_table::by_account_day>>
+        > daus_tables;
+
+        // typedef eosio::multi_index<"dauhistory"_n, dau_history_table,
+        //     indexed_by<"byaccount"_n,
+        //     const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_account>>,
+        //     indexed_by<"bydate"_n,
+        //     const_mem_fun<dau_history_table, uint64_t, &dau_history_table::by_date>>
+        // > dau_history_tables;
 
         typedef eosio::multi_index<"regenscores"_n, regen_score_table,
             indexed_by<"byregenavg"_n,
@@ -375,7 +409,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(organization, (reset)(addmember)(removemember)(changerole)(changeowner)(addregen)
-            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)(cleandaus)(cleandau)
+            (subregen)(create)(destroy)(refund)(appuse)(registerapp)(banapp)
             (rankregens)(rankregen)(scoreorgs)(scoretrxs)
             (makethrivble)(makeregen)(makesustnble)(makereptable)(testregensc)(teststatus))
       }
