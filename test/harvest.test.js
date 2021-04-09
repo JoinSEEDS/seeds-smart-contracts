@@ -1284,7 +1284,7 @@ describe.only('Mint Rate and Harvest', async assert => {
   
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
+  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
   const globalBalanceBefore = await getTestBalance(globaldho)
 
   console.log('run harvest')
@@ -1295,7 +1295,7 @@ describe.only('Mint Rate and Harvest', async assert => {
 
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
+  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
   const globalBalanceAfter = await getTestBalance(globaldho)
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
