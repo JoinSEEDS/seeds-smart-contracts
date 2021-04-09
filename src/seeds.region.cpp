@@ -346,7 +346,7 @@ void region::create_telos_account(name sponsor, name orgaccount, string publicKe
 {
     action(
         permission_level{contracts::onboarding, "active"_n},
-        contracts::onboarding, "creatergn"_n,
+        contracts::onboarding, "createregion"_n,
         make_tuple(sponsor, orgaccount, publicKey)
     ).send();
 }
