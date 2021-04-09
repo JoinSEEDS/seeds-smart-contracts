@@ -6,13 +6,6 @@ const { firstuser, seconduser, settings, gratitude, accounts, token, bank } = na
 
 describe('gratitude general', async assert => {
 
-  if (!isLocal()) {
-    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-    return
-  }
-
-  const contracts = await initContracts({ gratitude, accounts, settings, token })
-
   const get_settings = async (key) => {
     const value = await eos.getTableRows({
       code: settings,
@@ -24,7 +17,7 @@ describe('gratitude general', async assert => {
     })
     return value.rows[0].value
   }
-
+  
   const getRemainingGratitude = async account => {
     const balanceTable = await getTableRows({
       code: gratitude,
@@ -35,7 +28,7 @@ describe('gratitude general', async assert => {
     const balance = balanceTable.rows.filter(r => r.account == account)
     return parseInt(balance[0].remaining)
   }
-
+  
   const checkRemainingGratitude = async (account, expected) => {
     const remaining = await getRemainingGratitude(account)
     assert({
@@ -45,7 +38,7 @@ describe('gratitude general', async assert => {
       expected: expected
     })
   }
-
+  
   const getReceivedGratitude = async account => {
     const balanceTable = await getTableRows({
       code: gratitude,
@@ -56,7 +49,7 @@ describe('gratitude general', async assert => {
     const balance = balanceTable.rows.filter(r => r.account == account)
     return parseInt(balance[0].received)
   }
-
+  
   const checkReceivedGratitude = async (account, expected) => {
     const received = await getReceivedGratitude(account)
     assert({
@@ -66,6 +59,13 @@ describe('gratitude general', async assert => {
       expected: expected
     })
   }
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ gratitude, accounts, settings, token })
 
   console.log('gratitude reset')
   await contracts.gratitude.reset({ authorization: `${gratitude}@active` })
@@ -79,12 +79,13 @@ describe('gratitude general', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
-  const initialGratitude = await get_settings("gratz.gen") / 10000; // in GRATZ
+  const initialGratitude = await get_settings("gratz1.gen") / 10000; // in GRATZ
 
   console.log('add SEEDS users')
   const users = [firstuser, seconduser]
   for (const user of users) {
     await contracts.accounts.adduser(user, '', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
   }
 
   const amount = 1000
@@ -99,6 +100,9 @@ describe('gratitude general', async assert => {
 
   checkRemainingGratitude(firstuser, initialGratitude-transferAmount)
   checkReceivedGratitude(seconduser, transferAmount)
+
+  // console.log('acknowledge')
+  // await contracts.gratitude.acknowledge(firstuser, seconduser, 'Thanks!', { authorization: `${firstuser}@active` })
 
   console.log('restart gratitude round')
 

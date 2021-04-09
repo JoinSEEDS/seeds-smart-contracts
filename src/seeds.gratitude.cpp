@@ -57,15 +57,15 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   check( from != to, "gratitude: cannot give to self" );
   check( is_account( to ), "gratitude: to account does not exist");
 
-  auto actr = acks.find(to.value);
+  auto actr = acks.find(from.value);
   if (actr == acks.end()) {
     acks.emplace(_self, [&](auto& item) {
-      item.receiver = to;
-      item.donors = vector{from};
+      item.donor = from;
+      item.receivers = vector{to};
     });
   } else {
     acks.modify(actr, get_self(), [&](auto &item) {
-        item.donors.push_back(from);
+        item.receivers.push_back(to);
     });
   }
 }
@@ -77,7 +77,6 @@ ACTION gratitude::newround() {
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
 
-  // TODO: calculate acks, redistribute then reset them
   auto actr = acks.begin();
   while (actr != acks.end()) {
     calc_acks(actr->donor);
