@@ -6,6 +6,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/size_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -19,6 +20,8 @@ CONTRACT region : public contract {
               members(receiver, receiver.value),
               sponsors(receiver, receiver.value),
               regiondelays(receiver, receiver.value),
+              sizes(receiver, receiver.value),
+              harvestbalances(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
               configfloat(contracts::settings, contracts::settings.value)
@@ -46,28 +49,36 @@ CONTRACT region : public contract {
 
         ACTION reset();
 
-        ACTION removebr(name region);
+        ACTION removergn(name region);
 
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
+        symbol test_symbol = symbol("TESTS", 4);
         
         name founder_role = name("founder");
         name admin_role = name("admin");
         
+        const name status_inactive = name("inactive");
+        const name status_active = name("active");
+
+        const name active_size = name("active.sz");
 
         void auth_founder(name region, name founder);
         void init_balance(name account);
         void check_user(name account);
         void remove_member(name account);
         void create_telos_account(name sponsor, name orgaccount, string publicKey); 
-        void size_change(name region, int delta);
+        void size_change(name id, int delta);
         void delete_role(name region, name account);
         bool is_member(name region, name account);
         bool is_admin(name region, name account);
         double config_float_get(name key);
+        uint64_t config_get(name key);
+        void update_members_count(name region, int delta);
+        void add_harvest_balance(name region, asset amount);
 
         TABLE region_table {
             name id;
@@ -138,6 +149,14 @@ CONTRACT region : public contract {
         };
         typedef eosio::multi_index <"regiondelays"_n, delay_table> delay_tables;
 
+        TABLE harvest_balance_table {
+            name region;
+            asset balance;
+
+            uint64_t primary_key() const { return region.value; }
+        };
+        typedef eosio::multi_index <"hrvstrgnblnc"_n, harvest_balance_table> harvest_balance_tables;
+
         // External tables
 
         DEFINE_USER_TABLE
@@ -154,13 +173,19 @@ CONTRACT region : public contract {
 
         DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
+        DEFINE_SIZE_TABLE
+
+        DEFINE_SIZE_TABLE_MULTI_INDEX
+
         config_tables config;
         config_float_tables configfloat;
+        size_tables sizes;
 
         region_tables regions;
         members_tables members;
         sponsors_tables sponsors;
         delay_tables regiondelays;
+        harvest_balance_tables harvestbalances;
 };
 
 
@@ -170,7 +195,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removebr))
+          (removemember)(leaverole)(setfounder)(removergn))
       }
   }
 }

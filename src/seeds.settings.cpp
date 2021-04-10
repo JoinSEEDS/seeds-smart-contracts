@@ -309,6 +309,7 @@ void settings::reset() {
   // region
   // =====================================
   conffloatdsc(name("rgn.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
+  confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
   // gratitude 

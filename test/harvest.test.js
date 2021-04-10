@@ -1084,6 +1084,9 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('configure - rgn.cit')
+  await contracts.settings.configure("rgn.cit", 1, { authorization: `${settings}@active` })
+
   console.log('reset history')
   await contracts.history.reset(history, { authorization: `${history}@active` })
   await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
@@ -1132,6 +1135,21 @@ describe('Mint Rate and Harvest', async assert => {
   const getTestBalance = async (user) => {
     const balance = await eos.getCurrencyBalance(names.token, user, 'TESTS')
     return Number.parseFloat(balance[0]) || 0
+  }
+
+  const getHarvestBalance = async (rgn, scope='test') => {
+    const hbalances = await getTableRows({
+      code: region,
+      scope: scope,
+      table: 'hrvstrgnblnc',
+      json: true
+    })
+    let value = 0.0
+    const hbalance = hbalances.rows.filter(r => r.region == rgn)
+    if (hbalance.length > 0) {
+      value = parseFloat(hbalance[0].balance.split(' ')[0])
+    }
+    return value
   }
 
   const checkHarvestValues = (bucket, ranks, totalAmount, actualValues) => {
@@ -1266,7 +1284,7 @@ describe('Mint Rate and Harvest', async assert => {
   
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
+  const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
   const globalBalanceBefore = await getTestBalance(globaldho)
 
   console.log('run harvest')
@@ -1277,7 +1295,7 @@ describe('Mint Rate and Harvest', async assert => {
 
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
-  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getTestBalance(rgn)))
+  const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
   const globalBalanceAfter = await getTestBalance(globaldho)
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
@@ -1314,6 +1332,15 @@ describe('Mint Rate and Harvest', async assert => {
       volume_growth: parseInt(expectedVolumeGrowth * 10000)
     }]
   })
+
+  const harvestBalances = await getTableRows({
+    code: region,
+    scope: 'test',
+    table: 'hrvstrgnblnc',
+    json: true
+  })
+  console.log('harvestBalances:', harvestBalances)
+
 
 })
 
@@ -1359,6 +1386,9 @@ describe('regions contribution score', async assert => {
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  // console.log('configure - rgn.cit')
+  // await contracts.settings.configure("rgn.cit", 2, { authorization: `${settings}@active` })
 
   console.log('join users')
   const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
