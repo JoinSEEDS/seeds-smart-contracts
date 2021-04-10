@@ -1539,8 +1539,9 @@ void proposals::check_resident(name account)
   check(uitr != users.end(), "no user");
   check(
     uitr->status == name("citizen") || 
-    uitr->status == name("resident"), 
-    "user is not a resident or citizen");
+    uitr->status == name("resident") ||
+    uitr->type == "organisation"_n, 
+    "user is not a resident or citizen or an organization");
 }
 
 void proposals::addactive(name account) {
