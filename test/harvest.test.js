@@ -1050,7 +1050,7 @@ describe('Monthly QEV', async assert => {
 
 })
 
-describe.only('Mint Rate and Harvest', async assert => {
+describe('Mint Rate and Harvest', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
