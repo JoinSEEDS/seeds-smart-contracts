@@ -320,20 +320,15 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 
   uint64_t prop_majority = config_get(name("propmajority"));
   uint64_t number_active_proposals = 0;
-  uint64_t total_eligible_voters = 0;
   uint64_t quorum_votes_needed = 0;
   
   auto citr = cyclestats.find(prop_cycle);
   if (citr !=  cyclestats.end()) {
     number_active_proposals = citr->num_proposals;
-    total_eligible_voters = citr->total_eligible_voters;
     quorum_votes_needed = citr->quorum_votes_needed;
   } else {
     number_active_proposals = get_size(prop_active_size);
-    total_eligible_voters = get_size(user_active_size);
   }
-
-  check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
   
   uint64_t quorum = get_quorum(number_active_proposals);
 
@@ -490,6 +485,7 @@ void proposals::onperiod() {
   auto citr = cyclestats.find(c.propcycle);
   if (citr != cyclestats.end()) {
     cyclestats.modify(citr, _self, [&](auto & item){
+      // not sure why we need this - just as a statistic I guess.
       item.total_eligible_voters = get_size(user_active_size);
     });
   }
@@ -530,20 +526,15 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 
   uint64_t prop_majority = config_get(name("propmajority"));
   uint64_t number_active_proposals = 0;
-  uint64_t total_eligible_voters = 0;
   uint64_t quorum_votes_needed = 0;
   
   auto citr = cyclestats.find(prop_cycle);
   if (citr !=  cyclestats.end()) {
     number_active_proposals = citr->num_proposals;
-    total_eligible_voters = citr->total_eligible_voters;
     quorum_votes_needed = citr->quorum_votes_needed;
   } else {
     number_active_proposals = get_size(prop_active_size);
-    total_eligible_voters = get_size(user_active_size);
   }
-
-  check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
   
   uint64_t quorum = get_quorum(number_active_proposals);
 
@@ -597,42 +588,24 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 
 }
 
-void proposals::send_test_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
-  transaction trx{};
-  trx.actions.emplace_back(
-    permission_level(get_self(), "active"_n),
-    get_self(),
-    "testevalprop"_n,
-    std::make_tuple(proposal_id, prop_cycle)
-  );
-  // trx.delay_sec = 1;
-  trx.send(proposal_id, _self);
-}
-
 void proposals::testperiod() {
   require_auth(get_self());
 
   cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
   auto citr = cyclestats.find(c.propcycle);
-  if (citr != cyclestats.end()) {
-    // This will modify cycle stats, but it's ok as this is true information and it doesn't affect the real onperiod method
-    cyclestats.modify(citr, _self, [&](auto & item){
-      item.total_eligible_voters = get_size(user_active_size);
-    });
-  }
 
   auto props_by_stage = props.get_index<"bystage"_n>();
 
   auto spitr = props_by_stage.find(stage_staged.value);
   while (spitr != props_by_stage.end() && spitr->stage == stage_staged) {
-    send_test_eval_prop(spitr->id, c.propcycle);
+    testevalprop(spitr->id, c.propcycle);
     spitr++;
   }
 
   auto apitr = props_by_stage.find(stage_active.value);
   while (apitr != props_by_stage.end() && apitr->stage == stage_active) {
-    send_test_eval_prop(apitr->id, c.propcycle);
+    testevalprop(apitr->id, c.propcycle);
     apitr++;
   }
 }
@@ -2051,58 +2024,6 @@ ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
     item.campaign_id = campaign_id;
   });
 
-}
-
-ACTION proposals::initcycstats () {
-  require_auth(get_self());
-
-  cycle_stats_migration_tables migration_cyclestats(get_self(), get_self().value);
-
-  auto migration_itr = migration_cyclestats.begin();
-
-  while (migration_itr != migration_cyclestats.end()) {
-
-    auto citr = cyclestats.find(migration_itr->propcycle);
-
-    if (citr != cyclestats.end()) {
-      cyclestats.modify(citr, _self, [&](auto & item){
-        item.start_time = migration_itr->start_time;
-        item.end_time = migration_itr->end_time;
-        item.num_proposals = migration_itr->num_proposals;
-        item.num_votes = migration_itr->num_votes;
-        item.total_voice_cast = migration_itr->total_voice_cast;
-        item.total_favour = migration_itr->total_favour;
-        item.total_against = migration_itr->total_against;
-        item.total_citizens = migration_itr->total_citizens;
-        item.quorum_vote_base = migration_itr->quorum_vote_base;
-        item.quorum_votes_needed = migration_itr->quorum_votes_needed;
-        item.total_eligible_voters = migration_itr->total_eligible_voters;
-        item.unity_needed = migration_itr->unity_needed;
-        item.active_props = migration_itr->active_props;
-        item.eval_props = migration_itr->eval_props;
-      });
-    } else {
-      cyclestats.emplace(_self, [&](auto & item){
-        item.propcycle = migration_itr->propcycle; 
-        item.start_time = migration_itr->start_time;
-        item.end_time = migration_itr->end_time;
-        item.num_proposals = migration_itr->num_proposals;
-        item.num_votes = migration_itr->num_votes;
-        item.total_voice_cast = migration_itr->total_voice_cast;
-        item.total_favour = migration_itr->total_favour;
-        item.total_against = migration_itr->total_against;
-        item.total_citizens = migration_itr->total_citizens;
-        item.quorum_vote_base = migration_itr->quorum_vote_base;
-        item.quorum_votes_needed = migration_itr->quorum_votes_needed;
-        item.total_eligible_voters = migration_itr->total_eligible_voters;
-        item.unity_needed = migration_itr->unity_needed;
-        item.active_props = migration_itr->active_props;
-        item.eval_props = migration_itr->eval_props;
-      });
-    }
-
-    migration_itr++;
-  }
 }
 
 void proposals::testpropquor(uint64_t current_cycle, uint64_t prop_id) {
