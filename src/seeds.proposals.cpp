@@ -249,6 +249,58 @@ void proposals::calcvotepow() {
 
 }
 
+ACTION proposals::migvotepow(uint64_t cycle) {
+  require_auth(_self);
+
+  size_tables sizes(get_self(), cycle);
+
+  auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
+  uint64_t all_total = 0;
+  uint64_t cmp_total = 0;
+  uint64_t cmp_num = 0;
+  uint64_t all_num = 0;
+  while( pitr != props.end() && pitr -> passed_cycle == cycle) {
+    name prop_type = get_type(pitr->fund);
+    if (prop_type == alliance_type) {
+      all_total += pitr -> total;
+      all_num += 1;
+    } else {
+      cmp_total += pitr -> total; 
+      cmp_num += 1;
+    }
+    pitr++;
+  }
+
+  uint64_t cmp_votes_needed = cmp_total * (get_quorum(cmp_num) / 100.0);
+  uint64_t all_votes_needed = all_total * (get_quorum(all_num) / 100.0);
+
+  size_set_s(campaign_votes_cast, cmp_total, cycle);
+  size_set_s(campaign_number, cmp_num, cycle);
+  size_set_s(campaign_votes_needed, cmp_votes_needed, cycle);
+
+  size_set_s(alliance_votes_cast, all_total, cycle);
+  size_set_s(alliance_number, all_num, cycle);
+  size_set_s(alliance_votes_needed, all_votes_needed, cycle);
+
+  print("cycle " +
+    std::to_string(cycle) +
+    " alliance props: " + 
+    std::to_string(all_num) +
+    " alliance total votes: " + 
+    std::to_string(all_total) +
+    " alliance votes needed: " + 
+    std::to_string(all_votes_needed) +
+
+    " campaign props: " + 
+    std::to_string(cmp_num) +
+    " campaign total votes: " + 
+    std::to_string(cmp_total) +
+    " alliance votes needed: " + 
+    std::to_string(cmp_votes_needed)
+  );
+
+}
+
 uint64_t proposals::active_cutoff_date() {
   uint64_t now = current_time_point().sec_since_epoch();
   uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
@@ -1594,7 +1646,11 @@ void proposals::recover_voice(name account) {
 }
 
 void proposals::size_change(name id, int64_t delta) {
-  size_tables sizes(get_self(), get_self().value);
+  size_change_s(id, delta, get_self().value);
+}
+
+void proposals::size_change_s(name id, int64_t delta, uint64_t scope) {
+  size_tables sizes(get_self(), scope);
 
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
@@ -1617,7 +1673,11 @@ void proposals::size_change(name id, int64_t delta) {
 }
 
 void proposals::size_set(name id, int64_t value) {
-  size_tables sizes(get_self(), get_self().value);
+  size_set_s(id, value, get_self().value);
+}
+
+void proposals::size_set_s(name id, int64_t value, uint64_t scope) {
+  size_tables sizes(get_self(), scope);
 
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {

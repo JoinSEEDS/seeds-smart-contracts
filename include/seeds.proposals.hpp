@@ -111,6 +111,7 @@ CONTRACT proposals : public contract {
       ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION initcycstats();
+      ACTION migvotepow(uint64_t cycle);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -132,6 +133,16 @@ CONTRACT proposals : public contract {
       name stage_staged = name("staged"); // 1 staged: can be cancelled, edited
       name stage_active = name("active"); // 2 active: can be voted on, can't be edited; open or evaluate status
       name stage_done = name("done");     // 3 done: can't be edited or voted on
+
+
+      // cycle stats numbers - size table scoped by cycle
+      name campaign_votes_cast = "cmp.votes.sz"_n; 
+      name alliance_votes_cast = "all.votes.sz"_n; 
+      name campaign_number = "cmp.num.sz"_n; 
+      name alliance_number = "all.num.sz"_n; 
+      name campaign_votes_needed = "cmp.vote.nd"_n;
+      name alliance_votes_needed = "all.vote.nd"_n;
+
 
       std::vector<uint64_t> default_step_distribution = {
         25,  // initial payout
@@ -169,7 +180,9 @@ CONTRACT proposals : public contract {
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
+      void size_change_s(name id, int64_t delta, uint64_t scope);
       void size_set(name id, int64_t value);
+      void size_set_s(name id, int64_t value, uint64_t scope);
 
       uint64_t get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
@@ -488,6 +501,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (calcvotepow)(addcampaign)
         (migrtevotedp)(migrpass)(testperiod)(testevalprop)(migstats)(migcycstat)(testpropquor)
         (initcycstats)
+        (migvotepow)
         )
       }
   }
