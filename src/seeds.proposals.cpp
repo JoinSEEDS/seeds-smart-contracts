@@ -295,7 +295,7 @@ ACTION proposals::migvotepow(uint64_t cycle) {
     std::to_string(cmp_num) +
     " campaign total votes: " + 
     std::to_string(cmp_total) +
-    " alliance votes needed: " + 
+    " campaign votes needed: " + 
     std::to_string(cmp_votes_needed)
   );
 
