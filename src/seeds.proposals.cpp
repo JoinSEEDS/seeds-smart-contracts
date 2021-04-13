@@ -2031,75 +2031,6 @@ ACTION proposals::migrpass () {
   }
 }
 
-ACTION proposals::migstats (uint64_t cycle) {
-  require_auth(get_self());
-
-  auto citr = cyclestats.find(cycle);
-  while(citr != cyclestats.end()) {
-    citr = cyclestats.erase(citr);
-  }
-
-  // calculate vote power for cycle
-  auto pitr = props.find(72);
-
-  uint64_t num_proposals = 0;
-  uint64_t num_votes = 0;
-  uint64_t total_voice_cast = 0;
-  uint64_t total_favour = 0;
-  uint64_t total_against = 0; 
-
-  while(pitr != props.end() && pitr->passed_cycle <= cycle) {
-    if (pitr->passed_cycle == cycle) {
-      print("passed: "+std::to_string(cycle) + " " + std::to_string(pitr->id));
-      num_proposals++;
-      votes_tables votes(get_self(), pitr->id);
-      auto vitr = votes.begin();
-      while(vitr != votes.end()) {
-        num_votes++;
-        total_voice_cast += vitr -> amount;
-        if (vitr->favour) {
-          total_favour += vitr -> amount;
-        } else {
-          total_against += vitr -> amount;
-        }
-        vitr++;
-      }
-    }
-    pitr++;
-  }
-
-  cyclestats.emplace(_self, [&](auto & item){
-    item.propcycle = cycle;
-    item.num_proposals = num_proposals;
-    item.num_votes = num_votes;
-    item.total_voice_cast = total_voice_cast;
-    item.total_favour = total_favour;
-    item.total_against = total_against;
-  });
-
-}
-
-
-void proposals::migcycstat() {
-  require_auth(get_self());
-
-  cycle_table c = cycle.get();
-
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
-
-  auto citr = cyclestats.find(c.propcycle);
-
-  uint64_t num_proposals = citr->active_props.size();
-
-  cyclestats.modify(citr, _self, [&](auto & item){
-    item.num_proposals = num_proposals;
-    item.quorum_vote_base = quorum_vote_base;
-    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
-    item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
-  });
-
-}
-
 ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
   require_auth(get_self());
 
@@ -2109,6 +2040,18 @@ ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
   props.modify(pitr, _self, [&](auto & item){
     item.campaign_id = campaign_id;
   });
+
+}
+
+ACTION proposals::cleanmig () {
+  cycle_stats_migration_tables mcyclestats(get_self(), get_self().value);
+
+  auto mitr = mcyclestats.begin();
+  while (mitr != mcyclestats.end()) {
+    print("delete "+std::to_string(mitr->propcycle));
+    mitr++;
+    //mitr = mcyclestats.erase(mitr);
+  }
 
 }
 
