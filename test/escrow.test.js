@@ -135,7 +135,8 @@ describe('vest and escrow', async assert => {
         json: true
     })
 
-    console.log('withdraw')
+    console.log('withdraw '+ JSON.stringify(secondUserBalanceBeforewithdraw, null, 2))
+
     await contracts.escrow.withdraw(seconduser, '30.0000 SEEDS', { authorization: `${seconduser}@active` })
 
     const withdrawBalances = await getTableRows({
@@ -151,6 +152,8 @@ describe('vest and escrow', async assert => {
         table: 'accounts',
         json: true
     })
+    console.log('after withdraw '+ JSON.stringify(secondUserBalanceAfterwithdraw, null, 2))
+
 
     console.log('claim several escrows')
     await contracts.escrow.lock("time", firstuser, seconduser, '1.0000 SEEDS', ".", "firstuser", vesting_date_passed, "notes", { authorization: `${firstuser}@active` })
@@ -258,10 +261,9 @@ describe('vest and escrow', async assert => {
     assert({
         given: 'the seconduser has claimed its escrow',
         should: 'give the funds to the user',
-        actual: secondUserBalanceAfter.rows.map(row => { return { balance: parseFloat(row.balance.replace(' SEEDS')) } }),
-        expected: [{
-            balance: parseFloat(secondUserBalanceBefore.rows[0].balance.replace(' SEEDS', '')) + 20
-        }]
+        actual: parseFloat(secondUserBalanceAfter.rows[0].balance),
+        expected: parseFloat(secondUserBalanceBefore.rows[0].balance) + 20
+        
     })
 
     assert({
@@ -301,16 +303,8 @@ describe('vest and escrow', async assert => {
     assert({
         given: 'the withdraw action called',
         should: 'withdraw the tokens to the user',
-        actual: secondUserBalanceAfterwithdraw.rows.map(row => {
-            return {
-                balance: parseFloat(row.balance.replace(' SEEDS'))
-            }
-        }),
-        expected: secondUserBalanceBeforewithdraw.rows.map(row => { 
-            return {
-                balance: parseFloat(row.balance.replace(' SEEDS')) + 30
-            } 
-        })
+        actual: parseFloat(secondUserBalanceAfterwithdraw.rows[0].balance),
+        expected: parseFloat(secondUserBalanceBeforewithdraw.rows[0].balance) + 30
     })
 
     assert({
