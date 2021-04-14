@@ -1758,13 +1758,14 @@ describe('Active count and vote power', async assert => {
   await contracts.proposals.favour(seconduser, 2, 1, { authorization: `${seconduser}@active` })
   await contracts.proposals.initsz( { authorization: `${proposals}@active` })
 
-  await testActiveSize(2, 40) // not sure we still even use this..
+  // Note: we don't do active size anymore.  
+  //await testActiveSize(2, 40) // not sure we still even use this..
 
-  console.log("run props")
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
+  //console.log("run props")
+  //await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  //await sleep(3000)
 
-  await testActiveSize(2, votePower2 + votePower1)
+  //await testActiveSize(2, votePower2 + votePower1)
 
 })
 
