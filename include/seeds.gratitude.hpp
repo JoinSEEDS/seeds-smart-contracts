@@ -123,5 +123,5 @@ CONTRACT gratitude : public contract {
 };
 
 EOSIO_DISPATCH(gratitude, 
-  (reset)(give)(acknowledge)(newround)
+  (reset)(give)(acknowledge)(newround)(testacks)
 );

@@ -107,15 +107,13 @@ describe('gratitude general', async assert => {
   console.log('calc acks')
   await contracts.gratitude.testacks({ authorization: `${gratitude}@active` })
 
-  console.log("DEBUG: acks should have been processed!")
-
   const acksTable = await getTableRows({
     code: gratitude,
     scope: gratitude,
     table: 'acks',
     json: true
   })
-  console.log(acksTable)
+  //console.log(acksTable)
 
   const gratzAcks = await get_settings("gratz.acks")
   const transferPerAckAmount = initialGratitude / gratzAcks
@@ -124,24 +122,33 @@ describe('gratitude general', async assert => {
 
   console.log('restart gratitude round')
 
+  const firstBalanceBefore = await getBalance(firstuser)  
   const secondBalanceBefore = await getBalance(seconduser)  
   await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
   const contractBalanceAfter = await getBalance(gratitude)
-
+  const firstBalanceAfter = await getBalance(firstuser)
   const secondBalanceAfter = await getBalance(seconduser)
+
 
   assert({
     given: 'gratitude round finished',
-    should: 'contract balance',
+    should: 'reset contract balance',
     actual: contractBalanceAfter,
     expected: contractBalanceBefore
   })
 
   assert({
     given: 'gratitude round finished',
-    should: 'second user received seeds',
+    should: 'second user received seeds because of direct direct gratz received',
     actual: secondBalanceAfter,
-    expected: secondBalanceBefore + amount
+    expected: secondBalanceBefore + amount/2
+  })
+
+  assert({
+    given: 'gratitude round finished',
+    should: 'first user received seeds because of acknowledge',
+    actual: firstBalanceAfter,
+    expected: firstBalanceBefore + amount/2
   })
 
 
