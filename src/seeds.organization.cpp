@@ -144,17 +144,22 @@ ACTION organization::reset() {
 
     auto aitr = apps.begin();
     while(aitr != apps.end()) {
-        dau_tables daus(get_self(), aitr->app_name.value);
-        dau_history_tables dau_history(get_self(), aitr->app_name.value);
+        daus_tables daus(get_self(), aitr->app_name.value);
+        daus_totals_tables daus_totals(get_self(), aitr->app_name.value);
         auto dauitr = daus.begin();
         while (dauitr != daus.end()) {
             dauitr = daus.erase(dauitr);
         }
-        auto dau_history_itr = dau_history.begin();
-        while (dau_history_itr != dau_history.end()) {
-            dau_history_itr = dau_history.erase(dau_history_itr);
+        auto daus_totals_itr = daus_totals.begin();
+        while (daus_totals_itr != daus_totals.end()) {
+            daus_totals_itr = daus_totals.erase(daus_totals_itr);
         }
         aitr = apps.erase(aitr);
+    }
+
+    auto dsitr = dausscores.begin();
+    while (dsitr != dausscores.end()) {
+        dsitr = dausscores.erase(dsitr);
     }
 
     auto bitr = sponsors.begin();
@@ -604,6 +609,8 @@ ACTION organization::registerapp (name owner, name organization, name appname, s
         app.is_banned = false;
         app.number_of_uses = 0;
     });
+
+    increase_size_by_one(app_size);
 }
 
 ACTION organization::banapp (name appname) {
@@ -640,8 +647,8 @@ ACTION organization::appuse (name appname, name account) {
     // MUST EDIT THE REP MULTIPLIER TO USE THE SECOND CURVE
 
     uint64_t points = 0;
-    if (uitr.status != "visitor") {
-        points = uitr.status == "citizen" ? config_get("dau.cit.pt"_n) : config_get("dau.res.pt"_n);
+    if (uitr.status != "visitor"_n) {
+        points = uitr.status == "citizen"_n ? config_get("dau.cit.pt"_n) : config_get("dau.res.pt"_n);
         points *= utils::get_rep_multiplier(account);
     }
 
@@ -657,7 +664,10 @@ ACTION organization::appuse (name appname, name account) {
             });
         }
     } else {
-        daus_by_day_account.emplace(_self, [&](auto & item){
+        daus.emplace(_self, [&](auto & item){
+            item.id = daus.available_primary_key();
+            item.account = account;
+            item.day = day;
             item.number_app_uses = 1;
             item.points = points;
         });
@@ -665,65 +675,145 @@ ACTION organization::appuse (name appname, name account) {
         if (dtitr != daus_totals.end()) {
             daus_totals.modify(dtitr, _self, [&](auto & item){
                 item.daily_points += points;
-                item.daily_uses += 1;
+                item.daily_users += 1;
             });
         } else {
             daus_totals.emplace(_self, [&](auto & item){
+                item.day = day;
                 item.daily_points = points;
-                item.daily_uses = 1;
+                item.daily_users = 1;
             });
         }
 
     }
 }
 
-ACTION organization::appuse(name appname, name account) {
-    require_auth(account);
-    check_user(account);
+ACTION organization::calcmappuses () {
+    require_auth(get_self());
 
-    auto appitr = apps.find(appname.value);
-    check(appitr != apps.end(), "This application does not exist.");
-    check(!(appitr -> is_banned), "Can not use a banned app.");
-    
-    dau_tables daus(get_self(), appname.value);
+    uint64_t threshold = config_get("dau.thresh"_n);
+    uint64_t trailing_cycles = config_get("dau.cyc"_n);
 
-    uint64_t today_timestamp = get_beginning_of_day_in_seconds();
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    uint64_t cutoff = now - (trailing_cycles * utils::moon_cycle);
+
+    calcmappuse(uint64_t(0), uint64_t(50), threshold, cutoff);
+}
+
+ACTION organization::calcmappuse (uint64_t start, uint64_t chunksize, uint64_t threshold, uint64_t cutoff) {
+    require_auth(get_self());
+
+    auto appitr = start == 0 ? apps.begin() : apps.find(start);
+    uint64_t count = 0;
     
-    auto dauitr = daus.find(account.value);
-    if (dauitr != daus.end()) {
-        if (dauitr -> date == today_timestamp) {
-            daus.modify(dauitr, _self, [&](auto & dau){
-                dau.number_app_uses += 1;
+    while (appitr != apps.end() && count < chunksize) {
+        if (!appitr->is_banned) {
+            calculate_trailing_app_use(appitr->app_name, cutoff, threshold);
+        } else {
+            auto dsitr = dausscores.find(appitr->app_name.value);
+            if (dsitr != dausscores.end()) {
+                dausscores.erase(dsitr);
+            }
+        }
+        appitr++;
+        count++;
+    }
+
+    if (appitr != apps.end()) {
+        action next_execution(
+            permission_level("active"_n, get_self()),
+            get_self(),
+            "calcmappuse"_n,
+            std::make_tuple((appitr->app_name).value, chunksize)
+        );
+        transaction tx;
+        tx.actions.emplace_back(next_execution);
+        tx.delay_sec = 1;
+        tx.send((appitr->app_name).value, _self);
+    }
+}
+
+void organization::calculate_trailing_app_use (const name & appname, const uint64_t & cutoff, const int64_t & threshold) {
+
+    daus_totals_tables daus_totals(get_self(), appname.value);
+
+    int64_t trailing_points = 0;
+    uint64_t trailing_uses = 0;
+
+    auto dtitr = daus_totals.rbegin();
+    while (dtitr != daus_totals.rend() && dtitr->day >= cutoff) {
+        trailing_points += dtitr->daily_points;
+        trailing_uses += dtitr->daily_users;
+        dtitr++;
+    }
+
+    auto dsitr = dausscores.find(appname.value);
+    if (dsitr != dausscores.end()) {
+        if (trailing_points >= threshold) {
+            dausscores.modify(dsitr, _self, [&](auto & item){
+                item.total_points = trailing_points;
+                item.total_uses = trailing_uses;
             });
         } else {
-            if (dauitr -> number_app_uses != 0) {
-                dau_history_tables dau_history(get_self(), appname.value); 
-                dau_history.emplace(_self, [&](auto & dau_h){
-                    dau_h.dau_history_id = dau_history.available_primary_key();
-                    dau_h.account = dauitr -> account;
-                    dau_h.date = dauitr -> date;
-                    dau_h.number_app_uses = dauitr -> number_app_uses;
-                });
-            }
-            daus.modify(dauitr, _self, [&](auto & dau){
-                dau.date = today_timestamp;
-                dau.number_app_uses = 1;
-            }); 
+            dausscores.erase(dsitr);
+            decrease_size_by_one(app_use_size);
         }
-    } else {
-        daus.emplace(_self, [&](auto & dau){
-            dau.account = account;
-            dau.date = today_timestamp;
-            dau.number_app_uses = 1;
+    } else if (trailing_points >= threshold) {
+        dausscores.emplace(_self, [&](auto & item){
+            item.app_name = appname;
+            item.total_points = trailing_points;
+            item.total_uses = trailing_uses;
+            item.rank = 0;
         });
+        increase_size_by_one(app_use_size);
     }
-
-    apps.modify(appitr, _self, [&](auto & app){
-        app.number_of_uses += 1;
-    });
 }
 
+ACTION organization::rankappuses () {
+    require_auth(get_self());
+    rankappuse(uint64_t(0), uint64_t(0), uint64_t(100));
+}
 
+ACTION organization::rankappuse (uint64_t start, uint64_t chunk, uint64_t chunksize) {
+    require_auth(get_self());
+
+    check(chunksize > 0, "chunk size must be > 0");
+
+    uint64_t total = get_size(app_use_size);
+    if (total == 0) return;
+
+    uint64_t current = chunk * chunksize;
+    auto daus_scores_by_points = dausscores.get_index<"bytpoints"_n>();
+    auto dsitr = start == 0 ? daus_scores_by_points.begin() : daus_scores_by_points.lower_bound(start);
+    uint64_t count = 0;
+
+    while (dsitr != daus_scores_by_points.end() && count < chunksize) {
+        
+        uint64_t rank = utils::rank(current, total);
+        
+        daus_scores_by_points.modify(dsitr, _self, [&](auto & item){
+            item.rank = rank;
+        });
+
+        current++;
+        count++;
+        dsitr++;
+    }
+
+    if (dsitr != daus_scores_by_points.end()) {
+        action next_execution(
+            permission_level("active"_n, get_self()),
+            get_self(),
+            "rankappuse"_n,
+            std::make_tuple((dsitr->app_name).value, chunk + 1, chunksize)
+        );
+        transaction tx;
+        tx.actions.emplace_back(next_execution);
+        tx.delay_sec = 1;
+        tx.send((dsitr->app_name).value, _self);
+    }
+
+}
 
 ACTION organization::scoretrxs() {
     scoreorgs(""_n);
