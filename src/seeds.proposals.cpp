@@ -1689,9 +1689,12 @@ void proposals::recover_voice(name account) {
 
 }
 
-void gratitude::size_change(name id, int delta) {
+void proposals::size_change(name id, int64_t delta) {
+  size_tables sizes(get_self(), get_self().value);
+
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
+    check(delta >= 0, "can't add negagtive size");
     sizes.emplace(_self, [&](auto& item) {
       item.id = id;
       item.size = delta;
@@ -1709,16 +1712,18 @@ void gratitude::size_change(name id, int delta) {
   }
 }
 
-void gratitude::size_set(name id, uint64_t newsize) {
+void proposals::size_set(name id, int64_t value) {
+  size_tables sizes(get_self(), get_self().value);
+
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     sizes.emplace(_self, [&](auto& item) {
       item.id = id;
-      item.size = newsize;
+      item.size = value;
     });
   } else {
     sizes.modify(sitr, _self, [&](auto& item) {
-      item.size = newsize;
+      item.size = value;
     });
   }
 }
