@@ -1977,66 +1977,6 @@ void proposals::add_voted_proposal (uint64_t proposal_id) {
 
 }
 
-ACTION proposals::migrtevotedp () {
-  require_auth(get_self());
-
-  auto pitr = props.begin();
-  
-  while (pitr != props.end()) {
-    if (pitr -> passed_cycle != 0) {
-      voted_proposals_tables votedprops(get_self(), pitr -> passed_cycle);
-      auto vpitr = votedprops.find(pitr -> id);
-      if (vpitr == votedprops.end()) {
-        votedprops.emplace(_self, [&](auto & item){
-          item.proposal_id = pitr -> id;
-        });
-      }
-    }
-    pitr++;
-  }
-
-}
-
-ACTION proposals::migrpass () {
-  require_auth(get_self());
-  // fix passed for rejected proposla in the range from cycle 25 
-
-  // Manual review results: 
-
-  // 72 - 25
-  // 80 - 26 
-  // 90 - 27
-  // 95 - 28
-  // 100 - 28 <-- current cycle
-
-  auto pitr = props.find(72);
-
-  while(pitr != props.end() && pitr->id <= 100) {
-    if (pitr->status == status_rejected && pitr->passed_cycle == 0) {
-
-      uint64_t cycle = 25;
-
-      if (pitr->id >= 80) {
-        cycle = 26;
-      }
-
-      if (pitr->id >= 90) {
-        cycle = 27;
-      }
-      
-      if (pitr->id >= 95) {
-        cycle = 28;
-      }
-
-      props.modify(pitr, _self, [&](auto& proposal) {
-        proposal.passed_cycle = cycle;
-      });
-
-    }
-    pitr++;
-  }
-}
-
 ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
   require_auth(get_self());
 

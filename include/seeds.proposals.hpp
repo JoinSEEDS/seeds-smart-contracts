@@ -101,9 +101,6 @@ CONTRACT proposals : public contract {
       ACTION doneprop(uint64_t proposal_id);
 
 
-      ACTION migrtevotedp ();
-      ACTION migrpass ();
-
       ACTION cleanmig ();
       ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
@@ -420,7 +417,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
-        (migrtevotedp)(migrpass)(testperiod)(testevalprop)
+        (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
         (migvotepow)
         )
