@@ -137,16 +137,6 @@ CONTRACT proposals : public contract {
       name stage_active = name("active"); // 2 active: can be voted on, can't be edited; open or evaluate status
       name stage_done = name("done");     // 3 done: can't be edited or voted on
 
-
-      // cycle stats numbers - size table scoped by cycle
-      name campaign_votes_cast = "cmp.votes.sz"_n; 
-      name alliance_votes_cast = "all.votes.sz"_n; 
-      name campaign_number = "cmp.num.sz"_n; 
-      name alliance_number = "all.num.sz"_n; 
-      name campaign_votes_needed = "cmp.vote.nd"_n;
-      name alliance_votes_needed = "all.vote.nd"_n;
-
-
       std::vector<uint64_t> default_step_distribution = {
         25,  // initial payout
         25,  // cycle 1
@@ -219,6 +209,7 @@ CONTRACT proposals : public contract {
       bool check_prop_majority(uint64_t favour, uint64_t against);
 
       void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -399,11 +390,10 @@ CONTRACT proposals : public contract {
         
         uint64_t num_proposals;
         uint64_t total_voice_cast;
-        uint64_t support_level;
+        uint64_t voice_needed;
 
         uint64_t primary_key()const { return propcycle; }
       };
-
 
 
       TABLE cycle_stats_migration_table {
@@ -487,6 +477,8 @@ CONTRACT proposals : public contract {
     typedef eosio::multi_index<"cyclestats"_n, cycle_stats_table> cycle_stats_tables;
     typedef eosio::multi_index<"mcyclestats"_n, cycle_stats_migration_table> cycle_stats_migration_tables;
     typedef eosio::multi_index<"cycvotedprps"_n, voted_proposals_table> voted_proposals_tables;
+
+    typedef eosio::multi_index<"supportlvl"_n, support_level_table> support_level_tables;
 
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX

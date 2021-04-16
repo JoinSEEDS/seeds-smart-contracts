@@ -252,8 +252,6 @@ void proposals::calcvotepow() {
 ACTION proposals::migvotepow(uint64_t cycle) {
   require_auth(_self);
 
-  size_tables sizes(get_self(), cycle);
-
   auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
   uint64_t all_total = 0;
   uint64_t cmp_total = 0;
@@ -271,16 +269,8 @@ ACTION proposals::migvotepow(uint64_t cycle) {
     pitr++;
   }
 
-  uint64_t cmp_votes_needed = cmp_total * (get_quorum(cmp_num) / 100.0);
-  uint64_t all_votes_needed = all_total * (get_quorum(all_num) / 100.0);
-
-  size_set_s(campaign_votes_cast, cmp_total, cycle);
-  size_set_s(campaign_number, cmp_num, cycle);
-  size_set_s(campaign_votes_needed, cmp_votes_needed, cycle);
-
-  size_set_s(alliance_votes_cast, all_total, cycle);
-  size_set_s(alliance_number, all_num, cycle);
-  size_set_s(alliance_votes_needed, all_votes_needed, cycle);
+  set_support_level(cycle, cmp_num, cmp_total, campaign_type);
+  set_support_level(cycle, all_num, all_total, alliance_type);
 
   print("cycle " +
     std::to_string(cycle) +
@@ -288,17 +278,34 @@ ACTION proposals::migvotepow(uint64_t cycle) {
     std::to_string(all_num) +
     " alliance total votes: " + 
     std::to_string(all_total) +
-    " alliance votes needed: " + 
-    std::to_string(all_votes_needed) +
 
     " campaign props: " + 
     std::to_string(cmp_num) +
     " campaign total votes: " + 
-    std::to_string(cmp_total) +
-    " campaign votes needed: " + 
-    std::to_string(cmp_votes_needed)
+    std::to_string(cmp_total) 
   );
 
+}
+
+void proposals::set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type) {
+  uint64_t votes_needed = votes_cast * (get_quorum(num_proposals) / 100.0);
+  support_level_tables support(get_self(), type.value);
+
+  auto sitr = support.find(cycle);
+  if (sitr != support.end()) {
+    support.modify(sitr, _self, [&](auto & item){
+      item.num_proposals = num_proposals;
+      item.total_voice_cast = votes_cast;
+      item.voice_needed = votes_needed;
+    });
+  } else {
+    support.emplace(_self, [&](auto & item){
+      item.propcycle = cycle;
+      item.num_proposals = num_proposals;
+      item.total_voice_cast = votes_cast;
+      item.voice_needed = votes_needed;
+    });
+  }
 }
 
 uint64_t proposals::active_cutoff_date() {
