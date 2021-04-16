@@ -656,6 +656,9 @@ var permissions = [{
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.onboarding.account}@active`,
+}, { 
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.escrow.account}@active`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

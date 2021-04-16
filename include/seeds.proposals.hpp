@@ -99,6 +99,11 @@ CONTRACT proposals : public contract {
 
       ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
 
+      ACTION checkprop(uint64_t proposal_id, string message);
+
+      ACTION doneprop(uint64_t proposal_id);
+
+
       ACTION migrtevotedp ();
       ACTION migrpass ();
 
@@ -212,6 +217,8 @@ CONTRACT proposals : public contract {
       void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
       void send_punish(name account);
       void send_update_voices();
+      void send_cancel_lock(name fromfund, uint64_t campaign_id, asset quantity);
+      bool check_prop_majority(uint64_t favour, uint64_t against);
 
       void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
 
@@ -508,7 +515,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
         (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
-        (calcvotepow)(addcampaign)
+        (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (migrtevotedp)(migrpass)(testperiod)(testevalprop)
         (cleanmig)(testpropquor)
         (initcycstats)

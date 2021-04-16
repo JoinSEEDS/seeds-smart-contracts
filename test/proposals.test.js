@@ -92,7 +92,7 @@ describe('Proposals', async assert => {
   const numberOfProposalsAfterCancel = await numberOfProposals()
 
   console.log('create alliance proposal')
-  await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${fourthuser}@active` })
+  await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
 
   // let notOwnerStake = true
   // try {
@@ -555,7 +555,7 @@ describe('Proposals', async assert => {
       "lock_type": "event",
       "sponsor": "allies.seeds",
       "beneficiary": "seedsuserxxx",
-      "quantity": "1.2000 SEEDS",
+      "quantity": "12.0000 SEEDS",
       "trigger_event": "golive",
       "trigger_source": "dao.hypha",
       "notes": "proposal id: 4",
@@ -600,15 +600,15 @@ describe('Proposals', async assert => {
   })
 
   assert({
-    given: 'finished cycle number 3',
-    should: 'complete execution of proposal 4',
+    given: 'finished cycle number 3, proposal 4',
+    should: 'still be active',
     expected: {
       id: 4,
       creator: fourthuser,
       recipient: fourthuser,
       quantity: '12.0000 SEEDS',
       staked: '0.0000 SEEDS',
-      executed: 1,
+      executed: 0,
       total: 60,
       favour: 60,
       against: 0,
@@ -617,12 +617,12 @@ describe('Proposals', async assert => {
       description: 'description',
       image: 'image',
       url: 'url',
-      status: 'passed',
-      stage: 'done',
+      status: 'evaluate',
+      stage: 'active',
       fund: 'allies.seeds',
-      pay_percentages: [10,30,30,30],
+      pay_percentages: [100],
       passed_cycle: initialCycle + 1,
-      age: 3,
+      age: 4,
       current_payout: '12.0000 SEEDS',
       campaign_type: 'alliance',
       max_amount_per_invite: '0.0000 SEEDS',
@@ -1758,13 +1758,14 @@ describe('Active count and vote power', async assert => {
   await contracts.proposals.favour(seconduser, 2, 1, { authorization: `${seconduser}@active` })
   await contracts.proposals.initsz( { authorization: `${proposals}@active` })
 
-  await testActiveSize(2, 40) // not sure we still even use this..
+  // Note: we don't do active size anymore.  
+  //await testActiveSize(2, 40) // not sure we still even use this..
 
-  console.log("run props")
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(3000)
+  //console.log("run props")
+  //await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  //await sleep(3000)
 
-  await testActiveSize(2, votePower2 + votePower1)
+  //await testActiveSize(2, votePower2 + votePower1)
 
 })
 
@@ -2397,5 +2398,253 @@ describe("invite campaigns", async assert => {
     json: true,
   })
   console.log(props)
+
+})
+
+describe('Alliance campaigns', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+  console.log('change min stake')
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.base', 90, { authorization: `${settings}@active` })
+
+  const eventSource = 'dao.hypha'
+  const eventName = 'golive'
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+  await contracts.escrow.resettrigger(eventSource, { authorization: `${escrow}@active` })
+
+  console.log('onboarding reset')
+  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('give rank in the contribution score table')
+  await contracts.harvest.testupdatecs(firstuser, 99, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 99, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 99, { authorization: `${harvest}@active` })
+  
+  const propose = async (user, amount, propId) => {
+    await contracts.proposals.create(user, user, amount, 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${user}@active` })
+    await contracts.token.transfer(user, proposals, '500.0000 SEEDS', `${propId}`, { authorization: `${user}@active` })
+  }
+
+  const voteProp = async (propId, approve=true) => {
+    const vote = approve ? contracts.proposals.favour : contracts.proposals.against
+    await vote(firstuser, propId, 8, { authorization: `${firstuser}@active` })
+    await vote(seconduser, propId, 8, { authorization: `${seconduser}@active` })
+    await vote(thirduser, propId, 8, { authorization: `${thirduser}@active` })
+  }
+
+  const checkEscrowLocks = async (expectedLocks) => {
+    const lockTable = await eos.getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      json: true,
+    })
+    const locks = lockTable.rows.map(r => {
+      return {
+        propId: parseInt(r.notes.substring(13)),
+        amount: r.quantity
+      }
+    })
+    assert({
+      given: 'alliances accepted',
+      should: 'have the correct entries in the locks table',
+      actual: locks,
+      expected: expectedLocks
+    })
+  }
+
+  const checkProps = async (expectedProps) => {
+    const propsTable = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'props',
+      json: true,
+    })
+    const props = propsTable.rows.map(r => {
+      return {
+        propId: r.id,
+        status: r.status,
+        stage: r.stage
+      }
+    })
+    assert({
+      given: 'onperiod ran, props',
+      should: 'have the correct status and stage',
+      actual: props,
+      expected: expectedProps
+    })
+  }
+
+  console.log('create alliance proposal')
+  const amountRequested = '12.0000 SEEDS'
+  await propose(firstuser, amountRequested, 1) // passing, lock claimed successfully
+  await propose(firstuser, amountRequested, 2) // not passing
+  await propose(seconduser, amountRequested, 3) // passing, but downvoted
+  await propose(thirduser, amountRequested, 4) // passing, but failing before claiming lock
+
+  console.log('activate proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await voteProp(1)
+  await voteProp(2, false)
+  await voteProp(3)
+  await voteProp(4)
+
+  console.log('running onperiod 1')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  let expectedLocks = [
+    {
+      propId: 1,
+      amount: amountRequested
+    },
+    {
+      propId: 3,
+      amount: amountRequested
+    },
+    {
+      propId: 4,
+      amount: amountRequested
+    }
+  ]
+
+  await checkEscrowLocks(expectedLocks)
+
+  console.log('running onperiod 2')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  console.log('downvote prop 3')
+  await voteProp(3, false)
+
+  console.log('running onperiod 3')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  expectedLocks = expectedLocks.filter(e => e.propId !== 3)
+  await checkEscrowLocks(expectedLocks)
+
+  console.log('downvote prop 4')
+  await voteProp(4, false)
+
+  console.log('going live')
+  await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
+  
+  console.log('claim lock for prop 4')
+  try {
+    await contracts.escrow.claim(thirduser, { authorization: `${thirduser}@active` })
+  } catch (err) {
+    if (!err.json.error.details[0].message.includes('proposal is not passing, lock can not be claimed')) {
+      throw err
+    }
+    console.log('can not claim the lock (expected)')
+  }
+
+  console.log('claim lock for prop 1')
+  const firstuserBalanceBefore = await getBalance(firstuser)
+  await contracts.escrow.claim(firstuser, { authorization: `${firstuser}@active` })
+  const firstuserBalanceAfter = await getBalance(firstuser)
+
+  expectedLocks = expectedLocks.filter(e => e.propId !== 1)
+  await checkEscrowLocks(expectedLocks)
+
+  assert({
+    given: 'firstuser claimed its lock',
+    should: 'have the correct balance',
+    actual: firstuserBalanceAfter - firstuserBalanceBefore,
+    expected: 12
+  })
+
+  await checkProps([
+    {
+      propId: 1,
+      status: 'passed',
+      stage: 'done'
+    },
+    {
+      propId: 2,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 3,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 4,
+      status: 'evaluate',
+      stage: 'active'
+    }
+  ])
+
+  console.log('running onperiod 4')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await checkEscrowLocks([])
+
+  await checkProps([
+    {
+      propId: 1,
+      status: 'passed',
+      stage: 'done'
+    },
+    {
+      propId: 2,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 3,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 4,
+      status: 'rejected',
+      stage: 'done'
+    }
+  ])
 
 })
