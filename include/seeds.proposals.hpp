@@ -183,9 +183,7 @@ CONTRACT proposals : public contract {
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
-      void size_change_s(name id, int64_t delta, uint64_t scope);
       void size_set(name id, int64_t value);
-      void size_set_s(name id, int64_t value, uint64_t scope);
 
       uint64_t get_quorum(uint64_t total_proposals);
       void recover_voice(name account);

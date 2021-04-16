@@ -1689,16 +1689,9 @@ void proposals::recover_voice(name account) {
 
 }
 
-void proposals::size_change(name id, int64_t delta) {
-  size_change_s(id, delta, get_self().value);
-}
-
-void proposals::size_change_s(name id, int64_t delta, uint64_t scope) {
-  size_tables sizes(get_self(), scope);
-
+void gratitude::size_change(name id, int delta) {
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
-    check(delta >= 0, "can't add negagtive size");
     sizes.emplace(_self, [&](auto& item) {
       item.id = id;
       item.size = delta;
@@ -1716,22 +1709,16 @@ void proposals::size_change_s(name id, int64_t delta, uint64_t scope) {
   }
 }
 
-void proposals::size_set(name id, int64_t value) {
-  size_set_s(id, value, get_self().value);
-}
-
-void proposals::size_set_s(name id, int64_t value, uint64_t scope) {
-  size_tables sizes(get_self(), scope);
-
+void gratitude::size_set(name id, uint64_t newsize) {
   auto sitr = sizes.find(id.value);
   if (sitr == sizes.end()) {
     sizes.emplace(_self, [&](auto& item) {
       item.id = id;
-      item.size = value;
+      item.size = newsize;
     });
   } else {
     sizes.modify(sitr, _self, [&](auto& item) {
-      item.size = value;
+      item.size = newsize;
     });
   }
 }
