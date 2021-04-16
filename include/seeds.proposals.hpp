@@ -372,14 +372,14 @@ CONTRACT proposals : public contract {
         
         uint64_t start_time; 
         uint64_t end_time; 
-        uint64_t num_proposals;
+        uint64_t num_proposals;           // unused -> see support_level_table, scoped by type
         uint64_t num_votes;
         uint64_t total_voice_cast;
         uint64_t total_favour;
         uint64_t total_against; 
         uint64_t total_citizens;
-        uint64_t quorum_vote_base;
-        uint64_t quorum_votes_needed;
+        uint64_t quorum_vote_base;        // unused -> see support_level_table scoped by type
+        uint64_t quorum_votes_needed;     // unused -> see support_level_table scoped by type
         uint64_t total_eligible_voters;
         float unity_needed;
 
@@ -388,6 +388,18 @@ CONTRACT proposals : public contract {
 
         uint64_t primary_key()const { return propcycle; }
       };
+
+      TABLE support_level_table {
+        uint64_t propcycle; 
+        
+        uint64_t num_proposals;
+        uint64_t total_voice_cast;
+        uint64_t support_level;
+
+        uint64_t primary_key()const { return propcycle; }
+      };
+
+
 
       TABLE cycle_stats_migration_table {
         uint64_t propcycle; 
