@@ -2097,11 +2097,8 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     if (passed && valid_quorum) {
 
       print(" re-eval : CHANGED STATUS TO PASSED");
-
   
       // refund_staked(pitr->creator, pitr->staked);
-
-      /**
        
       change_rep(pitr->creator, true);
 
@@ -2128,7 +2125,6 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
         proposal.status = status_evaluate;
         proposal.current_payout += payout_amount;
       });
-      **/
 
     } else {
       print(" prop still failed ");
