@@ -2081,6 +2081,8 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
   // re-evaluate only proposals which have been rejected
   if (pitr -> stage == stage_done && pitr -> status == status_rejected) {
 
+    check(pitr -> passed_cycle == prop_cycle, "invalid cycle");
+
     bool passed = check_prop_majority(pitr->favour, pitr->against);
     bool is_alliance_type = prop_type == alliance_type;
     bool is_campaign_type = prop_type == campaign_type;
@@ -2092,14 +2094,18 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 
     print(" re-eval "+std::to_string(proposal_id) + 
       " passed:  " + (passed ? "YES" : "NO") + 
-      " quorum: " + (valid_quorum ? "YES" : "NO")  + " ");
+      " quorum: " + (valid_quorum ? "YES" : "NO") +
+      " votes in favor: " + std::to_string(pitr->favour) +
+      " votes needed: " + std::to_string(quorum_votes_needed) +
+      " votes against: " + std::to_string(pitr->against) +
+
+      + " ");
 
     if (passed && valid_quorum) {
 
       print(" re-eval : CHANGED STATUS TO PASSED");
   
       // refund_staked(pitr->creator, pitr->staked);
-       
       change_rep(pitr->creator, true);
 
       asset payout_amount;
