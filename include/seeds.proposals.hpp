@@ -108,6 +108,7 @@ CONTRACT proposals : public contract {
       ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION migvotepow(uint64_t cycle);
+      ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -423,6 +424,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
         (migvotepow)
+        (reevalprop)
         )
       }
   }

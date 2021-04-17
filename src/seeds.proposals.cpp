@@ -2059,3 +2059,82 @@ void proposals::testpropquor(uint64_t current_cycle, uint64_t prop_id) {
   );
 
 }
+
+// migration - evaluate a proposal that should not have been rejected
+void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
+  require_auth(get_self());
+
+  auto pitr = props.find(proposal_id);
+  check(pitr != props.end(), "prop not found"); 
+
+  name prop_type = get_type(pitr->fund);
+
+  uint64_t number_active_proposals = 0;
+  uint64_t quorum_votes_needed = 0;
+
+  support_level_tables support(get_self(), prop_type.value);
+  auto sitr = support.get(prop_cycle, "no stats for cycle");
+
+  number_active_proposals = sitr.num_proposals;
+  quorum_votes_needed = sitr.voice_needed;
+  
+  // re-evaluate only proposals which have been rejected
+  if (pitr -> stage == stage_done && pitr -> status == status_rejected) {
+
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
+    bool is_alliance_type = prop_type == alliance_type;
+    bool is_campaign_type = prop_type == campaign_type;
+
+    bool valid_quorum = false;
+
+    uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+    valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+    print(" re-eval "+std::to_string(proposal_id) + 
+      " passed:  " + (passed ? "YES" : "NO") + 
+      " quorum: " + (valid_quorum ? "YES" : "NO")  + " ");
+
+    if (passed && valid_quorum) {
+
+      print(" re-eval : CHANGED STATUS TO PASSED");
+
+  
+      // refund_staked(pitr->creator, pitr->staked);
+
+      /**
+       
+      change_rep(pitr->creator, true);
+
+      asset payout_amount;
+
+      if (is_alliance_type) {
+        payout_amount = pitr->quantity;
+        send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+      } else {
+        payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+        if (pitr->campaign_type == campaign_invite_type) {
+          withdraw(get_self(), payout_amount, pitr->fund, "invites");
+          withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+          send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+        } else {
+          withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+        }
+      }
+
+      props.modify(pitr, _self, [&](auto & proposal){
+        proposal.passed_cycle = prop_cycle;
+        proposal.age = 0;
+        proposal.staked = asset(0, seeds_symbol);
+        proposal.status = status_evaluate;
+        proposal.current_payout += payout_amount;
+      });
+      **/
+
+    } else {
+      print(" prop still failed ");
+    }  
+  } else {
+    print(" not re-evaluating proposals that passed ");
+  }
+
+}
