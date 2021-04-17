@@ -2141,23 +2141,3 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
   }
 
 }
-
-void proposals::migeval() {
-  auto citr = cyclestats.get(32, "error");
-  for(const uint64_t value: citr.active_props) {
-    print(" prop " + std::to_string(value) +" ");
-
-    auto pitr = props.find(value);
-
-    check(pitr != props.end(), "unknown prop id ");
-
-    if (pitr->status == status_evaluate && pitr->stage == stage_done) {
-      // fix it
-      print(" FIXGING stage " + std::to_string(value) +" to -> active");
-
-      props.modify(pitr, _self, [&](auto & item){
-        item.stage = stage_active;
-      });
-    }
-  }
-}
