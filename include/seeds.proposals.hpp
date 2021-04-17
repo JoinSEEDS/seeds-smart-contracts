@@ -185,7 +185,7 @@ CONTRACT proposals : public contract {
       bool is_active(name account, uint64_t cutoff_date);
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
-      void increase_voice_cast(name voter, uint64_t amount, name option);
+      void increase_voice_cast(uint64_t amount, name option, name prop_type);
       uint64_t calc_quorum_base(uint64_t propcycle);
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
@@ -195,7 +195,7 @@ CONTRACT proposals : public contract {
 
       void send_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
       void init_cycle_new_stats();
-      void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
+      void update_cycle_stats_from_proposal(uint64_t proposal_id, name type, name array);
       void send_punish(name account);
       void send_update_voices();
       void send_cancel_lock(name fromfund, uint64_t campaign_id, asset quantity);
@@ -203,6 +203,9 @@ CONTRACT proposals : public contract {
 
       void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
       void set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type);
+      void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
+      void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
+      uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
