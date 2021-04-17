@@ -265,21 +265,27 @@ void proposals::calcvotepow() {
 ACTION proposals::migvotepow(uint64_t cycle) {
   require_auth(_self);
 
-  auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
+  //auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
   uint64_t all_total = 0;
   uint64_t cmp_total = 0;
   uint64_t cmp_num = 0;
   uint64_t all_num = 0;
-  while( pitr != props.end() && pitr -> passed_cycle == cycle) {
-    name prop_type = get_type(pitr->fund);
-    if (prop_type == alliance_type) {
-      all_total += pitr -> total;
+
+
+  auto citr = cyclestats.get(cycle, "unknown cycle");
+
+  for(const uint64_t value: citr.active_props) {
+    print(" prop " + std::to_string(value) +" ");
+
+    auto pitr = props.get(value, "unknown prop id ");
+
+    if (get_type(pitr.fund) == alliance_type) {
+      all_total += pitr.total;
       all_num += 1;
     } else {
-      cmp_total += pitr -> total; 
+      cmp_total += pitr.total; 
       cmp_num += 1;
     }
-    pitr++;
   }
 
   set_support_level(cycle, cmp_num, cmp_total, campaign_type);
@@ -306,7 +312,7 @@ void proposals::set_support_level(uint64_t cycle, uint64_t num_proposals, uint64
 
   support_level_tables support(get_self(), type.value);
   auto sitr = support.find(cycle);
-  
+
   if (sitr != support.end()) {
     support.modify(sitr, _self, [&](auto & item){
       item.num_proposals = num_proposals;
