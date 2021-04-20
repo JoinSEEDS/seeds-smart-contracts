@@ -21,7 +21,6 @@ CONTRACT proposals : public contract {
       proposals(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
           props(receiver, receiver.value),
-          migrateprops(receiver, receiver.value),
           voice(receiver, receiver.value),
           lastprops(receiver, receiver.value),
           cycle(receiver, receiver.value),
@@ -84,8 +83,6 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
-      ACTION migratevoice(uint64_t start);
-
       ACTION testsetvoice(name user, uint64_t amount);
       ACTION initsz();
 
@@ -104,17 +101,14 @@ CONTRACT proposals : public contract {
       ACTION doneprop(uint64_t proposal_id);
 
 
-      ACTION migrtevotedp ();
-      ACTION migrpass ();
-
-      ACTION migstats (uint64_t cycle);
-      ACTION migcycstat ();
+      ACTION cleanmig ();
       ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
       ACTION testperiod ();
       ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
-      ACTION initcycstats();
+      ACTION migvotepow(uint64_t cycle);
+      ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -192,7 +186,7 @@ CONTRACT proposals : public contract {
       bool is_active(name account, uint64_t cutoff_date);
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
-      void increase_voice_cast(name voter, uint64_t amount, name option);
+      void increase_voice_cast(uint64_t amount, name option, name prop_type);
       uint64_t calc_quorum_base(uint64_t propcycle);
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
@@ -202,13 +196,17 @@ CONTRACT proposals : public contract {
 
       void send_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
       void init_cycle_new_stats();
-      void update_cycle_stats_from_proposal(uint64_t proposal_id, name array);
+      void update_cycle_stats_from_proposal(uint64_t proposal_id, name type, name array);
       void send_punish(name account);
       void send_update_voices();
       void send_cancel_lock(name fromfund, uint64_t campaign_id, asset quantity);
       bool check_prop_majority(uint64_t favour, uint64_t against);
 
       void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type);
+      void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
+      void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
+      uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -258,45 +256,6 @@ CONTRACT proposals : public contract {
           uint64_t by_campaign()const { return campaign_id; }
           uint64_t by_creator()const { return creator.value; }
 
-          uint128_t by_status_id()const { return (uint128_t(status.value) << 64) + id; }
-          uint128_t by_stage_id()const { return (uint128_t(stage.value) << 64) + id; }
-          uint128_t by_campaign_type_id()const { return (uint128_t(campaign_type.value) << 64) + id; }
-      };
-
-      TABLE proposal_migration_table {
-          uint64_t id;
-          name creator;
-          name recipient;
-          asset quantity;
-          asset staked;
-          bool executed;
-          uint64_t total;
-          uint64_t favour;
-          uint64_t against;
-          string title;
-          string summary;
-          string description;
-          string image;
-          string url;
-          name status;
-          name stage;
-          name fund;
-          uint64_t creation_date;
-          std::vector<uint64_t> pay_percentages;
-          uint64_t passed_cycle;
-          uint32_t age;
-          asset current_payout;
-          name campaign_type;
-          asset max_amount_per_invite;
-          asset planted;
-          asset reward;
-          uint64_t campaign_id;
-
-          uint64_t primary_key()const { return id; }
-          uint64_t by_status()const { return status.value; }
-          uint64_t by_stage()const { return stage.value; }
-          uint64_t by_campaign()const { return campaign_id; }
-          uint64_t by_creator()const { return creator.value; }
           uint128_t by_status_id()const { return (uint128_t(status.value) << 64) + id; }
           uint128_t by_stage_id()const { return (uint128_t(stage.value) << 64) + id; }
           uint128_t by_campaign_type_id()const { return (uint128_t(campaign_type.value) << 64) + id; }
@@ -367,14 +326,14 @@ CONTRACT proposals : public contract {
         
         uint64_t start_time; 
         uint64_t end_time; 
-        uint64_t num_proposals;
+        uint64_t num_proposals;           // unused -> see support_level_table, scoped by type
         uint64_t num_votes;
         uint64_t total_voice_cast;
         uint64_t total_favour;
         uint64_t total_against; 
         uint64_t total_citizens;
-        uint64_t quorum_vote_base;
-        uint64_t quorum_votes_needed;
+        uint64_t quorum_vote_base;        // unused -> see support_level_table scoped by type
+        uint64_t quorum_votes_needed;     // unused -> see support_level_table scoped by type
         uint64_t total_eligible_voters;
         float unity_needed;
 
@@ -384,28 +343,15 @@ CONTRACT proposals : public contract {
         uint64_t primary_key()const { return propcycle; }
       };
 
-      TABLE cycle_stats_migration_table {
+      TABLE support_level_table {
         uint64_t propcycle; 
-
-        uint64_t start_time; 
-        uint64_t end_time; 
+        
         uint64_t num_proposals;
-        uint64_t num_votes;
         uint64_t total_voice_cast;
-        uint64_t total_favour;
-        uint64_t total_against; 
-        uint64_t total_citizens;
-        uint64_t quorum_vote_base;
-        uint64_t quorum_votes_needed;
-        uint64_t total_eligible_voters;
-        float unity_needed;
-
-        std::vector<uint64_t> active_props;
-        std::vector<uint64_t> eval_props;
+        uint64_t voice_needed;
 
         uint64_t primary_key()const { return propcycle; }
       };
-
 
       TABLE voted_proposals_table { // scoped by cycle
         uint64_t proposal_id;
@@ -430,23 +376,6 @@ CONTRACT proposals : public contract {
       const_mem_fun<proposal_table, uint128_t, &proposal_table::by_campaign_type_id>>
     > proposal_tables;
     
-    typedef eosio::multi_index<"migrateprops"_n, proposal_migration_table,
-      indexed_by<"bystatus"_n,
-      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_status>>,
-      indexed_by<"bystage"_n,
-      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_stage>>,
-      indexed_by<"bycampaign"_n,
-      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_campaign>>,
-      indexed_by<"bycreator"_n,
-      const_mem_fun<proposal_migration_table, uint64_t, &proposal_migration_table::by_creator>>,
-      indexed_by<"bystatusid"_n,
-      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_status_id>>,
-      indexed_by<"bystageid"_n,
-      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_stage_id>>,
-      indexed_by<"bycmptypeid"_n,
-      const_mem_fun<proposal_migration_table, uint128_t, &proposal_migration_table::by_campaign_type_id>>
-    > proposal_migration_tables;
-
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
@@ -463,14 +392,14 @@ CONTRACT proposals : public contract {
       const_mem_fun<delegate_trust_table, uint128_t, &delegate_trust_table::by_delegatee_delegator>>
     > delegate_trust_tables;
     typedef eosio::multi_index<"cyclestats"_n, cycle_stats_table> cycle_stats_tables;
-    typedef eosio::multi_index<"mcyclestats"_n, cycle_stats_migration_table> cycle_stats_migration_tables;
     typedef eosio::multi_index<"cycvotedprps"_n, voted_proposals_table> voted_proposals_tables;
+
+    typedef eosio::multi_index<"support"_n, support_level_table> support_level_tables;
 
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
     proposal_tables props;
-    proposal_migration_tables migrateprops;
     participant_tables participants;
     user_tables users;
     voice_tables voice;
@@ -490,10 +419,12 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
-        (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
+        (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
-        (migrtevotedp)(migrpass)(testperiod)(testevalprop)(migstats)(migcycstat)(testpropquor)
-        (initcycstats)
+        (testperiod)(testevalprop)
+        (cleanmig)(testpropquor)
+        (migvotepow)
+        (reevalprop)
         )
       }
   }

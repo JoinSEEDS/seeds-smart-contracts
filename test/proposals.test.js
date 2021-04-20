@@ -94,14 +94,6 @@ describe('Proposals', async assert => {
   console.log('create alliance proposal')
   await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
 
-  // let notOwnerStake = true
-  // try {
-  //   await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
-  //   notOwnerStake = false
-  // } catch(err) {
-  //   console.log('stake from not owner (failed)')
-  // }
-
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
 
@@ -650,14 +642,14 @@ describe('Proposals', async assert => {
     expected: [
       {
         propcycle: initialCycle + 1,
-        num_proposals: 4,
+        num_proposals: 0,
         num_votes: 0,
         total_voice_cast: 0,
         total_favour: 0,
         total_against: 0,
         total_citizens: 3,
-        quorum_vote_base: 75,
-        quorum_votes_needed: 18,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
         total_eligible_voters: 0,
         active_props: [ 1, 2, 3, 4 ],
@@ -678,14 +670,14 @@ describe('Proposals', async assert => {
     expected: [
       {
         propcycle: initialCycle + 1,
-        num_proposals: 4,
+        num_proposals: 0,
         num_votes: 8,
         total_voice_cast: 161,
         total_favour: 130,
         total_against: 31,
         total_citizens: 3,
-        quorum_vote_base: 75,
-        quorum_votes_needed: 18,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
         total_eligible_voters: 4,
         active_props: [ 1, 2, 3, 4 ],
@@ -699,8 +691,8 @@ describe('Proposals', async assert => {
         total_favour: 0,
         total_against: 0,
         total_citizens: 4,
-        quorum_vote_base: 161,
-        quorum_votes_needed: 11,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
         total_eligible_voters: 0,
         active_props: [],
@@ -1175,7 +1167,7 @@ describe('Change Trust', async assert => {
 
 })
 
-describe('Proposals Quorum', async assert => {
+describe('Proposals Quorum And Support Levels', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1188,7 +1180,8 @@ describe('Proposals Quorum', async assert => {
   await contracts.settings.reset({ authorization: `${settings}@active` })
   console.log('set settings')
   await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
-
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
   // tested with 25 - pass, pass
   // 33 - fail, pass
   // 50 - fail, pass
@@ -1214,9 +1207,10 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
 
-  await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', '0', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', '1', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', '2', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '1.7777 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
 
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
@@ -1224,6 +1218,8 @@ describe('Proposals Quorum', async assert => {
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
   console.log('deposit stake 3')
   await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  console.log('deposit stake 4')
+  await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
 
   let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
   for (i = 0; i<users.length; i++ ) {
@@ -1251,19 +1247,29 @@ describe('Proposals Quorum', async assert => {
   await contracts.proposals.favour(seconduser, 2, 20, { authorization: `${seconduser}@active` })
   await contracts.proposals.favour(firstuser, 2, 30, { authorization: `${firstuser}@active` })
 
-  console.log('execute proposals')
-  const sizes = await getTableRows({
+  console.log('vote on 4th proposal')
+  await contracts.proposals.favour(seconduser, 4, 11, { authorization: `${seconduser}@active` })
+
+  const supportForAlliances = await getTableRows({
     code: proposals,
-    scope: proposals,
-    table: 'sizes',
+    scope: "alliance",
+    table: 'support',
     json: true
   })
-  //console.log("sizes "+JSON.stringify(sizes, null, 2))
 
+  const supportForCampaigns = await getTableRows({
+    code: proposals,
+    scope: "campaign",
+    table: 'support',
+    json: true
+  })
+
+  // console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
+  // console.log("supportForAlliances "+JSON.stringify(supportForAlliances, null, 2))
+
+  console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
-
-  console.log('foo 1')
 
   const props = await getTableRows({
     code: proposals,
@@ -1272,19 +1278,13 @@ describe('Proposals Quorum', async assert => {
     json: true
   })
 
-  console.log('foo 2')
-
   await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
-
-  console.log('foo 3')
 
   const testQuorum = async (numberProposals, expectedValue) => {
     try {
-      console.log('fooXX ', numberProposals, " " , expectedValue)
-
       await contracts.proposals.testquorum(numberProposals, { authorization: `${proposals}@active` })
     } catch (err) {
-      console.log("catch errrrrr ==== \n", JSON.stringify(err, null, 2), "\n====")
+      //console.log("catch errrrrr ==== \n", JSON.stringify(err, null, 2), "\n====")
       assert({
         given: 'get quorum called',
         should: 'give the correct quorum threshold',
@@ -1294,12 +1294,8 @@ describe('Proposals Quorum', async assert => {
     }
   }
 
-  //console.log("props "+JSON.stringify(props, null, 2))
-
   const min = 7
   const max = 40
-  const quorum_factor = 100
-  // forumula = quorum_factor / num_proposals, bounded by min, max
 
   await testQuorum(0, min)
   await testQuorum(1, max)
@@ -1315,13 +1311,37 @@ describe('Proposals Quorum', async assert => {
     expected: 'rejected'
   })
 
-
   assert({
     given: 'passed proposal quorum majority',
     should: 'have passed',
     actual: props.rows[1].status,
     expected: "evaluate"
   })
+
+  assert({
+    given: 'campaign support',
+    should: 'have the right numbers',
+    actual: supportForCampaigns.rows[0],
+    expected: {
+      "propcycle": 1,
+      "num_proposals": 3,
+      "total_voice_cast": 60,
+      "voice_needed": 20
+    }
+  })
+
+  assert({
+    given: 'alliance support',
+    should: 'have the right numbers',
+    actual: supportForAlliances.rows[0],
+    expected: {
+      "propcycle": 1,
+      "num_proposals": 1,
+      "total_voice_cast": 11,
+      "voice_needed": 5
+    }
+  })
+
 
 })
 
@@ -1537,7 +1557,7 @@ describe('Stake limits', async assert => {
     json: true,
   })
 
-  console.log("min stake "+JSON.stringify(minStakes, null, 2))
+  //console.log("min stake "+JSON.stringify(minStakes, null, 2))
 
   assert({
     given: 'proposal not having enough stake',
