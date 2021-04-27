@@ -36,10 +36,11 @@ ACTION gratitude::reset () {
 ACTION gratitude::give (name from, name to, asset quantity, string memo) {
   require_auth(from);
 
-  check( from != to, "gratitude: cannot give to self" );
-  check( is_account( to ), "gratitude: to account does not exist");
+  check(from != to, "gratitude: cannot give to self");
+  check(is_account(to), "gratitude: to account does not exist");
+  check_user(to);
   check_asset(quantity);
-  check( quantity.amount > 0, "gratitude: must give positive quantity" );
+  check(quantity.amount > 0, "gratitude: must give positive quantity");
 
   // Should create balances if not there yet
   init_balances(to);
@@ -54,8 +55,9 @@ ACTION gratitude::give (name from, name to, asset quantity, string memo) {
 ACTION gratitude::acknowledge (name from, name to, string memo) {
   require_auth(from);
 
-  check( from != to, "gratitude: cannot give to self" );
-  check( is_account( to ), "gratitude: to account does not exist");
+  check(from != to, "gratitude: cannot give to self");
+  check(is_account(to), "gratitude: to account does not exist");
+  check_user(to);
 
   auto actr = acks.find(from.value);
   if (actr == acks.end()) {
