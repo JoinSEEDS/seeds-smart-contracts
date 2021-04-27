@@ -363,8 +363,6 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
 }
 
 void history::send_trx_cbp_reward_action (name from, name to) {
-  print("MMMMMMMMMMMMMMMMMMMMMMTA\n", from, ",", to);
-
   action a(
     permission_level(get_self(), "active"_n),
     get_self(),
@@ -372,12 +370,10 @@ void history::send_trx_cbp_reward_action (name from, name to) {
     std::make_tuple(from, to)
   );
 
-  a.send();
-
-  // transaction tx;
-  // tx.actions.emplace_back(a);
-  // tx.delay_sec = 1;
-  // tx.send(from.value + 10, _self);
+  transaction tx;
+  tx.actions.emplace_back(a);
+  tx.delay_sec = 1;
+  tx.send(from.value + 10, _self);
 }
 
 void history::send_add_cbs (name account, int points) {
@@ -425,17 +421,12 @@ void history::sendtrxcbp (name from, name to) {
   auto oitr = organizations.find(to.value);
 
   if (oitr != organizations.end()) {
-
-    print("from:", from, ", to:", to, ", org status", oitr->status, "\n");
-
     if (oitr->status == status_regenerative) {
       trx_cbp_reward(from, "buyregen.cbp"_n);
     }
     if (oitr->status == status_thrivable) {
       trx_cbp_reward(from, "buythriv.cbp"_n);
     }
-  } else {
-    print("from:", from, ", to:", to, ", org not found\n");
   }
 
   auto bitr_from = members.find(from.value);

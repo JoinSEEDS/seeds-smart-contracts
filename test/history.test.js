@@ -951,7 +951,7 @@ describe('Transaction CBS', async assert => {
 
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
-    await sleep(2000)
+    await sleep(3000)
   }
 
   console.log('add users')
@@ -1005,8 +1005,15 @@ describe('Transaction CBS', async assert => {
     table: 'trxcbpreward',
     json: true
   })
-
   console.log(trxCbs)
+
+  const cbsTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+  console.log(cbsTable)
 
 })
 
