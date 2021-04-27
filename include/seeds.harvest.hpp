@@ -44,7 +44,8 @@ CONTRACT harvest : public contract {
         cbs(contracts::accounts, contracts::accounts.value),
         circulating(contracts::token, contracts::token.value),
         regions(contracts::region, contracts::region.value),
-        members(contracts::region, contracts::region.value)
+        members(contracts::region, contracts::region.value),
+        organizations(contracts::organization, contracts::organization.value)
         {}
         
     ACTION reset();
@@ -240,6 +241,18 @@ CONTRACT harvest : public contract {
 
     DEFINE_CBS_TABLE_MULTI_INDEX
 
+
+    TABLE organization_table {
+        name org_name;
+        name owner;
+        uint64_t status;
+        int64_t regen;
+        uint64_t reputation;
+        uint64_t voice;
+        asset planted;
+        uint64_t primary_key() const { return org_name.value; }
+     };
+
     TABLE region_table {
       name id;
       name founder;
@@ -279,6 +292,9 @@ CONTRACT harvest : public contract {
         indexed_by<"byplanted"_n,
         const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
     > balance_tables;
+
+    typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
+
 
     // From history contract
     TABLE transaction_points_table { // scoped by account
@@ -397,6 +413,8 @@ CONTRACT harvest : public contract {
     circulating_supply_tables circulating;
     region_tables regions;
     members_tables members;
+    organization_tables organizations;
+
 
 };
 

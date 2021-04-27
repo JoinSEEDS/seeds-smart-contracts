@@ -1153,10 +1153,14 @@ describe('Mint Rate and Harvest', async assert => {
   }
 
   const checkHarvestValues = (bucket, ranks, totalAmount, actualValues) => {
-
-    const totalRank = ranks.reduce((acc, curr) => acc + curr)
+    const minElegibleOrg = 2
+    const filteredRanks = bucket != "orgs" ? ranks: ranks.slice(minElegibleOrg,ranks.length)
+    const totalRank = filteredRanks.reduce((acc, curr) => acc + curr)
     const fragmentSeeds = totalAmount / totalRank
-    const expectedSeeds = ranks.map(rank => {
+    const expectedSeeds = ranks.map((rank,i) => {
+      if (i < minElegibleOrg && bucket === "orgs") {
+        return 0
+      }
       const temp = rank * fragmentSeeds
       return parseFloat(temp.toFixed(4))
     })
@@ -1198,7 +1202,9 @@ describe('Mint Rate and Harvest', async assert => {
     const org = orgs[index]
     await contracts.token.transfer(firstuser, organization, '200.0000 SEEDS', 'initial supply', { authorization: `${firstuser}@active` })
     await contracts.organization.create(firstuser, org, `${org} name`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.teststatus(org, index, { authorization: `${organization}@active` })
     await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
+
   }
 
   console.log('add regions')
@@ -1309,6 +1315,7 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('global:', globalHarvest)
 
   console.log('check expected values')
+  const elegibleStatus = 2
   checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
   checkHarvestValues('orgs', csOrgTable.rows.filter(row => orgs.includes(row.account)).map(row => row.rank), mintRate * percentageForOrgs, orgsHarvest)
   checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintRate * percentageForrgns, rgnsHarvest)

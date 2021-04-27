@@ -730,12 +730,15 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   if (total == 0) return;
 
   cs_points_tables cspoints_t(get_self(), cs_scope.value);
+  
 
   uint64_t current = chunk * chunksize;
   auto cs_by_points = cspoints_t.get_index<"bycspoints"_n>();
   auto citr = start_val == 0 ? cs_by_points.begin() : cs_by_points.lower_bound(start_val);
   uint64_t count = 0;
   uint64_t sum_rank = 0;
+
+  uint64_t minElegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -744,9 +747,16 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
     cs_by_points.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
     });
-
-    sum_rank += rank;
-
+   
+    if (cs_scope == organization_scope) {
+      auto org = organizations.find(citr -> account.value);
+      if (org -> status >= minElegible) {
+        sum_rank += rank;    
+      }   
+    } else {
+      sum_rank += rank;    
+    }
+  
     current++;
     count++;
     citr++;
@@ -1270,12 +1280,12 @@ void harvest::disthvstusrs (uint64_t start, uint64_t chunksize, asset total_amou
 
     // auto uitr = users.find(csitr -> account.value);
     if (csitr->rank > 0) {
-
+    
       print("user:", csitr->account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
       withdraw_aux(get_self(), csitr->account, asset(csitr->rank * fragment_seeds, test_symbol), "harvest");
     
     }
-
+    
     csitr++;
     count++;
   }
@@ -1353,14 +1363,16 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
 
   double fragment_seeds = total_amount.amount / double(sum_rank);
   
+  uint64_t minElegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
+
   while (csitr != cspoints_t.end() && count < chunksize) {
 
-    // auto uitr = users.find(csitr -> account.value);
     if (csitr->rank > 0) {
-
-      print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
-      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
-    
+      auto uitr = organizations.find(csitr -> account.value);
+      if (uitr -> status >= minElegible) {
+        print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+        withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+      }
     }
 
     csitr++;

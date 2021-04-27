@@ -112,6 +112,8 @@ void settings::reset() {
   confwithdesc(name("org.minsub"), 7, "Minimum amount of rating points a user can take from an org", high_impact);
   confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
   confwithdesc(name("orgratethrsh"), 100, "Minimum rating points an organization needs to earn to start being ranked", medium_impact);
+  confwithdesc(name("org.minharv"), 2, "Minimum status for a org to be ligible for receiving part of the harvest ", high_impact);
+
 
   // Scheduler cycle
   confwithdesc(name("secndstoexec"), 60, "Seconds to execute", high_impact);
