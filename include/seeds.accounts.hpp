@@ -57,6 +57,8 @@ CONTRACT accounts : public contract {
 
       ACTION subrep(name user, uint64_t amount);
 
+      ACTION addcbs(name account, int points);
+
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
@@ -378,4 +380,5 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
 (migorgs)(delcbsreporg)(testmigscope)
+(addcbs)
 );

@@ -53,6 +53,10 @@ void history::reset(name account) {
     }
   }
 
+  auto tcitr = trxcbprewards.begin();
+  while (tcitr != trxcbprewards.end()) {
+    tcitr = trxcbprewards.erase(tcitr);
+  }
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -232,10 +236,12 @@ void history::trxentry(name from, name to, asset quantity) {
     std::make_tuple(transaction_id, timestamp)
   );
 
-  transaction tx;
-  tx.actions.emplace_back(a);
-  tx.delay_sec = 1;
-  tx.send(from.value, _self);
+  a.send();
+
+  // transaction tx;
+  // tx.actions.emplace_back(a);
+  // tx.delay_sec = 1;
+  // tx.send(from.value, _self);
 }
 
 
@@ -309,6 +315,8 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
   if (uitr_from -> type != name("organisation")) {
     send_update_txpoints(from);
   }
+
+  send_trx_cbp_reward_action(from, to);
 }
 
 void history::save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day) {
@@ -351,6 +359,94 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
       item.timestamp = day;
       item.qualifying_volume = qualifying_volume;
     });
+  }
+}
+
+void history::send_trx_cbp_reward_action (name from, name to) {
+  print("MMMMMMMMMMMMMMMMMMMMMMTA\n", from, ",", to);
+
+  action a(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "sendtrxcbp"_n,
+    std::make_tuple(from, to)
+  );
+
+  a.send();
+
+  // transaction tx;
+  // tx.actions.emplace_back(a);
+  // tx.delay_sec = 1;
+  // tx.send(from.value + 10, _self);
+}
+
+void history::send_add_cbs (name account, int points) {
+  action(
+    permission_level(contracts::accounts, "active"_n),
+    contracts::accounts,
+    "addcbs"_n,
+    std::make_tuple(account, points)
+  ).send();
+}
+
+void history::trx_cbp_reward (name account, name key) {
+
+  auto trxcbprewards_by_acct_key = trxcbprewards.get_index<"byacctkey"_n>();
+
+  uint128_t id = (uint128_t(account.value) << 64) + key.value;
+  auto itr = trxcbprewards_by_acct_key.find(id);
+
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+  if (itr != trxcbprewards_by_acct_key.end()) {
+
+    uint64_t threshold = now - utils::moon_cycle;
+    if (itr->timestamp > threshold) { return; }
+
+    trxcbprewards_by_acct_key.modify(itr, _self, [&](auto & item){
+      item.timestamp = now;
+    });
+
+  } else {
+    trxcbprewards.emplace(_self, [&](auto & item){
+      item.id = trxcbprewards.available_primary_key();
+      item.account = account;
+      item.key = key;
+      item.timestamp = now;
+    });
+  }
+
+  send_add_cbs(account, int(config_get(key)));
+}
+
+void history::sendtrxcbp (name from, name to) {
+  require_auth(get_self());
+
+  auto oitr = organizations.find(to.value);
+
+  if (oitr != organizations.end()) {
+
+    print("from:", from, ", to:", to, ", org status", oitr->status, "\n");
+
+    if (oitr->status == status_regenerative) {
+      trx_cbp_reward(from, "buyregen.cbp"_n);
+    }
+    if (oitr->status == status_thrivable) {
+      trx_cbp_reward(from, "buythriv.cbp"_n);
+    }
+  } else {
+    print("from:", from, ", to:", to, ", org not found\n");
+  }
+
+  auto bitr_from = members.find(from.value);
+  auto bitr_to = members.find(to.value);
+
+  if (
+    bitr_from != members.end() && 
+    bitr_to != members.end() && 
+    bitr_from->region == bitr_to->region
+  ) {
+    trx_cbp_reward(from, "buylocal.cbp"_n);
   }
 }
 
