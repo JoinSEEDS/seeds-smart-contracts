@@ -738,7 +738,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   uint64_t count = 0;
   uint64_t sum_rank = 0;
 
-  uint64_t minElegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
+  uint64_t min_elegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -750,7 +750,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
    
     if (cs_scope == organization_scope) {
       auto org = organizations.find(citr -> account.value);
-      if (org -> status >= minElegible) {
+      if (org -> status >= min_elegible) {
         sum_rank += rank;    
       }   
     } else {
@@ -1363,13 +1363,13 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
 
   double fragment_seeds = total_amount.amount / double(sum_rank);
   
-  uint64_t minElegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
+  uint64_t min_elegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
 
   while (csitr != cspoints_t.end() && count < chunksize) {
 
     if (csitr->rank > 0) {
       auto uitr = organizations.find(csitr -> account.value);
-      if (uitr -> status >= minElegible) {
+      if (uitr -> status >= min_elegible) {
         print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
         withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
       }
