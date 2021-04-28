@@ -70,6 +70,7 @@ CONTRACT onboarding : public contract {
     uint64_t config_get(name key);
     void send_campaign_reward(uint64_t campaign_id);
     void send_return_funds_aux(uint64_t campaign_id);
+    void _cancel(name sponsor, checksum256 invite_hash, bool check_auth);
 
 
     TABLE invite_table {
