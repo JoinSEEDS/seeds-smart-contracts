@@ -106,6 +106,15 @@ ACTION gratitude::newround() {
     if (payout > 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
     bitr++;
   }
+
+  // adds a new round
+  auto stitr = stats.rbegin();
+  auto cur_round_id = stitr->round_id;
+  stats.emplace(_self, [&](auto& item) {
+    item.round_id = ++cur_round_id;
+    item.num_transfers = 0;
+    item.volume = asset(0, gratitude_symbol);
+  });
 }
 
 /// ----------================ PRIVATE ================----------
