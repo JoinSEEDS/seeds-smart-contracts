@@ -738,7 +738,7 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   uint64_t count = 0;
   uint64_t sum_rank = 0;
 
-  uint64_t min_elegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
+  uint64_t min_elegible = config_get(name("org.minharv"));
 
   while (citr != cs_by_points.end() && count < chunksize) {
 
@@ -1363,7 +1363,7 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
 
   double fragment_seeds = total_amount.amount / double(sum_rank);
   
-  uint64_t min_elegible = config.get(name("org.minharv").value, "The parameter org.minharv has not been initialized yet").value;
+  uint64_t min_elegible = config_get(name("org.minharv"));
 
   while (csitr != cspoints_t.end() && count < chunksize) {
 
