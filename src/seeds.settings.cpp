@@ -65,6 +65,8 @@ void settings::reset() {
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
 
+  conffloatdsc(name("infation.per"), 0.0, "Economic inflation per period. Example 0.01 = 1%", high_impact);
+
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);

@@ -1152,7 +1152,11 @@ void harvest::calcmintrate () {
 
   double volume_growth = double(current_qev_itr -> qualifying_volume - previous_qev_itr -> qualifying_volume) / previous_qev_itr -> qualifying_volume;
 
-  int64_t target_supply = (1.0 + volume_growth) * previous_qev_itr -> circulating_supply;
+  int64_t target_supply_raw = (1.0 + volume_growth) * previous_qev_itr -> circulating_supply;
+
+  double inflation_rate = config_float_get("infation.per"_n);
+
+  int64_t target_supply = (1.0 + inflation_rate) * target_supply_raw;
 
   int64_t delta = target_supply - current_qev_itr -> circulating_supply;
 
