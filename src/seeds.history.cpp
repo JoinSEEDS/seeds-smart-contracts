@@ -236,12 +236,10 @@ void history::trxentry(name from, name to, asset quantity) {
     std::make_tuple(transaction_id, timestamp)
   );
 
-  a.send();
-
-  // transaction tx;
-  // tx.actions.emplace_back(a);
-  // tx.delay_sec = 1;
-  // tx.send(from.value, _self);
+  transaction tx;
+  tx.actions.emplace_back(a);
+  tx.delay_sec = 1;
+  tx.send(from.value, _self);
 }
 
 
