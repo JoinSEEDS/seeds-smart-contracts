@@ -660,8 +660,13 @@ var permissions = [{
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.escrow.account}@active`
 }, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.history.account}@eosio.code`
+  target: `${accounts.accounts.account}@addcbs`,
+  actor: `${accounts.history.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  action: 'addcbs'
 }]
 
 const isTestnet = chainId == networks.telosTestnet

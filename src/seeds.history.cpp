@@ -376,7 +376,7 @@ void history::send_trx_cbp_reward_action (name from, name to) {
 
 void history::send_add_cbs (name account, int points) {
   action(
-    permission_level(contracts::accounts, "active"_n),
+    permission_level(contracts::accounts, "addcbs"_n),
     contracts::accounts,
     "addcbs"_n,
     std::make_tuple(account, points)
