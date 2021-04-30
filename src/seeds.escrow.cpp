@@ -59,8 +59,10 @@ void escrow::lock (   const name&         lock_type,
         msponsor.locked_balance += quantity;
     });
 
+    uint64_t lock_id = locks.available_primary_key();
+
     locks.emplace (get_self(), [&](auto &l) {
-        l.id                = locks.available_primary_key();
+        l.id                = lock_id;
         l.lock_type         = lock_type;
         l.sponsor           = sponsor;
         l.beneficiary       = beneficiary;
@@ -70,6 +72,19 @@ void escrow::lock (   const name&         lock_type,
         l.vesting_date      = vesting_date;
         l.notes             = notes;
     });
+    if (!notes.empty()) {
+        std::size_t found = notes.find(string("proposal id: "));
+        if (found != std::string::npos) {
+            string prop_id_string = notes.substr(13, string::npos);
+            uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+            action(
+                permission_level(contracts::proposals, "active"_n),
+                contracts::proposals,
+                "addcampaign"_n,
+                std::make_tuple(prop_id, lock_id)
+            ).send();
+        }
+    }
 }
 
 void escrow::cancellock (const uint64_t& lock_id) {
@@ -156,6 +171,26 @@ void escrow::claim(name beneficiary) {
         if(it -> beneficiary != beneficiary)
             break;
 
+        if (!it->notes.empty()) {
+            std::size_t found = it->notes.find(string("proposal id: "));
+            if (found != std::string::npos) {
+                string prop_id_string = it->notes.substr(13, string::npos);
+                uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+                action(
+                    permission_level(contracts::proposals, "active"_n),
+                    contracts::proposals,
+                    "checkprop"_n,
+                    std::make_tuple(prop_id, string("proposal is not passing, lock can not be claimed"))
+                ).send();
+                action(
+                    permission_level(contracts::proposals, "active"_n),
+                    contracts::proposals,
+                    "doneprop"_n,
+                    std::make_tuple(prop_id)
+                ).send();
+            }
+        }
+
         if (it->lock_type == "time"_n) {
             if(it -> vesting_date <= current_time_point()){
                 deduct_from_sponsor (it->sponsor, it->quantity);
@@ -187,12 +222,26 @@ void escrow::claim(name beneficiary) {
 }
 
 
+void escrow::resettrigger (const name & trigger_source) {
+    require_auth(get_self());
 
+    event_table e_t (get_self(), trigger_source.value);
+    auto eitr = e_t.begin();
+    while (eitr != e_t.end()) {
+        eitr = e_t.erase(eitr);
+    }
+}
 
+void escrow::triggertest (const name&     trigger_source,
+                            const name&     event_name,
+                            const string&   notes) {
+    require_auth (get_self());
 
-
-
-
-
+    event_table e_t (get_self(), trigger_source.value);
+    e_t.emplace (get_self(), [&](auto &e) {
+        e.event_name    = event_name;
+        e.notes         = notes;
+    });
+}
 
 

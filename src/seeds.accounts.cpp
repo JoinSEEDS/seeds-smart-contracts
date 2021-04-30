@@ -1,4 +1,3 @@
- 
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>
@@ -58,9 +57,21 @@ void accounts::reset() {
     cbsitr = cbs.erase(cbsitr);
   }
 
+  cbs_tables cbs_t(get_self(), organization_scope.value);
+  auto cbsitr_org = cbs_t.begin();
+  while (cbsitr_org != cbs_t.end()) {
+    cbsitr_org = cbs_t.erase(cbsitr_org);
+  }
+
   auto repitr = rep.begin();
   while (repitr != rep.end()) {
     repitr = rep.erase(repitr);
+  }
+
+  rep_tables rep_t(get_self(), organization_scope.value);
+  auto o_repitr = rep_t.begin();
+  while (o_repitr != rep_t.end()) {
+    o_repitr = rep_t.erase(o_repitr);
   }
 
   auto sitr = sizes.begin();
@@ -98,7 +109,7 @@ void accounts::adduser(name account, string nickname, name type)
 
   users.emplace(_self, [&](auto& user) {
       user.account = account;
-      user.status = name("visitor");
+      user.status = visitor;
       user.reputation = 0;
       user.type = type;
       user.nickname = nickname;
@@ -126,7 +137,7 @@ void accounts::vouch(name sponsor, name account) {
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
 
-  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
+  check(sponsor_status == citizen || sponsor_status == resident, "sponsor must be a citizen or resident to vouch.");
   _vouch(sponsor, account);
 }
 
@@ -155,8 +166,8 @@ void accounts::_vouch(name sponsor, name account) {
 
     uint64_t vouch_points = 0;
 
-    if (sponsor_status == name("resident")) vouch_points = resident_basepoints;
-    if (sponsor_status == name("citizen")) vouch_points = citizen_basepoints;
+    if (sponsor_status == resident) vouch_points = resident_basepoints;
+    if (sponsor_status == citizen) vouch_points = citizen_basepoints;
 
     vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
 
@@ -173,25 +184,11 @@ void accounts::_vouch(name sponsor, name account) {
   calc_vouch_rep(account); 
 }
 
-void accounts::unvouch (name sponsor, name account) {
-  require_auth(sponsor);
-
-  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
-  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
-  auto vitr = vouches_by_sponsor_account.find(id);
-
-  check(vitr != vouches_by_sponsor_account.end(), "vouch not found");
-
-  vouches_by_sponsor_account.erase(vitr);
-  
-  calc_vouch_rep(account);
-}
-
 void accounts::pnishvouched (name sponsor, uint64_t start_account) {
   require_auth(get_self());
 
   uint64_t batch_size = config_get("batchsize"_n);
-  uint128_t id = uint128_t(sponsor.value) << 64;
+  uint128_t id = (uint128_t(sponsor.value) << 64) + start_account;
 
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
@@ -293,23 +290,32 @@ void accounts::send_subrep(name user, uint64_t amount) {
 }
 
 void accounts::rewards(name account, name new_status) {
-  vouchreward(account);
+  vouchreward(account, new_status);
   refreward(account, new_status);
 }
 
-void accounts::vouchreward(name account) {
+void accounts::vouchreward(name account, name new_status) {
   check_user(account);
-
-  auto uitr = users.find(account.value);
-  name status = uitr->status;
 
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   
   auto vitr = vouches_by_account.find(account.value);
 
+  uint64_t points = 0;
+
+  if (new_status == resident) {
+    points = config_get("vouchrep.1"_n);
+  } else if (new_status == citizen) {
+    points = config_get("vouchrep.2"_n);
+  }
+
+  if (points == 0) { 
+    return; 
+  }
+
   while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1    
+    send_addrep(sponsor, points);     
     vitr++;
   }
 }
@@ -341,7 +347,7 @@ uint64_t calc_decaying_rewards(int num, int min, int max, int decay) {
 void accounts::refreward(name account, name new_status) {
   check_user(account);
 
-  bool is_citizen = new_status.value == name("citizen").value;
+  bool is_citizen = new_status.value == citizen.value;
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
@@ -427,18 +433,29 @@ void accounts::refreward(name account, name new_status) {
 }
 
 void accounts::add_cbs(name account, int points) {
-  auto citr = cbs.find(account.value);
-  if (citr != cbs.end()) {
-    cbs.modify(citr, _self, [&](auto& item) {
+
+  auto uitr = users.find(account.value);
+
+  name scope = get_scope(uitr->type);
+
+  cbs_tables cbs_t(get_self(), scope.value);
+
+  auto citr = cbs_t.find(account.value);
+  if (citr != cbs_t.end()) {
+    cbs_t.modify(citr, _self, [&](auto& item) {
       item.community_building_score += points;
     });
   } else {
-    cbs.emplace(_self, [&](auto& item) {
+    cbs_t.emplace(_self, [&](auto& item) {
       item.account = account;
       item.community_building_score = points;
       item.rank = 0;
     });
-    size_change("cbs.sz"_n, 1);
+    if (scope == individual_scope) {
+      size_change("cbs.sz"_n, 1);
+    } else if (scope == organization_scope) {
+      size_change("cbs.org.sz"_n, 1);
+    }
   }
 }
 
@@ -472,15 +489,20 @@ void accounts::addrep(name user, uint64_t amount)
   check(amount > 0, "amount must be > 0");
 
   auto uitr = users.find(user.value);
+
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    add_rep_item(user, amount);
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    add_rep_item(user, amount, scope);
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rep += amount;
     });
   }
@@ -496,6 +518,7 @@ void accounts::subrep(name user, uint64_t amount)
 
   // modify user reputation - deprecated
   auto uitr = users.find(user.value);
+
   users.modify(uitr, _self, [&](auto& user) {
     if (user.reputation < amount) {
       user.reputation = 0;
@@ -504,18 +527,35 @@ void accounts::subrep(name user, uint64_t amount)
     }
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr != rep.end()) {
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr != rep_t.end()) {
     if (ritr->rep > amount) {
-      rep.modify(ritr, _self, [&](auto& item) {
+      rep_t.modify(ritr, _self, [&](auto& item) {
         item.rep -= amount;
       });
     } else {
-      rep.erase(ritr);
-      size_change("rep.sz"_n, -1);
+      rep_t.erase(ritr);
+      if (scope == individual_scope) {
+        size_change("rep.sz"_n, -1);
+      } else if (scope == organization_scope) {
+        size_change("rep.org.sz"_n, -1);
+      }
     }
   }
 
+}
+
+name accounts::get_scope (name type) {
+  if (type == "individual"_n) {
+    return individual_scope;
+  } else if (type == "organisation"_n) {
+    return organization_scope;
+  }
+  return not_found;
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
@@ -595,7 +635,7 @@ void accounts::makeresident(name user)
 {
     check_can_make_resident(user);
 
-    auto new_status = name("resident");
+    auto new_status = resident;
 
     updatestatus(user, new_status);
 
@@ -607,7 +647,7 @@ void accounts::makeresident(name user)
 bool accounts::check_can_make_resident(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("visitor"), "user is not a visitor");
+    check(uitr->status == visitor, "user is not a visitor");
 
     auto bitr = balances.find(user.value);
 
@@ -642,7 +682,7 @@ void accounts::updatestatus(name user, name status)
     user.status = status;
   });
 
-  bool trust = status == name("citizen");
+  bool trust = status == citizen;
 
   action(
     permission_level{contracts::proposals, "active"_n},
@@ -678,7 +718,7 @@ void accounts::makecitizen(name user)
 {
     check_can_make_citizen(user);
     
-    auto new_status = name("citizen");
+    auto new_status = citizen;
 
     updatestatus(user, new_status);
 
@@ -694,7 +734,7 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("resident"), "user is not a resident");
+    check(uitr->status == resident, "user is not a resident");
 
     auto bitr = balances.find(user.value);
 
@@ -734,7 +774,7 @@ void accounts::testresident(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("resident");
+  auto new_status = resident;
   updatestatus(user, new_status);
 
   rewards(user, new_status);
@@ -746,7 +786,7 @@ void accounts::testvisitor(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("visitor");
+  auto new_status = visitor;
   updatestatus(user, new_status);
   
 }
@@ -755,7 +795,7 @@ void accounts::testcitizen(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("citizen");
+  auto new_status = citizen;
 
   updatestatus(user, new_status);
 
@@ -778,17 +818,28 @@ uint32_t accounts::num_transactions(name account, uint32_t limit) {
 }
 
 void accounts::rankreps() {
-  rankrep(0, 0, 200);
+  rankrep(0, 0, 200, individual_scope);
 }
 
-void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void accounts::rankorgreps() {
+  rankrep(0, 0, 200, organization_scope);
+}
+
+void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope) {
   require_auth(_self);
 
-  uint64_t total = get_size("rep.sz"_n);
+  uint64_t total = 0;
+  if (scope == individual_scope) {
+    total = get_size("rep.sz"_n);
+  } else if (scope == organization_scope) {
+    total = get_size("rep.org.sz"_n);
+  }
   if (total == 0) return;
 
+  rep_tables rep_t(get_self(), scope.value);
+
   uint64_t current = chunk * chunksize;
-  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto rep_by_rep = rep_t.get_index<"byrep"_n>();
   auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
   uint64_t count = 0;
 
@@ -814,7 +865,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "rankrep"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, scope)
     );
 
     transaction tx;
@@ -827,17 +878,29 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 }
 
 void accounts::rankcbss() {
-  rankcbs(0, 0, 200);
+  rankcbs(0, 0, 200, individual_scope);
 }
 
-void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void accounts::rankorgcbss() {
+  rankcbs(0, 0, 200, organization_scope);
+}
+
+void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope) {
   require_auth(_self);
 
-  uint64_t total = get_size("cbs.sz"_n);
+  uint64_t total = 0;
+
+  if (scope == individual_scope) {
+    total = get_size("cbs.sz"_n);
+  } else {
+    total = get_size("cbs.org.sz"_n);
+  }
   if (total == 0) return;
 
+  cbs_tables cbs_t(get_self(), scope.value);
+
   uint64_t current = chunk * chunksize;
-  auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
+  auto cbs_by_cbs = cbs_t.get_index<"bycbs"_n>();
   auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);
   uint64_t count = 0;
 
@@ -863,7 +926,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "rankcbs"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, scope)
     );
 
     transaction tx;
@@ -875,13 +938,21 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
 }
 
-void accounts::add_rep_item(name account, uint64_t reputation) {
+void accounts::add_rep_item(name account, uint64_t reputation, name scope) {
   check(reputation > 0, "reputation must be > 0");
-  rep.emplace(_self, [&](auto& item) {
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  rep_t.emplace(_self, [&](auto& item) {
     item.account = account;
     item.rep = reputation;
   });
-  size_change("rep.sz"_n, 1);
+
+  if (scope == individual_scope) {
+    size_change("rep.sz"_n, 1);
+  } else if (scope == organization_scope) {
+    size_change("rep.org.sz"_n, 1);
+  }
 }
 
 void accounts::changesize(name id, int64_t delta) {
@@ -971,11 +1042,15 @@ void accounts::testsetrep(name user, uint64_t amount) {
     user.reputation = amount;
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    add_rep_item(user, amount);
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    add_rep_item(user, amount, scope);
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rep = amount;
     });
   }
@@ -986,18 +1061,38 @@ void accounts::testsetrs(name user, uint64_t amount) {
 
   check(is_account(user), "non existing user");
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    rep.emplace(_self, [&](auto& item) {
+  auto uitr = users.find(user.value);
+  if (uitr == users.end()) { return; }
+
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    rep_t.emplace(_self, [&](auto& item) {
       item.account = user;
       item.rank = amount;
     });
-    size_change("rep.sz"_n, 1);  
+    if (scope == individual_scope) {
+      size_change("rep.sz"_n, 1);
+    } else if (scope == organization_scope) {
+      size_change("rep.org.sz"_n, 1);
+    }
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rank = amount;
     });
   }
+}
+
+void accounts::send_add_cbs_org (name user, uint64_t amount) {
+  action(
+    permission_level(contracts::organization, "active"_n),
+    contracts::organization,
+    "addcbpoints"_n,
+    std::make_tuple(user, amount)
+  ).send();
 }
 
 
@@ -1007,29 +1102,27 @@ void accounts::testsetcbs(name user, uint64_t amount) {
   check(is_account(user), "non existing user");
 
   auto usritr = users.find(user.value);
+  
+  name scope = get_scope(usritr->type);
 
-  auto citr = cbs.find(user.value);
-  if (citr == cbs.end()) {
-    cbs.emplace(_self, [&](auto& item) {
+  cbs_tables cbs_t(get_self(), scope.value);
+
+  auto citr = cbs_t.find(user.value);
+  if (citr == cbs_t.end()) {
+    cbs_t.emplace(_self, [&](auto& item) {
       item.account = user;
       item.community_building_score = amount;
       item.rank = 0;
     });
-    size_change("cbs.sz"_n, 1);
+    if (scope == individual_scope) {
+      size_change("cbs.sz"_n, 1);
+    } else {
+      size_change("cbs.org.sz"_n, 1);
+    }
   } else {
-    cbs.modify(citr, _self, [&](auto& item) {
+    cbs_t.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
     });
-  }
-
-  if (usritr -> type == organization) {
-    // register cbs in the cbsorg table to rank orgs
-    action(
-      permission_level(contracts::organization, "active"_n),
-      contracts::organization,
-      "addcbpoints"_n,
-      std::make_tuple(user, amount)
-    ).send();
   }
 }
 
@@ -1152,9 +1245,9 @@ void accounts::flag (name from, name to) {
   uint64_t base_points = 0;
   auto uitr = users.get(from.value, "user not found");
 
-  if (uitr.status == name("citizen")) {
+  if (uitr.status == citizen) {
     base_points = config_get("flag.base.c"_n);
-  } else if (uitr.status == name("resident")) {
+  } else if (uitr.status == resident) {
     base_points = config_get("flag.base.r"_n);
   } else {
     check(false, "user must be a resident or a citizen");
@@ -1260,7 +1353,7 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
 
   auto uritr = rep.find(to.value);
   if (uritr == rep.end()) {
-    updatestatus(to, name("visitor"));
+    updatestatus(to, visitor);
     return;
   }
 
@@ -1290,18 +1383,18 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
       name current_rank = uitr->status;
 
       if (rank < min_rep_score_resident) {
-        current_rank = name("visitor");
+        current_rank = visitor;
       } else if (rank < min_rep_score_citizen) {
-        current_rank = name("resident");
+        current_rank = resident;
       } else {
-        current_rank = name("citizen");
+        current_rank = citizen;
       }
 
-      if (uitr->status == name("citizen") && current_rank != name("citizen")) {
+      if (uitr->status == citizen && current_rank != citizen) {
         updatestatus(uitr->account, current_rank);
       }
-      else if (uitr->status == name("resident") && current_rank == name("visitor")) {
-        updatestatus(uitr->account, name("visitor"));
+      else if (uitr->status == resident && current_rank == visitor) {
+        updatestatus(uitr->account, visitor);
       }
 
       evaluated = true;
@@ -1348,6 +1441,7 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
   }
 }
 
+// TODO: remove
 void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size) {
   require_auth(get_self());
   
@@ -1414,7 +1508,169 @@ void accounts::migratevouch (uint64_t start_user, uint64_t start_sponsor, uint64
 
 }
 
+ACTION accounts::testmigscope (name account, uint64_t amount) {
+  require_auth(get_self());
 
+  auto citr = cbs.find(account.value);
+  if (citr != cbs.end()) {
+    cbs.modify(citr, _self, [&](auto & item){
+      item.community_building_score = amount;
+      item.rank = amount;
+    });
+  } else {
+    cbs.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.community_building_score = amount;
+      item.rank = amount;
+    });
+  }
+
+  auto ritr = rep.find(account.value);
+  if (ritr != rep.end()) {
+    rep.modify(ritr, _self, [&](auto & item){
+      item.rep = amount;
+      item.rank = amount;
+    });
+  } else {
+    rep.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.rep = amount;
+      item.rank = amount;
+    });
+  }
+
+}
+
+ACTION accounts::migorgs (uint64_t start) {
+  require_auth(get_self());
+
+  cbs_tables cbs_org(get_self(), organization_scope.value);
+  rep_tables rep_org(get_self(), organization_scope.value);
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < batch_size) {
+
+    if (uitr->type != name("organisation")) {
+      uitr++;
+      count++;
+      continue;
+    }
+
+    name org_name = uitr->account;
+
+    // moving cbs from individual scope to org scope
+    auto citr = cbs.find(org_name.value);
+
+    if (citr != cbs.end()) {
+
+      auto cbs_itr_org = cbs_org.find(org_name.value);
+
+      if (cbs_itr_org != cbs_org.end()) {
+        cbs_org.modify(cbs_itr_org, _self, [&](auto & item){
+          item.community_building_score = citr->community_building_score;
+          item.rank = citr->rank;
+        });
+      } else {
+        cbs_org.emplace(_self, [&](auto & item){
+          item.account = org_name;
+          item.community_building_score = citr->community_building_score;
+          item.rank = citr->rank;
+        });
+      }
+
+    }
+
+    // moving rep from individual scope to org scope
+    auto ritr = rep.find(org_name.value);
+
+    if (ritr != rep.end()) {
+
+      auto rep_itr_org = rep_org.find(org_name.value);
+
+      if (rep_itr_org != rep_org.end()) {
+        rep_org.modify(rep_itr_org, _self, [&](auto & item){
+          item.rep = ritr->rep;
+          item.rank = ritr->rank;
+        });
+      } else {
+        rep_org.emplace(_self, [&](auto & item){
+          item.account = org_name;
+          item.rep = ritr->rep;
+          item.rank = ritr->rank;
+        });
+      }
+
+    }
+
+    uitr++;
+    count++;
+
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migorgs"_n,
+      std::make_tuple(uitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value, _self);
+  }
+
+}
+
+ACTION accounts::delcbsreporg (uint64_t start) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < batch_size) {
+
+    if (uitr->type != name("organisation")) {
+      uitr++;
+      count++;
+      continue;
+    }
+
+    name org_name = uitr->account;
+
+    auto citr = cbs.find(org_name.value);
+    if (citr != cbs.end()) { cbs.erase(citr); }
+
+    auto ritr = rep.find(org_name.value);
+    if (ritr != rep.end()) { rep.erase(ritr); }
+
+    uitr++;
+    count++;
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "delcbsreporg"_n,
+      std::make_tuple(uitr->account.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value, _self);
+  }
+}
+
+// TDDO: remove along with migratevouch
 void accounts::migrate_calc_vouch_rep (name account) {
   auto vouches_by_account = vouches.get_index<"byaccount"_n>();
   auto vitr = vouches_by_account.find(account.value);

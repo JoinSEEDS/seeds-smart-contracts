@@ -20,6 +20,8 @@ void settings::reset() {
   confwithdesc(name("proppass.rep"), 10, "Reputation points for passed proposal", high_impact); // rep points for passed proposal
 
   confwithdesc(name("prop.cyc.qb"), 2, "Prop cycles to take into account for calculating quorum basis", high_impact);
+
+  confwithdesc(name("prop.evl.psh"), 100, "Rep points the proposer will lose if the proposal fails in evaluate state", high_impact);
   
   confwithdesc(name("unity.high"), 90, "High unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
@@ -43,7 +45,7 @@ void settings::reset() {
   confwithdesc(name("hrvstreward"), 100000, "Harvest reward", high_impact);
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
-  confwithdesc(name("bio.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a bio region (in Seeds)", high_impact);
+  confwithdesc(name("region.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a region (in Seeds)", high_impact);
   confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
@@ -55,51 +57,63 @@ void settings::reset() {
   confwithdesc(name("txlimit.mul"), 10, "Multiplier to calculate maximum number of transactions per user", high_impact);
 
   confwithdesc(name("i.trx.max"), uint64_t(1777) * uint64_t(10000), "Individuals: Maximum points for a transaction", high_impact);
-  confwithdesc(name("i.trx.div"), 26, "Individuals: Transaction diversity not more than 26 from 1 user is counted", high_impact);
   
   confwithdesc(name("org.trx.max"), uint64_t(1777) * uint64_t(10000), "Organization: Maximum points for a transaction", high_impact);
-  confwithdesc(name("org.trx.div"), 26, "Organization: Transaction diversity not more than 26 from 1 other is counted", high_impact);
 
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
 
+  conffloatdsc(name("infation.per"), 0.0, "Economic inflation per period. Example 0.01 = 1%", high_impact);
+
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
-  confwithdesc(name("hrvst.bios"), 300000, "Percentage of the harvest that Bioregions will receive (4 decimals of precision)", high_impact);
+  confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
-  // Organizations
-  confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
-  
-  confwithdesc(name("org.minsub"), 7, "Minimum amount of rating points a user can take from an org", high_impact);
-  confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
 
-  // replace this single rating with the below
-  // confwithdesc(name("org.rgen.min"), 1000, "Minimum regen points an organization must have to be ranked", high_impact);
+  // =====================================
+  // organizations 
+  // =====================================
+
+  confwithdesc(name("orgminplnt.5"), 2000 * 10000, "Minimum planted Seeds to become a Thrivable organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.4"), 1000 * 10000, "Minimum planted Seeds to become a Regenerative organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.3"), 800 * 10000, "Minimum planted Seeds to become a Sustainable organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.2"), 400 * 10000, "Minimum planted Seeds to become a Reputable organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.1"), 200 * 10000, "Minimum planted Seeds to create a Regular organization (in Seeds)", medium_impact);
   
+  confwithdesc(name("orgminrank.5"), 90, "Minimum reputation score to become a Thrivable organization", medium_impact);
+  confwithdesc(name("orgminrank.4"), 75, "Minimum reputation score to become a Regenerative organization", medium_impact);
+  confwithdesc(name("orgminrank.3"), 50, "Minimum reputation score to become a Sustainable organization", medium_impact);
+  confwithdesc(name("orgminrank.2"), 20, "Minimum reputation score to become a Reputable organization", medium_impact);
+
   // user rating threshold when an org can become a (reputable/sustainable/regenerative/thrivable) org
   confwithdesc(name("org.rated.5"), 1000, "Thrivable organization rating threshold", low_impact);
   confwithdesc(name("org.rated.4"), 200, "Regenerative organization rating threshold", low_impact);
   confwithdesc(name("org.rated.3"), 100, "Sustainable organization rating threshold", low_impact);
   confwithdesc(name("org.rated.2"), 50, "Reputable organization rating threshold", low_impact);
 
+  confwithdesc(name("org.visref.5"), 100, "Minimum of visitors invited to become a Thrivable organization", medium_impact);
+  confwithdesc(name("org.visref.4"), 50, "Minimum of visitors invited to become a Regenerative organization", medium_impact);
+  confwithdesc(name("org.visref.3"), 10, "Minimum of visitors invited to become a Sustainable organization", medium_impact);
+  confwithdesc(name("org.visref.2"), 1, "Minimum of visitors invited to become a Reputable organization", medium_impact);
 
-  // Resident orgs
-  confwithdesc(name("rep.minplnt"), 400 * 10000, "Minimum amount planted to become a Reputable Organization (in Seeds)", high_impact);
-  confwithdesc(name("rep.minrank"), 50, "Minimum rank an organization must have to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.refrred"), 10, "Minimum number of referrals to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.resref"), 5, "Minimum number of residents or citizens referred to become a Reputable Organization", high_impact);
-  confwithdesc(name("rep.mintrx"), 5, "Minimum number of exchanged transactions with Reputable/Regenerative organizations or Citizens to become a Reputable Organization", high_impact);
+  confwithdesc(name("org.resref.5"), 50, "Minimum of residents invited to become a Thrivable organization", medium_impact);
+  confwithdesc(name("org.resref.4"), 25, "Minimum of residents invited to become a Regenerative organization", medium_impact);
+  confwithdesc(name("org.resref.3"), 5, "Minimum of residents invited to become a Sustainable organization", medium_impact);
+  confwithdesc(name("org.resref.2"), 0, "Minimum of residents invited to become a Reputable organization", medium_impact);
 
-  // Regenerative orgs
-  confwithdesc(name("rgen.minplnt"), 400 * 10000, "Minimum amount planted to become a Regenerative Organization (in Seeds)", high_impact);
-  confwithdesc(name("rgen.minrank"), 50, "Minimum rank an organization must have to become a Regenerative Organization", high_impact);
-  confwithdesc(name("rgen.refrred"), 10, "Minimum number of referrals to become a Regenerative Organization", high_impact);
-  confwithdesc(name("rgen.resref"), 5, "Minimum number of residents or citizens referred to become a Regenerative Organization", high_impact);
-  confwithdesc(name("rgen.mintrx"), 5, "Minimum number of exchanged transactions with Reputable/Regenerative organizations or Citizens to become a Regenerative Organization", high_impact);
+  conffloatdsc(name("org5trx.mul"), 2.0, "Multiplier received when exchanging with a Thrivable organization", medium_impact);
+  conffloatdsc(name("org4trx.mul"), 1.7, "Multiplier received when exchanging with a Regeneraitve organization", medium_impact);
+  conffloatdsc(name("org3trx.mul"), 1.3, "Multiplier received when exchanging with a Sustainable organization", medium_impact);
+  conffloatdsc(name("org2trx.mul"), 1.0, "Multiplier received when exchanging with a Reputable organization", medium_impact);
+  conffloatdsc(name("org1trx.mul"), 1.0, "Multiplier received when exchanging with a Regular organization", medium_impact);
+  
+  confwithdesc(name("org.minsub"), 7, "Minimum amount of rating points a user can take from an org", high_impact);
+  confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
+  confwithdesc(name("orgratethrsh"), 100, "Minimum rating points an organization needs to earn to start being ranked", medium_impact);
 
   // Scheduler cycle
   confwithdesc(name("secndstoexec"), 60, "Seconds to execute", high_impact);
@@ -215,20 +229,49 @@ void settings::reset() {
   // vouch base reward citizen
   confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
 
+  // Reputation point reward for vouchers when user becomes resident
+  confwithdesc(name("vouchrep.1"), 1, "Reputation point reward for vouchers when user becomes resident", medium_impact);
+
+  // Reputation point reward for vouchers when user becomes citizen
+  confwithdesc(name("vouchrep.2"), 1, "Reputation point reward for vouchers when user becomes citizen", medium_impact);
+
+  // Maximum number of points a user can gain from others vouching for them [NOT YET IMPLEMENTED]
+  confwithdesc(name("sendvouchmax"), 250, "Maximum number of non invite vouches a user can make", medium_impact);
+
+  // =====================================
+  // Community Building Points 
+  // =====================================
+
   // community buiding points for referrer when user becomes resident
-  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", high_impact);
+  confwithdesc(name("ref.cbp1.ind"), 2, "Community buiding points for referrer when user becomes resident", medium_impact);
 
   // community buiding points for referrer when user becomes citizen
-  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", high_impact);
+  confwithdesc(name("ref.cbp2.ind"), 2, "Community buiding points for referrer when user becomes citizen", medium_impact);
 
-  // community buiding points for voucher when user referred reputable org
-  confwithdesc(name("ref.org1.cbp1"), 8, "Referred reputable organization", high_impact);
+  // community buiding points for referrer when user referred sustainable org
+  // Bob invites Alice, Alice creates org, org becomes sustainable
+  confwithdesc(name("ref.org3.cbp1"), 4, "Referred sustainable organization", medium_impact);
 
-  // community buiding points for org referrer when referred user becomes resident
+  // community buiding points for referrer when user referred regenerative org
+  // Bob invites Alice, Alice creates org, org becomes regenerative
+  confwithdesc(name("ref.org4.cbp1"), 4, "Referred regenerative organization", medium_impact);
+
+  // community buiding points for referrer when user referred thrivable org
+  // Bob invites Alice, Alice creates org, org becomes thrivable
+  confwithdesc(name("ref.org5.cbp1"), 4, "Referred thrivable organization", medium_impact);
+
   confwithdesc(name("refcbp1.org"), 2, "Org community building points reward when user becomes resident", high_impact);
-
-  // community buiding points for org referrer when user becomes citizen
   confwithdesc(name("refcbp2.org"), 2, "Org community building points reward when user becomes citizen", high_impact);
+  confwithdesc(name("cbp.wane"), 2, "Degrading % over 1 cycle for org cbp points", high_impact);
+
+  // Community Building Point reward for buying from an organisation in your Region. One per lunar cycle.
+  confwithdesc(name("buylocal.cbp"), 1, "Community Building Point reward for buying from local organisation in your Region. One per lunar cycle", high_impact);
+
+  // Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.
+  confwithdesc(name("buyregen.cbp"), 2, "Community Building Point reward for buying from a Regenerative Organisation. One per lunar cycle.", high_impact);
+
+  // Community Building Point reward for buying from a Thriving Organisation. One award per lunar cycle.
+  confwithdesc(name("buythriv.cbp"), 4, "Community Building Point reward for buying from a Thriving Organisation. One per lunar cycle.", high_impact);
 
   // =====================================
   // flag points
@@ -242,8 +285,8 @@ void settings::reset() {
   // =====================================
   // forum 
   // =====================================
-  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", high_impact);
-  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", high_impact);
+  confwithdesc(name("forum.maxp"), 100000, "Max points the user will get for voting", low_impact);
+  confwithdesc(name("forum.vpb"), 70000, "Vote Base Points multiplier", low_impact);
   confwithdesc(name("forum.cutoff"), 280000, "Minimum value to start the decay", high_impact);
   confwithdesc(name("forum.cutzro"), 5000, "Minimum value to set vote power to zero", high_impact);
   confwithdesc(name("forum.dp"), 9500, "Depreciation multiplier (four decimal precision)", high_impact);
@@ -253,21 +296,35 @@ void settings::reset() {
   // =====================================
   // transaction multipliers
   // =====================================
-  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same bioregion", high_impact);
+  conffloatdsc(name("local.mul"), 1.5, "Transaction multiplier for exchanging within the same region", high_impact);
   conffloatdsc(name("regen.mul"), 1.5, "Transaction multiplier for exchanging with a regenerative organization", high_impact);
 
+  conffloatdsc(name("org1.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 1 organization", medium_impact);
+  conffloatdsc(name("org2.trx.mul"), 1.0, "Transaction multiplier for exchanging with a level 2 organization", medium_impact);
+  conffloatdsc(name("org3.trx.mul"), 1.3, "Transaction multiplier for exchanging with a level 3 organization", medium_impact);
+  conffloatdsc(name("org4.trx.mul"), 1.7, "Transaction multiplier for exchanging with a level 4 organization", medium_impact);
+  conffloatdsc(name("org5.trx.mul"), 2.0, "Transaction multiplier for exchanging with a level 5 organization", medium_impact);
 
   conffloatdsc(name("cyctrx.trail"), 3.0, "Number of cycles to take into account for calculating transaction points for individuals and orgs", high_impact);
 
   // =====================================
-  // bioregion
+  // region
   // =====================================
-  conffloatdsc(name("bio.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another bioregion", high_impact);
+  conffloatdsc(name("rgn.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
+  confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
   // gratitude 
   // =====================================
-  confwithdesc(name("gratz.gen"), 100 * 10000, "Base quantity of gratitude tokens received per cycle", high_impact);
+  confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
+  confwithdesc(name("gratz2.gen"), 200 * 10000, "Base quantity of gratitude tokens received for citizens per cycle", medium_impact);
+  confwithdesc(name("gratz.acks"), 10, "Minumum number of gratitude acks to fully use your tokens", medium_impact);
+
+  // =====================================
+  // onboarding/invite
+  // =====================================
+  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);

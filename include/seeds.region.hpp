@@ -6,19 +6,22 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/size_table.hpp>
 
 using namespace eosio;
 using std::string;
 
-CONTRACT bioregion : public contract {
+CONTRACT region : public contract {
     public:
         using contract::contract;
-        bioregion(name receiver, name code, datastream<const char*> ds)
+        region(name receiver, name code, datastream<const char*> ds)
             : contract(receiver, code, ds),
-              bioregions(receiver, receiver.value),
+              regions(receiver, receiver.value),
               members(receiver, receiver.value),
               sponsors(receiver, receiver.value),
-              biodelays(receiver, receiver.value),
+              regiondelays(receiver, receiver.value),
+              sizes(receiver, receiver.value),
+              harvestbalances(receiver, receiver.value),
               users(contracts::accounts, contracts::accounts.value),
               config(contracts::settings, contracts::settings.value),
               configfloat(contracts::settings, contracts::settings.value)
@@ -27,49 +30,57 @@ CONTRACT bioregion : public contract {
         
         ACTION create(
             name founder, 
-            name bioaccount, 
+            name rgnaccount, 
             string description, 
             string locationJson, 
             float latitude, 
             float longitude, 
             string publicKey);
 
-        ACTION join(name bioregion, name account);
-        ACTION leave(name bioregion, name account);
+        ACTION join(name region, name account);
+        ACTION leave(name region, name account);
 
-        ACTION addrole(name bioregion, name admin, name account, name role);
-        ACTION removerole(name bioregion, name admin, name account);
-        ACTION leaverole(name bioregion, name account);
-        ACTION removemember(name bioregion, name admin, name account);
+        ACTION addrole(name region, name admin, name account, name role);
+        ACTION removerole(name region, name admin, name account);
+        ACTION leaverole(name region, name account);
+        ACTION removemember(name region, name admin, name account);
 
-        ACTION setfounder(name bioregion, name founder, name new_founder);
+        ACTION setfounder(name region, name founder, name new_founder);
 
         ACTION reset();
 
-        ACTION removebr(name bioregion);
+        ACTION removergn(name region);
 
 
         void deposit(name from, name to, asset quantity, std::string memo);
 
     private:
         symbol seeds_symbol = symbol("SEEDS", 4);
+        symbol test_symbol = symbol("TESTS", 4);
         
         name founder_role = name("founder");
         name admin_role = name("admin");
         
+        const name status_inactive = name("inactive");
+        const name status_active = name("active");
 
-        void auth_founder(name bioregion, name founder);
+        const name active_size = name("active.sz");
+
+        void auth_founder(name region, name founder);
         void init_balance(name account);
         void check_user(name account);
         void remove_member(name account);
         void create_telos_account(name sponsor, name orgaccount, string publicKey); 
-        void size_change(name bioregion, int delta);
-        void delete_role(name bioregion, name account);
-        bool is_member(name bioregion, name account);
-        bool is_admin(name bioregion, name account);
+        void size_change(name id, int delta);
+        void delete_role(name region, name account);
+        bool is_member(name region, name account);
+        bool is_admin(name region, name account);
         double config_float_get(name key);
+        uint64_t config_get(name key);
+        void update_members_count(name region, int delta);
+        void add_harvest_balance(name region, asset amount);
 
-        TABLE bioregion_table {
+        TABLE region_table {
             name id;
             name founder;
             name status; // "active" "inactive"
@@ -83,25 +94,27 @@ CONTRACT bioregion : public contract {
             uint64_t primary_key() const { return id.value; }
             uint64_t by_status() const { return status.value; }
             uint64_t by_count() const { return members_count; }
+            uint128_t by_status_id() const { return (uint128_t(status.value) << 64) + id.value; }
         };
 
-        typedef eosio::multi_index <"bioregions"_n, bioregion_table,
-            indexed_by<"bystatus"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_status>>,
-            indexed_by<"bycount"_n,const_mem_fun<bioregion_table, uint64_t, &bioregion_table::by_count>>
-        > bioregion_tables;
+        typedef eosio::multi_index <"regions"_n, region_table,
+            indexed_by<"bystatus"_n,const_mem_fun<region_table, uint64_t, &region_table::by_status>>,
+            indexed_by<"bycount"_n,const_mem_fun<region_table, uint64_t, &region_table::by_count>>,
+            indexed_by<"bystatusid"_n,const_mem_fun<region_table, uint128_t, &region_table::by_status_id>>
+        > region_tables;
 
 
         TABLE members_table {
-            name bioregion;
+            name region;
             name account;
             time_point joined_date = current_block_time().to_time_point();
 
             uint64_t primary_key() const { return account.value; }
-            uint64_t by_bio() const { return bioregion.value; }
+            uint64_t by_region() const { return region.value; }
 
         };
         typedef eosio::multi_index <"members"_n, members_table,
-            indexed_by<"bybio"_n,const_mem_fun<members_table, uint64_t, &members_table::by_bio>>
+            indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
         > members_tables;
 
 
@@ -119,7 +132,7 @@ CONTRACT bioregion : public contract {
         > roles_tables;
 
 
-        TABLE sponsors_table { // is it posible to have a negative balance?
+        TABLE sponsors_table {
             name account;
             asset balance;
 
@@ -134,7 +147,15 @@ CONTRACT bioregion : public contract {
 
             uint64_t primary_key() const { return account.value; }
         };
-        typedef eosio::multi_index <"biodelays"_n, delay_table> delay_tables;
+        typedef eosio::multi_index <"regiondelays"_n, delay_table> delay_tables;
+
+        TABLE harvest_balance_table {
+            name region;
+            asset balance;
+
+            uint64_t primary_key() const { return region.value; }
+        };
+        typedef eosio::multi_index <"hrvstrgnblnc"_n, harvest_balance_table> harvest_balance_tables;
 
         // External tables
 
@@ -152,23 +173,29 @@ CONTRACT bioregion : public contract {
 
         DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
+        DEFINE_SIZE_TABLE
+
+        DEFINE_SIZE_TABLE_MULTI_INDEX
+
         config_tables config;
         config_float_tables configfloat;
+        size_tables sizes;
 
-        bioregion_tables bioregions;
+        region_tables regions;
         members_tables members;
         sponsors_tables sponsors;
-        delay_tables biodelays;
+        delay_tables regiondelays;
+        harvest_balance_tables harvestbalances;
 };
 
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == name("transfer").value && code == contracts::token.value) {
-      execute_action<bioregion>(name(receiver), name(code), &bioregion::deposit);
+      execute_action<region>(name(receiver), name(code), &region::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(bioregion, (reset)(create)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removebr))
+          EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
+          (removemember)(leaverole)(setfounder)(removergn))
       }
   }
 }
