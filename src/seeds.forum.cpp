@@ -532,11 +532,6 @@ ACTION forum::testsize (name id, uint64_t size) {
     size_set(id, size);
 }
 
-ACTION forum::testrnk (uint64_t rnk) {
-   auto r = utils::spline_rank(rnk, 100);
-   print("rank "+std::to_string(r));
-}
-
 ACTION forum::testapoints () {
     require_auth(get_self());
     check(false, std::to_string(get_available_points()));
