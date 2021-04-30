@@ -1079,7 +1079,9 @@ describe('Mint Rate and Harvest', async assert => {
   const previousDay = (new Date((day - 3 * moonCycle) * 1000).setUTCHours(0,0,0,0)) / 1000
 
   const users = [firstuser, seconduser, thirduser, fourthuser]
-  const orgs = ['firstorg', 'secondorg', 'thirdorg']
+  const orgs = ['orgaaa', 'orgbbb', 'orgccc', 'orgddd']
+
+  const minEligibleOrgStatus = 2
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -1154,10 +1156,29 @@ describe('Mint Rate and Harvest', async assert => {
 
   const checkHarvestValues = (bucket, ranks, totalAmount, actualValues) => {
 
-    const totalRank = ranks.reduce((acc, curr) => acc + curr)
+    let totalRank
+
+    if (bucket !== 'orgs') {
+      totalRank = ranks.reduce((acc, curr) => acc + curr)
+    } else {
+      totalRank = 0
+      for (const r of ranks) {
+        totalRank += r.status >= minEligibleOrgStatus ? r.rank : 0
+      }
+    }
+
     const fragmentSeeds = totalAmount / totalRank
-    const expectedSeeds = ranks.map(rank => {
-      const temp = rank * fragmentSeeds
+
+    const expectedSeeds = ranks.map((rank) => {
+      let r = 0
+      if (bucket === 'orgs') {
+        if (rank.status >= minEligibleOrgStatus) {
+          r = rank.rank
+        }
+      } else { 
+        r = rank
+      }
+      const temp = r * fragmentSeeds
       return parseFloat(temp.toFixed(4))
     })
 
@@ -1198,6 +1219,7 @@ describe('Mint Rate and Harvest', async assert => {
     const org = orgs[index]
     await contracts.token.transfer(firstuser, organization, '200.0000 SEEDS', 'initial supply', { authorization: `${firstuser}@active` })
     await contracts.organization.create(firstuser, org, `${org} name`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.teststatus(org, index, { authorization: `${organization}@active` })
     await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
   }
 
@@ -1308,9 +1330,20 @@ describe('Mint Rate and Harvest', async assert => {
   console.log('rgns:', rgnsHarvest)
   console.log('global:', globalHarvest)
 
+  const organizationsTable = await getTableRows({
+    code: organization,
+    scope: organization,
+    table: 'organization',
+    json: true,
+  })
+  const orgStatus = {}
+  for (const r of organizationsTable.rows) {
+    orgStatus[r.org_name] = r.status
+  }
+
   console.log('check expected values')
   checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
-  checkHarvestValues('orgs', csOrgTable.rows.filter(row => orgs.includes(row.account)).map(row => row.rank), mintRate * percentageForOrgs, orgsHarvest)
+  checkHarvestValues('orgs', csOrgTable.rows.map(row => { return { rank:row.rank, status: orgStatus[row.account] } }), mintRate * percentageForOrgs, orgsHarvest)
   checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintRate * percentageForrgns, rgnsHarvest)
   checkHarvestValues('global', [1], mintRate * percentageForGlobal, [globalHarvest])
 

@@ -737,6 +737,8 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
   uint64_t count = 0;
   uint64_t sum_rank = 0;
 
+  uint64_t min_eligible = config_get(name("org.minharv"));
+
   while (citr != cs_by_points.end() && count < chunksize) {
 
     uint64_t rank = utils::rank(current, total);
@@ -745,7 +747,14 @@ void harvest::rankcs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, nam
       item.rank = rank;
     });
 
-    sum_rank += rank;
+    if (cs_scope == organization_scope) {
+      auto org = organizations.find(citr -> account.value);
+      if (org -> status >= min_eligible) {
+        sum_rank += rank;    
+      }   
+    } else {
+      sum_rank += rank;    
+    }
 
     current++;
     count++;
@@ -1356,15 +1365,18 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
   check(sum_rank > 0, "the sum rank for organizations must be greater than zero");
 
   double fragment_seeds = total_amount.amount / double(sum_rank);
+
+  uint64_t min_eligible = config_get(name("org.minharv"));
   
   while (csitr != cspoints_t.end() && count < chunksize) {
 
     // auto uitr = users.find(csitr -> account.value);
     if (csitr->rank > 0) {
-
-      print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
-      withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
-    
+      auto uitr = organizations.find(csitr -> account.value);
+      if (uitr -> status >= min_eligible) {
+        print("org:", csitr -> account, ", rank:", csitr -> rank, ", amount:", asset(csitr -> rank * fragment_seeds, test_symbol), "\n");
+        withdraw_aux(get_self(), csitr -> account, asset(csitr -> rank * fragment_seeds, test_symbol), "harvest");
+      }
     }
 
     csitr++;
