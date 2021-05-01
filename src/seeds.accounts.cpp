@@ -459,6 +459,11 @@ void accounts::add_cbs(name account, int points) {
   }
 }
 
+ACTION accounts::addcbs (name account, int points) {
+  require_auth(get_self());
+  add_cbs(account, points);
+}
+
 void accounts::addref(name referrer, name invited)
 {
   require_auth(get_self());

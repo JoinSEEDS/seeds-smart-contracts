@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, thirduser, history, accounts, organization, token, settings, region } = names
+const { firstuser, seconduser, thirduser, fourthuser, history, accounts, organization, token, settings, region } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -906,3 +906,151 @@ describe('individual transactions', async assert => {
   })
 
 })
+
+
+describe('Transaction CBS', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const firstorg = 'firstorg'
+  const secondorg = 'secondorg'
+  const thirdorg = 'thirdorg'
+  const fourthorg = 'fourthorg'
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const orgs = [firstorg, secondorg, thirdorg, fourthorg]
+  const orgsStauts = [4 /** thrivable */, 4, 3 /** regenerative */, 1 /** normal */]
+
+  const contracts = await initContracts({ token, history, accounts, settings, organization, region })
+
+  const day = getBeginningOfDayInSeconds()
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('history reset')
+  await Promise.all(users.map(user => contracts.history.reset(user, { authorization: `${history}@active` })))
+  await Promise.all(orgs.map(org => contracts.history.reset(org, { authorization: `${history}@active` })))
+  await contracts.history.reset(history, { authorization: `${history}@active` })
+  await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+
+  console.log('token reset weekly')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset orgs')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('reset rgns')
+  await contracts.region.reset({ authorization: `${region}@active` })
+
+  const transfer = async (from, to, quantity) => {
+    await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
+    await sleep(3000)
+  }
+
+  console.log('add users')
+  await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
+
+  console.log('add orgs')
+  for (let i = 0; i < orgs.length; i++) {
+    const org = orgs[i]
+    await contracts.token.transfer(firstuser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, org, `${org} name`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.teststatus(org, orgsStauts[i], { authorization: `${organization}@active` })
+  }
+  
+  console.log('add region')
+  const keypair = await createKeypair()
+  await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const rgns = ['rgn1.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
+    await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.region.create(
+      users[index], 
+      rgn, 
+      'test rgn region',
+      '{lat:0.0111,lon:1.3232}', 
+      1.1, 
+      1.23, 
+      keypair.public, 
+      { authorization: `${users[index]}@active` })
+  }
+
+  await contracts.region.join(rgns[0], secondorg, { authorization: `${secondorg}@active` })
+
+  console.log('make transactions')
+  await transfer(seconduser, firstorg, 1)
+  await transfer(firstuser, secondorg, 1)
+  await transfer(thirduser, thirdorg, 1)
+  await transfer(fourthuser, fourthorg, 1)
+  await transfer(firstuser, secondorg, 1)
+
+  const trxCbs = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'trxcbpreward',
+    json: true
+  })
+
+  const cbsTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'cbs',
+    json: true
+  })
+
+  assert({
+    given: 'transactions made',
+    should: 'have the correct trx cbp entries',
+    actual: trxCbs.rows.map(r => {
+      return {
+        id: r.id,
+        account: r.account,
+        key: r.key
+      }
+    }),
+    expected: [
+      {
+        id: 0,
+        account: seconduser,
+        key: 'buythriv.cbp'
+      },
+      {
+        id: 1,
+        account: firstuser,
+        key: 'buythriv.cbp'
+      },
+      {
+        id: 2,
+        account: firstuser,
+        key: 'buylocal.cbp'
+      },
+      {
+        id: 3,
+        account: thirduser,
+        key: 'buyregen.cbp'
+      }
+
+    ]
+  })
+
+  assert({
+    given: 'transactions made',
+    should: 'have the correct cbps',
+    actual: cbsTable.rows,
+    expected: [
+      { account: firstuser, community_building_score: 5, rank: 0 },
+      { account: seconduser, community_building_score: 4, rank: 0 },
+      { account: thirduser, community_building_score: 2, rank: 0 }
+    ]
+  })
+
+})
+
