@@ -73,6 +73,7 @@ void settings::reset() {
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
+  confwithdesc(name("org.minharv"), 2, "Minimum status for a organization to be eligible for receiving part of the harvest ", high_impact);
 
   // =====================================
   // organizations 
