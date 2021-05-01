@@ -826,15 +826,15 @@ describe('Private campaign', async assert => {
 
     let cantCreateCampWithNotEnoughFunds = true
     try {
-        await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
+        await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
         cantCreateCampWithNotEnoughFunds = false
     } catch (err) {
         console.log('not enough funds (expected)')
     }
 
     await deposit(firstuser, onboarding, '45.0000 SEEDS')
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, 0, { authorization: `${firstuser}@active` })
 
     await checkCampaignFunds(1, maxAmount1)
     await checkCampaignFunds(2, maxAmount2)

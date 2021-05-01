@@ -12,6 +12,7 @@
 using namespace eosio;
 using namespace utils;
 using std::string;
+using std::vector;
 
 CONTRACT gratitude : public contract {
 
@@ -21,6 +22,7 @@ CONTRACT gratitude : public contract {
     gratitude(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
         balances(receiver, receiver.value),
+        acks(receiver, receiver.value),
         stats(receiver, receiver.value),
         sizes(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value),
@@ -29,16 +31,22 @@ CONTRACT gratitude : public contract {
 
     ACTION reset();
 
-    // Give gratitude to another user
+    // Directly give gratitude to another user
     ACTION give(name from, name to, asset quantity, string memo);
+
+    // Acknowledge gratitude to another user (will actually give tokens in proportion on new round)
+    ACTION acknowledge(name from, name to, string memo);
 
     // Generates a new gratitude round, regenerating gratitude and splitting stored SEEDS
     ACTION newround();
+
+    ACTION testacks();
 
   private:
 
     void check_user(name account);
     void init_balances(name account);
+    void calc_acks(name account);
     void add_gratitude(name account, asset quantity);
     void sub_gratitude(name account, asset quantity);
     uint64_t get_current_volume();
@@ -76,6 +84,13 @@ CONTRACT gratitude : public contract {
       uint64_t by_received() const { return received.amount; }
     };
 
+    TABLE acks_table {
+      name donor;
+      vector<name> receivers; // can have duplicates
+
+      uint64_t primary_key() const { return donor.value; }
+    };
+
     TABLE stats_table {
       uint64_t round_id;
       uint64_t num_transfers;
@@ -89,9 +104,12 @@ CONTRACT gratitude : public contract {
         const_mem_fun<balance_table, uint64_t, &balance_table::by_received>>
     > balance_tables;
 
+    typedef eosio::multi_index<"acks"_n, acks_table> acks_tables;
+
     typedef eosio::multi_index<"stats"_n, stats_table> stats_tables;
 
     balance_tables balances;
+    acks_tables acks;
     stats_tables stats;
 
     // External tables
@@ -99,9 +117,11 @@ CONTRACT gratitude : public contract {
     config_tables config;
     size_tables sizes;
 
-    const name gratzgen = "gratz.gen"_n; // Gratitude generated per cycle setting
+    const name gratzgen_res = "gratz1.gen"_n; // Gratitude generated per cycle for residents
+    const name gratzgen_cit = "gratz2.gen"_n; // Gratitude generated per cycle for citizens
+    const name gratz_acks = "gratz.acks"_n; // Gratitude generated per cycle for citizens
 };
 
 EOSIO_DISPATCH(gratitude, 
-  (reset)(give)(newround)
+  (reset)(give)(acknowledge)(newround)(testacks)
 );

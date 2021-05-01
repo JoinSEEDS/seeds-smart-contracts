@@ -57,10 +57,11 @@ CONTRACT accounts : public contract {
 
       ACTION subrep(name user, uint64_t amount);
 
+      ACTION addcbs(name account, int points);
+
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
-      ACTION unvouch(name sponsor, name account);
       ACTION pnishvouched(name sponsor, uint64_t start_account);
 
       ACTION rankreps();
@@ -102,6 +103,9 @@ CONTRACT accounts : public contract {
       const name individual = "individual"_n;
       const name organization = "organisation"_n;
 
+      const name citizen = name("citizen");
+      const name resident = name("resident");
+      const name visitor = name("visitor");
       const name individual_scope = get_self();
       const name organization_scope = "org"_n;
 
@@ -142,7 +146,7 @@ CONTRACT accounts : public contract {
       void buyaccount(name account, string owner_key, string active_key);
       void check_user(name account);
       void rewards(name account, name new_status);
-      void vouchreward(name account);
+      void vouchreward(name account, name new_status);
       void refreward(name account, name new_status);
       void send_reward(name beneficiary, asset quantity);
       void updatestatus(name account, name status);
@@ -371,9 +375,10 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(requestvouch)(vouch)(unvouch)(pnishvouched)
+(testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
 (migorgs)(delcbsreporg)(testmigscope)
+(addcbs)
 );

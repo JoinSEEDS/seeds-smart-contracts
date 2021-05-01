@@ -15,7 +15,7 @@ const randomAccountNamergn = () => {
   for ( var i = 0; i < length; i++ ) {
      result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
-  return result + ".bdc";
+  return result + ".rgn";
 }
 
 describe("regions general", async assert => {
@@ -42,6 +42,27 @@ describe("regions general", async assert => {
 
   console.log('configure - 1 Seeds feee')
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+
+  console.log('configure - rgn.cit')
+  await contracts.settings.configure("rgn.cit", 2, { authorization: `${settings}@active` })
+
+  const statusInactive = 'inactive'
+  const statusActive = 'active'
+
+  const checkStatus = async (rgn, status, given, should) => {
+    const regions = await getTableRows({
+      code: region,
+      scope: region,
+      table: 'regions',
+      json: true
+    })
+    assert({
+      given,
+      should,
+      actual: regions.rows.filter(r => r.id == rgn)[0].status,
+      expected: status
+    })
+  }
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
@@ -100,17 +121,21 @@ describe("regions general", async assert => {
     } catch {
   
     }
+
+  await checkStatus(rgnname, statusInactive, 'region created', 'have the correct status')
   
   console.log('join a region')
   await contracts.region.join(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
   const members = await getMembers()
   //console.log("members "+JSON.stringify(members, null, 2))
+  await checkStatus(rgnname, statusActive, `${seconduser} joined`, 'have the correct status')
 
   console.log('leave a region')
   await contracts.region.leave(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
   const membersAfter = await getMembers()
+  await checkStatus(rgnname, statusInactive, `${seconduser} left`, 'have the correct status')
 
   //console.log("membersAfter "+JSON.stringify(membersAfter, null, 2))
 
@@ -120,6 +145,7 @@ describe("regions general", async assert => {
 
   const membersAfterRemove = await getMembers()
   //console.log("membersAfterRemove "+JSON.stringify(membersAfterRemove, null, 2))
+  await checkStatus(rgnname, statusInactive, `${thirduser} joined`, 'have the correct status')
 
   const admin = seconduser
 
@@ -391,7 +417,7 @@ describe("regions Test Delete", async assert => {
   // console.log("roles1before "+JSON.stringify(roles1before, null, 2))
   // console.log("roles2before "+JSON.stringify(roles2before, null, 2))
 
-  await contracts.region.removebr(rgnname2, { authorization: `${region}@active` })
+  await contracts.region.removergn(rgnname2, { authorization: `${region}@active` })
 
   const roles1After = await getRoles(rgnname)
   const roles2After = await getRoles(rgnname2)

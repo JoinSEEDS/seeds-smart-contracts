@@ -29,7 +29,7 @@ const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://test.hypha.earth',
-  telosMainnet: 'https://node.hypha.earth'
+  telosMainnet: 'https://api.telosfoundation.io'
 }
 
 const ownerAccounts = {
@@ -650,11 +650,24 @@ var permissions = [{
 }, {
   target: `${accounts.harvest.account}@execute`,
   action: 'rankorgcss'
-}//, {
-  // target: `${accounts.bank.account}@active`,
-  // actor: `${accounts.pouch.account}@active`
-//}
-]
+}, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.onboarding.account}@active`,
+}, { 
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.escrow.account}@active`
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  actor: `${accounts.history.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  action: 'addcbs'
+}]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
