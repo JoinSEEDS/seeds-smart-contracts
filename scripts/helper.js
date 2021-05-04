@@ -11,7 +11,8 @@ const networks = {
   mainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
   jungle: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473',
   kylin: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191',
-  local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
+  // local: process.env.COMPILER === 'local' ? eosioLocalChainID : dockerLocalChainID,
+  local: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
   telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
@@ -84,7 +85,7 @@ const payForCPUKeys = {
 const payForCPUPublicKey = payForCPUKeys[chainId]
 
 const applicationKeys = {
-  [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
 }
@@ -179,6 +180,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -667,6 +669,9 @@ var permissions = [{
 }, {
   target: `${accounts.accounts.account}@addcbs`,
   action: 'addcbs'
+}, {
+  target: `${accounts.pool.account}@active`,
+  actor: `${accounts.pool.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
