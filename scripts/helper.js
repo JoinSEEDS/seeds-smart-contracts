@@ -792,9 +792,27 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function asset (quantity) {
+  if (typeof quantity == 'object') {
+    if (quantity.symbol) {
+      return quantity
+    }
+    return {}
+  }
+  const [amount, symbol] = quantity.split(' ')
+  const indexDecimal = amount.indexOf('.')
+  const precision = amount.substring(indexDecimal + 1).length
+  return {
+    amount: parseFloat(amount),
+    symbol,
+    precision,
+    toString: quantity
+  }
+}
+
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
 }
 
