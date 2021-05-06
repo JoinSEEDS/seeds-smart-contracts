@@ -23,6 +23,7 @@ ACTION pool::ontransfer (name from, name to, asset quantity, string memo) {
       quantity.symbol == utils::seeds_symbol) {        // SEEDS symbol
 
     utils::check_asset(quantity);
+    check(from == contracts::escrow, "the sender is not an allowed account");
 
     name account = name(memo);
     check(is_account(account), account.to_string() + " is not an account");
