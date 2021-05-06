@@ -804,7 +804,7 @@ describe('Increase Price', async assert => {
   })
 })
 
-describe.only('Update Volume', async assert => {
+describe('Update Volume', async assert => {
 
   const contracts = await initContracts({ accounts, token, exchange })
   
