@@ -829,10 +829,10 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: regenScores.rows,
         expected: [
-            { org_name: org2, regen_avg: 6, rank: 25 },
+            { org_name: org2, regen_avg: 6, rank: 4 },
             { org_name: org3, regen_avg: 0, rank: 0 },
-            { org_name: org4, regen_avg: 10, rank: 50 },
-            { org_name: org5, regen_avg: 11, rank: 75 }
+            { org_name: org4, regen_avg: 10, rank: 27 },
+            { org_name: org5, regen_avg: 11, rank: 63 }
         ]
     })
 

@@ -314,12 +314,11 @@ describe('forum reputation', async assert => {
         try {
             await contracts.forum.testapoints({ authorization: `${forum}@active` })
         } catch (e) {
-            const error = JSON.parse(e)
             assert({
                 given: 'test points called',
                 should: 'return the correct amount of points',
                 expected: `assertion failure with message: ${parseInt(expectedValue)}`,
-                actual: error.error.details[0].message
+                actual: e.json.error.details[0].message
             })
         }
     }
@@ -364,15 +363,16 @@ describe('forum reputation', async assert => {
     await testGetPoints(parseInt(0.5 * 1000), 1000)
     await testGetPoints(parseInt(0.2 * 20000), 20000)
     await testGetPoints(parseInt(0.1 * 100001), 100001)
-    
+
+    ranktest = await contracts.forum.testrank(50, { authorization: `${forum}@active` });
 
     assert({
         given: 'rankforums called',
         should: 'rank all the users in the forum correctly',
         expected: [
             { account: firstuser, reputation: -70000, rank: 0 },
-            { account: seconduser, reputation: 70000, rank: 66 },
-            { account: thirduser, reputation: 35000, rank: 33 }
+            { account: seconduser, reputation: 70000, rank: 50 },
+            { account: thirduser, reputation: 35000, rank: 8 }
         ],
         actual: forumReputation.rows
     })
@@ -387,8 +387,15 @@ describe('forum reputation', async assert => {
     assert({
         given: 'reputation distributed',
         should: 'give users correct reputation',
-        expected: [10000, 5006, 10003],
+        expected: [10000, 5005, 10000],
         actual: users.rows.map(u => u.reputation)
+    })
+
+    assert({
+        given: 'ranking using spline coeficients',
+        should: 'return expected value',
+        expected: 'rank 27',
+        actual: ranktest.processed.action_traces[0].console
     })
 })
 

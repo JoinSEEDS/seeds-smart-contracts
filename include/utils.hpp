@@ -19,7 +19,7 @@ namespace utils {
 
   symbol seeds_symbol = symbol("SEEDS", 4);
 
-  inline uint64_t rank(uint64_t current, uint64_t total) { 
+  inline uint64_t linear_rank(uint64_t current, uint64_t total) { 
     /**
      * TODO - Table Locks
      * 
@@ -36,14 +36,123 @@ namespace utils {
      * lock but applying reputation we would have to store changes in a secondary table rep_delta, apply all changes there while rep ranking is happening
      * and apply the delta back to the full table once rep ranking is finished.
      * 
-     * The count rebalances the next time we go over it, it's a dynamic system. 
      * 
+     * The count rebalances the next time we go over it, it's a dynamic system. 
+
      * The cheap way to fix it is to limit rank to 99
     */
-
     uint64_t r = (current * 100) / total; 
     if (r > 99) return 99;
     return r;
+  }
+
+  inline uint64_t spline_rank(uint64_t current, uint64_t total) {
+    // Spline rank table coeficients
+    const float rank_coefs[100] = { 0.00,
+                            0.00,
+                            0.01,
+                            0.03,
+                            0.06,
+                            0.09,
+                            0.14,
+                            0.19,
+                            0.26,
+                            0.34,
+                            0.44,
+                            0.55,
+                            0.67,
+                            0.81,
+                            0.97,
+                            1.15,
+                            1.34,
+                            1.56,
+                            1.80,
+                            2.06,
+                            2.34,
+                            2.65,
+                            2.98,
+                            3.34,
+                            3.72,
+                            4.14,
+                            4.58,
+                            5.06,
+                            5.57,
+                            6.11,
+                            6.68,
+                            7.30,
+                            7.94,
+                            8.63,
+                            9.35,
+                            10.12,
+                            10.92,
+                            11.77,
+                            12.66,
+                            13.60,
+                            14.59,
+                            15.62,
+                            16.70,
+                            17.83,
+                            19.02,
+                            20.26,
+                            21.55,
+                            22.90,
+                            24.30,
+                            25.77,
+                            27.23,
+                            28.70,
+                            30.16,
+                            31.63,
+                            33.09,
+                            34.56,
+                            36.02,
+                            37.49,
+                            38.95,
+                            40.41,
+                            41.88,
+                            43.34,
+                            44.81,
+                            46.27,
+                            47.74,
+                            49.20,
+                            50.67,
+                            52.13,
+                            53.60,
+                            55.06,
+                            56.53,
+                            57.99,
+                            59.45,
+                            60.92,
+                            62.38,
+                            63.85,
+                            65.31,
+                            66.78,
+                            68.24,
+                            69.71,
+                            71.17,
+                            72.64,
+                            74.10,
+                            75.57,
+                            77.03,
+                            78.50,
+                            79.96,
+                            81.42,
+                            82.89,
+                            84.35,
+                            85.82,
+                            87.28,
+                            88.75,
+                            90.21,
+                            91.68,
+                            93.14,
+                            94.61,
+                            96.07,
+                            97.54,
+                            99.00
+    };
+    uint64_t calc = (current * 100) / total;
+    if (calc > 99) calc = 99;
+
+    return (uint64_t)rank_coefs[calc];
   }
 
   inline bool is_valid_majority(uint64_t favour, uint64_t against, uint64_t majority) {
