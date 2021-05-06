@@ -841,10 +841,10 @@ describe('organization scores', async assert => {
         should: 'rank the orgs properly',
         actual: cbsRanks.rows,
         expected: [
-            { account: org1, community_building_score: 100, rank: 80 },
-            { account: org2, community_building_score: 75, rank: 60 },
-            { account: org3, community_building_score: 50, rank: 40 },
-            { account: org4, community_building_score: 25, rank: 20 },
+            { account: org1, community_building_score: 100, rank: 71 },
+            { account: org2, community_building_score: 75, rank: 41 },
+            { account: org3, community_building_score: 50, rank: 14 },
+            { account: org4, community_building_score: 25, rank: 2 },
             { account: org5, community_building_score: 1, rank: 0 }
         ]
     })
@@ -857,10 +857,10 @@ describe('organization scores', async assert => {
         actual: txRanks.rows,
         expected: [
             { account: org1, points: 501, rank: 0 },
-            { account: org2, points: 1001, rank: 20 },
-            { account: org3, points: 2001, rank: 40 },
-            { account: org4, points: 2600, rank: 60 },
-            { account: org5, points: 2935, rank: 80 }      
+            { account: org2, points: 1001, rank: 2 },
+            { account: org3, points: 2001, rank: 14 },
+            { account: org4, points: 2600, rank: 41 },
+            { account: org5, points: 2935, rank: 71 }      
         ]
     })
     console.log('trxs', txRanks.rows)
