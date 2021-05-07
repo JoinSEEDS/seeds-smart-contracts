@@ -370,6 +370,34 @@ ACTION exchange::addround(uint64_t volume, asset seeds_per_usd) {
   });
 }
 
+ACTION exchange::updatevol(uint64_t round_id, uint64_t volume) {
+  require_auth(get_self());
+
+  price_table p = price.get_or_create(get_self(), price_table());
+  check(round_id > p.current_round_id, "cannot change volume on past or already started rounds, only on future rounds");
+
+  uint64_t prev_vol = 0;
+
+  auto previtr = rounds.find(round_id - 1);
+  if (previtr != rounds.end()) {
+    prev_vol = previtr -> max_sold;
+  } else {
+    check(round_id == 0, "invalid round id - must be continuous");
+  }
+
+  auto ritr = rounds.find(round_id);
+
+  while(ritr != rounds.end()) {
+    uint64_t max_sold = prev_vol + volume;
+    rounds.modify(ritr, _self, [&](auto& item) {
+        item.max_sold = max_sold;
+    });
+    prev_vol = max_sold;
+    ritr++;
+  }
+
+}
+
 ACTION exchange::initsale() {
   require_auth(get_self());
   initrounds(

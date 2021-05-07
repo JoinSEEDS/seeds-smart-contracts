@@ -56,6 +56,8 @@ CONTRACT exchange : public contract {
 
     ACTION reset();
 
+    ACTION updatevol(uint64_t round_id, uint64_t volume);
+
     //ACTION testhusd(name from, name to, asset quantity);
 
   private:
@@ -188,6 +190,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (addround)(initsale)(initrounds)(priceupdate)
           (migrate)(pause)(unpause)(setflag)
           (incprice)
+          (updatevol)
           //(testhusd)
           )
       }
