@@ -46,7 +46,7 @@ void settings::reset() {
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
   confwithdesc(name("region.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a region (in Seeds)", high_impact);
-  confwithdesc(name("vdecayprntge"), 6, "The percentage of voice decay (in percentage)", high_impact);
+  confwithdesc(name("vdecayprntge"), 11, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
   confwithdesc(name("inact.cyc"), 3, "Number of cycles until a voter is considered inactive and no longer counts towards quorum", high_impact);
