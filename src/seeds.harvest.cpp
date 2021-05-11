@@ -210,7 +210,6 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
       if (refund_time > eosio::current_time_point().sec_since_epoch()) {
-        auto bitr = balances.find(from.value);
 
         add_planted(from, ritr->amount);
 
