@@ -5,26 +5,47 @@
 #include <string>
 
 
-bool scheduler::is_ready_to_execute(name operation){
-    auto itr = operations.find(operation.value);
-
-    if (itr == operations.end()) {
-        return false;
-    }
-    if(itr -> pause > 0) {
-        print("transaction " + operation.to_string() + " is paused");
-        return false;
-    }
-
+bool scheduler::is_ready_to_execute(name operation, name optype){
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
-    uint64_t periods = 0;
 
-    periods = (timestamp - itr -> timestamp) / itr -> period;
+    if (optype == "op"_n) {
+        auto itr = operations.find(operation.value);
 
-    print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
+        if (itr == operations.end()) {
+            return false;
+        }
+        if(itr -> pause > 0) {
+            print("transaction " + operation.to_string() + " is paused");
+            return false;
+        }
 
-    if(periods > 0) return true;
-    return false;
+        uint64_t periods = 0;
+
+        periods = (timestamp - itr -> timestamp) / itr -> period;
+
+        print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
+
+        if(periods > 0) return true;
+        return false;
+    }
+    else {
+        auto mitr = moonops.find(operation.value);
+
+        if (mitr == moonops.end()) {
+            return false;
+        }
+        if (mitr->pause > 0) {
+            print("moon op " + operation.to_string() + " is paused");
+            return false;
+        }
+
+        uint64_t date = std::max(
+            mitr->start_time, 
+            mitr->last_moon_cycle_id + (mitr->quarter_moon_cycles * (utils::moon_cycle / 4))
+        );
+
+
+    }
 }
 
 
@@ -289,6 +310,37 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period,
     }
 }
 
+ACTION scheduler::configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime) {
+    require_auth(_self);
+
+    check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
+    
+    auto mitr = moonphases.find(starttime);
+    check(mitr != moonphases.end(), "start time must be a valid moon phase timestamp");
+
+    auto mop_itr = moonops.find(id.value);
+
+    if (mop_itr != moonops.end()) {
+        moonops.modify(mop_itr, _self, [&](auto & op){
+            op.action = action;
+            op.contract = contract;
+            op.quarter_moon_cycles = quarter_moon_cycles;
+            op.start_time = starttime;
+            op.pause = 0;
+        });
+    } else {
+        moonops.emplace(_self, [&](auto & op){
+            op.id = id;
+            op.action = action;
+            op.contract = contract;
+            op.quarter_moon_cycles = quarter_moon_cycles;
+            op.start_time = starttime;
+            op.last_moon_cycle_id = 0;
+            op.pause = 0;
+        });
+    }
+}
+
 ACTION scheduler::moonphase(uint64_t timestamp, string phase_name, string eclipse) {
     require_auth(_self);
 
@@ -398,9 +450,9 @@ ACTION scheduler::execute() {
     bool has_executed = false;
 
     while(itr != ops_by_last_executed.end()) {
-        if(is_ready_to_execute(itr -> id)){
+        if(is_ready_to_execute(itr -> id, "op"_n)){
 
-            print("\nOperation to be executed: " + itr -> id.to_string());
+            print("\nOperation to be executed: " + itr -> id.to_string(), "\n");
 
             exec_op(itr->id, itr->contract, itr->operation);
 
@@ -409,6 +461,25 @@ ACTION scheduler::execute() {
             break;
         }
         itr++;
+    }
+
+    if (!has_executed) {
+        auto moonops_by_last_cycle = moonops.get_index<"bylastcycle"_n>();
+        auto mitr = moonops_by_last_cycle.begin();
+        
+        while (mitr != moonops_by_last_cycle.end()) {
+            if (is_ready_to_execute(mitr->id, "moonop"_n)) {
+
+                print("\nMoon operation to be executed: " + mitr->id.to_string(), "\n");
+
+                exec_op(mitr->id, mitr->contract, mitr->action);
+
+                has_executed = true;
+
+                break;
+            }
+            mitr++;
+        }
     }
 
     // =======================
