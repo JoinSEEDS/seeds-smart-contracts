@@ -3,9 +3,9 @@
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <utils.hpp>
-#include <tables.hpp>
 #include <tables/config_table.hpp>
 #include <tables/rep_table.hpp>
+#include <tables/org_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -109,17 +109,9 @@ CONTRACT organization : public contract {
             "thrivable"_n
         };
 
-        TABLE organization_table {
-            name org_name;
-            name owner;
-            uint64_t status;
-            int64_t regen;
-            uint64_t reputation;
-            uint64_t voice;
-            asset planted;
+        DEFINE_ORG_TABLE
 
-            uint64_t primary_key() const { return org_name.value; }
-        };
+        DEFINE_ORG_TABLE_MULTI_INDEX
 
         TABLE members_table {
             name account;
@@ -283,8 +275,6 @@ CONTRACT organization : public contract {
             const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
         > balance_tables;
     
-        typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
-
         typedef eosio::multi_index <"members"_n, members_table> members_tables;
 
         typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;

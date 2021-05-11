@@ -8,9 +8,8 @@
 #include <eosio/eosio.hpp>
 #include <eosio/transaction.hpp>
 #include <contracts.hpp>
-#include <tables.hpp>
-#include <tables/config_table.hpp>
 #include <eosio/singleton.hpp>
+#include <tables/config_table.hpp>
 
 #include <string>
 
@@ -229,18 +228,15 @@ namespace eosio {
             const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
          > transaction_tables;
 
-          typedef eosio::multi_index<"users"_n, tables::user_table,
-            indexed_by<"byreputation"_n,
-            const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
-          > user_tables;
-
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
          void update_stats( const name& from, const name& to, const asset& quantity );
          void save_transaction(name from, name to, asset quantity);
-         void check_limit( const name& from );
          uint64_t balance_for( const name& owner );
-         void check_limit_transactions(name from);
+
+         void tx_limit_and_save(name from, name to, asset quantity);
+         void check_limit_transactions(name from, asset planted);
+
          void reset_weekly_aux(uint64_t begin);
 
          TABLE circulating_supply_table {

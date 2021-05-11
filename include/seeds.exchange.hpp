@@ -3,7 +3,6 @@
 #include <eosio/transaction.hpp>
 #include <eosio/singleton.hpp>
 #include <contracts.hpp>
-#include <tables.hpp>
 #include <tables/price_history_table.hpp>
 
 using namespace eosio;

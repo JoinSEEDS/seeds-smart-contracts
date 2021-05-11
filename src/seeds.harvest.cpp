@@ -5,10 +5,10 @@
 void harvest::reset() {
   require_auth(_self);
 
-  auto bitr = balances.begin();
-  while (bitr != balances.end()) {
-    bitr = balances.erase(bitr);
-  }
+  // auto bitr = balances.begin();
+  // while (bitr != balances.end()) {
+  //   bitr = balances.erase(bitr);
+  // }
   
   name user = name("seedsuserbbb");
   refund_tables refunds(get_self(), user.value);
@@ -104,10 +104,10 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 }
 
 void harvest::add_planted(name account, asset quantity) {
-  auto bitr = balances.find(account.value);
-  balances.modify(bitr, _self, [&](auto& user) {
-    user.planted += quantity;
-  });
+  // auto bitr = balances.find(account.value);
+  // balances.modify(bitr, _self, [&](auto& user) {
+  //   user.planted += quantity;
+  // });
   auto pitr = planted.find(account.value);
   if (pitr == planted.end()) {
     planted.emplace(_self, [&](auto& item) {
@@ -210,7 +210,7 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
       uint32_t refund_time = ritr->request_time + ONE_WEEK * ritr->weeks_delay;
 
       if (refund_time > eosio::current_time_point().sec_since_epoch()) {
-        auto bitr = balances.find(from.value);
+        //auto bitr = balances.find(from.value);
 
         add_planted(from, ritr->amount);
 

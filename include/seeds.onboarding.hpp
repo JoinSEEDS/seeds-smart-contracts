@@ -3,7 +3,6 @@
 #include <eosio/crypto.hpp>
 #include <abieos_numeric.hpp>
 #include <contracts.hpp>
-#include <tables.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
 

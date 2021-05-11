@@ -27,7 +27,7 @@ CONTRACT harvest : public contract {
     using contract::contract;
     harvest(name receiver, name code, datastream<const char*> ds)
       : contract(receiver, code, ds),
-        balances(receiver, receiver.value),
+        // balances(receiver, receiver.value),
         planted(receiver, receiver.value),
         txpoints(receiver, receiver.value),
         cspoints(receiver, receiver.value),
@@ -156,14 +156,14 @@ CONTRACT harvest : public contract {
     // Contract Tables
 
     // Migration plan - leave this data in there, but start using the planted table
-    TABLE balance_table {
-      name account;
-      asset planted;
-      asset reward; // harvest reward - unused
+    // TABLE balance_table {
+    //   name account;
+    //   asset planted;
+    //   asset reward; // harvest reward - unused
 
-      uint64_t primary_key()const { return account.value; }
-      uint64_t by_planted()const { return planted.amount; }
-    };
+    //   uint64_t primary_key()const { return account.value; }
+    //   uint64_t by_planted()const { return planted.amount; }
+    // };
 
     TABLE refund_table {
       uint64_t request_id;
@@ -276,11 +276,6 @@ CONTRACT harvest : public contract {
 
     typedef eosio::multi_index<"refunds"_n, refund_table> refund_tables;
 
-    typedef eosio::multi_index<"balances"_n, balance_table,
-        indexed_by<"byplanted"_n,
-        const_mem_fun<balance_table, uint64_t, &balance_table::by_planted>>
-    > balance_tables;
-
     // From history contract
     TABLE transaction_points_table { // scoped by account
       uint64_t timestamp;
@@ -385,7 +380,7 @@ CONTRACT harvest : public contract {
 
 
     // Contract Tables
-    balance_tables balances;
+    // balance_tables balances;
     planted_tables planted;
     tx_points_tables txpoints;
     cs_points_tables cspoints;

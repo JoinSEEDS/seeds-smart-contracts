@@ -2,6 +2,7 @@ const { describe } = require('riteway')
 
 const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper')
 const { assert } = require('chai')
+const { thunkify } = require('ramda')
 
 const { token, firstuser, seconduser, thirduser, history, accounts, harvest, settings } = names
 
@@ -16,6 +17,13 @@ const getSupply = async () => {
   })
 
   return Number.parseInt(rows[0].supply)
+}
+
+
+const addUser = async (username) => {
+  const contracts = await initContracts({ token, accounts })
+  await contracts.accounts.adduser(username, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.token.transfer(username, "harvst.seeds", '0.0001 SEEDS', ``, { authorization: `${username}@active` })
 }
 
 describe('token.transfer.history', async assert => {
@@ -42,8 +50,10 @@ describe('token.transfer.history', async assert => {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
   console.log('update status')
-  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+
+  await addUser(firstuser)
+  await addUser(seconduser)
+  
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
@@ -87,18 +97,21 @@ describe('token.transfer.history', async assert => {
 
 })
 
-describe('token.transfer', async assert => {
+describe.only('token.transfer', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-  const contracts = await initContracts({ token, harvest })
+  const contracts = await initContracts({ token, harvest, settings })
 
   console.log('harvest reset')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
-  let limit = 20
+  console.log('configure')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  let limit = 21
   const transfer = (n) => contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', `x${n}`, { authorization: `${firstuser}@active` })
 
   const balances = [await getBalance(firstuser)]
@@ -108,6 +121,16 @@ describe('token.transfer', async assert => {
 
   console.log('plant SEEDS')
   await contracts.token.transfer(firstuser, harvest, '2.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+
+  const balancesX = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'balances',
+    json: true
+  })
+  console.log("balances "+JSON.stringify(balancesX, null, 2))
+
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
@@ -259,9 +282,9 @@ describe('token.resetweekly', async assert => {
   await sleep(10 * 1000)
 
   console.log('update status')
-  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
+  await addUser(firstuser)
+  await addUser(seconduser)
+  await addUser(thirduser)
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
@@ -337,11 +360,10 @@ describe('transaction limits', async assert => {
   console.log('set tx multiplier to 2')
   await contracts.settings.configure("txlimit.mul", 2, { authorization: `${settings}@active` })
   
-
   console.log('add users')
-  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
+  await addUser(firstuser)
+  await addUser(seconduser)
+  await addUser(thirduser)
 
   console.log('plant')
   await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })

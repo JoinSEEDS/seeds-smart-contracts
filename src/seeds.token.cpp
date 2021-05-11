@@ -110,10 +110,6 @@ void token::transfer( const name&    from,
     require_recipient( from );
     require_recipient( to );
 
-    check_limit_transactions(from);
-
-    // check_limit(from);
-
     check( quantity.is_valid(), "seeds: invalid quantity" );
     check( quantity.amount > 0, "seeds: must transfer positive quantity" );
     check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
@@ -124,9 +120,7 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity);
-
-    update_stats( from, to, quantity );
+    tx_limit_and_save(from, to, quantity);
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -157,10 +151,13 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
 }
 
 void token::save_transaction(name from, name to, asset quantity) {
-  if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
+
+  // The check below only relevant for setting up contracts on a test chain
+  // Should never go on mainnet. Comment back in if needed locally.
+  //if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
     // Before our accounts are created, don't record anything
-    return;
-  }
+  //  return;
+  //}
   
   action(
     permission_level{contracts::history, "active"_n},
@@ -171,57 +168,62 @@ void token::save_transaction(name from, name to, asset quantity) {
 
 }
 
-void token::check_limit_transactions(name from) {
-  user_tables users(contracts::accounts, contracts::accounts.value);
-  config_tables config(contracts::settings, contracts::settings.value);
-  balance_tables balances(contracts::harvest, contracts::harvest.value);
+inline void token::tx_limit_and_save(const name from, const name to, const asset quantity) {
 
-  auto bitr = balances.find(from.value);
-  auto uitr = users.find(from.value);
+  print( " check tx limit ");
+    if (from == contracts::harvest || to == contracts::harvest) return;
 
-  if (uitr != users.end()) {
-    uint64_t max_trx = 0;
-    auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
-    if (bitr != balances.end() && bitr -> planted > asset(0, seeds_symbol)) {
-      auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
-      max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
-    } 
-        
-    if (min_trx.value > max_trx) {
-      max_trx = min_trx.value;
+  print( " 111 ");
+
+    balance_tables balances(contracts::harvest, contracts::harvest.value);
+    auto bitr_from = balances.find(from.value);
+
+    if (bitr_from != balances.end()) {
+
+      print( " from has balance ");
+
+      check_limit_transactions(from, bitr_from->planted); 
+
+      print( " update stats ");
+
+        update_stats( from, to, quantity );
     }
 
-    transaction_tables transactions(get_self(), seeds_symbol.code().raw());
-    auto titr = transactions.find(from.value);
-
-    if (titr != transactions.end()) {
-      check(max_trx > titr -> outgoing_transactions, "Maximum limit of allowed transactions reached.");
-    }
-  }
+    save_transaction(from, to, quantity);
+  
 }
 
-void token::check_limit(const name& from) {
-  user_tables users(contracts::accounts, contracts::accounts.value);
-  auto uitr = users.find(from.value);
+inline void token::check_limit_transactions(name from, asset planted) {
+  config_tables config(contracts::settings, contracts::settings.value);
 
-  if (uitr == users.end()) {
-    return;
-  }
+  uint64_t max_trx = 0;
+  uint64_t min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.").value;
+  
+    print( " planted "+std::to_string(planted.amount));
+    print( " min_trx "+std::to_string(min_trx));
 
-  name status = uitr->status;
+  if (planted > asset(0, seeds_symbol)) {
+    auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
+    max_trx = (mul_trx.value * (planted).amount) / 10000;
 
-  uint64_t limit = 10;
-  if (status == "resident"_n) {
-    limit = 50;
-  } else if (status == "citizen"_n) {
-    limit = 100;
+        print( " max_trx "+std::to_string(max_trx));
+
+  } 
+      
+  if (min_trx > max_trx) {
+    max_trx = min_trx;
   }
 
   transaction_tables transactions(get_self(), seeds_symbol.code().raw());
   auto titr = transactions.find(from.value);
-  uint64_t current = titr->outgoing_transactions;
 
-  check(current < limit, "too many outgoing transactions");
+  if (titr != transactions.end()) {
+            print( " max_trx "+std::to_string(max_trx));
+            print( " outgoing_transactions "+std::to_string(titr -> outgoing_transactions));
+
+    check(max_trx > titr -> outgoing_transactions, "Weekly transaction limit reached. Plant more Seeds to increase your limit!");
+  }
+  
 }
 
 void token::reset_weekly_aux(uint64_t begin) {
@@ -271,15 +273,6 @@ void token::resetwhelper (uint64_t begin) {
 }
 
 void token::update_stats( const name& from, const name& to, const asset& quantity ) {
-    user_tables users(contracts::accounts, contracts::accounts.value);
-
-    auto fromuser = users.find(from.value);
-    auto touser = users.find(to.value);
-    
-    if (fromuser == users.end() || touser == users.end()) {
-      return;
-    }
-
     auto sym_code_raw = quantity.symbol.code().raw();
     transaction_tables transactions(get_self(), sym_code_raw);
 

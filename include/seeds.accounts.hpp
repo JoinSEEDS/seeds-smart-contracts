@@ -1,13 +1,13 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <contracts.hpp>
-#include <tables.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/planted_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -195,6 +195,10 @@ CONTRACT accounts : public contract {
 
       DEFINE_CBS_TABLE_MULTI_INDEX
 
+      DEFINE_PLANTED_BALANCES_TABLE
+
+      DEFINE_PLANTED_BALANCES_TABLE_MULTI_INDEX
+
       TABLE ref_table {
         name referrer;
         name invited;
@@ -316,12 +320,6 @@ CONTRACT accounts : public contract {
       indexed_by<"bysponsor"_n,
       const_mem_fun<req_vouch_table, uint64_t, &req_vouch_table::by_sponsor>>
     > req_vouch_tables;
-
-    typedef eosio::multi_index<"balances"_n, tables::balance_table,
-        indexed_by<"byplanted"_n,
-        const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
-    > balance_tables;
-    balance_tables balances;
 
     struct [[eosio::table]] account {
       asset    balance;
