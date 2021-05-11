@@ -152,45 +152,15 @@ void history::trxentry(name from, name to, asset quantity) {
     return;
   }
 
-  auto from_user = users.find(from.value);
-  auto to_user = users.find(to.value);
-  
-  if (from_user == users.end() || to_user == users.end()) {
+  auto from_planted = planted.find(from.value);
+  auto to_planted = planted.find(to.value);
+
+  if (from_planted == planted.end() || to_planted == planted.end()) {
     return;
   }
 
-
-  uint64_t day = utils::get_beginning_of_day_in_seconds();
-  daily_transactions_tables transactions(get_self(), day);
-
-  uint64_t transaction_id = transactions.available_primary_key();
-  uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
-
-  bool from_is_organization = from_user -> type == "organisation"_n;
-  bool to_is_organization = to_user -> type == "organisation"_n;
-
-  int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
-  int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
-  int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
-
-  double from_capped_amount = (
-    from_is_organization ? 
-    std::min(max_transaction_points_organizations, quantity.amount) : 
-    std::min(max_transaction_points_individuals, quantity.amount)
-  ) / 10000.0;
-  
-  double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
-
-  transactions.emplace(_self, [&](auto & transaction){
-    transaction.id = transaction_id;
-    transaction.from = from;
-    transaction.to = to;
-    transaction.volume = quantity.amount;
-    transaction.qualifying_volume = std::min(transactions_cap, quantity.amount);
-    transaction.from_points = uint64_t(ceil(from_capped_amount * get_transaction_multiplier(to, from)));
-    transaction.to_points = to_is_organization ? uint64_t(ceil(to_capped_amount * get_transaction_multiplier(from, to))) : 0;
-    transaction.timestamp = timestamp;
-  });
+  bool from_is_organization = organizations.find(from.value) != organizations.end();
+  bool to_is_organization = organizations.find(to.value) != organizations.end();
 
   auto from_totals_itr = totals.find(from.value);
 
@@ -227,52 +197,61 @@ void history::trxentry(name from, name to, asset quantity) {
     }
   }
 
-  cancel_deferred(from.value);
+  uint64_t trx_id = get_deferred_id();
 
   action a(
-    permission_level{contracts::history, "active"_n},
+    permission_level(get_self(), "active"_n),
     get_self(),
     "savepoints"_n,
-    std::make_tuple(transaction_id, timestamp)
+    std::make_tuple(from, to, quantity, trx_id)
   );
 
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1;
-  tx.send(from.value, _self);
+  tx.send(trx_id, _self);
 }
 
 
-void history::savepoints(uint64_t id, uint64_t timestamp) {
+void history::savepoints (name from, name to, asset quantity, uint64_t trx_id) {
   require_auth(get_self());
 
-  auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
-  uint64_t day = date.utc_seconds;
+  print("SAVEPOINTS: from=", from, ", to=", to, ", quantity=", quantity, "\n");
 
+  uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
+
+  bool from_is_organization = organizations.find(from.value) != organizations.end();
+  bool to_is_organization = organizations.find(to.value) != organizations.end();
+
+  int64_t transactions_cap = int64_t(config_get("qev.trx.cap"_n));
+  int64_t max_transaction_points_individuals = int64_t(config_get("i.trx.max"_n));
+  int64_t max_transaction_points_organizations = int64_t(config_get("org.trx.max"_n));
+
+  double from_capped_amount = (
+    from_is_organization ? 
+    std::min(max_transaction_points_organizations, quantity.amount) : 
+    std::min(max_transaction_points_individuals, quantity.amount)
+  ) / 10000.0;
+  
+  double to_capped_amount = std::min(max_transaction_points_organizations, quantity.amount) / 10000.0;
+  uint64_t qvolume = std::min(transactions_cap, quantity.amount);
+
   auto transactions_by_from_to = transactions.get_index<"byfromto"_n>();
-
-  auto titr = transactions.find(id);
-  check(titr != transactions.end(), "transaction not found");
-  name from = titr -> from;
-  name to = titr -> to;
-
-  auto uitr_from = users.find(from.value);
-  auto uitr_to = users.find(to.value);
 
   uint64_t max_number_transactions = config_get("htry.trx.max"_n);
 
-  uint128_t from_to_id = (uint128_t(titr -> from.value) << 64) + titr -> to.value;
+  uint128_t from_to_id = (uint128_t(from.value) << 64) + to.value;
   uint64_t count = 0;
 
   auto ft_itr = transactions_by_from_to.find(from_to_id);
   auto current_itr = ft_itr;
 
   while (ft_itr != transactions_by_from_to.end() && 
-      count <= max_number_transactions && 
+      count < max_number_transactions && 
       ft_itr -> from == from && ft_itr -> to == to) {
 
-    if (ft_itr -> volume < current_itr -> volume) {
+    if (ft_itr -> volume < current_itr->volume) {
       current_itr = ft_itr;
     }
 
@@ -280,21 +259,39 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
     count++;
   }
 
-  int64_t from_points = int64_t(titr -> from_points);
-  int64_t to_points = int64_t(titr -> to_points);
-  int64_t qualifying_volume = int64_t(titr -> qualifying_volume);
+  bool current_has_smaller_volume = current_itr->volume < qvolume;
 
-  if (count > max_number_transactions) {
-    from_points -= current_itr -> from_points;
-    to_points -= current_itr -> to_points;
-    qualifying_volume -= current_itr -> qualifying_volume;
+  if (count >= max_number_transactions && !current_has_smaller_volume) { return; }
+
+  uint64_t fpoints = uint64_t(ceil(from_capped_amount * get_transaction_multiplier(to, from)));
+  uint64_t tpoints = to_is_organization ? uint64_t(ceil(to_capped_amount * get_transaction_multiplier(from, to))) : 0;
+
+  transactions.emplace(_self, [&](auto & transaction){
+    transaction.id = transactions.available_primary_key();
+    transaction.from = from;
+    transaction.to = to;
+    transaction.volume = quantity.amount;
+    transaction.qualifying_volume = qvolume;
+    transaction.from_points = fpoints;
+    transaction.to_points = tpoints;
+    transaction.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+
+  int64_t from_points = int64_t(fpoints);
+  int64_t to_points = int64_t(tpoints);
+  int64_t qualifying_volume = int64_t(qvolume);
+
+  if (count >= max_number_transactions && current_has_smaller_volume) {
+    from_points -= current_itr->from_points;
+    to_points -= current_itr->to_points;
+    qualifying_volume -= current_itr->qualifying_volume;
 
     transactions_by_from_to.erase(current_itr);
   }
 
-  save_from_metrics (from, from_points, qualifying_volume, day);
+  save_from_metrics(from, from_points, qualifying_volume, day);
 
-  if (uitr_to -> type == name("organisation")) {
+  if (to_is_organization) {
     transaction_points_tables trx_points_to(get_self(), to.value);
     auto trx_itr_to = trx_points_to.find(day);
 
@@ -310,7 +307,7 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
     }
   }
 
-  if (uitr_from -> type != name("organisation")) {
+  if (from_is_organization) {
     send_update_txpoints(from);
   }
 
@@ -360,6 +357,7 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
   }
 }
 
+
 void history::send_trx_cbp_reward_action (name from, name to) {
   action a(
     permission_level(get_self(), "active"_n),
@@ -371,7 +369,7 @@ void history::send_trx_cbp_reward_action (name from, name to) {
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1;
-  tx.send(from.value + 10, _self);
+  tx.send(get_deferred_id(), _self);
 }
 
 void history::send_add_cbs (name account, int points) {
@@ -517,7 +515,7 @@ void history::send_update_txpoints (name from) {
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1; 
-  tx.send(from.value, _self);
+  tx.send(get_deferred_id(), _self);
 }
 
 void history::numtrx(name account) {
@@ -809,3 +807,26 @@ void history::adjust_transactions (uint64_t id, uint64_t timestamp) {
     }
   }
 }
+
+uint64_t history::get_deferred_id () {
+  deferred_trx_id_tables deferred_t(get_self(), get_self().value);
+
+  auto ditr = deferred_t.begin();
+
+  if (ditr == deferred_t.end()) {
+    deferred_t.emplace(_self, [&](auto & item){
+      item.id = 0;
+      item.value = 1;
+    });
+    return 1;
+  }
+
+  uint64_t value = ditr->value + 1;
+
+  deferred_t.modify(ditr, _self, [&](auto & item){
+    item.value = value;
+  });
+
+  return value;
+}
+

@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, thirduser, fourthuser, history, accounts, organization, token, settings, region } = names
+const { firstuser, seconduser, thirduser, fourthuser, history, accounts, organization, token, settings, region, harvest } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -19,9 +19,12 @@ describe('make a transaction entry', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-  const contracts = await initContracts({ history, accounts, settings })
+  const contracts = await initContracts({ history, accounts, settings, token })
 
   const day = getBeginningOfDayInSeconds()
+
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -44,6 +47,9 @@ describe('make a transaction entry', async assert => {
   const seconduserRep = 49
   await contracts.accounts.testsetrs(firstuser, firstuserRep, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(seconduser, seconduserRep, { authorization: `${accounts}@active` })
+
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', 'sow ' + firstuser, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '1.0000 SEEDS', 'sow ' + seconduser, { authorization: `${seconduser}@active` })
 
   console.log('add transaction entry')
   await contracts.history.trxentry(firstuser, seconduser, '10.0000 SEEDS', { authorization: `${history}@active` })
@@ -292,9 +298,13 @@ describe('individual transactions', async assert => {
   await contracts.accounts.testsetrs(seconduser, seconduserRep, { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(thirduser, thirduserRep, { authorization: `${accounts}@active` })
 
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', 'sow ' + firstuser, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '1.0000 SEEDS', 'sow ' + seconduser, { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, harvest, '1.0000 SEEDS', 'sow ' + thirduser, { authorization: `${thirduser}@active` })
+
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
-    await sleep(2000)
+    await sleep(1000)
   }
 
   const getTransactionEntries = async (user) => {
@@ -346,7 +356,10 @@ describe('individual transactions', async assert => {
 
   await transfer(thirduser, firstuser, 10)
 
+  await sleep(1000)
+
   const infoFirstUser = await getTransactionEntries(firstuser)
+
   const infoSecondUser = await getTransactionEntries(seconduser)
   const infoThirdUser = await getTransactionEntries(thirduser)
   const historyTotal = await getTransactionEntries(history)
@@ -655,7 +668,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 7,
+        id: 6,
         from: firstorg,
         to: firstuser,
         volume: 10000,
@@ -664,7 +677,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 8,
+        id: 7,
         from: firstorg,
         to: firstuser,
         volume: 50000,
@@ -673,7 +686,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 9,
+        id: 8,
         from: firstorg,
         to: secondorg,
         volume: 10000,
@@ -682,7 +695,7 @@ describe('org transaction entry', async assert => {
         to_points: 2
       },
       {
-        id: 10,
+        id: 9,
         from: seconduser,
         to: firstorg,
         volume: 10000,

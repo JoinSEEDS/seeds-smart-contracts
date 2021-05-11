@@ -497,6 +497,10 @@ describe("harvest transaction score", async assert => {
   let users = [firstuser, seconduser, thirduser, fourthuser]
   users.forEach( async (user, index) => await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` }))
   users.forEach( async (user, index) => await contracts.history.reset(user, { authorization: `${history}@active` }))
+
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', 'sow ' + firstuser, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '1.0000 SEEDS', 'sow ' + seconduser, { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, harvest, '1.0000 SEEDS', 'sow ' + thirduser, { authorization: `${thirduser}@active` })
   
   await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
   await sleep(100)
@@ -826,6 +830,7 @@ describe('contribution score', async assert => {
   
   await contracts.accounts.adduser(fifthuser, fifthuser, 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.testsetrs(fifthuser, 10, { authorization: `${accounts}@active` })
+  await contracts.token.transfer(fifthuser, harvest, '1.0000 SEEDS', `sow ${fifthuser}`, { authorization: `${fifthuser}@active` })
 
   for (let i = 0; i < users.length; i++) {
     const user = users[i]
@@ -1430,6 +1435,7 @@ describe('regions contribution score', async assert => {
     await contracts.accounts.adduser(user, i + ' user', 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.testsetrs(user, 49, { authorization: `${accounts}@active` })
     await contracts.history.reset(user, { authorization: `${history}@active` })
+    await contracts.token.transfer(user, harvest, '0.0001 SEEDS', 'sow ' + user, { authorization: `${user}@active` })
   }
 
   console.log('add regions')

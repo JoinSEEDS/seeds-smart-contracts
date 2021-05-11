@@ -673,6 +673,8 @@ describe('organization scores', async assert => {
     await contracts.accounts.testsetrs(firstuser, 99, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetrs(seconduser, 66, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetrs(thirduser, 33, { authorization: `${accounts}@active` })
+
+    await Promise.all(users1.map(user => contracts.token.transfer(user, harvest, '0.0001 SEEDS', 'sow ' + user, { authorization: `${user}@active` })))
     
     console.log('create balance')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
@@ -1142,6 +1144,7 @@ describe('organization status', async assert => {
 
     console.log('join users')
     await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
+    await Promise.all(users.map(user => { contracts.token.transfer(user, harvest, '0.0001 SEEDS', 'sow ' + user, { authorization: `${user}@active` }) }))
 
     console.log('create organizations')
     for (let index = 0; index < orgs.length; index++) {

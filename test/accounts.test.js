@@ -845,6 +845,8 @@ describe('make resident', async assert => {
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
 
+  await contracts.token.transfer(seconduser, harvest, '1.0000 SEEDS', 'sow ' + seconduser, { authorization: `${seconduser}@active` })
+
   console.log('make resident - fail')
   try {
     await contracts.accounts.makeresident(firstuser, { authorization: `${firstuser}@active` })
@@ -931,6 +933,11 @@ describe('make citizen test', async assert => {
   await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, '3 user', "individual", { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, '4 user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', 'sow ' + firstuser, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '1.0000 SEEDS', 'sow ' + seconduser, { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, harvest, '1.0000 SEEDS', 'sow ' + thirduser, { authorization: `${thirduser}@active` })
+  await contracts.token.transfer(fourthuser, harvest, '1.0000 SEEDS', 'sow ' + fourthuser, { authorization: `${fourthuser}@active` })
 
   console.log('make citizen - fail')
   try {

@@ -2,6 +2,7 @@
 #include <contracts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
 #include <tables/size_table.hpp>
@@ -28,7 +29,8 @@ CONTRACT history : public contract {
           totals(receiver, receiver.value),
           trxcbprewards(receiver, receiver.value),
           organizations(contracts::organization, contracts::organization.value),
-          members(contracts::region, contracts::region.value)
+          members(contracts::region, contracts::region.value),
+          planted(contracts::harvest, contracts::harvest.value)
         {}
 
         ACTION reset(name account);
@@ -47,7 +49,7 @@ CONTRACT history : public contract {
 
         ACTION deldailytrx(uint64_t day);
 
-        ACTION savepoints(uint64_t id, uint64_t timestamp);
+        ACTION savepoints(name from, name to, asset quantity, uint64_t trx_id);
 
         ACTION sendtrxcbp(name from, name to);
 
@@ -87,6 +89,7 @@ CONTRACT history : public contract {
       void send_trx_cbp_reward_action(name from, name to);
       void send_add_cbs(name account, int points);
       void trx_cbp_reward(name account, name key);
+      uint64_t get_deferred_id();
       
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
@@ -239,6 +242,29 @@ CONTRACT history : public contract {
         uint128_t by_account_key() const { return (uint128_t(account.value) << 64) + key.value; }
       };
 
+      TABLE deferred_trx_id_table {
+        uint64_t id;
+        uint64_t value;
+
+        uint64_t primary_key() const { return id; }
+      };
+
+      TABLE planted_table { // harvest contract
+        name account;
+        asset planted;
+        uint64_t rank;  
+
+        uint64_t primary_key()const { return account.value; }
+        uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
+        uint64_t by_rank() const { return rank; } 
+
+      };
+
+      typedef eosio::multi_index<"planted"_n, planted_table,
+        indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
+        indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
+      > planted_tables;
+
       typedef eosio::multi_index<"citizens"_n, citizen_table,
         indexed_by<"byaccount"_n,
         const_mem_fun<citizen_table, uint64_t, &citizen_table::by_account>>
@@ -290,6 +316,8 @@ CONTRACT history : public contract {
         const_mem_fun<trx_cbp_rewards_table, uint128_t, &trx_cbp_rewards_table::by_account_key>>
       > trx_cbp_rewards_tables;
 
+      typedef eosio::multi_index<"dtrxid"_n, deferred_trx_id_table> deferred_trx_id_tables;
+
       DEFINE_USER_TABLE
       
       DEFINE_USER_TABLE_MULTI_INDEX
@@ -306,6 +334,7 @@ CONTRACT history : public contract {
       organization_tables organizations;
       members_tables members;
       trx_cbp_rewards_tables trxcbprewards;
+      planted_tables planted;
 };
 
 EOSIO_DISPATCH(history, 
