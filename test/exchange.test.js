@@ -689,6 +689,8 @@ describe('Token Sale 50 Rounds', async assert => {
 
 })
 
+
+
 describe('Increase Price', async assert => {
 
   const contracts = await initContracts({ accounts, token, exchange })
@@ -799,6 +801,92 @@ describe('Increase Price', async assert => {
     should: "new price is correct",
     actual: parseFloat(priceHistoryAfter.rows[priceHistoryAfter.rows.length-1].seeds_usd),
     expected: Math.round(oldPrice / 1.033 * 10000) / 10000
+  })
+})
+
+describe('Update Volume', async assert => {
+
+  const contracts = await initContracts({ accounts, token, exchange })
+  
+  console.log(`reset exchange`)
+  await contracts.exchange.reset({ authorization: `${exchange}@active` })  
+
+  console.log("test init rounds - 10 seeds per round")
+  await contracts.exchange.initrounds( 10 * 10000, "90.9091 SEEDS", { authorization: `${exchange}@active` })
+
+  console.log(`reset accounts`)
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log(`add user`)
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+
+  console.log(`transfer seeds to ${exchange}`)
+  await contracts.token.transfer(firstuser, exchange, "200.0000 SEEDS", 'unit test', { authorization: `${firstuser}@active` })
+
+  await contracts.exchange.newpayment(firstuser, "BTC", "TEST", parseInt(0.5 * 10000), { authorization: `${exchange}@active` })
+
+  let price = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'price',
+    json: true
+  })
+  //console.log("price "+JSON.stringify(price, null, 2))
+
+  var currentRound = price.rows[0].current_round_id  
+
+  updatePreviousRound = false
+  try {
+    await contracts.exchange.updatevol(currentRound, 80, { authorization: `${exchange}@active` })
+    updatePreviousRound = true
+  } catch (err) {
+    console.log("can't update previous or current round")
+  }
+
+  var newVolume = 10
+  await contracts.exchange.updatevol(currentRound+1, newVolume, { authorization: `${exchange}@active` })
+
+  let rounds = await eos.getTableRows({
+    code: exchange,
+    scope: exchange,
+    table: 'rounds',
+    limit: 100,
+    json: true
+  })
+  //console.log(JSON.stringify(rounds, null, 2))
+
+  assert({
+    given: 'update volume of invalid round',
+    should: "fail",
+    actual: updatePreviousRound,
+    expected: false
+  })
+
+  assert({
+    given: 'update volume on round 5',
+    should: "max vol updated",
+    actual: [
+      rounds.rows[4],
+      rounds.rows[5],
+      rounds.rows[49],
+    ],
+    expected: [
+      {
+        "id": 4,
+        "max_sold": 500000,
+        "seeds_per_usd": "79.8373 SEEDS"
+      },
+      {
+        "id": 5,
+        "max_sold": 500010,
+        "seeds_per_usd": "77.2869 SEEDS"
+      },
+      {
+        "id": 49,
+        "max_sold": 500450,
+        "seeds_per_usd": "18.5222 SEEDS"
+      }
+    ]
   })
 
 
