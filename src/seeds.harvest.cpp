@@ -78,7 +78,7 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
         to  ==  get_self() &&                     // to here
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
 
-    utils::check_asset(quantity);
+    check_asset(quantity);
 
     name target = from;
 
@@ -104,6 +104,9 @@ void harvest::plant(name from, name to, asset quantity, string memo) {
 }
 
 void harvest::add_planted(name account, asset quantity) {
+
+  check_asset(quantity);
+
   auto bitr = balances.find(account.value);
   balances.modify(bitr, _self, [&](auto& user) {
     user.planted += quantity;
@@ -127,6 +130,9 @@ void harvest::add_planted(name account, asset quantity) {
 }
 
 void harvest::sub_planted(name account, asset quantity) {
+  
+  check_asset(quantity);
+
   auto fromitr = balances.find(account.value);
   check(fromitr->planted.amount >= quantity.amount, "not enough planted balance");
   balances.modify(fromitr, _self, [&](auto& user) {
@@ -135,14 +141,11 @@ void harvest::sub_planted(name account, asset quantity) {
 
   auto pitr = planted.find(account.value);
   check(pitr != planted.end(), "user has no balance");
-  if (pitr->planted.amount == quantity.amount) {
-    planted.erase(pitr);
-    size_change(planted_size, -1);
-  } else {
-    planted.modify(pitr, _self, [&](auto& item) {
-      item.planted -= quantity;
-    });
-  }
+  check(pitr->planted.amount >= quantity.amount, "not enough planted balance");
+
+  planted.modify(pitr, _self, [&](auto& item) {
+    item.planted -= quantity;
+  });
   
   change_total(false, quantity);
 
@@ -152,6 +155,7 @@ void harvest::sow(name from, name to, asset quantity) {
     require_auth(from);
     check_user(from);
     check_user(to);
+    check_asset(quantity);
 
     init_balance(from);
     init_balance(to);
@@ -235,6 +239,7 @@ void harvest::cancelrefund(name from, uint64_t request_id) {
 void harvest::unplant(name from, asset quantity) {
   require_auth(from);
   check_user(from);
+  check_asset(quantity);
 
   auto bitr = balances.find(from.value);
   check(bitr->planted.amount >= quantity.amount, "can't unplant more than planted!");
@@ -285,15 +290,6 @@ ACTION harvest::updatecs(name account) {
   require_auth(account);
   auto uitr = users.get(account.value, "user not found");
   calc_contribution_score(account, uitr.type);
-}
-
-ACTION harvest::updtotal() { // remove when balances are retired
-  require_auth(get_self());
-
-  auto bitr = balances.find(_self.value);
-  total_table tt = total.get_or_create(get_self(), total_table());
-  tt.total_planted = bitr->planted;
-  total.set(tt, get_self());
 }
 
 ACTION harvest::calctotal(uint64_t startval) {
@@ -843,6 +839,8 @@ void harvest::check_asset(asset quantity)
 {
   check(quantity.is_valid(), "invalid asset");
   check(quantity.symbol == seeds_symbol, "invalid asset");
+  check(quantity.amount > 0, "must be positive value");
+
 }
 
 void harvest::_deposit(asset quantity)
@@ -861,7 +859,7 @@ void harvest::_withdraw(name beneficiary, asset quantity)
   auto bank_account = contracts::bank;
 
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
-  action.send(contracts::bank, beneficiary, quantity, "");
+  action.send(contracts::bank, beneficiary, quantity, "");sub_planted
 }
 
 void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {
@@ -1007,6 +1005,7 @@ uint64_t harvest::get_size(name id) {
 }
 
 void harvest::change_total(bool add, asset quantity) {
+  check_asset(quantity);
   total_table tt = total.get_or_create(get_self(), total_table());
   if (tt.total_planted.amount == 0) {
     tt.total_planted = asset(0, seeds_symbol);
