@@ -1826,7 +1826,7 @@ describe('Active count and vote power', async assert => {
 })
 
 
-describe('Voice decay', async assert => {
+describe.only('Voice decay', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1856,6 +1856,9 @@ describe('Voice decay', async assert => {
   console.log('propdecaysec')
   await contracts.settings.configure('propdecaysec', 5, { authorization: `${settings}@active` })
 
+  console.log('vdecayprntge = 15%')
+  await contracts.settings.configure('vdecayprntge', 15, { authorization: `${settings}@active` })
+  
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
