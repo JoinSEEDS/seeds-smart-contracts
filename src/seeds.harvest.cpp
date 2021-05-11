@@ -859,7 +859,7 @@ void harvest::_withdraw(name beneficiary, asset quantity)
   auto bank_account = contracts::bank;
 
   token::transfer_action action{contracts::token, {contracts::bank, "active"_n}};
-  action.send(contracts::bank, beneficiary, quantity, "");sub_planted
+  action.send(contracts::bank, beneficiary, quantity, "");
 }
 
 void harvest::testclaim(name from, uint64_t request_id, uint64_t sec_rewind) {

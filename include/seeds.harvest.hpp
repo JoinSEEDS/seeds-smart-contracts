@@ -16,6 +16,7 @@
 #include <tables/cbs_table.hpp>
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
+#include <tables/planted_table.hpp>
 #include <eosio/singleton.hpp>
 #include <cmath> 
 
@@ -175,21 +176,9 @@ CONTRACT harvest : public contract {
       uint64_t primary_key()const { return refund_id; }
     };
 
-    TABLE planted_table {
-      name account;
-      asset planted;
-      uint64_t rank;  
+    DEFINE_PLANTED_TABLE
 
-      uint64_t primary_key()const { return account.value; }
-      uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
-      uint64_t by_rank() const { return rank; } 
-
-    };
-
-    typedef eosio::multi_index<"planted"_n, planted_table,
-      indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
-      indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
-    > planted_tables;
+    DEFINE_PLANTED_TABLE_MULTI_INDEX
 
     TABLE tx_points_table {
       name account;

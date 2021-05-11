@@ -7,6 +7,7 @@
 #include <tables/config_table.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/organization_table.hpp>
+#include <tables/planted_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -113,6 +114,10 @@ CONTRACT organization : public contract {
         DEFINE_ORGANIZATION_TABLE
 
         DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
+
+        DEFINE_PLANTED_TABLE
+
+        DEFINE_PLANTED_TABLE_MULTI_INDEX
 
         TABLE members_table {
             name account;
@@ -261,16 +266,6 @@ CONTRACT organization : public contract {
             uint64_t by_date() const { return date; }
         };
 
-        TABLE planted_table { // from harvest
-            name account;
-            asset planted;
-            uint64_t rank;  
-
-            uint64_t primary_key()const { return account.value; }
-            uint128_t by_planted() const { return (uint128_t(planted.amount) << 64) + account.value; } 
-            uint64_t by_rank() const { return rank; } 
-        };
-
         typedef eosio::multi_index<"balances"_n, tables::balance_table,
             indexed_by<"byplanted"_n,
             const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
@@ -320,11 +315,6 @@ CONTRACT organization : public contract {
             indexed_by<"byrank"_n,
             const_mem_fun<cbs_organization_table, uint64_t, &cbs_organization_table::by_rank>>
         > cbs_organization_tables;
-
-        typedef eosio::multi_index<"planted"_n, planted_table,
-            indexed_by<"byplanted"_n,const_mem_fun<planted_table, uint128_t, &planted_table::by_planted>>,
-            indexed_by<"byrank"_n,const_mem_fun<planted_table, uint64_t, &planted_table::by_rank>>
-        > planted_tables;
 
         organization_tables organizations;
         sponsors_tables sponsors;
