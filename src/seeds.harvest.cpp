@@ -332,48 +332,6 @@ ACTION harvest::calctotal(uint64_t startval) {
   } 
 }
 
-// copy everything to harvest table
-// ACTION harvest::updharvest(uint64_t startval) {
-
-//   total_table tt = total.get_or_create(get_self(), total_table());
-//   tt.total_planted = asset(0, seeds_symbol);
-//   total.set(tt, get_self());
-
-//   uint64_t limit = 50;
-
-//   auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
-
-//   while (bitr != balances.end() && limit > 0) {
-//     if (bitr->planted.amount > 0 && bitr->account != _self) {
-//       planted.emplace(_self, [&](auto& entry) {
-//         entry.account = bitr->account;
-//         entry.planted = bitr->planted;
-//       });
-//       size_change(planted_size, 1);
-//       change_total(true, bitr->planted);
-//     }
-//     bitr++;
-//     limit--;
-//   }
-
-//   if (bitr != balances.end()) {
-
-//     uint64_t next_value = bitr->account.value;
-//     action next_execution(
-//         permission_level{get_self(), "active"_n},
-//         get_self(),
-//         "updharvest"_n,
-//         std::make_tuple(next_value)
-//     );
-
-//     transaction tx;
-//     tx.actions.emplace_back(next_execution);
-//     tx.delay_sec = 1;
-//     tx.send(next_value, _self);
-
-//   } 
-// }
-
 // Calculate Transaction Points for a single account
 // Returns count of iterations
 uint32_t harvest::calc_transaction_points(name account, name type) {
