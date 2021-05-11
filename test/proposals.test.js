@@ -3,11 +3,13 @@ const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64ByteHexString, fromHexString, sha256 } = require('../scripts/helper');
 const { expect } = require('chai');
 
-const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser, onboarding } = names
+const { harvest, accounts, proposals, settings, escrow, token, organization, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser, onboarding } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 describe('Proposals', async assert => {
 
@@ -1345,14 +1347,14 @@ describe('Proposals Quorum And Support Levels', async assert => {
 
 })
 
-describe('Recepient invalid', async assert => {
+describe('Creating Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, organization })
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -1360,9 +1362,11 @@ describe('Recepient invalid', async assert => {
   console.log('set propmajority to 80')
   await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
 
-
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('organization reset')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
@@ -1401,6 +1405,24 @@ describe('Recepient invalid', async assert => {
 
   }
 
+  console.log('create organization')
+  const org1 = "org1"
+  await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.organization.create(firstuser, org1, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+
+  console.log('org create campaign')
+  var orgCreateCampaign = false
+  try {
+    await contracts.proposals.createx(org1, org1, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${org1}@active` })
+    orgCreateCampaign = true
+  } catch (err) {
+
+  }
+
+  console.log('org create alliance')
+  var orgCreateAlliance = false
+  await contracts.proposals.createx(org1, org1, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${org1}@active` })
+  orgCreateAlliance = true
 
   assert({
     given: 'create proposal with invalid recepient',
@@ -1421,6 +1443,20 @@ describe('Recepient invalid', async assert => {
     should: 'fail',
     actual: createNonSeedsUser,
     expected: false
+  })
+
+  assert({
+    given: 'create campaign proposal with org ',
+    should: 'fail',
+    actual: orgCreateCampaign,
+    expected: false
+  })
+  
+  assert({
+    given: 'create alliance proposal with org ',
+    should: 'succeed',
+    actual: orgCreateAlliance,
+    expected: true
   })
 
 })
