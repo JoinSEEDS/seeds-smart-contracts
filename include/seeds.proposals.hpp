@@ -155,7 +155,7 @@ CONTRACT proposals : public contract {
 
       void check_user(name account);
       void check_citizen(name account);
-      void check_resident(name account);
+      void check_resident(name account, bool org_allowed);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity, name sender, string memo);
       void refund_staked(name beneficiary, asset quantity);
