@@ -216,6 +216,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosTestnet) {
     return {
