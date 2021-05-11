@@ -244,9 +244,6 @@ CONTRACT history : public contract {
 
       TABLE deferred_trx_id_table {
         uint64_t id;
-        uint64_t value;
-
-        uint64_t primary_key() const { return id; }
       };
 
       TABLE planted_table { // harvest contract
@@ -316,7 +313,9 @@ CONTRACT history : public contract {
         const_mem_fun<trx_cbp_rewards_table, uint128_t, &trx_cbp_rewards_table::by_account_key>>
       > trx_cbp_rewards_tables;
 
-      typedef eosio::multi_index<"dtrxid"_n, deferred_trx_id_table> deferred_trx_id_tables;
+
+      typedef singleton<"dtrxid"_n, deferred_trx_id_table> deferred_trx_id_tables;
+      typedef eosio::multi_index<"dtrxid"_n, deferred_trx_id_table> dump_for_deferred_trx_id_tables;
 
       DEFINE_USER_TABLE
       

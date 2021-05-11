@@ -216,8 +216,6 @@ void history::trxentry(name from, name to, asset quantity) {
 void history::savepoints (name from, name to, asset quantity, uint64_t trx_id) {
   require_auth(get_self());
 
-  print("SAVEPOINTS: from=", from, ", to=", to, ", quantity=", quantity, "\n");
-
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
 
@@ -810,23 +808,12 @@ void history::adjust_transactions (uint64_t id, uint64_t timestamp) {
 
 uint64_t history::get_deferred_id () {
   deferred_trx_id_tables deferred_t(get_self(), get_self().value);
+  deferred_trx_id_table d_t = deferred_t.get_or_create(get_self(), deferred_trx_id_table());
 
-  auto ditr = deferred_t.begin();
+  d_t.id += 1;
 
-  if (ditr == deferred_t.end()) {
-    deferred_t.emplace(_self, [&](auto & item){
-      item.id = 0;
-      item.value = 1;
-    });
-    return 1;
-  }
+  deferred_t.set(d_t, get_self());
 
-  uint64_t value = ditr->value + 1;
-
-  deferred_t.modify(ditr, _self, [&](auto & item){
-    item.value = value;
-  });
-
-  return value;
+  return d_t.id;
 }
 
