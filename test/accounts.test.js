@@ -1848,3 +1848,109 @@ describe('Migrate cbs and rep for orgs', async assert => {
   await printHarvestTables('org')
 
 })
+
+
+describe('Enforce accounts', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+
+  const contracts = await initContracts({ accounts, settings })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  const generateString = (length) => {
+    var result = ''
+    var characters = 'abcdefghijklmnopqrstuvwxyz1234'
+    var charactersLength = characters.length
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    }
+    return result
+  }
+
+  const string8000 = generateString(8000)
+  const string600 = generateString(600)
+  const string512 = generateString(512)
+
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.update(
+    firstuser, 
+    "individual", 
+    string512,
+    string512,
+    string512,
+    string512,
+    string512,
+    string512,
+    { authorization: `${firstuser}@active` })
+
+  await contracts.accounts.update(
+    seconduser, 
+    "individual", 
+    seconduser,
+    string600,
+    string600,
+    string512,
+    string512,
+    string512,
+    { authorization: `${seconduser}@active` })
+
+  await contracts.accounts.update(
+    thirduser, 
+    "individual", 
+    thirduser,
+    string600,
+    string600,
+    string600,
+    string600,
+    string600,
+    { authorization: `${thirduser}@active` })
+
+  await contracts.accounts.migusersizes(0, 2, { authorization: `${accounts}@active` })
+  await sleep(2000)
+
+  const users = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true
+  })
+  console.log(users)
+
+  await contracts.accounts.update(
+    fourthuser, 
+    "individual", 
+    fourthuser,
+    string512,
+    string512,
+    string512,
+    generateString(132000),
+    string512,
+    { authorization: `${fourthuser}@active` })
+
+  await contracts.accounts.migusrsize(fourthuser, { authorization: `${accounts}@active` })
+
+  const users2 = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true
+  })
+  console.log(users2)
+
+})
+
+
