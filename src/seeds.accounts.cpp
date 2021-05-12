@@ -103,6 +103,7 @@ void accounts::adduser(name account, string nickname, name type)
   check(is_account(account), "no account");
 
   check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organisation'");
+  check(nickname.size() <= 64, "nickname must be less than 65 characters long");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
@@ -572,6 +573,12 @@ void accounts::update(name user, name type, string nickname, string image, strin
     auto uitr = users.find(user.value);
 
     check(uitr->type == type, "Can't change type - create an org in the org contract.");
+    check(nickname.size() <= 64, "nickname must be less or equal to 64 characters long");
+    check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+    check(story.size() <= 7000, "story length must be less or equal to 7000 characters long");
+    check(roles.size() <= 512, "roles length must be less or equal to 512 characters long");
+    check(skills.size() <= 512, "skills must be less or equal to 512 characters long");
+    check(interests.size() <= 512, "interests must be less or equal to 512 characters long");
 
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
