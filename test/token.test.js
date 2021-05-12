@@ -27,7 +27,8 @@ describe('token.transfer.history', async assert => {
 
   const contracts = await initContracts({ token, history, accounts, settings })
   
-  const transfer = () => contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  const transfer = async () => await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  const plant = async (user) => await contracts.token.transfer(user, "harvst.seeds", '0.0001 SEEDS', ``, { authorization: `${user}@active` })
   
   console.log('configure')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -44,14 +45,18 @@ describe('token.transfer.history', async assert => {
   console.log('update status')
   await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  console.log('plant seeds x')
+  await contracts.token.transfer(firstuser, harvest, '0.0001 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '0.0001 SEEDS', '', { authorization: `${seconduser}@active` })
+
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   
   console.log('transfer token')
   await transfer()
   await sleep(500)
-  console.log('transfer 2')
 
+  console.log('transfer 2')
   await transfer()
   await sleep(500)
 
@@ -93,10 +98,23 @@ describe('token.transfer', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-  const contracts = await initContracts({ token, harvest })
+  const contracts = await initContracts({ token, harvest, settings, accounts })
 
   console.log('harvest reset')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('configure')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('update status')
+  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  console.log('plant seeds x')
+  await contracts.token.transfer(firstuser, harvest, '0.0001 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '0.0001 SEEDS', '', { authorization: `${seconduser}@active` })
 
   let limit = 20
   const transfer = (n) => contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', `x${n}`, { authorization: `${firstuser}@active` })
@@ -111,8 +129,16 @@ describe('token.transfer', async assert => {
 
   console.log(`call transfer x${limit} times`)
   while (--limit >= 0) {
-    await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
+    await contracts.token.transfer(firstuser, seconduser, '1.0000 SEEDS', limit + "x", { authorization: `${firstuser}@active` })
   }
+  const stats = await getTableRows({
+    code: token,
+    scope: "SEEDS",
+    table: 'trxstat',
+    json: true
+  })
+
+  console.log("trxstat "+JSON.stringify(stats, null, 2));
 
   let limitFailWithPlantedBalance = false
   try {
@@ -127,6 +153,8 @@ describe('token.transfer', async assert => {
 
   console.log('harvest reset')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  await contracts.token.transfer(firstuser, harvest, '0.0001 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '0.0001 SEEDS', '', { authorization: `${seconduser}@active` })
 
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -147,10 +175,10 @@ describe('token.transfer', async assert => {
   }
 
   assert({
-    given: 'token.transfer called',
+    given: 'token.transfer called' + balances[0] + " -> " + balances[1],
     should: 'decrease user balance',
     actual: balances[1],
-    expected: balances[0] - 202
+    expected: balances[0] - 20 - 2
   })
 
   assert({
@@ -238,7 +266,7 @@ describe('token calculate circulating supply', async assert => {
   })
 })
 
-describe('token.resetweekly', async assert => {
+describe('Test token.resetweekly', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -266,19 +294,26 @@ describe('token.resetweekly', async assert => {
   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
+  console.log('plant seeds x')
+  await contracts.token.transfer(firstuser, harvest, '0.0001 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '0.0001 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, harvest, '0.0001 SEEDS', '', { authorization: `${thirduser}@active` })
+
   await contracts.token.transfer(firstuser, seconduser, '10.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, thirduser, '10.0000 SEEDS', ``, { authorization: `${seconduser}@active` })
   await contracts.token.transfer(thirduser, seconduser, '10.0000 SEEDS', ``, { authorization: `${thirduser}@active` })
   
 
-  let balancesBefore = await getTableRows({
+  let balancesBeforeData = await getTableRows({
     code: token,
     scope: 'SEEDS',
     table: 'trxstat',
     json: true
   })
 
-  balancesBefore = balancesBefore.rows.map(row => row.outgoing_transactions)
+  //console.log("balancesBeforeData "+JSON.stringify(balancesBeforeData, null, 2))
+
+  balancesBefore = balancesBeforeData.rows.filter(e => e.account == firstuser || e.account == seconduser || e.account == thirduser).map(row => row.outgoing_transactions)
  
   console.log('reset token')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -346,6 +381,7 @@ describe('transaction limits', async assert => {
   console.log('plant')
   await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, harvest, '3.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(thirduser, harvest, '0.0001 SEEDS', '', { authorization: `${thirduser}@active` })
 
   let transfer = async (from, to) => {
     return await contracts.token.transfer(from, to, '0.0001 SEEDS', ``, { authorization: `${from}@active` })
