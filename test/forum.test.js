@@ -107,9 +107,9 @@ describe('forum', async assert => {
     })
 
     console.log('depreciate')
-    await contracts.forum.onperiod([], { authorization: `${forum}@execute` })
+    await contracts.forum.onperiod({ authorization: `${forum}@execute` })
     await sleep(10000)
-    await contracts.forum.onperiod([], { authorization: `${forum}@execute` })
+    await contracts.forum.onperiod({ authorization: `${forum}@execute` })
 
     console.log('vote comments')
 
@@ -132,7 +132,7 @@ describe('forum', async assert => {
 
     console.log('new day')
     try{
-        await contracts.forum.newday([], { authorization: `${forum}@execute` })
+        await contracts.forum.newday({ authorization: `${forum}@execute` })
     }
     catch(err){
         console.log("new day is not ready to be executed.", err)
@@ -313,12 +313,13 @@ describe('forum reputation', async assert => {
         }
         try {
             await contracts.forum.testapoints({ authorization: `${forum}@active` })
-        } catch (e) {
+        } catch (e) {            
+            const error = JSON.parse(JSON.stringify(e, null, 2))
             assert({
                 given: 'test points called',
                 should: 'return the correct amount of points',
                 expected: `assertion failure with message: ${parseInt(expectedValue)}`,
-                actual: e.json.error.details[0].message
+                actual: error.json.error.details[0].message
             })
         }
     }
