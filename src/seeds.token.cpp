@@ -110,10 +110,6 @@ void token::transfer( const name&    from,
     require_recipient( from );
     require_recipient( to );
 
-    check_limit_transactions(from);
-
-    // check_limit(from);
-
     check( quantity.is_valid(), "seeds: invalid quantity" );
     check( quantity.amount > 0, "seeds: must transfer positive quantity" );
     check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
@@ -124,9 +120,8 @@ void token::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    save_transaction(from, to, quantity);
+    check_limit_transactions(from, to, quantity);
 
-    update_stats( from, to, quantity );
 }
 
 void token::sub_balance( const name& owner, const asset& value ) {
@@ -157,10 +152,6 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
 }
 
 void token::save_transaction(name from, name to, asset quantity) {
-  if (!is_account(contracts::accounts) || !is_account(contracts::history)) {
-    // Before our accounts are created, don't record anything
-    return;
-  }
   
   action(
     permission_level{contracts::history, "active"_n},
@@ -171,57 +162,51 @@ void token::save_transaction(name from, name to, asset quantity) {
 
 }
 
-void token::check_limit_transactions(name from) {
-  user_tables users(contracts::accounts, contracts::accounts.value);
+void token::check_limit_transactions(name from, name to, asset quantity) {
   config_tables config(contracts::settings, contracts::settings.value);
-  balance_tables balances(contracts::harvest, contracts::harvest.value);
+  planted_tables planted(contracts::harvest, contracts::harvest.value);
+  organization_tables organization(contracts::organization, contracts::organization.value);
 
-  auto bitr = balances.find(from.value);
-  auto uitr = users.find(from.value);
+  auto bitr = planted.find(from.value);
+  auto oitr = organization.find(from.value);
 
-  if (uitr != users.end()) {
-    uint64_t max_trx = 0;
-    auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
-    if (bitr != balances.end() && bitr -> planted > asset(0, seeds_symbol)) {
-      auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
-      max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
-    } 
-        
-    if (min_trx.value > max_trx) {
-      max_trx = min_trx.value;
-    }
+  const bool has_planted = bitr != planted.end();
+  const bool is_org = oitr != organization.end();
+  const bool is_seeds_user = has_planted || is_org;
 
-    transaction_tables transactions(get_self(), seeds_symbol.code().raw());
-    auto titr = transactions.find(from.value);
-
-    if (titr != transactions.end()) {
-      check(max_trx > titr -> outgoing_transactions, "Maximum limit of allowed transactions reached.");
-    }
-  }
-}
-
-void token::check_limit(const name& from) {
-  user_tables users(contracts::accounts, contracts::accounts.value);
-  auto uitr = users.find(from.value);
-
-  if (uitr == users.end()) {
+  if (!is_seeds_user) {
     return;
   }
 
-  name status = uitr->status;
-
-  uint64_t limit = 10;
-  if (status == "resident"_n) {
-    limit = 50;
-  } else if (status == "citizen"_n) {
-    limit = 100;
+  asset planted_balance = asset(0, seeds_symbol);
+  
+  if (has_planted) {
+    planted_balance = planted_balance + bitr -> planted;
   }
+
+  if (is_org) {
+    planted_balance = planted_balance + oitr -> planted;
+  }
+
+  uint64_t min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.").value;
+  auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
+  uint64_t max_trx = (mul_trx.value * planted_balance.amount) / 10000;
+  max_trx = std::max(min_trx, max_trx);
 
   transaction_tables transactions(get_self(), seeds_symbol.code().raw());
   auto titr = transactions.find(from.value);
-  uint64_t current = titr->outgoing_transactions;
 
-  check(current < limit, "too many outgoing transactions");
+  if (titr != transactions.end()) {
+    check(max_trx > titr -> outgoing_transactions, "Maximum limit of allowed transactions reached.");
+  }
+  
+  // this is a check if the second party is a Seeds user by checking planted and checking organization tables
+  if ( planted.find(to.value) != planted.end() || organization.find(to.value) != organization.end() ) {
+    update_stats( from, to, quantity ); // we only keep stats for Seeds users
+    save_transaction(from, to, quantity); // we only track Seeds users - may change this later by passing alogn is_user and is_org for both parties
+  }
+  
+
 }
 
 void token::reset_weekly_aux(uint64_t begin) {
@@ -270,16 +255,9 @@ void token::resetwhelper (uint64_t begin) {
   reset_weekly_aux(begin);
 }
 
-void token::update_stats( const name& from, const name& to, const asset& quantity ) {
-    user_tables users(contracts::accounts, contracts::accounts.value);
+void token::update_stats(name from, name to, asset quantity ) {
 
-    auto fromuser = users.find(from.value);
-    auto touser = users.find(to.value);
-    
-    if (fromuser == users.end() || touser == users.end()) {
-      return;
-    }
-
+  print(" update stats ");
     auto sym_code_raw = quantity.symbol.code().raw();
     transaction_tables transactions(get_self(), sym_code_raw);
 

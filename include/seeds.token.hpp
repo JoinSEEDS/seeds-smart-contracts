@@ -10,6 +10,8 @@
 #include <contracts.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
+#include <tables/planted_table.hpp>
+#include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
 
 #include <string>
@@ -195,8 +197,6 @@ namespace eosio {
           symbol seeds_symbol = symbol("SEEDS", 4);
           symbol test_symbol = symbol("TESTS", 4);
 
-         DEFINE_CONFIG_TABLE
-
          struct [[eosio::table]] account {
             asset    balance;
 
@@ -229,18 +229,12 @@ namespace eosio {
             const_mem_fun<transaction_stats, uint64_t, &transaction_stats::by_transaction_volume>>
          > transaction_tables;
 
-          typedef eosio::multi_index<"users"_n, tables::user_table,
-            indexed_by<"byreputation"_n,
-            const_mem_fun<tables::user_table, uint64_t, &tables::user_table::by_reputation>>
-          > user_tables;
-
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
-         void update_stats( const name& from, const name& to, const asset& quantity );
+         void update_stats( name from, name to, asset quantity );
          void save_transaction(name from, name to, asset quantity);
-         void check_limit( const name& from );
          uint64_t balance_for( const name& owner );
-         void check_limit_transactions(name from);
+         void check_limit_transactions(name from, name to, asset quantity);
          void reset_weekly_aux(uint64_t begin);
 
          TABLE circulating_supply_table {
@@ -255,11 +249,20 @@ namespace eosio {
 
          circulating_supply_tables circulating;
 
-         typedef eosio::multi_index<"config"_n, config_table> config_tables;
-         typedef eosio::multi_index<"balances"_n, tables::balance_table,
-         indexed_by<"byplanted"_n,
-            const_mem_fun<tables::balance_table, uint64_t, &tables::balance_table::by_planted>>
-         > balance_tables;
+
+         // Seeds specific tables for transaction limits
+
+         DEFINE_CONFIG_TABLE
+         
+         DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+         DEFINE_PLANTED_TABLE
+
+         DEFINE_PLANTED_TABLE_MULTI_INDEX
+
+         DEFINE_ORGANIZATION_TABLE
+
+         DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
