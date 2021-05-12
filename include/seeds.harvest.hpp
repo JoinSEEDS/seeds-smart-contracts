@@ -15,6 +15,7 @@
 #include <tables/config_float_table.hpp>
 #include <tables/cbs_table.hpp>
 #include <tables/cspoints_table.hpp>
+#include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
 #include <cmath> 
 
@@ -371,18 +372,9 @@ CONTRACT harvest : public contract {
         indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
     > members_tables;
 
-    TABLE organization_table {
-      name org_name;
-      name owner;
-      uint64_t status;
-      int64_t regen;
-      uint64_t reputation;
-      uint64_t voice;
-      asset planted;
-      uint64_t primary_key() const { return org_name.value; }
-    };
-    typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
+    DEFINE_ORGANIZATION_TABLE
 
+    DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
     // Contract Tables
     balance_tables balances;
