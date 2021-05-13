@@ -103,6 +103,7 @@ void accounts::adduser(name account, string nickname, name type)
   check(is_account(account), "no account");
 
   check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organisation'");
+  check(nickname.size() <= 64, "nickname must be less than 65 characters long");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
@@ -572,6 +573,12 @@ void accounts::update(name user, name type, string nickname, string image, strin
     auto uitr = users.find(user.value);
 
     check(uitr->type == type, "Can't change type - create an org in the org contract.");
+    check(nickname.size() <= 64, "nickname must be less or equal to 64 characters long");
+    check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+    check(story.size() <= 7000, "story length must be less or equal to 7000 characters long");
+    check(roles.size() <= 512, "roles length must be less or equal to 512 characters long");
+    check(skills.size() <= 512, "skills must be less or equal to 512 characters long");
+    check(interests.size() <= 512, "interests must be less or equal to 512 characters long");
 
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
@@ -1724,6 +1731,7 @@ void accounts::migrate_calc_vouch_rep (name account) {
   }
 }
 
+// Note we don't need this since all accounts fill the criteria now
 ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
 
   require_auth(get_self());
@@ -1734,14 +1742,28 @@ ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
   string none = "";
 
   while (uitr != users.end() && count < chunksize) {
-    users.modify(uitr, _self, [&](auto & user){
-      user.nickname = user.nickname.size() <= 64 ? user.nickname : none;
-      user.image = user.image.size() <= 512 ? user.image : none;
-      user.roles = user.roles.size() <= 512 ? user.roles : none;
-      user.skills = user.skills.size() <= 512 ? user.skills : none;
-      user.interests = user.interests.size() <= 512 ? user.interests : none;
-    });
+    if (uitr->image.size() >512 ||
+        uitr->roles.size() > 512 ||
+        uitr->skills.size() > 512 ||
+        uitr->interests.size() > 512 ) 
+    {
+      users.modify(uitr, _self, [&](auto & user){   
+        if (user.image.size() > 512) {
+          user.image = none;
+        }   
+        if (user.roles.size() > 512) {
+          user.roles = none;
+        }
+        if (user.skills.size() > 512) {
+          user.skills = none;
+        }
+        if (user.interests.size() > 512) {
+          user.interests = none;
+        }
+      });
+    }
     uitr++;
+    count++;
   }
 
   if (uitr != users.end()) {

@@ -101,6 +101,92 @@ describe('General accounts', async assert => {
   await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
   await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
 
+  console.log('update')
+
+  //void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
+  
+  const nickname = "A NEw NAME FOR FIRST USER"
+  const image = "https://somthignsomething"
+  const story = "my story ... "
+  const roles = "some roles... "
+  const skills = "some skills... "
+  const interests = "some interests... "
+
+  await contract.update(firstuser, "individual", nickname, image, story, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  const userOne = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    lower_bound: firstuser,
+    upper_bound: firstuser,
+    json: true,
+  })
+
+  //console.log("user one: "+JSON.stringify(userOne, null, 2))
+
+  var canChangeType = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, story, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canChangeType = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+  var longstory = "0123456789"
+  for (var i=0; i<699; i++) {
+    longstory = longstory + "0123456789"
+  }
+  console.log("longstory length: "+longstory.length)
+
+  await contract.update(firstuser, "individual", nickname, image, longstory, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  longstory = longstory + "0123456789" + "Whoops!"
+  var canStoreLongStory = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, longstory, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canStoreLongStory = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canChangeType,
+    expected: false
+  })
+  
+  delete userOne.rows[0].timestamp
+
+  assert({
+    given: 'update called',
+    should: 'fields are updates',
+    actual: userOne.rows[0],
+    expected: 
+      {
+        "account": "seedsuseraaa",
+        "status": "visitor",
+        "type": "individual",
+        "nickname": "A NEw NAME FOR FIRST USER",
+        "image": image,
+        "story": story,
+        "roles": roles,
+        "skills": skills,
+        "interests":interests,
+        "reputation": 0,
+      }
+  })
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canStoreLongStory,
+    expected: false
+  })
+
+
   console.log("filling account with Seedds for bonuses [Change this]")
   await thetoken.transfer(firstuser, accounts, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
