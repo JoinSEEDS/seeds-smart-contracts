@@ -1749,6 +1749,7 @@ ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
       user.interests = user.interests.size() <= 512 ? user.interests : none;
     });
     uitr++;
+    count++;
   }
 
   if (uitr != users.end()) {
