@@ -1731,6 +1731,7 @@ void accounts::migrate_calc_vouch_rep (name account) {
   }
 }
 
+// Note we don't need this since all accounts fill the criteria now
 ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
 
   require_auth(get_self());
@@ -1741,13 +1742,26 @@ ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
   string none = "";
 
   while (uitr != users.end() && count < chunksize) {
-    users.modify(uitr, _self, [&](auto & user){
-      user.nickname = user.nickname.size() <= 64 ? user.nickname : none;
-      user.image = user.image.size() <= 512 ? user.image : none;
-      user.roles = user.roles.size() <= 512 ? user.roles : none;
-      user.skills = user.skills.size() <= 512 ? user.skills : none;
-      user.interests = user.interests.size() <= 512 ? user.interests : none;
-    });
+    if (uitr->image.size() >512 ||
+        uitr->roles.size() > 512 ||
+        uitr->skills.size() > 512 ||
+        uitr->interests.size() > 512 ) 
+    {
+      users.modify(uitr, _self, [&](auto & user){   
+        if (user.image.size() > 512) {
+          user.image = none;
+        }   
+        if (user.roles.size() > 512) {
+          user.roles = none;
+        }
+        if (user.skills.size() > 512) {
+          user.skills = none;
+        }
+        if (user.interests.size() > 512) {
+          user.interests = none;
+        }
+      });
+    }
     uitr++;
     count++;
   }
