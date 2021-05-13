@@ -133,6 +133,24 @@ describe('General accounts', async assert => {
     console.log("expected error "+err)
   }
 
+  var longstory = "0123456789"
+  for (var i=0; i<699; i++) {
+    longstory = longstory + "0123456789"
+  }
+  console.log("longstory length: "+longstory.length)
+
+  await contract.update(firstuser, "individual", nickname, image, longstory, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  longstory = longstory + "0123456789" + "Whoops!"
+  var canStoreLongStory = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, longstory, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canStoreLongStory = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+
   assert({
     given: 'trying to change user type',
     should: 'cant',
@@ -160,6 +178,14 @@ describe('General accounts', async assert => {
         "reputation": 0,
       }
   })
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canStoreLongStory,
+    expected: false
+  })
+
 
   console.log("filling account with Seedds for bonuses [Change this]")
   await thetoken.transfer(firstuser, accounts, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
