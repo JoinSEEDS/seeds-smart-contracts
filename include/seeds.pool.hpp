@@ -27,7 +27,7 @@ CONTRACT pool : public contract {
 
     ACTION payouts(asset quantity);
 
-    ACTION payout(asset quantity, uint64_t start, uint64_t chunksize, uint64_t accumulated_balance);
+    ACTION payout(asset quantity, uint64_t start, uint64_t chunksize, int64_t old_total_balance);
 
 
   private:

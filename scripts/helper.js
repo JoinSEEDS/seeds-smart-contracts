@@ -806,7 +806,7 @@ function asset (quantity) {
     if (quantity.symbol) {
       return quantity
     }
-    return {}
+    return null
   }
   const [amount, symbol] = quantity.split(' ')
   const indexDecimal = amount.indexOf('.')

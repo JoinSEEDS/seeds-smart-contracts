@@ -57,25 +57,29 @@ ACTION pool::payouts (asset quantity) {
 }
 
 
-ACTION pool::payout (asset quantity, uint64_t start, uint64_t chunksize, uint64_t accumulated_balance) {
+ACTION pool::payout (asset quantity, uint64_t start, uint64_t chunksize, int64_t old_total_balance) {
 
   require_auth(get_self());
 
   auto bitr = start == 0 ? balances.begin() : balances.lower_bound(start);
   uint64_t current = 0;
 
-  double total_balance = double(get_size(total_balance_size));
+  int64_t total_balance = old_total_balance == 0 ? int64_t(get_size(total_balance_size)) : old_total_balance;
 
-  string memo("pool distribution");
+  if (total_balance <= 0) { return; }
+  if (quantity.amount <= 0) { return; }
+  if (total_balance < quantity.amount) { return; }
+
+  double total_balance_divisor = double(total_balance);
+  string memo("dSeeds pool distribution");
 
   while (bitr != balances.end() && current < chunksize) {
 
-    double percentage = bitr->balance.amount / total_balance;
+    double percentage = bitr->balance.amount / total_balance_divisor;
     asset amount_to_payout = asset(std::min(bitr->balance.amount, int64_t(percentage * quantity.amount)), utils::seeds_symbol);
     
     send_transfer(bitr->account, amount_to_payout, memo);
-
-    accumulated_balance += amount_to_payout.amount;
+    size_change(total_balance_size, -1 * amount_to_payout.amount);
 
     if (bitr->balance == amount_to_payout) {
       bitr = balances.erase(bitr);
@@ -94,17 +98,14 @@ ACTION pool::payout (asset quantity, uint64_t start, uint64_t chunksize, uint64_
       permission_level(get_self(), "active"_n),
       get_self(),
       "payout"_n,
-      std::make_tuple(quantity, bitr->account.value, chunksize, accumulated_balance)
+      std::make_tuple(asset(quantity.amount, utils::seeds_symbol), bitr->account.value, chunksize, total_balance)
     );
 
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(bitr->account.value, _self);
-  } else {
-    size_change(total_balance_size, -1 * accumulated_balance);
   }
-
 }
 
 void pool::send_transfer (const name & to, const asset & quantity, const string & memo) {

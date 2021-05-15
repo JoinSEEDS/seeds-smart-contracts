@@ -1,7 +1,7 @@
 const { describe } = require("riteway")
 const { names, getTableRows, isLocal, initContracts, sleep, asset, getBalanceFloat } = require("../scripts/helper")
 
-const { firstuser, seconduser, thirduser, pool, accounts, settings, token } = names
+const { firstuser, seconduser, thirduser, pool, accounts, settings, token, escrow } = names
 
 
 describe('Pool transfer and payout', async assert => {
@@ -60,7 +60,8 @@ describe('Pool transfer and payout', async assert => {
   const balancesBefore = await Promise.all(users.map(user => getBalanceFloat(user)))
 
   console.log(`transfer to ${pool}`)
-  await Promise.all(users.map((user, index) => contracts.token.transfer(user, pool, `${10 * (index+1)}.0000 SEEDS`, user, { authorization: `${user}@active` })))
+  await Promise.all(users.map((user, index) => contracts.token.transfer(user, escrow, `${10 * (index+1)}.0000 SEEDS`, '', { authorization: `${user}@active` })))
+  await Promise.all(users.map((user, index) => contracts.token.transfer(escrow, pool, `${10 * (index+1)}.0000 SEEDS`, user, { authorization: `${escrow}@active` })))
 
   await checkBalances({
     expected: [
@@ -91,7 +92,7 @@ describe('Pool transfer and payout', async assert => {
 
   console.log('payout more Seeds')
   await contracts.pool.payouts('20.0000 SEEDS', { authorization: `${pool}@active` })
-  await sleep(2000)
+  await sleep(4000)
 
   await checkBalances({
     expected: [
@@ -104,7 +105,7 @@ describe('Pool transfer and payout', async assert => {
   })
 
   console.log('payout all the Seeds')
-  await contracts.pool.payouts('2000.0000 SEEDS', { authorization: `${pool}@active` })
+  await contracts.pool.payouts('30.0003 SEEDS', { authorization: `${pool}@active` })
   await sleep(2000)
 
   await checkBalances({

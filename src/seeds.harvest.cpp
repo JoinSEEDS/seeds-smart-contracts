@@ -1259,16 +1259,18 @@ void harvest::runharvest() {
   size_tables pool_sizes_t(contracts::pool, contracts::pool.value);
 
   auto total_pool_balance_itr = pool_sizes_t.find(name("total.sz").value);
+  int64_t pool_payout = 0;
+
   if (total_pool_balance_itr != pool_sizes_t.end() && total_pool_balance_itr->size > 0) {
-    quantity = asset(mitr->mint_rate * 0.5, test_symbol);
-    send_pool_payout(asset(mitr->mint_rate * 0.5, utils::seeds_symbol));
-  } else {
-    quantity = asset(mitr->mint_rate, test_symbol);
+    pool_payout = std::min(int64_t(mitr->mint_rate * 0.5), int64_t(total_pool_balance_itr->size));
+    send_pool_payout(asset(pool_payout, utils::seeds_symbol));
   }
+
+  quantity = asset(mitr->mint_rate - pool_payout, test_symbol);
 
   string memo = "harvest";
 
-  print("mint rate:", quantity, "\n");
+  print("minted:", quantity, "\n");
 
   token::issue_action_test t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
   t_issue.send(get_self(), quantity, memo);
