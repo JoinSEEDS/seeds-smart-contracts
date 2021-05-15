@@ -251,7 +251,7 @@ describe("make a history entry", async (assert) => {
 
 })
 
-describe('individual transactions', async assert => {
+describe.only('individual transactions', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -294,7 +294,6 @@ describe('individual transactions', async assert => {
 
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
-    await sleep(2000)
   }
 
   const getTransactionEntries = async (user) => {
@@ -345,6 +344,8 @@ describe('individual transactions', async assert => {
   await transfer(seconduser, thirduser, 100)
 
   await transfer(thirduser, firstuser, 10)
+
+  await sleep(6000)
 
   const infoFirstUser = await getTransactionEntries(firstuser)
   const infoSecondUser = await getTransactionEntries(seconduser)

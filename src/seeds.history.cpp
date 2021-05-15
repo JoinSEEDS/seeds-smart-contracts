@@ -227,7 +227,7 @@ void history::trxentry(name from, name to, asset quantity) {
     }
   }
 
-  cancel_deferred(from.value);
+  uint64_t deferred_id = get_deferred_id();
 
   action a(
     permission_level{contracts::history, "active"_n},
@@ -238,13 +238,25 @@ void history::trxentry(name from, name to, asset quantity) {
 
   transaction tx;
   tx.actions.emplace_back(a);
-  tx.delay_sec = 1;
-  tx.send(from.value, _self);
+  tx.delay_sec = 0;
+  tx.send(deferred_id, _self);
 }
 
+uint64_t history::get_deferred_id () {
+  deferred_id_tables deferredids(get_self(), get_self().value);
+  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+
+  d_s.id += 1;
+
+  deferredids.set(d_s, get_self());
+
+  return d_s.id;
+}
 
 void history::savepoints(uint64_t id, uint64_t timestamp) {
   require_auth(get_self());
+
+  print("RECORDING: ", id, ", timestamp:", timestamp, "\n");
 
   auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
   uint64_t day = date.utc_seconds;
@@ -505,7 +517,6 @@ uint64_t history::get_size(name id) {
 
 void history::send_update_txpoints (name from) {
   // delayed update
-  cancel_deferred(from.value);
 
   action a(
       permission_level{contracts::harvest, "active"_n},

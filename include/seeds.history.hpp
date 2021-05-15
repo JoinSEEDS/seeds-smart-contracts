@@ -2,6 +2,7 @@
 #include <contracts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
 #include <tables/size_table.hpp>
@@ -91,6 +92,7 @@ CONTRACT history : public contract {
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
       void adjust_transactions(uint64_t id, uint64_t timestamp);
+      uint64_t get_deferred_id();
 
       TABLE citizen_table {
         uint64_t id;
@@ -238,6 +240,13 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return id; }
         uint128_t by_account_key() const { return (uint128_t(account.value) << 64) + key.value; }
       };
+
+      TABLE deferred_id_table {
+        uint64_t id;
+      };
+
+      typedef singleton<"deferredids"_n, deferred_id_table> deferred_id_tables;
+      typedef eosio::multi_index<"deferredids"_n, deferred_id_table> dump_for_deferred_id;
 
       typedef eosio::multi_index<"citizens"_n, citizen_table,
         indexed_by<"byaccount"_n,
