@@ -5,18 +5,16 @@
 #include <string>
 
 
-bool scheduler::is_ready_to_execute(name operation, name optype){
-    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
-
+uint64_t scheduler::is_ready_to_execute(const name & operation, const name & optype, const uint64_t & timestamp) {
     if (optype == "op"_n) {
         auto itr = operations.find(operation.value);
 
         if (itr == operations.end()) {
-            return false;
+            return 0;
         }
         if(itr -> pause > 0) {
             print("transaction " + operation.to_string() + " is paused");
-            return false;
+            return 0;
         }
 
         uint64_t periods = 0;
@@ -25,26 +23,30 @@ bool scheduler::is_ready_to_execute(name operation, name optype){
 
         print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
 
-        if(periods > 0) return true;
-        return false;
+        return periods > 0 ? timestamp : 0;
     }
     else {
         auto mitr = moonops.find(operation.value);
 
         if (mitr == moonops.end()) {
-            return false;
+            return 0;
         }
         if (mitr->pause > 0) {
             print("moon op " + operation.to_string() + " is paused");
-            return false;
+            return 0;
         }
 
-        uint64_t date = std::max(
-            mitr->start_time, 
-            mitr->last_moon_cycle_id + (mitr->quarter_moon_cycles * (utils::moon_cycle / 4))
-        );
+        uint64_t moon_timestamp = 0;
 
+        if (mitr->start_time > mitr->last_moon_cycle_id) {
+            moon_timestamp = mitr->start_time;
+        } else {
+            auto mpitr = moonphases.find(mitr->last_moon_cycle_id);
+            std::advance(mpitr, mitr->quarter_moon_cycles);
+            moon_timestamp = mpitr->timestamp;
+        }
 
+        return timestamp >= moon_timestamp ? moon_timestamp : 0;
     }
 }
 
@@ -369,41 +371,47 @@ ACTION scheduler::moonphase(uint64_t timestamp, string phase_name, string eclips
         });
     }
 
-        }
+}
 
 ACTION scheduler::removeop(name id) {
     require_auth(get_self());
 
     auto itr = operations.find(id.value);
-    check(itr != operations.end(), contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
+    if (itr != operations.end()) {
+        operations.erase(itr);
+        return;
+    }
 
-    operations.erase(itr);
+    auto mitr = moonops.find(id.value);
+    if (mitr != moonops.end()) {
+        moonops.erase(mitr);
+        return;
+    }
+
+    check(false, contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
 }
 
 ACTION scheduler::pauseop(name id, uint8_t pause) {
     require_auth(get_self());
 
     auto itr = operations.find(id.value);
-    check(itr != operations.end(), contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
+    if (itr != operations.end()) {
+        operations.modify(itr, _self, [&](auto & moperation) {
+            moperation.pause = pause;
+        });
+        return;
+    }
 
-    operations.modify(itr, _self, [&](auto & moperation) {
-        moperation.pause = pause;
-    });
+    auto mitr = moonops.find(id.value);
+    if (mitr != moonops.end()) {
+        moonops.modify(mitr, _self, [&](auto & moonop){
+            moonop.pause = pause;
+        });
+        return;
+    }
+
+    check(false, contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
 }
-
-ACTION scheduler::confirm(name operation) {
-    require_auth(get_self());
-
-    print("Confirm the execution of " + operation.to_string());
-
-    auto itr = operations.find(operation.value);
-    check(itr != operations.end(), "Operation does not exist");
-
-    operations.modify(itr, _self, [&](auto & moperation) {
-        moperation.timestamp = current_time_point().sec_since_epoch();
-    });
-}
-
 
 ACTION scheduler::execute() {
    // require_auth(_self);
@@ -449,12 +457,18 @@ ACTION scheduler::execute() {
     auto itr = ops_by_last_executed.begin();
     bool has_executed = false;
 
+    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
+
     while(itr != ops_by_last_executed.end()) {
-        if(is_ready_to_execute(itr -> id, "op"_n)){
+        if(is_ready_to_execute(itr -> id, "op"_n, timestamp)){
 
             print("\nOperation to be executed: " + itr -> id.to_string(), "\n");
 
             exec_op(itr->id, itr->contract, itr->operation);
+
+            ops_by_last_executed.modify(itr, _self, [&](auto & operation) {
+                operation.timestamp = timestamp;
+            });
 
             has_executed = true;
             
@@ -468,11 +482,15 @@ ACTION scheduler::execute() {
         auto mitr = moonops_by_last_cycle.begin();
         
         while (mitr != moonops_by_last_cycle.end()) {
-            if (is_ready_to_execute(mitr->id, "moonop"_n)) {
-
+            uint64_t used_timestamp = is_ready_to_execute(mitr->id, "moonop"_n, timestamp);
+            if (used_timestamp) {
                 print("\nMoon operation to be executed: " + mitr->id.to_string(), "\n");
 
                 exec_op(mitr->id, mitr->contract, mitr->action);
+
+                moonops_by_last_cycle.modify(mitr, _self, [&](auto & operation){
+                    operation.last_moon_cycle_id = used_timestamp;
+                });
 
                 has_executed = true;
 
@@ -573,16 +591,9 @@ void scheduler::exec_op(name id, name contract, name operation) {
     // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 
     a.send();
-
-    action c = action(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "confirm"_n,
-        std::make_tuple(id)
-    );
-
-    c.send();
 }
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops));
+EOSIO_DISPATCH(scheduler,
+    (configop)(configmoonop)(execute)(reset)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+);

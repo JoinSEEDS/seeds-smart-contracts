@@ -30,11 +30,11 @@ CONTRACT scheduler : public contract {
         // specify start time any time in the future, or use 0 for "now"
         ACTION configop(name id, name action, name contract, uint64_t period, uint64_t starttime);
 
+        ACTION configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime);
+
         ACTION removeop(name id);
 
         ACTION pauseop(name id, uint8_t pause);
-
-        ACTION confirm(name operation);
         
         ACTION stop();
         
@@ -111,7 +111,7 @@ CONTRACT scheduler : public contract {
 
         typedef eosio::multi_index <"moonops"_n, moon_ops_table,
             indexed_by<"bylastcycle"_n,
-            const_mem_fun<moon_ops_table, uint64_t, &moon_ops_table::by_last_cycle>
+            const_mem_fun<moon_ops_table, uint64_t, &moon_ops_table::by_last_cycle>>
         > moon_ops_tables;
 
         typedef eosio::multi_index <"test"_n, test_table> test_tables;
@@ -124,5 +124,5 @@ CONTRACT scheduler : public contract {
         moon_phases_tables moonphases;
         moon_ops_tables moonops;
 
-        bool is_ready_to_execute(name operation);
+        uint64_t is_ready_to_execute(const name & operation, const name & optype, const uint64_t & timestamp);
 };
