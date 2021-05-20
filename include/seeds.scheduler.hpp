@@ -124,5 +124,6 @@ CONTRACT scheduler : public contract {
         moon_phases_tables moonphases;
         moon_ops_tables moonops;
 
-        uint64_t is_ready_to_execute(const name & operation, const name & optype, const uint64_t & timestamp);
+        uint64_t is_ready_op(const name & operation, const uint64_t & timestamp);
+        uint64_t is_ready_moon_op(const name & operation, const uint64_t & timestamp);
 };

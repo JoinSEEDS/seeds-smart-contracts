@@ -5,49 +5,46 @@
 #include <string>
 
 
-uint64_t scheduler::is_ready_to_execute(const name & operation, const name & optype, const uint64_t & timestamp) {
-    if (optype == "op"_n) {
-        auto itr = operations.find(operation.value);
+uint64_t scheduler::is_ready_op (const name & operation, const uint64_t & timestamp) {
 
-        if (itr == operations.end()) {
-            return 0;
-        }
-        if(itr -> pause > 0) {
-            print("transaction " + operation.to_string() + " is paused");
-            return 0;
-        }
+    auto itr = operations.find(operation.value);
 
-        uint64_t periods = 0;
-
-        periods = (timestamp - itr -> timestamp) / itr -> period;
-
-        print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
-
-        return periods > 0 ? timestamp : 0;
+    if(itr -> pause > 0) {
+        print("transaction " + operation.to_string() + " is paused");
+        return 0;
     }
-    else {
-        auto mitr = moonops.find(operation.value);
 
-        if (mitr == moonops.end()) {
-            return 0;
-        }
-        if (mitr->pause > 0) {
-            print("moon op " + operation.to_string() + " is paused");
-            return 0;
-        }
+    uint64_t periods = 0;
 
-        uint64_t moon_timestamp = 0;
+    periods = (timestamp - itr -> timestamp) / itr -> period;
 
-        if (mitr->start_time > mitr->last_moon_cycle_id) {
-            moon_timestamp = mitr->start_time;
-        } else {
-            auto mpitr = moonphases.find(mitr->last_moon_cycle_id);
-            std::advance(mpitr, mitr->quarter_moon_cycles);
-            moon_timestamp = mpitr->timestamp;
-        }
+    print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
 
-        return timestamp >= moon_timestamp ? moon_timestamp : 0;
+    return periods > 0 ? timestamp : 0;
+    
+}
+
+uint64_t scheduler::is_ready_moon_op (const name & operation, const uint64_t & timestamp) {
+
+    auto mitr = moonops.find(operation.value);
+
+    if (mitr->pause > 0) {
+        print("moon op " + operation.to_string() + " is paused");
+        return 0;
     }
+
+    uint64_t moon_timestamp = 0;
+
+    if (mitr->start_time > mitr->last_moon_cycle_id) {
+        moon_timestamp = mitr->start_time;
+    } else {
+        auto mpitr = moonphases.find(mitr->last_moon_cycle_id);
+        std::advance(mpitr, mitr->quarter_moon_cycles);
+        moon_timestamp = mpitr->timestamp;
+    }
+
+    return timestamp >= moon_timestamp ? moon_timestamp : 0;
+
 }
 
 
@@ -460,7 +457,7 @@ ACTION scheduler::execute() {
     uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
 
     while(itr != ops_by_last_executed.end()) {
-        if(is_ready_to_execute(itr -> id, "op"_n, timestamp)){
+        if(is_ready_op(itr -> id, timestamp)){
 
             print("\nOperation to be executed: " + itr -> id.to_string(), "\n");
 
@@ -482,7 +479,7 @@ ACTION scheduler::execute() {
         auto mitr = moonops_by_last_cycle.begin();
         
         while (mitr != moonops_by_last_cycle.end()) {
-            uint64_t used_timestamp = is_ready_to_execute(mitr->id, "moonop"_n, timestamp);
+            uint64_t used_timestamp = is_ready_moon_op(mitr->id, timestamp);
             if (used_timestamp) {
                 print("\nMoon operation to be executed: " + mitr->id.to_string(), "\n");
 
