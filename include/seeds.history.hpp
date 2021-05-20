@@ -5,6 +5,7 @@
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
 #include <tables/size_table.hpp>
+#include <tables/organization_table.hpp>
 
 #include <contracts.hpp>
 #include <tables/user_table.hpp>
@@ -215,17 +216,9 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return account.value; }
       };
 
-      TABLE organization_table { // from organization contract
-          name org_name;
-          name owner;
-          uint64_t status;
-          int64_t regen;
-          uint64_t reputation;
-          uint64_t voice;
-          asset planted;
+      DEFINE_ORGANIZATION_TABLE
 
-          uint64_t primary_key() const { return org_name.value; }
-      };
+      DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
       TABLE members_table {
           name region;
@@ -287,8 +280,6 @@ CONTRACT history : public contract {
       > qev_tables;
 
       typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
-
-      typedef eosio::multi_index <"organization"_n, organization_table> organization_tables;
 
       typedef eosio::multi_index <"members"_n, members_table,
         indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>

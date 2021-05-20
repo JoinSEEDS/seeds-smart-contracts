@@ -966,7 +966,8 @@ void proposals::create_aux (
 
   require_auth(creator);
 
-  check_resident(creator);
+  // For the time being, organizations are allowed to create alliance type proposals
+  check_resident(creator, campaign_type == alliance_type );
   
   if (campaign_type != campaign_invite_type) {
     if (campaign_type == alliance_type) {
@@ -1640,14 +1641,15 @@ void proposals::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
-void proposals::check_resident(name account)
+void proposals::check_resident(name account, bool org_allowed)
 {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
   check(
     uitr->status == name("citizen") || 
-    uitr->status == name("resident"), 
-    "user is not a resident or citizen");
+    uitr->status == name("resident") ||
+    ( org_allowed && uitr->type == "organisation"_n ), 
+    "user is not a resident or citizen or an organization with alliance proposal");
 }
 
 void proposals::addactive(name account) {
