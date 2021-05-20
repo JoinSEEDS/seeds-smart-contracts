@@ -1630,7 +1630,7 @@ describe('Punishment', async assert => {
   }
 
   console.log('change resident threshold')
-  await contracts.settings.configure('res.rep.pt', 10, { authorization: `${settings}@active` })
+  await contracts.settings.configure('res.rep.pt', 2, { authorization: `${settings}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })
