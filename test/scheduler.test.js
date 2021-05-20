@@ -1,6 +1,6 @@
 const { describe } = require('riteway')
-const { eos, names, isLocal, getTableRows } = require('../scripts/helper')
-const { equals } = require('ramda')
+const { eos, names, isLocal, getTableRows, initContracts } = require('../scripts/helper')
+const { equals, init } = require('ramda')
 
 const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum } = names
 
@@ -167,6 +167,11 @@ describe('scheduler, organization.cleandaus', async assert => {
 
 describe('scheduler, token.resetweekly', async assert => {
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
+
     console.log('scheduler reset')
     await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
 
@@ -199,6 +204,11 @@ describe('scheduler, token.resetweekly', async assert => {
 })
 
 describe('scheduler, organization scores', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
 
     contracts = await Promise.all([
         eos.contract(scheduler),
@@ -314,6 +324,11 @@ describe('scheduler, organization scores', async assert => {
 
 describe('scheduler, forum', async assert => {
 
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
+
     contracts = await Promise.all([
         eos.contract(scheduler),
         eos.contract(settings)
@@ -392,6 +407,11 @@ describe('scheduler, forum', async assert => {
 })
 
 describe('scheduler, harvest', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
 
     contracts = await Promise.all([
         eos.contract(scheduler),
@@ -492,6 +512,153 @@ describe('scheduler, harvest', async assert => {
 
     //console.log('scheduler reset')
     //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+})
+
+
+describe('scheduler, moon phases', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
+
+    const contracts = await initContracts({ scheduler, settings })
+
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('configure seconds to execute')
+    await contracts.settings.configure('secndstoexec', 1, { authorization: `${settings}@active` })
+
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        json: true,
+        limit: 1000
+    })
+
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+    }
+
+    const moonopTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'moonops',
+        json: true,
+        limit: 1000
+    })
+
+    for (const op of moonopTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+    }
+
+    console.log('populate moonphases')
+    let dateTimestamp = parseInt(Date.now() / 1000)
+    for (let i = 0; i < 50; i++) {
+        await contracts.scheduler.moonphase(dateTimestamp + i, `phase ${(i % 4) + 1}`, '', { authorization: `${scheduler}@active` })
+    }
+
+    await contracts.scheduler.configmoonop('one', 'test1', 'cycle.seeds', 1, dateTimestamp, { authorization: `${scheduler}@active` })
+    await contracts.scheduler.configmoonop('two', 'test2', 'cycle.seeds', 3, dateTimestamp, { authorization: `${scheduler}@active` })
+
+    console.log('init test 1')
+    await contracts.scheduler.test1({ authorization: `${scheduler}@active` })
+
+    console.log('init test 2')
+    await contracts.scheduler.test2({ authorization: `${scheduler}@active` })
+
+    const beforeValues = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
+    })
+
+    console.log("before "+JSON.stringify(beforeValues, null, 2))
+
+    console.log('scheduler execute')
+    await contracts.scheduler.start( { authorization: `${scheduler}@active` } )
+
+    await sleep(30 * 1000)
+
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+
+    const afterValues = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
+    })
+
+    await sleep(5 * 1000)
+
+    const afterValues2 = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'test',
+        json: true, 
+        lower_bound: 'unit.test.1',
+        upper_bound: 'unit.test.2',    
+        limit: 100
+    })
+
+    console.log("after "+JSON.stringify(afterValues, null, 2))
+
+    let delta1 = afterValues.rows[0].value - beforeValues.rows[0].value
+    let delta2 = afterValues.rows[1].value - beforeValues.rows[1].value
+
+    console.log('delta1:', delta1)
+    console.log('delta2:', delta2)
+
+    const opTable2 = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        json: true
+    })
+    console.log(opTable2)
+
+    const moonopTable2 = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'moonops',
+        json: true,
+        limit: 1000
+    })
+    console.log(moonopTable2)
+
+    assert({
+        given: '1 second delay was executed 30 seonds',
+        should: 'be executed close to 30 times (was: '+delta1+')',
+        actual: delta1 >= 20 && delta1 <= 28, // NOTE: ACTUALLY 27 => 31 - 4, 4 is the other action
+        expected: true
+    })
+
+    assert({
+        given: 'test2 executed every 3 moonphases',
+        should: 'be executed 8 times',
+        actual: delta2,
+        expected: 8
+    })
+
+    assert({
+        given: 'stopped',
+        should: 'no more executions',
+        actual: [afterValues.rows[0].value, afterValues.rows[1].value],
+        expected: [afterValues2.rows[0].value, afterValues2.rows[1].value],
+    })
 
 })
 
