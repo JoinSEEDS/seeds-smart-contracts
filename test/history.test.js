@@ -329,21 +329,21 @@ describe.only('individual transactions', async assert => {
   }
 
   console.log('add transaction entry')
-  await transfer(firstuser, seconduser, 200) // trx points = 
-  await transfer(firstuser, seconduser, 300)
-  await transfer(firstuser, seconduser, 400)
+  // await transfer(firstuser, seconduser, 200) // trx points = 
+  // await transfer(firstuser, seconduser, 300)
+  // await transfer(firstuser, seconduser, 400)
 
-  await contracts.accounts.testsetrs(seconduser, 1, { authorization: `${accounts}@active` })
-  await transfer(firstuser, seconduser, 750)
+  // await contracts.accounts.testsetrs(seconduser, 1, { authorization: `${accounts}@active` })
+  // await transfer(firstuser, seconduser, 750)
 
-  await transfer(seconduser, firstuser, 200)
-  await transfer(seconduser, firstuser, 200)
+  // await transfer(seconduser, firstuser, 200)
+  // await transfer(seconduser, firstuser, 200)
 
   await transfer(seconduser, thirduser, 255)
   await transfer(seconduser, thirduser, 300)
   await transfer(seconduser, thirduser, 100)
 
-  await transfer(thirduser, firstuser, 10)
+  // await transfer(thirduser, firstuser, 10)
 
   await sleep(6000)
 

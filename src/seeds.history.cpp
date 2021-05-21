@@ -229,6 +229,10 @@ void history::trxentry(name from, name to, asset quantity) {
 
   uint64_t deferred_id = get_deferred_id();
 
+  print("---> transaction id: ", transaction_id, "\n");
+  print("---> deferred id for savepoints:", deferred_id, "\n");
+  print("---> from: ", from, ", to: ", to, ", quantity:", quantity, "\n");
+
   action a(
     permission_level{contracts::history, "active"_n},
     get_self(),
@@ -238,7 +242,7 @@ void history::trxentry(name from, name to, asset quantity) {
 
   transaction tx;
   tx.actions.emplace_back(a);
-  tx.delay_sec = 0;
+  tx.delay_sec = 1;
   tx.send(deferred_id, _self);
 }
 
@@ -297,6 +301,9 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
   int64_t qualifying_volume = int64_t(titr -> qualifying_volume);
 
   if (count > max_number_transactions) {
+
+    print("current transaction that is going to be erased:", current_itr->id, "\n");
+
     from_points -= current_itr -> from_points;
     to_points -= current_itr -> to_points;
     qualifying_volume -= current_itr -> qualifying_volume;
@@ -373,17 +380,20 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
 }
 
 void history::send_trx_cbp_reward_action (name from, name to) {
+
+  uint64_t deferred_id = get_deferred_id();
+
   action a(
     permission_level(get_self(), "active"_n),
     get_self(),
     "sendtrxcbp"_n,
-    std::make_tuple(from, to)
+    std::make_tuple(deferred_id, from, to)
   );
 
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1;
-  tx.send(from.value + 10, _self);
+  tx.send(deferred_id, _self);
 }
 
 void history::send_add_cbs (name account, int points) {
@@ -425,7 +435,7 @@ void history::trx_cbp_reward (name account, name key) {
   send_add_cbs(account, int(config_get(key)));
 }
 
-void history::sendtrxcbp (name from, name to) {
+void history::sendtrxcbp (uint64_t deferred_id, name from, name to) {
   require_auth(get_self());
 
   auto oitr = organizations.find(to.value);
@@ -515,20 +525,33 @@ uint64_t history::get_size(name id) {
   }
 }
 
+void history::updatetxpt (uint64_t deferred_id, name from) {
+  require_auth(get_self());
+
+  action a(
+    permission_level{contracts::harvest, "active"_n},
+    contracts::harvest,
+    "updatetxpt"_n,
+    std::make_tuple(from)
+  );
+}
+
 void history::send_update_txpoints (name from) {
   // delayed update
 
+  uint64_t deferred_id = get_deferred_id();
+
   action a(
-      permission_level{contracts::harvest, "active"_n},
-      contracts::harvest,
-      "updatetxpt"_n,
-      std::make_tuple(from)
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    "updatetxpt"_n,
+    std::make_tuple(deferred_id, from)
   );
 
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1; 
-  tx.send(from.value, _self);
+  tx.send(deferred_id, _self);
 }
 
 void history::numtrx(name account) {
