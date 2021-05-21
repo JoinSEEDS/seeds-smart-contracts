@@ -57,6 +57,12 @@ void history::reset(name account) {
   while (tcitr != trxcbprewards.end()) {
     tcitr = trxcbprewards.erase(tcitr);
   }
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+  auto ptrx_itr = ptrx_t.begin();
+  while (ptrx_itr != ptrx_t.end()) {
+    ptrx_itr = ptrx_t.erase(ptrx_itr);
+  }
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -159,7 +165,6 @@ void history::trxentry(name from, name to, asset quantity) {
     return;
   }
 
-
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
 
@@ -229,10 +234,6 @@ void history::trxentry(name from, name to, asset quantity) {
 
   uint64_t deferred_id = get_deferred_id();
 
-  print("---> transaction id: ", transaction_id, "\n");
-  print("---> deferred id for savepoints:", deferred_id, "\n");
-  print("---> from: ", from, ", to: ", to, ", quantity:", quantity, "\n");
-
   action a(
     permission_level{contracts::history, "active"_n},
     get_self(),
@@ -260,8 +261,6 @@ uint64_t history::get_deferred_id () {
 void history::savepoints(uint64_t id, uint64_t timestamp) {
   require_auth(get_self());
 
-  print("RECORDING: ", id, ", timestamp:", timestamp, "\n");
-
   auto date = eosio::time_point_sec(timestamp / 86400 * 86400);
   uint64_t day = date.utc_seconds;
 
@@ -278,7 +277,7 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
 
   uint64_t max_number_transactions = config_get("htry.trx.max"_n);
 
-  uint128_t from_to_id = (uint128_t(titr -> from.value) << 64) + titr -> to.value;
+  uint128_t from_to_id = (uint128_t(from.value) << 64) + to.value;
   uint64_t count = 0;
 
   auto ft_itr = transactions_by_from_to.find(from_to_id);
@@ -300,37 +299,59 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
   int64_t to_points = int64_t(titr -> to_points);
   int64_t qualifying_volume = int64_t(titr -> qualifying_volume);
 
+  bool save_points = true;
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+
   if (count > max_number_transactions) {
+    if (current_itr->id != id) {
 
-    print("current transaction that is going to be erased:", current_itr->id, "\n");
+      auto ptrx_t_by_timestamp_id = ptrx_t.get_index<"bytimestmpid"_n>();
+      uint128_t ptrx_id = (uint128_t(day) << 64) + current_itr->id;
 
-    from_points -= current_itr -> from_points;
-    to_points -= current_itr -> to_points;
-    qualifying_volume -= current_itr -> qualifying_volume;
+      auto ptrx_itr = ptrx_t_by_timestamp_id.find(ptrx_id);
+
+      if (ptrx_itr != ptrx_t_by_timestamp_id.end()) {
+        from_points -= current_itr -> from_points;
+        to_points -= current_itr -> to_points;
+        qualifying_volume -= current_itr -> qualifying_volume;
+      }
+
+    } else {
+      save_points = false;
+    }
 
     transactions_by_from_to.erase(current_itr);
   }
 
-  save_from_metrics (from, from_points, qualifying_volume, day);
+  if (save_points) {
+    save_from_metrics (from, from_points, qualifying_volume, day);
 
-  if (uitr_to -> type == name("organisation")) {
-    transaction_points_tables trx_points_to(get_self(), to.value);
-    auto trx_itr_to = trx_points_to.find(day);
+    if (uitr_to -> type == name("organisation")) {
+      transaction_points_tables trx_points_to(get_self(), to.value);
+      auto trx_itr_to = trx_points_to.find(day);
 
-    if (trx_itr_to != trx_points_to.end()) {
-      trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
-        item.points += to_points;
-      });
-    } else {
-      trx_points_to.emplace(_self, [&](auto & item){
-        item.timestamp = day;
-        item.points = to_points;
-      });
+      if (trx_itr_to != trx_points_to.end()) {
+        trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
+          item.points += to_points;
+        });
+      } else {
+        trx_points_to.emplace(_self, [&](auto & item){
+          item.timestamp = day;
+          item.points = to_points;
+        });
+      }
     }
-  }
 
-  if (uitr_from -> type != name("organisation")) {
-    send_update_txpoints(from);
+    if (uitr_from -> type != name("organisation")) {
+      send_update_txpoints(from);
+    }
+
+    ptrx_t.emplace(_self, [&](auto & ptrx){
+      ptrx.id = ptrx_t.available_primary_key();
+      ptrx.transaction_id = id;
+      ptrx.timestamp = day;
+    });
   }
 
   send_trx_cbp_reward_action(from, to);

@@ -220,6 +220,15 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return account.value; }
       };
 
+      TABLE processed_trx_table {
+        uint64_t id;
+        uint64_t transaction_id;
+        uint64_t timestamp;
+
+        uint64_t primary_key() const { return id; }
+        uint128_t by_timestamp_id() const { return (uint128_t(timestamp) << 64) + transaction_id; }
+      };
+
       DEFINE_ORGANIZATION_TABLE
 
       DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
@@ -291,6 +300,11 @@ CONTRACT history : public contract {
       > qev_tables;
 
       typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
+
+      typedef eosio::multi_index<"ptrx"_n, processed_trx_table,
+        indexed_by<"bytimestmpid"_n,
+        const_mem_fun<processed_trx_table, uint128_t, &processed_trx_table::by_timestamp_id>>
+      > processed_trx_tables;
 
       typedef eosio::multi_index <"members"_n, members_table,
         indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
