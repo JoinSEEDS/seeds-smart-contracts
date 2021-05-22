@@ -857,7 +857,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -918,7 +918,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
@@ -1381,7 +1381,7 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
     if (ritr->account == to) {
-      uint64_t rank = utils::rank(current, total);
+      uint64_t rank = utils::spline_rank(current, total);
 
       rep_by_rep.modify(ritr, _self, [&](auto& item) {
         item.rank = rank;
