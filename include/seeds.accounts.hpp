@@ -96,6 +96,9 @@ CONTRACT accounts : public contract {
       ACTION delcbsreporg(uint64_t start_org);
       ACTION testmigscope(name account, uint64_t amount);
 
+      ACTION migusersizes(uint64_t start, uint64_t chunksize);
+      ACTION migusrsize(name account);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
@@ -381,4 +384,5 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (testmvouch)(migratevouch)
 (migorgs)(delcbsreporg)(testmigscope)
 (addcbs)
+(migusersizes)(migusrsize)
 );

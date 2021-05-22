@@ -14,15 +14,9 @@ void escrow::reset() {
     }
 }
 
-
-void escrow::init_balance(name user) {
-    auto it = sponsors.find(user.value);
-    
-}
-
 void escrow::check_asset(asset quantity) {
     check(quantity.is_valid(), "invalid asset");
-    check(quantity.symbol == seeds_symbol, "invalid asset");
+    check(quantity.symbol == utils::seeds_symbol, "invalid asset");
 }
 
 void escrow::trigger (const name&     trigger_source,
@@ -35,6 +29,82 @@ void escrow::trigger (const name&     trigger_source,
         e.event_name    = event_name;
         e.notes         = notes;
     });
+
+    if (trigger_source == trigger_source_hypha_dao && event_name == trigger_event_golive) {
+        sendtopool(uint64_t(0), config_get("batchsize"_n));
+    }
+}
+
+void escrow::sendtopool (uint64_t start, uint64_t chunksize) {
+    require_auth(get_self());
+
+    auto litr = start == 0 ? locks.begin() : locks.lower_bound(start);
+    uint64_t current = 0;
+    
+    while (litr != locks.end() && current < chunksize) {
+        if (litr->trigger_source == trigger_source_hypha_dao && litr->trigger_event == trigger_event_golive) {
+            action a(
+                permission_level(get_self(), "active"_n),
+                get_self(),
+                "miglock"_n,
+                std::make_tuple(litr->id)
+            );
+            transaction tx;
+            tx.actions.emplace_back(a);
+            tx.delay_sec = 1;
+            tx.send(litr->id, _self);
+        }
+        litr++;
+        current += 3;
+    }
+
+    if (litr != locks.end()) {
+        action next_execution(
+            permission_level(get_self(), "active"_n),
+            get_self(),
+            "sendtopool"_n,
+            std::make_tuple(litr->id, chunksize)
+        );
+
+        transaction tx;
+        tx.actions.emplace_back(next_execution);
+        tx.delay_sec = 1;
+        tx.send(litr->id, _self);
+    }
+}
+
+void escrow::miglock (uint64_t lock_id) {
+    require_auth(get_self());
+
+    auto litr = locks.find(lock_id);
+    check(litr != locks.end(), "lock not found");
+
+    if (litr->trigger_source == trigger_source_hypha_dao && litr->trigger_event == trigger_event_golive) {
+
+        if (!litr->notes.empty()) {
+            std::size_t found = litr->notes.find(string("proposal id: "));
+            if (found != std::string::npos) {
+                string prop_id_string = litr->notes.substr(13, string::npos);
+                uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+                action(
+                    permission_level(contracts::proposals, "active"_n),
+                    contracts::proposals,
+                    "checkprop"_n,
+                    std::make_tuple(prop_id, string("proposal is not passing, lock can not be claimed"))
+                ).send();
+                action(
+                    permission_level(contracts::proposals, "active"_n),
+                    contracts::proposals,
+                    "doneprop"_n,
+                    std::make_tuple(prop_id)
+                ).send();
+            }
+        }
+
+        deduct_from_sponsor(litr->sponsor, litr->quantity);
+        send_transfer(contracts::pool, litr->quantity, litr->beneficiary.to_string());
+        litr = locks.erase(litr);
+    }
 }
 
 void escrow::lock (   const name&         lock_type, 
@@ -109,7 +179,7 @@ void escrow::ontransfer(name from, name to, asset quantity, string memo) {
     // get_first_receiver confirms that the tokens came from the right account
     if (get_first_receiver() == contracts::token  &&    // from SEEDS token account
         to  ==  get_self() &&                    // sent to escrow.seeds contract
-        quantity.symbol == seeds_symbol) {       // SEEDS symbol
+        quantity.symbol == utils::seeds_symbol) {       // SEEDS symbol
 
         
         auto s_itr = sponsors.find (from.value);
@@ -163,7 +233,9 @@ void escrow::claim(name beneficiary) {
     auto locks_by_beneficiary = locks.get_index<"bybneficiary"_n>();
     auto it = locks_by_beneficiary.find(beneficiary.value);
 
-    asset total_quantity = asset(0, seeds_symbol);
+    asset zero = asset(0, utils::seeds_symbol);
+    asset total_quantity = zero;
+    asset pool_quantity = zero;
     check(it != locks_by_beneficiary.end(), "vstandscrow: The user " + beneficiary.to_string() + " does not have any locks.");
 
     while(it != locks_by_beneficiary.end()){
@@ -204,7 +276,11 @@ void escrow::claim(name beneficiary) {
             auto e_itr = e_t.find (it->trigger_event.value);
             if (e_itr != e_t.end() && e_itr->event_date <= current_time_point()) {
                 deduct_from_sponsor (it->sponsor, it->quantity);
-                total_quantity += it -> quantity;
+                if (it->trigger_source == trigger_source_hypha_dao && it->trigger_event == trigger_event_golive) {
+                    pool_quantity += it->quantity;
+                } else {
+                    total_quantity += it->quantity;
+                }
                 it = locks_by_beneficiary.erase(it);
             } else {
                 it++;
@@ -214,11 +290,15 @@ void escrow::claim(name beneficiary) {
         }
     }
 
-    check(total_quantity > asset(0, seeds_symbol), "vstandscrow: The beneficiary does not have any available locks, try to claim them after their vesting date or triggering event");
+    check(total_quantity > zero || pool_quantity > zero, 
+        "vstandscrow: The beneficiary does not have any available locks, try to claim them after their vesting date or triggering event");
 
-    auto token_account = contracts::token;
-    token::transfer_action action{name(token_account), {get_self(), "active"_n}};
-    action.send(get_self(), beneficiary, total_quantity, "");
+    if (total_quantity > zero) {
+        send_transfer(beneficiary, total_quantity, string(""));
+    }
+    if (pool_quantity > zero) {
+        send_transfer(contracts::pool, pool_quantity, beneficiary.to_string());
+    }
 }
 
 
@@ -242,6 +322,15 @@ void escrow::triggertest (const name&     trigger_source,
         e.event_name    = event_name;
         e.notes         = notes;
     });
+
+    if (trigger_source == trigger_source_hypha_dao && event_name == trigger_event_golive) {
+        sendtopool(uint64_t(0), config_get("batchsize"_n));
+    }
+}
+
+void escrow::send_transfer (const name & beneficiary, const asset & quantity, const string & memo) {
+    token::transfer_action action {name(contracts::token), {get_self(), "active"_n}};
+    action.send(get_self(), beneficiary, quantity, memo);
 }
 
 

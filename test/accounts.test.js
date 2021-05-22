@@ -101,6 +101,92 @@ describe('General accounts', async assert => {
   await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
   await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
 
+  console.log('update')
+
+  //void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
+  
+  const nickname = "A NEw NAME FOR FIRST USER"
+  const image = "https://somthignsomething"
+  const story = "my story ... "
+  const roles = "some roles... "
+  const skills = "some skills... "
+  const interests = "some interests... "
+
+  await contract.update(firstuser, "individual", nickname, image, story, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  const userOne = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    lower_bound: firstuser,
+    upper_bound: firstuser,
+    json: true,
+  })
+
+  //console.log("user one: "+JSON.stringify(userOne, null, 2))
+
+  var canChangeType = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, story, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canChangeType = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+  var longstory = "0123456789"
+  for (var i=0; i<699; i++) {
+    longstory = longstory + "0123456789"
+  }
+  console.log("longstory length: "+longstory.length)
+
+  await contract.update(firstuser, "individual", nickname, image, longstory, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  longstory = longstory + "0123456789" + "Whoops!"
+  var canStoreLongStory = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, longstory, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canStoreLongStory = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canChangeType,
+    expected: false
+  })
+  
+  delete userOne.rows[0].timestamp
+
+  assert({
+    given: 'update called',
+    should: 'fields are updates',
+    actual: userOne.rows[0],
+    expected: 
+      {
+        "account": "seedsuseraaa",
+        "status": "visitor",
+        "type": "individual",
+        "nickname": "A NEw NAME FOR FIRST USER",
+        "image": image,
+        "story": story,
+        "roles": roles,
+        "skills": skills,
+        "interests":interests,
+        "reputation": 0,
+      }
+  })
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canStoreLongStory,
+    expected: false
+  })
+
+
   console.log("filling account with Seedds for bonuses [Change this]")
   await thetoken.transfer(firstuser, accounts, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
@@ -1848,3 +1934,109 @@ describe('Migrate cbs and rep for orgs', async assert => {
   await printHarvestTables('org')
 
 })
+
+
+describe('Enforce accounts', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+
+  const contracts = await initContracts({ accounts, settings })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  const generateString = (length) => {
+    var result = ''
+    var characters = 'abcdefghijklmnopqrstuvwxyz1234'
+    var charactersLength = characters.length
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    }
+    return result
+  }
+
+  const string8000 = generateString(8000)
+  const string600 = generateString(600)
+  const string512 = generateString(512)
+
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.update(
+    firstuser, 
+    "individual", 
+    string512,
+    string512,
+    string512,
+    string512,
+    string512,
+    string512,
+    { authorization: `${firstuser}@active` })
+
+  await contracts.accounts.update(
+    seconduser, 
+    "individual", 
+    seconduser,
+    string600,
+    string600,
+    string512,
+    string512,
+    string512,
+    { authorization: `${seconduser}@active` })
+
+  await contracts.accounts.update(
+    thirduser, 
+    "individual", 
+    thirduser,
+    string600,
+    string600,
+    string600,
+    string600,
+    string600,
+    { authorization: `${thirduser}@active` })
+
+  await contracts.accounts.migusersizes(0, 2, { authorization: `${accounts}@active` })
+  await sleep(2000)
+
+  const users = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true
+  })
+  console.log(users)
+
+  await contracts.accounts.update(
+    fourthuser, 
+    "individual", 
+    fourthuser,
+    string512,
+    string512,
+    string512,
+    generateString(132000),
+    string512,
+    { authorization: `${fourthuser}@active` })
+
+  await contracts.accounts.migusrsize(fourthuser, { authorization: `${accounts}@active` })
+
+  const users2 = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    json: true
+  })
+  console.log(users2)
+
+})
+
+

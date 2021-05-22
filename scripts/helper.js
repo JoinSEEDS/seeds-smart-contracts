@@ -179,6 +179,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -215,6 +216,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -259,6 +261,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -667,6 +670,17 @@ var permissions = [{
 }, {
   target: `${accounts.accounts.account}@addcbs`,
   action: 'addcbs'
+}, {
+  target: `${accounts.pool.account}@active`,
+  actor: `${accounts.pool.account}@eosio.code`
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  actor: `${accounts.harvest.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  action: 'payouts'
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -787,9 +801,27 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function asset (quantity) {
+  if (typeof quantity == 'object') {
+    if (quantity.symbol) {
+      return quantity
+    }
+    return null
+  }
+  const [amount, symbol] = quantity.split(' ')
+  const indexDecimal = amount.indexOf('.')
+  const precision = amount.substring(indexDecimal + 1).length
+  return {
+    amount: parseFloat(amount),
+    symbol,
+    precision,
+    toString: quantity
+  }
+}
+
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
 }
 

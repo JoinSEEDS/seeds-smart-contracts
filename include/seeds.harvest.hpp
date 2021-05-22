@@ -153,6 +153,7 @@ CONTRACT harvest : public contract {
     double config_float_get(name key);
     void send_distribute_harvest (name key, asset amount);
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
+    void send_pool_payout(asset quantity);
 
     // Contract Tables
 

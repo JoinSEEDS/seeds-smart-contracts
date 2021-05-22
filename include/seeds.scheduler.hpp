@@ -17,6 +17,7 @@ CONTRACT scheduler : public contract {
         operations(receiver, receiver.value),
         moonphases(receiver, receiver.value),
         test(receiver, receiver.value),
+        moonops(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value)
         {}
 
@@ -29,11 +30,11 @@ CONTRACT scheduler : public contract {
         // specify start time any time in the future, or use 0 for "now"
         ACTION configop(name id, name action, name contract, uint64_t period, uint64_t starttime);
 
+        ACTION configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime);
+
         ACTION removeop(name id);
 
         ACTION pauseop(name id, uint8_t pause);
-
-        ACTION confirm(name operation);
         
         ACTION stop();
         
@@ -78,6 +79,19 @@ CONTRACT scheduler : public contract {
             uint64_t primary_key() const { return timestamp; }
         };
 
+        TABLE moon_ops_table {
+            name id;
+            name action;
+            name contract;
+            uint64_t quarter_moon_cycles;
+            uint64_t start_time;
+            uint64_t last_moon_cycle_id;
+            uint8_t pause;
+
+            uint64_t primary_key() const { return id.value; }
+            uint64_t by_last_cycle() const { return last_moon_cycle_id; }
+        };
+
         TABLE test_table {
             name param;
             uint64_t value;
@@ -89,10 +103,16 @@ CONTRACT scheduler : public contract {
         DEFINE_CONFIG_TABLE_MULTI_INDEX
 
         typedef eosio::multi_index < "operations"_n, operations_table,
-            indexed_by<"bytimestamp"_n, const_mem_fun<operations_table, uint64_t, &operations_table::by_timestamp>>
+            indexed_by<"bytimestamp"_n, 
+            const_mem_fun<operations_table, uint64_t, &operations_table::by_timestamp>>
         > operations_tables;
 
         typedef eosio::multi_index <"moonphases"_n, moon_phases_table> moon_phases_tables;
+
+        typedef eosio::multi_index <"moonops"_n, moon_ops_table,
+            indexed_by<"bylastcycle"_n,
+            const_mem_fun<moon_ops_table, uint64_t, &moon_ops_table::by_last_cycle>>
+        > moon_ops_tables;
 
         typedef eosio::multi_index <"test"_n, test_table> test_tables;
 
@@ -102,6 +122,8 @@ CONTRACT scheduler : public contract {
         config_tables config;
         test_tables test;
         moon_phases_tables moonphases;
+        moon_ops_tables moonops;
 
-        bool is_ready_to_execute(name operation);
+        uint64_t is_ready_op(const name & operation, const uint64_t & timestamp);
+        uint64_t is_ready_moon_op(const name & operation, const uint64_t & timestamp);
 };
