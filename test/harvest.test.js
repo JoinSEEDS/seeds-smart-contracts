@@ -1,9 +1,10 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, createKeypair } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, createKeypair, asset } = require("../scripts/helper")
 const { equals } = require("ramda")
 const { parse } = require("commander")
+const moment = require('moment')
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, region, globaldho, fifthuser } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, region, globaldho, fifthuser, escrow, pool } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -1050,7 +1051,7 @@ describe('Monthly QEV', async assert => {
 
 })
 
-describe('Mint Rate and Harvest', async assert => {
+async function testHarvest (assert, dSeeds) {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1301,8 +1302,17 @@ describe('Mint Rate and Harvest', async assert => {
   })
   delete mintRateTable.rows[0].timestamp
 
+  let poolPayout = 0
   const mintRate = mintRateTable.rows[0].mint_rate / 10000.0
   console.log('mint rate:', mintRate)
+
+  if (dSeeds > 0) {
+    poolPayout = Math.min(mintRate * 0.5, dSeeds)
+    console.log('pool payout:', poolPayout)
+  }
+
+  const mintedSeeds = mintRate - poolPayout
+  console.log('minted seeds:', mintedSeeds)
   
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
@@ -1342,10 +1352,10 @@ describe('Mint Rate and Harvest', async assert => {
   }
 
   console.log('check expected values')
-  checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintRate * percentageForUsers, userHarvest)
-  checkHarvestValues('orgs', csOrgTable.rows.map(row => { return { rank:row.rank, status: orgStatus[row.account] } }), mintRate * percentageForOrgs, orgsHarvest)
-  checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintRate * percentageForrgns, rgnsHarvest)
-  checkHarvestValues('global', [1], mintRate * percentageForGlobal, [globalHarvest])
+  checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintedSeeds * percentageForUsers, userHarvest)
+  checkHarvestValues('orgs', csOrgTable.rows.map(row => { return { rank:row.rank, status: orgStatus[row.account] } }), mintedSeeds * percentageForOrgs, orgsHarvest)
+  checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintedSeeds * percentageForrgns, rgnsHarvest)
+  checkHarvestValues('global', [1], mintedSeeds * percentageForGlobal, [globalHarvest])
 
   const stats = await getTableRows({
     code: token,
@@ -1374,6 +1384,111 @@ describe('Mint Rate and Harvest', async assert => {
   })
   console.log('harvestBalances:', harvestBalances)
 
+  return mintedSeeds
+
+}
+
+describe('Mint Rate and Harvest', async assert => {
+
+  const contracts = await initContracts({ pool })
+
+  console.log('pool reset')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
+
+  await testHarvest(assert, 0)
+})
+
+describe('Mint Rate and Harvest, dSeeds > 0', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, pool, token, escrow, settings })
+
+  const hyphadao = 'dao.hypha'
+  const golive = 'golive'
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('pool reset')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
+
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+  
+  console.log('create locks')
+  await contracts.token.transfer(firstuser, escrow, '60000.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  const vesting_date_future = moment().utc().add(1000, 's').toString()
+  await Promise.all(
+      users
+      .slice(1)
+      .map((user, index) => 
+          contracts.escrow.lock(
+              'event', 
+              firstuser, 
+              user, 
+              `${10000 * (index+1)}.0000 SEEDS`, 
+              golive, 
+              hyphadao, 
+              vesting_date_future, 
+              'notes', 
+              { authorization: `${firstuser}@active` }
+          )
+      )
+  )
+
+  const escrowT = await getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+  console.log(escrowT)
+
+  console.log('trigger event golive')
+  await contracts.escrow.resettrigger(hyphadao, { authorization: `${escrow}@active` })
+  await contracts.escrow.triggertest(hyphadao, golive, 'event notes', { authorization: `${escrow}@active` })
+  await sleep(2000)
+
+  const mintedSeeds = await testHarvest(assert, 60000)
+
+  const poolBalanceTable = await getTableRows({
+    code: pool,
+    scope: pool,
+    table: 'balances',
+    json: true
+  })
+  console.log(poolBalanceTable)
+
+  const expectedBalances = users.slice(1).map((user, index) => {
+    const userBalance = 10000 * (index + 1)
+    return userBalance - (mintedSeeds * (userBalance / 60000))
+  })
+  const actual = poolBalanceTable.rows.map((r, index) => {
+    const actualBalance = asset(r.balance).amount
+    return Math.abs(actualBalance - expectedBalances[index]) <= 0.0001
+  })
+
+  assert({
+    given: 'harvest run',
+    should: 'repart the dSeeds',
+    actual,
+    expected: Array.from(Array(expectedBalances.length).keys()).fill(true)
+  })
 
 })
 

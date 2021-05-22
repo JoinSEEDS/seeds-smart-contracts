@@ -1230,6 +1230,19 @@ void harvest::withdraw_aux (name sender, name beneficiary, asset quantity, strin
   t_action.send(sender, beneficiary, quantity, memo);
 }
 
+void harvest::send_pool_payout (asset quantity) {
+  action a(
+    permission_level(contracts::pool, "hrvst.pool"_n),
+    contracts::pool,
+    "payouts"_n,
+    std::make_tuple(quantity)
+  );
+  transaction tx;
+  tx.actions.emplace_back(a);
+  tx.delay_sec = 1;
+  tx.send(name("poolpayout").value, _self);
+}
+
 void harvest::runharvest() {
   require_auth(get_self());
 
@@ -1242,10 +1255,22 @@ void harvest::runharvest() {
 
   if (mitr -> mint_rate <= 0) { return; }
 
-  asset quantity = asset(mitr -> mint_rate, test_symbol);
+  asset quantity;
+  size_tables pool_sizes_t(contracts::pool, contracts::pool.value);
+
+  auto total_pool_balance_itr = pool_sizes_t.find(name("total.sz").value);
+  int64_t pool_payout = 0;
+
+  if (total_pool_balance_itr != pool_sizes_t.end() && total_pool_balance_itr->size > 0) {
+    pool_payout = std::min(int64_t(mitr->mint_rate * 0.5), int64_t(total_pool_balance_itr->size));
+    send_pool_payout(asset(pool_payout, utils::seeds_symbol));
+  }
+
+  quantity = asset(mitr->mint_rate - pool_payout, test_symbol);
+
   string memo = "harvest";
 
-  print("mint rate:", quantity, "\n");
+  print("minted:", quantity, "\n");
 
   token::issue_action_test t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
   t_issue.send(get_self(), quantity, memo);
@@ -1255,16 +1280,16 @@ void harvest::runharvest() {
   double orgs_percentage = config_get("hrvst.orgs"_n) / 1000000.0;
   double global_percentage = config_get("hrvst.global"_n) / 1000000.0;
 
-  print("amount for users: ", asset(mitr -> mint_rate * users_percentage, test_symbol), "\n");
-  print("amount for rgns: ", asset(mitr -> mint_rate * rgns_percentage, test_symbol), "\n");
-  print("amount for orgs: ", asset(mitr -> mint_rate * orgs_percentage, test_symbol), "\n");
-  print("amount for global: ", asset(mitr -> mint_rate * global_percentage, test_symbol), "\n");
+  print("amount for users: ", asset(quantity.amount * users_percentage, test_symbol), "\n");
+  print("amount for rgns: ", asset(quantity.amount * rgns_percentage, test_symbol), "\n");
+  print("amount for orgs: ", asset(quantity.amount * orgs_percentage, test_symbol), "\n");
+  print("amount for global: ", asset(quantity.amount * global_percentage, test_symbol), "\n");
 
-  send_distribute_harvest("disthvstusrs"_n, asset(mitr -> mint_rate * users_percentage, test_symbol));
-  send_distribute_harvest("disthvstrgns"_n, asset(mitr -> mint_rate * rgns_percentage, test_symbol));
-  send_distribute_harvest("disthvstorgs"_n, asset(mitr -> mint_rate * orgs_percentage, test_symbol));
+  send_distribute_harvest("disthvstusrs"_n, asset(quantity.amount * users_percentage, test_symbol));
+  send_distribute_harvest("disthvstrgns"_n, asset(quantity.amount * rgns_percentage, test_symbol));
+  send_distribute_harvest("disthvstorgs"_n, asset(quantity.amount * orgs_percentage, test_symbol));
 
-  withdraw_aux(get_self(), bankaccts::globaldho, asset(mitr -> mint_rate * global_percentage, test_symbol), "harvest");
+  withdraw_aux(get_self(), bankaccts::globaldho, asset(quantity.amount * global_percentage, test_symbol), "harvest");
 
 }
 

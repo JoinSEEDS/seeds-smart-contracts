@@ -3,7 +3,11 @@ const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64ByteHexString, fromHexString, sha256 } = require('../scripts/helper');
 const { expect } = require('chai');
 
-const { harvest, accounts, proposals, settings, escrow, token, organization, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser, onboarding } = names
+const { 
+  harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
+  campaignbank, milestonebank, alliancesbank, 
+  firstuser, seconduser, thirduser, fourthuser, fifthuser
+} = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -1203,7 +1207,6 @@ describe('Proposals Quorum And Support Levels', async assert => {
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fifthuser, 'fifthuser', 'individual', { authorization: `${accounts}@active` })
-  // await contracts.accounts.adduser(sixthuser, 'sixthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
@@ -1826,7 +1829,7 @@ describe('Active count and vote power', async assert => {
 })
 
 
-describe.only('Voice decay', async assert => {
+describe('Voice decay', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -2467,7 +2470,7 @@ describe('Alliance campaigns', async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding, pool })
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -2491,6 +2494,9 @@ describe('Alliance campaigns', async assert => {
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('pool reset')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
 
   console.log('escrow reset')
   await contracts.escrow.reset({ authorization: `${escrow}@active` })
@@ -2628,30 +2634,26 @@ describe('Alliance campaigns', async assert => {
 
   console.log('going live')
   await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
+  await sleep(5000)
+
+  const poolBalances = await eos.getTableRows({
+    code: pool,
+    scope: pool,
+    table: 'balances',
+    json: true
+  })
   
-  console.log('claim lock for prop 4')
-  try {
-    await contracts.escrow.claim(thirduser, { authorization: `${thirduser}@active` })
-  } catch (err) {
-    if (!err.json.error.details[0].message.includes('proposal is not passing, lock can not be claimed')) {
-      throw err
-    }
-    console.log('can not claim the lock (expected)')
-  }
-
-  console.log('claim lock for prop 1')
-  const firstuserBalanceBefore = await getBalance(firstuser)
-  await contracts.escrow.claim(firstuser, { authorization: `${firstuser}@active` })
-  const firstuserBalanceAfter = await getBalance(firstuser)
-
-  expectedLocks = expectedLocks.filter(e => e.propId !== 1)
-  await checkEscrowLocks(expectedLocks)
+  await checkEscrowLocks([
+    { propId: 4, amount: '12.0000 SEEDS' }
+  ])
 
   assert({
-    given: 'firstuser claimed its lock',
-    should: 'have the correct balance',
-    actual: firstuserBalanceAfter - firstuserBalanceBefore,
-    expected: 12
+    given: 'golive triggered',
+    should: 'have the correct pool balances',
+    actual: poolBalances.rows,
+    expected: [
+      { account: firstuser, balance: '12.0000 SEEDS' }
+    ]
   })
 
   await checkProps([

@@ -1,12 +1,8 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal } = require("../scripts/helper")
+const { eos, names, getTableRows, isLocal, sleep, initContracts } = require("../scripts/helper")
 const { equals } = require("ramda")
-const { escrow, accounts, token, firstuser, seconduser, thirduser } = names
-const moment = require('moment');
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const { escrow, accounts, token, firstuser, seconduser, thirduser, pool, fourthuser, settings } = names
+const moment = require('moment')
 
 describe('vest and escrow', async assert => {
 
@@ -337,4 +333,166 @@ describe('vest and escrow', async assert => {
         actual: severalEscrowsAfter.rows.length,
         expected: 5
     })
+})
+
+describe('go live', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+    const contracts = await initContracts({ accounts, pool, token, escrow, settings })
+    const hyphadao = 'dao.hypha'
+    const golive = 'golive'
+    const users = [firstuser, seconduser, thirduser, fourthuser]
+
+    console.log('escrow reset')
+    await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('pool reset')
+    await contracts.pool.reset({ authorization: `${pool}@active` })
+
+    console.log('reset token')
+    await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    const checkLocks = async ({ expectedLocks, given, should }) => {
+        const lockTable = await eos.getTableRows({
+          code: escrow,
+          scope: escrow,
+          table: 'locks',
+          json: true,
+        })
+        const locks = lockTable.rows.map(r => {
+          return {
+            lock_type: r.lock_type,
+            sponsor: r.sponsor,
+            beneficiary: r.beneficiary,
+            quantity: r.quantity,
+            trigger_event: r.trigger_event,
+            trigger_source: r.trigger_source
+          }
+        }).sort((a, b) => { return a.beneficiary < b.beneficiary ? -1 : 1 })
+        assert({
+          given,
+          should,
+          actual: locks,
+          expected: expectedLocks
+        })
+    }
+
+    const checkPoolBalances = async ({ expectedBalances, given, should }) => {
+        const poolTable = await eos.getTableRows({
+            code: pool,
+            scope: pool,
+            table: 'balances',
+            json: true,
+        })
+        assert({
+            given,
+            should,
+            actual: poolTable.rows,
+            expected: expectedBalances
+        })
+    }
+
+    console.log('join users')
+    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+    
+    console.log('create locks')
+    await contracts.token.transfer(firstuser, escrow, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    const vesting_date_future = moment().utc().add(1000, 's').toString()
+    await Promise.all(
+        users
+        .slice(1)
+        .map((user, index) => 
+            contracts.escrow.lock(
+                'event', 
+                firstuser, 
+                user, 
+                `${10 * (index+1)}.0000 SEEDS`, 
+                golive, 
+                hyphadao, 
+                vesting_date_future, 
+                'notes', 
+                { authorization: `${firstuser}@active` }
+            )
+        )
+    )
+
+    await contracts.escrow.lock('event', firstuser, seconduser, `4.0000 SEEDS`, golive, hyphadao, vesting_date_future, 'notes', { authorization: `${firstuser}@active` })
+    await contracts.escrow.lock('event', firstuser, thirduser, `4.0000 SEEDS`, 'testevent', firstuser, vesting_date_future, 'notes', { authorization: `${firstuser}@active` })
+
+    await checkLocks({
+        expectedLocks: [
+            { lock_type: 'event', sponsor: firstuser, beneficiary: seconduser, quantity: '10.0000 SEEDS', trigger_event: golive, trigger_source: hyphadao },
+            { lock_type: 'event', sponsor: firstuser, beneficiary: seconduser, quantity: '4.0000 SEEDS', trigger_event: golive, trigger_source: hyphadao },
+            { lock_type: 'event', sponsor: firstuser, beneficiary: thirduser, quantity: '20.0000 SEEDS', trigger_event: golive, trigger_source: hyphadao },
+            { lock_type: 'event', sponsor: firstuser, beneficiary: thirduser, quantity: '4.0000 SEEDS', trigger_event: 'testevent', trigger_source: firstuser },
+            { lock_type: 'event', sponsor: firstuser, beneficiary: fourthuser, quantity: '30.0000 SEEDS', trigger_event: golive, trigger_source: hyphadao }
+        ],
+        given: 'locks created',
+        should: 'have the correct entries'
+    })
+
+    console.log('set batchsize to 2')
+    await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+    
+    console.log('trigger event golive')
+    await contracts.escrow.resettrigger(hyphadao, { authorization: `${escrow}@active` })
+    await contracts.escrow.triggertest(hyphadao, golive, 'event notes', { authorization: `${escrow}@active` })
+    await sleep(5000)
+
+    await checkLocks({
+        expectedLocks: [
+            { lock_type: 'event', sponsor: firstuser, beneficiary: thirduser, quantity: '4.0000 SEEDS', trigger_event: 'testevent', trigger_source: firstuser }
+        ],
+        given: `${golive} event triggered`,
+        should: `send dSeeds to ${pool}`
+    })
+
+    await checkPoolBalances({
+        expectedBalances: [
+            { account: seconduser, balance: '14.0000 SEEDS' },
+            { account: thirduser, balance: '20.0000 SEEDS' },
+            { account: fourthuser, balance: '30.0000 SEEDS' }
+        ],
+        given: `${golive} event triggered`,
+        should: 'have the correct pool balances'
+    })
+
+    console.log('add lock after event triggered')
+    await contracts.escrow.lock('event', firstuser, thirduser, `2.0000 SEEDS`, golive, hyphadao, vesting_date_future, 'notes', { authorization: `${firstuser}@active` })
+
+    console.log('trigger event testevent')
+    await contracts.escrow.resettrigger(firstuser, { authorization: `${escrow}@active` })
+    await contracts.escrow.triggertest(firstuser, 'testevent', 'event notes', { authorization: `${escrow}@active` })
+    await sleep(1000)
+
+    console.log('claim locks')
+    await contracts.escrow.claim(thirduser, { authorization: `${thirduser}@active` })
+
+    await checkLocks({
+        expectedLocks: [],
+        given: 'all the locks claimed',
+        should: `be empty`
+    })
+
+    await checkPoolBalances({
+        expectedBalances: [
+            { account: seconduser, balance: '14.0000 SEEDS' },
+            { account: thirduser, balance: '22.0000 SEEDS' },
+            { account: fourthuser, balance: '30.0000 SEEDS' }
+        ],
+        given: 'locks claimed',
+        should: 'have the correct pool balances'
+    })
+
 })
