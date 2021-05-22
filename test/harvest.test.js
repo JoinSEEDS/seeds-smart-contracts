@@ -892,7 +892,7 @@ describe('contribution score', async assert => {
   for (const org of orgs) { orgScores.push(await calcCSPoints(org, 'org')) }
   orgScores = orgScores.filter(s => s > 0)
 
-  await checkCSScores(individualHarvestScope, userScores, [0, 0, 0])
+  await checkCSScores(individualHarvestScope, userScores, [0, 0, 0, 0])
   await checkCSScores(organizationScope, orgScores, [0, 0])
 
   console.log('rank contribution score for orgs')
@@ -900,7 +900,7 @@ describe('contribution score', async assert => {
   await contracts.harvest.rankorgcss({ authorization: `${harvest}@active` })
   await sleep(2000)
 
-  await checkCSScores(individualHarvestScope, userScores, [0, 33, 66])
+  await checkCSScores(individualHarvestScope, userScores, [25, 0, 50, 75])
   await checkCSScores(organizationScope, orgScores, [0, 50])
 
 })
