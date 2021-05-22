@@ -294,7 +294,6 @@ describe('individual transactions', async assert => {
 
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
-    await sleep(2000)
   }
 
   const getTransactionEntries = async (user) => {
@@ -334,6 +333,8 @@ describe('individual transactions', async assert => {
   await transfer(firstuser, seconduser, 300)
   await transfer(firstuser, seconduser, 400)
 
+  await sleep(2000)
+
   await contracts.accounts.testsetrs(seconduser, 1, { authorization: `${accounts}@active` })
   await transfer(firstuser, seconduser, 750)
 
@@ -345,6 +346,8 @@ describe('individual transactions', async assert => {
   await transfer(seconduser, thirduser, 100)
 
   await transfer(thirduser, firstuser, 10)
+
+  await sleep(4000)
 
   const infoFirstUser = await getTransactionEntries(firstuser)
   const infoSecondUser = await getTransactionEntries(seconduser)
@@ -418,7 +421,7 @@ describe('individual transactions', async assert => {
         to_points: 0
       },
       {
-        id: 8,
+        id: 9,
         from: thirduser,
         to: firstuser,
         volume: 100000,
@@ -546,7 +549,6 @@ describe('org transaction entry', async assert => {
   
   const transfer = async (from, to, quantity) => {
     await contracts.token.transfer(from, to, `${quantity}.0000 SEEDS`, 'test', { authorization: `${from}@active` })
-    await sleep(2000)
   }
 
   const getTransactionEntries = async (user) => {
@@ -601,6 +603,8 @@ describe('org transaction entry', async assert => {
 
   await transfer(seconduser, firstorg, 1)
 
+  await sleep(5000)
+
   const infoFirstUser = await getTransactionEntries(firstuser)
   const infoFirstOrg = await getTransactionEntries(firstorg)
   const infoSecondUser = await getTransactionEntries(seconduser)
@@ -637,7 +641,7 @@ describe('org transaction entry', async assert => {
         to_points: 61
       },
       {
-        id: 3,
+        id: 5,
         from: firstorg,
         to: seconduser,
         volume: 20000,
@@ -646,7 +650,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 4,
+        id: 6,
         from: firstorg,
         to: seconduser,
         volume: 30000,
@@ -655,7 +659,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 7,
+        id: 10,
         from: firstorg,
         to: firstuser,
         volume: 10000,
@@ -664,7 +668,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 8,
+        id: 11,
         from: firstorg,
         to: firstuser,
         volume: 50000,
@@ -673,7 +677,7 @@ describe('org transaction entry', async assert => {
         to_points: 0
       },
       {
-        id: 9,
+        id: 12,
         from: firstorg,
         to: secondorg,
         volume: 10000,
@@ -682,7 +686,7 @@ describe('org transaction entry', async assert => {
         to_points: 2
       },
       {
-        id: 10,
+        id: 13,
         from: seconduser,
         to: firstorg,
         volume: 10000,

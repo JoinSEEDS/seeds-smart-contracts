@@ -2,6 +2,7 @@
 #include <contracts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
 #include <tables/size_table.hpp>
@@ -49,7 +50,9 @@ CONTRACT history : public contract {
 
         ACTION savepoints(uint64_t id, uint64_t timestamp);
 
-        ACTION sendtrxcbp(name from, name to);
+        ACTION sendtrxcbp(uint64_t deferred_id, name from, name to);
+
+        ACTION updatetxpt(uint64_t deferred_id, name from);
 
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
         ACTION migrate();
@@ -91,6 +94,7 @@ CONTRACT history : public contract {
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
       void adjust_transactions(uint64_t id, uint64_t timestamp);
+      uint64_t get_deferred_id();
 
       TABLE citizen_table {
         uint64_t id;
@@ -216,6 +220,15 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return account.value; }
       };
 
+      TABLE processed_trx_table {
+        uint64_t id;
+        uint64_t transaction_id;
+        uint64_t timestamp;
+
+        uint64_t primary_key() const { return id; }
+        uint128_t by_timestamp_id() const { return (uint128_t(timestamp) << 64) + transaction_id; }
+      };
+
       DEFINE_ORGANIZATION_TABLE
 
       DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
@@ -238,6 +251,13 @@ CONTRACT history : public contract {
         uint64_t primary_key() const { return id; }
         uint128_t by_account_key() const { return (uint128_t(account.value) << 64) + key.value; }
       };
+
+      TABLE deferred_id_table {
+        uint64_t id;
+      };
+
+      typedef singleton<"deferredids"_n, deferred_id_table> deferred_id_tables;
+      typedef eosio::multi_index<"deferredids"_n, deferred_id_table> dump_for_deferred_id;
 
       typedef eosio::multi_index<"citizens"_n, citizen_table,
         indexed_by<"byaccount"_n,
@@ -281,6 +301,11 @@ CONTRACT history : public contract {
 
       typedef eosio::multi_index<"totals"_n, totals_table> totals_tables;
 
+      typedef eosio::multi_index<"ptrx"_n, processed_trx_table,
+        indexed_by<"bytimestmpid"_n,
+        const_mem_fun<processed_trx_table, uint128_t, &processed_trx_table::by_timestamp_id>>
+      > processed_trx_tables;
+
       typedef eosio::multi_index <"members"_n, members_table,
         indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
       > members_tables;
@@ -316,7 +341,7 @@ EOSIO_DISPATCH(history,
   (numtrx)
   (deldailytrx)(savepoints)
   (testtotalqev)
-  (sendtrxcbp)
+  (sendtrxcbp)(updatetxpt)
   (migrateusers)(migrateuser)
   (migrate)
 );
