@@ -409,7 +409,7 @@ ACTION forum::rankforum(uint64_t start, uint64_t chunksize, uint64_t chunk) {
 
     while (fitr != forum_rep_by_points.end() && count < chunksize) {
 
-        uint64_t rank = utils::spline_rank(current, total);
+        uint64_t rank = utils::rank(current, total);
 
         forum_rep_by_points.modify(fitr, _self, [&](auto& item) {
             item.rank = rank;
@@ -537,8 +537,3 @@ ACTION forum::testapoints () {
     check(false, std::to_string(get_available_points()));
 }
 
-ACTION forum::testrank (uint64_t rnk) {
-    require_auth(get_self());
-    auto r = utils::spline_rank(rnk, 100);
-    print("rank "+std::to_string(r));
-}

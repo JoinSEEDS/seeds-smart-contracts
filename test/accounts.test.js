@@ -1269,7 +1269,7 @@ describe('reputation & cbs ranking', async assert => {
     given: '4 users with cbs',
     should: 'have entries in cbs table',
     actual: cbsAfter.rows.map(({rank})=>rank),
-    expected: [0,4,27,63]
+    expected: [0,25,50,75]
   })
 
   assert({
@@ -1716,7 +1716,7 @@ describe('Punishment', async assert => {
   }
 
   console.log('change resident threshold')
-  await contracts.settings.configure('res.rep.pt', 2, { authorization: `${settings}@active` })
+  await contracts.settings.configure('res.rep.pt', 10, { authorization: `${settings}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })

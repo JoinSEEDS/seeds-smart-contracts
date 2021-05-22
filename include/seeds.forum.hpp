@@ -59,7 +59,6 @@ CONTRACT forum : public contract {
 
         ACTION testapoints ();
         ACTION testsize (name id, uint64_t size);
-        ACTION testrank (uint64_t rnk);
 
     private:
         TABLE postcomment_table {
@@ -195,5 +194,5 @@ CONTRACT forum : public contract {
 EOSIO_DISPATCH(forum, 
     (createpost)(createcomt)(upvotepost)(upvotecomt)(downvotepost)(downvotecomt)(reset)(onperiod)(newday)
     (rankforums)(rankforum)(givereps)(giverep)(delteactives)(deleteactive)
-    (testapoints)(testsize)(testrank)
+    (testapoints)(testsize)
 );

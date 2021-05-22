@@ -385,7 +385,7 @@ describe("Harvest General", async assert => {
     })),
     expected: [{
       account: firstuser,
-      score: 27
+      score: 50
     }, {
       account: seconduser,
       score: 0
@@ -458,9 +458,9 @@ describe("harvest planted score", async assert => {
 
   assert({
     given: 'planted calculation',
-    should: 'have values',
+    should: 'have valies',
     actual: planted.rows.map(({ rank }) => rank),
-    expected: [27, 0]
+    expected: [50, 0]
   })
 
 })
@@ -554,7 +554,7 @@ describe("harvest transaction score", async assert => {
   await contracts.accounts.testsetrs(thirduser, 75, { authorization: `${accounts}@active` })
   await transfer(seconduser, thirduser, 10, '0'+memoprefix)
 
-  await checkScores([10, 16], [0, 27], "2 reputation, 2 tx", "0, 27 score")
+  await checkScores([10, 16], [0, 50], "2 reputation, 2 tx", "0, 50 score")
 
   let expectedScore = 15 + 25 * (1 * 1.5) // 52.5
   console.log("More than 26 transactions. Expected tx points: "+ expectedScore)
@@ -566,13 +566,13 @@ describe("harvest transaction score", async assert => {
     // score from before was 15
     await transfer(firstuser, seconduser, 9, memoprefix+" tx "+i)
   }
-  await checkScores([19, 16], [27, 0], "2 reputation, 2 tx", "27, 0 score")
+  await checkScores([19, 16], [50, 0], "2 reputation, 2 tx", "50, 0 score")
 
   // test tx exceeds volume limit
   let tx_max_points = 1777
   let third_user_rep_multiplier = 2 * 0.7575
   await transfer(seconduser, thirduser, 3000, memoprefix+" tx max pt")
-  await checkScores([19, parseInt(Math.ceil(16 + tx_max_points * third_user_rep_multiplier))], [0, 27], "large tx", "100, 27 score")
+  await checkScores([19, parseInt(Math.ceil(16 + tx_max_points * third_user_rep_multiplier))], [0, 50], "large tx", "100, 75 score")
   
   // send back 
   await transfer(thirduser, seconduser, 3000, memoprefix+" tx max pt")
@@ -608,7 +608,7 @@ describe("harvest transaction score", async assert => {
     given: 'contribution score points',
     should: 'have contribution points',
     actual: cspoints.rows.map(({ contribution_points }) => contribution_points), 
-    expected: [26]
+    expected: [49]
   })
 
   assert({
@@ -695,7 +695,7 @@ describe("harvest community building score", async assert => {
   await contracts.accounts.testsetcbs(fourthuser, 0, { authorization: `${accounts}@active` })
 
   await contracts.accounts.rankcbss({ authorization: `${accounts}@active` })
-  await checkScores([1, 2, 3, 0], [4, 27, 63, 0], "cbs distribution", "correct")
+  await checkScores([1, 2, 3, 0], [25, 50, 75, 0], "cbs distribution", "correct")
 })
 
 describe('contribution score', async assert => {
@@ -900,7 +900,7 @@ describe('contribution score', async assert => {
   await contracts.harvest.rankorgcss({ authorization: `${harvest}@active` })
   await sleep(2000)
 
-  await checkCSScores(individualHarvestScope, userScores, [25, 0, 50, 75])
+  await checkCSScores(individualHarvestScope, userScores, [0, 25, 50, 75])
   await checkCSScores(organizationScope, orgScores, [0, 50])
 
 })
@@ -1612,8 +1612,8 @@ describe('regions contribution score', async assert => {
     should: 'have the correct ranks',
     actual: cspointsrgns.rows,
     expected: [
-      { account: 'rgn2.rgn', contribution_points: 41, rank: 0 },
-      { account: 'rgn3.rgn', contribution_points: 82, rank: 50 }
+      { account: 'rgn2.rgn', contribution_points: 77, rank: 0 },
+      { account: 'rgn3.rgn', contribution_points: 117, rank: 50 }
     ]
   })
 
