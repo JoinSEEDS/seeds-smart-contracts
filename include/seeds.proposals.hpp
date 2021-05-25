@@ -142,7 +142,14 @@ CONTRACT proposals : public contract {
       name campaign_type = "campaign"_n;
       name campaign_invite_type = "cmp.invite"_n;
       name campaign_funding_type = "cmp.funding"_n;
-      name milestone_type = "milestone"_n;
+      name campaign_milestone_type = "milestone"_n;
+      name hypha_type = "hypha"_n;
+
+      std::vector<name> scopes = {
+        alliance_type,
+        get_self(),
+        hypha_type
+      };
 
       void update_cycle();
       void update_voicedecay();
@@ -173,7 +180,7 @@ CONTRACT proposals : public contract {
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
-      name get_type (name fund);
+      name get_type (const name & fund);
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
