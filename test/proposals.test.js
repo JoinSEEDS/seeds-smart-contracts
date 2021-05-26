@@ -1898,6 +1898,13 @@ describe('Voice decay', async assert => {
       json: true,
     })
 
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: 'hypha',
+      table: 'voice',
+      json: true,
+    })
+
     assert({
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices if required',
@@ -1908,6 +1915,12 @@ describe('Voice decay', async assert => {
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices for alliance if required',
       actual: voiceAlliance.rows.map(r => r.balance),
+      expected: expectedValues
+    })
+    assert({
+      given: 'ran voice decay for the ' + n + ' time',
+      should: 'decay voices for hypha if required',
+      actual: voiceHypha.rows.map(r => r.balance),
       expected: expectedValues
     })
   }
@@ -2071,9 +2084,13 @@ describe('delegate trust', async assert => {
   console.log('create alliance proposal')
   await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
   
+  console.log('create hypha proposal')
+  await contracts.proposals.create(firstuser, hyphabank, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', milestonebank, { authorization: `${firstuser}@active` })
+
   console.log('stake')
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '3', { authorization: `${firstuser}@active` })
   
   console.log('active proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2094,6 +2111,10 @@ describe('delegate trust', async assert => {
   await contracts.proposals.delegate(seconduser, firstuser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(seconduser, thirduser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(fourthuser, thirduser, scopeAlliance, { authorization: `${fourthuser}@active` })
+
+  console.log('delegate trust for hypha')
+  const scopeHypha = 'hypha'
+  await contracts.proposals.delegate(seconduser, thirduser, scopeHypha, { authorization: `${seconduser}@active` })
 
   let avoidCyclesWorks = true
   try {
@@ -2116,9 +2137,16 @@ describe('delegate trust', async assert => {
       table: 'voice',
       json: true,
     })
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: scopeHypha,
+      table: 'voice',
+      json: true,
+    })
     return {
       campaigns: voiceCampaigns.rows,
-      alliances: voiceAlliances.rows
+      alliances: voiceAlliances.rows,
+      hypha: voiceHypha.rows
     }
   }
 
@@ -2144,6 +2172,9 @@ describe('delegate trust', async assert => {
 
   console.log('vote for alliances')
   await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
+  await sleep(5000)
+
+  await contracts.proposals.against(thirduser, 3, 50, { authorization: `${thirduser}@active` })
   await sleep(5000)
 
   const usersTable = await eos.getTableRows({
@@ -2247,6 +2278,13 @@ describe('delegate trust', async assert => {
         { account: thirduser, balance: 0 },
         { account: fourthuser, balance: 0 },
         { account: fifthuser, balance: 22 }
+      ],
+      hypha: [
+        { account: firstuser,balance:20 },
+        { account: seconduser, balance: 0 },
+        { account: thirduser, balance: 0 },
+        { account: fourthuser, balance:35 },
+        { account: fifthuser, balance:22 }
       ]
     }
   })
@@ -2265,6 +2303,13 @@ describe('delegate trust', async assert => {
       ],
       alliances: [
         { account: firstuser, balance: 20 },
+        { account: seconduser, balance: 10 },
+        { account: thirduser, balance: 50 },
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
+      ],
+      hypha: [
+        { account: firstuser, balance:20 },
         { account: seconduser, balance: 10 },
         { account: thirduser, balance: 50 },
         { account: fourthuser, balance: 35 },

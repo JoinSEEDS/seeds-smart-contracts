@@ -887,6 +887,7 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
+  voice_tables voice_hypha(get_self(), hypha_type.value);
 
   uint64_t percentage_decay = config_get(name("vdecayprntge"));
   check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
@@ -896,7 +897,8 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   double multiplier = (100.0 - (double)percentage_decay) / 100.0;
 
   while (vitr != voice.end() && count < chunksize) {
-    auto vaitr = voice_alliance.find(vitr -> account.value);
+    auto vaitr = voice_alliance.find(vitr->account.value);
+    auto hvitr = voice_hypha.find(vitr->account.value);
 
     voice.modify(vitr, _self, [&](auto & v){
       v.balance *= multiplier;
@@ -905,6 +907,12 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
     if (vaitr != voice_alliance.end()) {
       voice_alliance.modify(vaitr, _self, [&](auto & va){
         va.balance *= multiplier;
+      });
+    }
+
+    if (hvitr != voice_hypha.end()) {
+      voice_hypha.modify(hvitr, _self, [&](auto & hv){
+        hv.balance *= multiplier;
       });
     }
 
@@ -1803,7 +1811,7 @@ ACTION proposals::initnumprop() {
 }
 
 void proposals::check_voice_scope (name scope) {
-  check(scope == _self || scope == alliance_type, "invalid scope for voice");
+  check(scope == _self || scope == alliance_type || scope == hypha_type, "invalid scope for voice");
 }
 
 bool proposals::is_trust_delegated (name account, name scope) {
@@ -1918,12 +1926,14 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
     name voter = ditr -> delegator;
 
     auto vitr = voices.find(voter.value);
-    if (option == trust) {
-      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
-    } else if (option == distrust) {
-      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, distrust);
-    } else if (option == abstain) {
-      send_vote_on_behalf(voter, proposal_id, uint64_t(0), abstain);
+    if (vitr != voices.end()) {
+      if (option == trust) {
+        send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
+      } else if (option == distrust) {
+        send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, distrust);
+      } else if (option == abstain) {
+        send_vote_on_behalf(voter, proposal_id, uint64_t(0), abstain);
+      }
     }
 
     ditr++;
