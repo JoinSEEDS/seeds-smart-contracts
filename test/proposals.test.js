@@ -2709,3 +2709,80 @@ describe('Alliance campaigns', async assert => {
   ])
 
 })
+
+
+describe('fix alliances', async assert => {
+ 
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  const printProposals = async () => {
+    const proposalsTable = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'props',
+      json: true
+    })
+    console.log(proposalsTable)
+    const escrowTable = await eos.getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      json: true
+    })
+    console.log(escrowTable)
+  }
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create alliances')
+  await contracts.proposals.testalliance(1, firstuser, '10.0000 SEEDS', '1.0000 SEEDS', 'evaluate', 'active', 'alliance', { authorization: `${proposals}@active` })
+  await contracts.proposals.testalliance(2, seconduser, '10.0000 SEEDS', '1.0000 SEEDS', 'passed', 'done', 'alliance', { authorization: `${proposals}@active` })
+  await contracts.proposals.testalliance(3, thirduser, '10.0000 SEEDS', '1.0000 SEEDS', 'rejected', 'done', 'alliance', { authorization: `${proposals}@active` })
+  await contracts.proposals.testalliance(4, thirduser, '10.0000 SEEDS', '0.0000 SEEDS', 'open', 'active', 'alliance', { authorization: `${proposals}@active` })
+  await contracts.proposals.testalliance(5, firstuser, '10.0000 SEEDS', '1.0000 SEEDS', 'evaluate', 'active', 'cmp.invite', { authorization: `${proposals}@active` })
+
+  await printProposals()
+
+  await contracts.proposals.migalliances(0, 2, { authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await printProposals()
+
+  const locksTable = await eos.getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+
+  assert({
+    given: 'alliances not being paid out',
+    should: 'send the missing amount to escrow',
+    actual: locksTable.rows.length,
+    expected: 2
+  })
+
+
+})
+
+

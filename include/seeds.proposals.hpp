@@ -110,6 +110,9 @@ CONTRACT proposals : public contract {
       ACTION migvotepow(uint64_t cycle);
       ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
 
+      ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
+      ACTION migalliances(uint64_t start, uint64_t chunksize);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -425,6 +428,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (cleanmig)(testpropquor)
         (migvotepow)
         (reevalprop)
+        (testalliance)(migalliances)
         )
       }
   }
