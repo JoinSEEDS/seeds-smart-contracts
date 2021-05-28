@@ -486,7 +486,7 @@ ACTION organization::rankregen(uint64_t start, uint64_t chunk, uint64_t chunksiz
 
     if (rsitr != regen_score_by_avg_regen.end()) {
         action next_execution(
-            permission_level("active"_n, get_self()),
+            permission_level(get_self(), "active"_n),
             get_self(),
             "rankregen"_n,
             std::make_tuple((rsitr -> org_name).value, chunk + 1, chunksize)
@@ -633,6 +633,12 @@ ACTION organization::appuse (name appname, name account) {
     check(appitr != apps.end(), "This application does not exist.");
     check(!(appitr -> is_banned), "Can not use a banned app.");
 
+     apps.modify(appitr, _self, [&](auto & app){
+        app.number_of_uses += 1;
+    });
+
+    if (uitr.status != "citizen"_n && uitr.status != "resident"_n) { return; }
+
     daus_tables daus(get_self(), appname.value);
     daus_totals_tables daus_totals(get_self(), appname.value);
 
@@ -643,14 +649,8 @@ ACTION organization::appuse (name appname, name account) {
     auto dtitr = daus_totals.find(day);
     auto ditr = daus_by_day_account.find(id);
 
-
-    // MUST EDIT THE REP MULTIPLIER TO USE THE SECOND CURVE
-
-    uint64_t points = 0;
-    if (uitr.status != "visitor"_n) {
-        points = uitr.status == "citizen"_n ? config_get("dau.cit.pt"_n) : config_get("dau.res.pt"_n);
-        points *= utils::get_rep_multiplier(account);
-    }
+    uint64_t points = uitr.status == "citizen"_n ? config_get("dau.cit.pt"_n) : config_get("dau.res.pt"_n);
+    points *= utils::get_rep_multiplier(account);
 
     if (ditr != daus_by_day_account.end()) {
         uint64_t max_uses = config_get("dau.maxuse"_n);
@@ -697,16 +697,22 @@ ACTION organization::calcmappuses () {
     uint64_t now = eosio::current_time_point().sec_since_epoch();
     uint64_t cutoff = now - (trailing_cycles * utils::moon_cycle);
 
-    calcmappuse(uint64_t(0), uint64_t(50), threshold, cutoff);
+    uint64_t batch_size = config_get("batchsize"_n);
+
+    calcmappuse(uint64_t(0), uint64_t(batch_size), threshold, cutoff);
 }
 
 ACTION organization::calcmappuse (uint64_t start, uint64_t chunksize, uint64_t threshold, uint64_t cutoff) {
     require_auth(get_self());
 
+    print("calc app use:", start, "\n");
+
     auto appitr = start == 0 ? apps.begin() : apps.find(start);
     uint64_t count = 0;
     
     while (appitr != apps.end() && count < chunksize) {
+        print("app:", appitr->app_name, "\n");
+
         if (!appitr->is_banned) {
             calculate_trailing_app_use(appitr->app_name, cutoff, threshold);
         } else {
@@ -716,15 +722,15 @@ ACTION organization::calcmappuse (uint64_t start, uint64_t chunksize, uint64_t t
             }
         }
         appitr++;
-        count++;
+        count += 4;
     }
 
     if (appitr != apps.end()) {
         action next_execution(
-            permission_level("active"_n, get_self()),
+            permission_level(get_self(), "active"_n),
             get_self(),
             "calcmappuse"_n,
-            std::make_tuple((appitr->app_name).value, chunksize)
+            std::make_tuple((appitr->app_name).value, chunksize, threshold, cutoff)
         );
         transaction tx;
         tx.actions.emplace_back(next_execution);
@@ -771,10 +777,11 @@ void organization::calculate_trailing_app_use (const name & appname, const uint6
 
 ACTION organization::rankappuses () {
     require_auth(get_self());
-    rankappuse(uint64_t(0), uint64_t(0), uint64_t(100));
+    uint64_t batch_size = config_get("batchsize"_n);
+    rankappuse(uint128_t(0), uint64_t(0), batch_size);
 }
 
-ACTION organization::rankappuse (uint64_t start, uint64_t chunk, uint64_t chunksize) {
+ACTION organization::rankappuse (uint128_t start, uint64_t chunk, uint64_t chunksize) {
     require_auth(get_self());
 
     check(chunksize > 0, "chunk size must be > 0");
@@ -783,15 +790,15 @@ ACTION organization::rankappuse (uint64_t start, uint64_t chunk, uint64_t chunks
     if (total == 0) return;
 
     uint64_t current = chunk * chunksize;
-    auto daus_scores_by_points = dausscores.get_index<"bytpoints"_n>();
-    auto dsitr = start == 0 ? daus_scores_by_points.begin() : daus_scores_by_points.lower_bound(start);
+    auto daus_scores_by_total_points = dausscores.get_index<"bytpointsapp"_n>();
+    auto dsitr = start == 0 ? daus_scores_by_total_points.begin() : daus_scores_by_total_points.lower_bound(start);
     uint64_t count = 0;
 
-    while (dsitr != daus_scores_by_points.end() && count < chunksize) {
+    while (dsitr != daus_scores_by_total_points.end() && count < chunksize) {
         
-        uint64_t rank = utils::rank(current, total);
+        uint64_t rank = utils::spline_rank(current, total);
         
-        daus_scores_by_points.modify(dsitr, _self, [&](auto & item){
+        daus_scores_by_total_points.modify(dsitr, _self, [&](auto & item){
             item.rank = rank;
         });
 
@@ -800,12 +807,12 @@ ACTION organization::rankappuse (uint64_t start, uint64_t chunk, uint64_t chunks
         dsitr++;
     }
 
-    if (dsitr != daus_scores_by_points.end()) {
+    if (dsitr != daus_scores_by_total_points.end()) {
         action next_execution(
-            permission_level("active"_n, get_self()),
+            permission_level(get_self(), "active"_n),
             get_self(),
             "rankappuse"_n,
-            std::make_tuple((dsitr->app_name).value, chunk + 1, chunksize)
+            std::make_tuple(dsitr->by_total_points_app(), chunk + 1, chunksize)
         );
         transaction tx;
         tx.actions.emplace_back(next_execution);

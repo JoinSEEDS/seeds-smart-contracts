@@ -69,7 +69,7 @@ CONTRACT organization : public contract {
 
         ACTION rankappuses();
 
-        ACTION rankappuse(uint64_t start, uint64_t chunk, uint64_t chunksize);
+        ACTION rankappuse(uint128_t start, uint64_t chunk, uint64_t chunksize);
 
         ACTION rankregens();
 
@@ -281,10 +281,15 @@ CONTRACT organization : public contract {
             uint64_t by_total_points() const {
                 uint64_t points_id = 1;
                 points_id <<= 63;
-                return points_id + ((total_points < 0) ? -1 : 0) + total_points;
+                return points_id + total_points;
             }
             uint64_t by_total_uses() const { return total_uses; }
             uint64_t by_rank() const { return rank; }
+            uint128_t by_total_points_app() const {
+                uint64_t points_id = 1;
+                points_id <<= 63;
+                return (uint128_t(points_id + total_points) << 64) + app_name.value;
+            }
         };
 
         // TABLE dau_history_table {
@@ -354,7 +359,9 @@ CONTRACT organization : public contract {
             indexed_by<"bytuses"_n,
             const_mem_fun<daus_score, uint64_t, &daus_score::by_total_uses>>,
             indexed_by<"byrank"_n,
-            const_mem_fun<daus_score, uint64_t, &daus_score::by_rank>>
+            const_mem_fun<daus_score, uint64_t, &daus_score::by_rank>>,
+            indexed_by<"bytpointsapp"_n,
+            const_mem_fun<daus_score, uint128_t, &daus_score::by_total_points_app>>
         > daus_scores;
 
         // typedef eosio::multi_index<"dauhistory"_n, dau_history_table,
