@@ -18,9 +18,7 @@ void exchange::reset() {
   unpause();
   setflag(tlos_paused_flag, 1);
 
-  // COMMENT in for testing, never check in commented in
-/**
-  // we never want to erase rounds or sold table or history except for unit testing
+  check(false, "Comment this out- safety stop. Always check in uncommented. ");
   
   sold.remove();
 
@@ -43,7 +41,6 @@ void exchange::reset() {
   while(fitr != flags.end()) {
     fitr = flags.erase(fitr);
   }
-/**/
 
 }
 
@@ -187,11 +184,11 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
 
     auto now = eosio::current_time_point().sec_since_epoch();
 
-    string paymentId = from.to_string() + ": "+quantity.to_string() + " time: " + std::to_string(now);
+    string paymentId = buyer.to_string() + ": "+tlos_quantity.to_string() + " time: " + std::to_string(now);
 
     payhistory.emplace(_self, [&](auto& item) {
       item.id = payhistory.available_primary_key();
-      item.recipientAccount = from;
+      item.recipientAccount = buyer;
       item.paymentSymbol = "TLOS";
       item.paymentId = paymentId;
       item.multipliedUsdValue = usd_asset.amount;
