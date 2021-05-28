@@ -184,6 +184,19 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, "TLOS", memo);
+
+    auto now = eosio::current_time_point().sec_since_epoch();
+
+    string paymentId = from.to_string() + ": "+quantity.to_string() + " time: " + std::to_string(now);
+
+    payhistory.emplace(_self, [&](auto& item) {
+      item.id = payhistory.available_primary_key();
+      item.recipientAccount = from;
+      item.paymentSymbol = "TLOS";
+      item.paymentId = paymentId;
+      item.multipliedUsdValue = usd_asset.amount;
+    });
+
   }
 }
 
