@@ -250,63 +250,6 @@ void proposals::calcvotepow() {
 
 }
 
-ACTION proposals::migvotepow(uint64_t cycle) {
-  require_auth(_self);
-
-  //auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
-  uint64_t all_total = 0;
-  uint64_t cmp_total = 0;
-  uint64_t milestone_total = 0;
-  uint64_t cmp_num = 0;
-  uint64_t all_num = 0;
-  uint64_t milestone_num = 0;
-
-  auto citr = cyclestats.get(cycle, "unknown cycle");
-
-  for(const uint64_t value: citr.active_props) {
-    print(" prop " + std::to_string(value) +" ");
-
-    auto pitr = props.get(value, "unknown prop id ");
-
-    name prop_type = get_type(pitr.fund);
-
-    if (prop_type == alliance_type) {
-      all_total += pitr.total;
-      all_num += 1;
-    }
-    else if (prop_type == milestone_type) {
-      milestone_total += pitr.total;
-      milestone_num += 1;
-    } 
-    else {
-      cmp_total += pitr.total; 
-      cmp_num += 1;
-    }
-  }
-
-  set_support_level(cycle, cmp_num, cmp_total, campaign_type);
-  set_support_level(cycle, all_num, all_total, alliance_type);
-  set_support_level(cycle, milestone_num, milestone_total, milestone_type);
-
-  print("cycle " +
-    std::to_string(cycle) +
-    " alliance props: " + 
-    std::to_string(all_num) +
-    " alliance total votes: " + 
-    std::to_string(all_total) +
-
-    " campaign props: " + 
-    std::to_string(cmp_num) +
-    " campaign total votes: " + 
-    std::to_string(cmp_total) +
-    " milestone props: " +
-    std::to_string(milestone_num) +
-    " milestone total votes: " +
-    std::to_string(milestone_total)
-  );
-
-}
-
 void proposals::set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type) {
   
   uint64_t votes_needed = calc_voice_needed(votes_cast, num_proposals);

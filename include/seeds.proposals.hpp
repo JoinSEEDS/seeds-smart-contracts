@@ -107,7 +107,6 @@ CONTRACT proposals : public contract {
       ACTION testperiod ();
       ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
-      ACTION migvotepow(uint64_t cycle);
       ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
@@ -432,7 +431,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
-        (migvotepow)
         (reevalprop)
         (testalliance)(migalliances)
         )
