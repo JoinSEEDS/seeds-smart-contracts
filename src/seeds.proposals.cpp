@@ -512,7 +512,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 
         asset payout_amount;
 
-        if (is_alliance_type) { // TODO new alliance props are created with 100% 1 cycle so this can go away
+        if (is_alliance_type) { 
           payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
         }
