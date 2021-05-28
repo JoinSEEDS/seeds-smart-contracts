@@ -176,7 +176,10 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
   
     asset tlos_per_usd = c.tlos_per_usd;
 
-    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
+    double tlos_q_double = tlos_quantity.amount / 10000.0;
+    double tlos_per_usd_double = tlos_per_usd.amount / 10000.0;
+
+    uint64_t usd_amount = (tlos_q_double * tlos_per_usd_double) * 10000;
 
     asset usd_asset = asset(usd_amount, usd_symbol);
 
