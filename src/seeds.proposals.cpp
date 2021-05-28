@@ -256,11 +256,10 @@ ACTION proposals::migvotepow(uint64_t cycle) {
   //auto pitr = props.find(131);// NOTE migration method from cycle 32 onward
   uint64_t all_total = 0;
   uint64_t cmp_total = 0;
-  uint64_t hypha_total = 0;
+  uint64_t milestone_total = 0;
   uint64_t cmp_num = 0;
   uint64_t all_num = 0;
-  uint64_t hypha_num = 0;
-
+  uint64_t milestone_num = 0;
 
   auto citr = cyclestats.get(cycle, "unknown cycle");
 
@@ -275,9 +274,9 @@ ACTION proposals::migvotepow(uint64_t cycle) {
       all_total += pitr.total;
       all_num += 1;
     }
-    else if (prop_type == hypha_type) {
-      hypha_total += pitr.total;
-      hypha_num += 1;
+    else if (prop_type == milestone_type) {
+      milestone_total += pitr.total;
+      milestone_num += 1;
     } 
     else {
       cmp_total += pitr.total; 
@@ -287,7 +286,7 @@ ACTION proposals::migvotepow(uint64_t cycle) {
 
   set_support_level(cycle, cmp_num, cmp_total, campaign_type);
   set_support_level(cycle, all_num, all_total, alliance_type);
-  set_support_level(cycle, hypha_num, hypha_total, hypha_type);
+  set_support_level(cycle, milestone_num, milestone_total, milestone_type);
 
   print("cycle " +
     std::to_string(cycle) +
@@ -300,11 +299,10 @@ ACTION proposals::migvotepow(uint64_t cycle) {
     std::to_string(cmp_num) +
     " campaign total votes: " + 
     std::to_string(cmp_total) +
-
-    " hypha props: " +
-    std::to_string(hypha_num) +
-    " hypha total votes: " +
-    std::to_string(hypha_total)
+    " milestone props: " +
+    std::to_string(milestone_num) +
+    " milestone total votes: " +
+    std::to_string(milestone_total)
   );
 
 }
@@ -494,7 +492,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
     bool passed = check_prop_majority(pitr->favour, pitr->against);
     bool is_alliance_type = prop_type == alliance_type;
     bool is_campaign_type = prop_type == campaign_type;
-    bool is_hypha_type = prop_type == hypha_type;
+    bool is_milestone_type = prop_type == milestone_type;
 
     bool valid_quorum = false;
 
@@ -518,7 +516,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
           payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
         }
-        if (is_hypha_type) {
+        if (is_milestone_type) {
           payout_amount = pitr->quantity;
           withdraw(pitr->recipient, payout_amount, pitr->fund, "");
         }
@@ -887,7 +885,7 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
-  voice_tables voice_hypha(get_self(), hypha_type.value);
+  voice_tables voice_milestone(get_self(), milestone_type.value);
 
   uint64_t percentage_decay = config_get(name("vdecayprntge"));
   check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
@@ -898,7 +896,7 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
 
   while (vitr != voice.end() && count < chunksize) {
     auto vaitr = voice_alliance.find(vitr->account.value);
-    auto hvitr = voice_hypha.find(vitr->account.value);
+    auto hvitr = voice_milestone.find(vitr->account.value);
 
     voice.modify(vitr, _self, [&](auto & v){
       v.balance *= multiplier;
@@ -910,12 +908,11 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
       });
     }
 
-    if (hvitr != voice_hypha.end()) {
-      voice_hypha.modify(hvitr, _self, [&](auto & hv){
+    if (hvitr != voice_milestone.end()) {
+      voice_milestone.modify(hvitr, _self, [&](auto & hv){
         hv.balance *= multiplier;
       });
     }
-
     vitr++;
     count++;
   }
@@ -966,7 +963,7 @@ void proposals::init_cycle_new_stats () {
   
   set_support_level(c.propcycle, 0, 0, campaign_type);
 
-  set_support_level(c.propcycle, 0, 0, hypha_type);
+  set_support_level(c.propcycle, 0, 0, milestone_type);
 
 }
 
@@ -993,7 +990,7 @@ void proposals::create_aux (
   check_resident(creator, campaign_type == alliance_type );
   
   if (campaign_type != campaign_invite_type) {
-    if (campaign_type == alliance_type || campaign_type == campaign_milestone_type) {
+    if (campaign_type == alliance_type || campaign_type == milestone_type) {
       pay_percentages = { 100 };
     } else {
       check_percentages(pay_percentages);
@@ -1004,7 +1001,7 @@ void proposals::create_aux (
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
 
   if (fund == bankaccts::milestone) { // Milestone Seeds
-    check(recipient == bankaccts::hyphabank, "Hypha proposals must go to " + bankaccts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
+    check(recipient == bankaccts::hyphabank, "Hypha milestone proposals must go to " + bankaccts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
   } else {
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
@@ -1138,7 +1135,7 @@ void proposals::createx(
   if (fund == bankaccts::alliances) {
     type = alliance_type;
   } else if (fund == bankaccts::milestone) {
-    type = campaign_milestone_type;
+    type = milestone_type;
   } else {
     type = campaign_funding_type;
   }
@@ -1774,7 +1771,7 @@ name proposals::get_type (const name & fund) {
     return campaign_type;
   } 
   else if (fund == bankaccts::milestone) {
-    return hypha_type;
+    return milestone_type;
   }
   return "none"_n;
 }
@@ -1811,7 +1808,7 @@ ACTION proposals::initnumprop() {
 }
 
 void proposals::check_voice_scope (name scope) {
-  check(scope == _self || scope == alliance_type || scope == hypha_type, "invalid scope for voice");
+  check(scope == _self || scope == alliance_type || scope == milestone_type, "invalid scope for voice");
 }
 
 bool proposals::is_trust_delegated (name account, name scope) {
@@ -2106,7 +2103,7 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     bool passed = check_prop_majority(pitr->favour, pitr->against);
     bool is_alliance_type = prop_type == alliance_type;
     bool is_campaign_type = prop_type == campaign_type;
-    bool is_hypha_type = prop_type == hypha_type;
+    bool is_milestone_type = prop_type == milestone_type;
 
     bool valid_quorum = false;
 
@@ -2135,7 +2132,7 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
         payout_amount = pitr->quantity;
         send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
       }
-      if (is_hypha_type) {
+      if (is_milestone_type) {
         payout_amount = pitr->quantity;
         withdraw(pitr->recipient, payout_amount, pitr->fund, "");
       } 

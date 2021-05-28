@@ -142,13 +142,12 @@ CONTRACT proposals : public contract {
       name campaign_type = "campaign"_n;
       name campaign_invite_type = "cmp.invite"_n;
       name campaign_funding_type = "cmp.funding"_n;
-      name campaign_milestone_type = "milestone"_n;
-      name hypha_type = "hypha"_n;
+      name milestone_type = "milestone"_n;
 
       std::vector<name> scopes = {
         alliance_type,
         get_self(),
-        hypha_type
+        milestone_type
       };
 
       void update_cycle();
