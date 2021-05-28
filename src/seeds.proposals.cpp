@@ -512,7 +512,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 
         asset payout_amount;
 
-        if (is_alliance_type) {
+        if (is_alliance_type) { // TODO new alliance props are created with 100% 1 cycle so this can go away
           payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
         }
@@ -531,13 +531,15 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
           }
         }
 
-        uint64_t num_cycles = pitr->pay_percentages.size() - 1;
+        bool is_done = pitr->pay_percentages.size() <= 1;
+
+        // This code needs some clarity - it's way too confusing.
 
         props.modify(pitr, _self, [&](auto & proposal){
           proposal.passed_cycle = prop_cycle;
-          proposal.age = 0;
+          proposal.age = 0; 
           proposal.staked = asset(0, seeds_symbol);
-          if (proposal.age >= num_cycles && !is_alliance_type) {
+          if (is_done) {
             proposal.executed = true;
             proposal.status = status_passed;
             proposal.stage = stage_done;
@@ -2219,13 +2221,13 @@ ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
         if (payout_amount.amount > 0) {
           print(">>Sending! ", payout_amount, "\n");
 
-          check(false, "disabled");
+          //check(false, "disabled");
           
-          // send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+          send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
 
-          // props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
-          //   prop.current_payout += payout_amount;
-          // });
+          props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
+            prop.current_payout += payout_amount;
+          });
 
         }
 
