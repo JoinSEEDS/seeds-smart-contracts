@@ -46,7 +46,7 @@ void settings::reset() {
   confwithdesc(name("mooncyclesec"), utils::moon_cycle, "Number of seconds a moon cycle has", high_impact);
   confwithdesc(name("batchsize"), 200, "Number of elements per batch", high_impact);
   confwithdesc(name("region.fee"), uint64_t(1000) * uint64_t(10000), "Minimum amount to create a region (in Seeds)", high_impact);
-  confwithdesc(name("vdecayprntge"), 15, "The percentage of voice decay (in percentage)", high_impact);
+  confwithdesc(name("vdecayprntge"), 11, "The percentage of voice decay (in percentage)", high_impact);
   confwithdesc(name("decaytime"), utils::proposal_cycle / 2, "Minimum amount of seconds before start voice decay", high_impact);
   confwithdesc(name("propdecaysec"), utils::seconds_per_day, "Minimum amount of seconds before execute a new voice decay", high_impact);
   confwithdesc(name("inact.cyc"), 3, "Number of cycles until a voter is considered inactive and no longer counts towards quorum", high_impact);
@@ -65,12 +65,15 @@ void settings::reset() {
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
   confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
 
+  conffloatdsc(name("infation.per"), 0.0, "Economic inflation per period. Example 0.01 = 1%", high_impact);
+
   // Harvest distribution
   confwithdesc(name("hrvst.users"), 300000, "Percentage of the harvest that Residents/Citizens will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.rgns"), 300000, "Percentage of the harvest that Regions will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.orgs"), 200000, "Percentage of the harvest that Organizations will receive (4 decimals of precision)", high_impact);
   confwithdesc(name("hrvst.global"), 200000, "Percentage of the harvest that Global G-DHO will receive (4 decimals of precision)", high_impact);
   
+  confwithdesc(name("org.minharv"), 2, "Minimum status for a organization to be eligible for receiving part of the harvest ", high_impact);
 
   // =====================================
   // organizations 
@@ -320,11 +323,14 @@ void settings::reset() {
   // region
   // =====================================
   conffloatdsc(name("rgn.vote.del"), 1.0, "Number of moon cycles to wait before user can vote or join another region", high_impact);
+  confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
   // gratitude 
   // =====================================
-  confwithdesc(name("gratz.gen"), 100 * 10000, "Base quantity of gratitude tokens received per cycle", high_impact);
+  confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
+  confwithdesc(name("gratz2.gen"), 200 * 10000, "Base quantity of gratitude tokens received for citizens per cycle", medium_impact);
+  confwithdesc(name("gratz.acks"), 10, "Minumum number of gratitude acks to fully use your tokens", medium_impact);
 
   // =====================================
   // onboarding/invite

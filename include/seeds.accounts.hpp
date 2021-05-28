@@ -57,6 +57,8 @@ CONTRACT accounts : public contract {
 
       ACTION subrep(name user, uint64_t amount);
 
+      ACTION addcbs(name account, int points);
+
       ACTION requestvouch(name account, name sponsor);
 
       ACTION vouch(name sponsor, name account);
@@ -93,6 +95,9 @@ CONTRACT accounts : public contract {
       ACTION migorgs(uint64_t start_org);
       ACTION delcbsreporg(uint64_t start_org);
       ACTION testmigscope(name account, uint64_t amount);
+
+      ACTION migusersizes(uint64_t start, uint64_t chunksize);
+      ACTION migusrsize(name account);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -378,4 +383,6 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
 (migorgs)(delcbsreporg)(testmigscope)
+(addcbs)
+(migusersizes)(migusrsize)
 );

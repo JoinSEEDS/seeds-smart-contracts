@@ -103,6 +103,7 @@ void accounts::adduser(name account, string nickname, name type)
   check(is_account(account), "no account");
 
   check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organisation'");
+  check(nickname.size() <= 64, "nickname must be less than 65 characters long");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
@@ -459,6 +460,11 @@ void accounts::add_cbs(name account, int points) {
   }
 }
 
+ACTION accounts::addcbs (name account, int points) {
+  require_auth(get_self());
+  add_cbs(account, points);
+}
+
 void accounts::addref(name referrer, name invited)
 {
   require_auth(get_self());
@@ -567,6 +573,12 @@ void accounts::update(name user, name type, string nickname, string image, strin
     auto uitr = users.find(user.value);
 
     check(uitr->type == type, "Can't change type - create an org in the org contract.");
+    check(nickname.size() <= 64, "nickname must be less or equal to 64 characters long");
+    check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+    check(story.size() <= 7000, "story length must be less or equal to 7000 characters long");
+    check(roles.size() <= 512, "roles length must be less or equal to 512 characters long");
+    check(skills.size() <= 512, "skills must be less or equal to 512 characters long");
+    check(interests.size() <= 512, "interests must be less or equal to 512 characters long");
 
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
@@ -845,7 +857,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -906,7 +918,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, n
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
@@ -1369,7 +1381,7 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
     if (ritr->account == to) {
-      uint64_t rank = utils::rank(current, total);
+      uint64_t rank = utils::spline_rank(current, total);
 
       rep_by_rep.modify(ritr, _self, [&](auto& item) {
         item.rank = rank;
@@ -1717,4 +1729,73 @@ void accounts::migrate_calc_vouch_rep (name account) {
       item.total_rep_points = total_vouch_capped;
     });
   }
+}
+
+// Note we don't need this since all accounts fill the criteria now
+ACTION accounts::migusersizes (uint64_t start, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.lower_bound(start);
+  uint64_t count = 0;
+
+  string none = "";
+
+  while (uitr != users.end() && count < chunksize) {
+    if (uitr->image.size() >512 ||
+        uitr->roles.size() > 512 ||
+        uitr->skills.size() > 512 ||
+        uitr->interests.size() > 512 ) 
+    {
+      users.modify(uitr, _self, [&](auto & user){   
+        if (user.image.size() > 512) {
+          user.image = none;
+        }   
+        if (user.roles.size() > 512) {
+          user.roles = none;
+        }
+        if (user.skills.size() > 512) {
+          user.skills = none;
+        }
+        if (user.interests.size() > 512) {
+          user.interests = none;
+        }
+      });
+    }
+    uitr++;
+    count++;
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migusersizes"_n,
+      std::make_tuple(uitr->account.value, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(uitr->account.value + 1, _self);
+  }
+}
+
+ACTION accounts::migusrsize (name account) {
+
+  require_auth(get_self());
+
+  auto uitr = users.find(account.value);
+  string none = "";
+
+  if (uitr != users.end()) {
+    users.modify(uitr, _self, [&](auto & user){
+      user.nickname = user.nickname.size() <= 64 ? user.nickname : none;
+      user.image = user.image.size() <= 512 ? user.image : none;
+      user.roles = user.roles.size() <= 512 ? user.roles : none;
+      user.skills = user.skills.size() <= 512 ? user.skills : none;
+      user.interests = user.interests.size() <= 512 ? user.interests : none;
+    });
+  }
+
 }

@@ -3,6 +3,8 @@
 #include <eosio/asset.hpp>
 #include <seeds.token.hpp>
 #include <contracts.hpp>
+#include <utils.hpp>
+#include <tables/config_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -13,7 +15,8 @@ CONTRACT escrow : public contract {
         escrow(name receiver, name code, datastream<const char*> ds)
         : contract(receiver, code, ds),
         locks(receiver, receiver.value),
-        sponsors(receiver, receiver.value)
+        sponsors(receiver, receiver.value),
+        config(contracts::settings, contracts::settings.value)
         {}
 
         ACTION reset();
@@ -31,17 +34,32 @@ CONTRACT escrow : public contract {
                         const name&     event_name,
                         const string&   notes);
 
+        ACTION sendtopool(uint64_t start, uint64_t chunksize);
+
+        ACTION miglock(uint64_t lock_id);
+
         ACTION cancellock (const uint64_t& lock_id);
 
         ACTION claim(name beneficiary);
 
         ACTION withdraw(name sponsor, asset quantity);
 
+        ACTION resettrigger(const name & trigger_source);
+
+        ACTION triggertest( const name&     trigger_source,
+                            const name&     event_name,
+                            const string&   notes);
+
         [[eosio::on_notify("*::transfer")]]
         void ontransfer(name from, name to, asset quantity, string memo);
 
     private:
-        symbol seeds_symbol = symbol("SEEDS", 4);
+        const name trigger_source_hypha_dao = "dao.hypha"_n;
+        const name trigger_event_golive = "golive"_n;
+
+        DEFINE_CONFIG_TABLE
+        DEFINE_CONFIG_TABLE_MULTI_INDEX
+        DEFINE_CONFIG_GET
 
         // events scoped by trigger_source
         TABLE event {
@@ -107,8 +125,9 @@ CONTRACT escrow : public contract {
         
         token_lock_table locks;
         sponsors_tables sponsors;
+        config_tables config;
 
         void check_asset(asset quantity);
-        void init_balance(name user);
-        void deduct_from_sponsor (name sponsor, asset locked_quantity);
+        void deduct_from_sponsor(name sponsor, asset locked_quantity);
+        void send_transfer(const name & beneficiary, const asset & quantity, const string & memo);
 };

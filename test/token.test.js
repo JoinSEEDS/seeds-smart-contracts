@@ -278,7 +278,10 @@ describe('token.resetweekly', async assert => {
     json: true
   })
 
-  balancesBefore = balancesBefore.rows.map(row => row.outgoing_transactions)
+  balancesBefore = balancesBefore.rows.filter(row => 
+      row.account == firstuser || row.account == seconduser || row.account == thirduser)
+
+  balancesBefore = balancesBefore.map(row => row.outgoing_transactions)
  
   console.log('reset token')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -292,21 +295,24 @@ describe('token.resetweekly', async assert => {
     json: true
   })
 
-  balancesAfter = balancesAfter.rows.map(row => row.outgoing_transactions)
+  balancesAfter = balancesAfter.rows.filter(row => 
+    row.account == firstuser || row.account == seconduser || row.account == thirduser)
+
+  balancesAfter = balancesAfter.map(row => row.outgoing_transactions)
 
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
   assert({
     given: 'called resetweekly',
     should: 'have trxstat table entry',
-    actual: balancesBefore.splice(0, 3),
+    actual: balancesBefore,
     expected: [1, 1, 1]
   })
 
   assert({
     given: 'called resetweekly',
     should: 'reset trxstat table',
-    actual: balancesAfter.splice(0, 3),
+    actual: balancesAfter,
     expected: [0, 0, 0]
   })
 

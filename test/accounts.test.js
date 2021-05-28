@@ -101,6 +101,92 @@ describe('General accounts', async assert => {
   await contract.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
   await contract.adduser(thirduser, 'Third user', "individual", { authorization: `${accounts}@active` })
 
+  console.log('update')
+
+  //void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
+  
+  const nickname = "A NEw NAME FOR FIRST USER"
+  const image = "https://somthignsomething"
+  const story = "my story ... "
+  const roles = "some roles... "
+  const skills = "some skills... "
+  const interests = "some interests... "
+
+  await contract.update(firstuser, "individual", nickname, image, story, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  const userOne = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'users',
+    lower_bound: firstuser,
+    upper_bound: firstuser,
+    json: true,
+  })
+
+  //console.log("user one: "+JSON.stringify(userOne, null, 2))
+
+  var canChangeType = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, story, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canChangeType = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+  var longstory = "0123456789"
+  for (var i=0; i<699; i++) {
+    longstory = longstory + "0123456789"
+  }
+  console.log("longstory length: "+longstory.length)
+
+  await contract.update(firstuser, "individual", nickname, image, longstory, roles, skills, interests, { authorization: `${firstuser}@active` })
+
+  longstory = longstory + "0123456789" + "Whoops!"
+  var canStoreLongStory = false
+  try {
+    await contract.update(firstuser, "organisation", nickname, image, longstory, roles, skills, interests,{ authorization: `${firstuser}@active` })
+    canStoreLongStory = true
+  } catch (err) {
+    console.log("expected error "+err)
+  }
+
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canChangeType,
+    expected: false
+  })
+  
+  delete userOne.rows[0].timestamp
+
+  assert({
+    given: 'update called',
+    should: 'fields are updates',
+    actual: userOne.rows[0],
+    expected: 
+      {
+        "account": "seedsuseraaa",
+        "status": "visitor",
+        "type": "individual",
+        "nickname": "A NEw NAME FOR FIRST USER",
+        "image": image,
+        "story": story,
+        "roles": roles,
+        "skills": skills,
+        "interests":interests,
+        "reputation": 0,
+      }
+  })
+
+  assert({
+    given: 'trying to change user type',
+    should: 'cant',
+    actual: canStoreLongStory,
+    expected: false
+  })
+
+
   console.log("filling account with Seedds for bonuses [Change this]")
   await thetoken.transfer(firstuser, accounts, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
 
@@ -331,7 +417,7 @@ describe('vouching', async assert => {
       table: 'vouches',
       json: true
     })
-    console.log(vouchTables)
+    //console.log(vouchTables)
     assert({
       given,
       should,
@@ -1183,7 +1269,7 @@ describe('reputation & cbs ranking', async assert => {
     given: '4 users with cbs',
     should: 'have entries in cbs table',
     actual: cbsAfter.rows.map(({rank})=>rank),
-    expected: [0,25,50,75]
+    expected: [0,4,27,63]
   })
 
   assert({
@@ -1630,7 +1716,7 @@ describe('Punishment', async assert => {
   }
 
   console.log('change resident threshold')
-  await contracts.settings.configure('res.rep.pt', 10, { authorization: `${settings}@active` })
+  await contracts.settings.configure('res.rep.pt', 2, { authorization: `${settings}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })
@@ -1742,7 +1828,115 @@ describe('Punishment', async assert => {
 
 })
 
-describe('Migrate cbs and rep for orgs', async assert => {
+// describe('Migrate cbs and rep for orgs', async assert => {
+
+//   if (!isLocal()) {
+//     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//     return
+//   }
+
+//   const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+
+//   const contracts = await initContracts({ accounts, token, organization, settings, harvest })
+
+//   console.log('reset accounts')
+//   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+//   console.log('reset settings')
+//   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+//   console.log('reset token')
+//   await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+//   console.log('reset settings')
+//   await contracts.organization.reset({ authorization: `${organization}@active` })
+
+//   console.log('reset harvest')
+//   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+//   console.log('change batch size')
+//   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+//   console.log('add users')
+//   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+//   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+//   await contracts.accounts.testmigscope(firstuser, 90, { authorization: `${accounts}@active` })
+//   await contracts.accounts.testmigscope(seconduser, 90, { authorization: `${accounts}@active` })
+//   await contracts.harvest.testmigscope(firstuser, 90, { authorization: `${harvest}@active` })
+//   await contracts.harvest.testmigscope(seconduser, 90, { authorization: `${harvest}@active` })
+
+//   const printAccountTables = async (scope) => {
+//     const cbs = await getTableRows({
+//       code: accounts,
+//       scope,
+//       table: 'cbs',
+//       json: true
+//     })
+//     console.log(`cbs (${scope}):`, cbs)
+//     const rep = await getTableRows({
+//       code: accounts,
+//       scope,
+//       table: 'rep',
+//       json: true
+//     })
+//     console.log(`rep (${scope}):`, rep)
+//   }
+
+//   const printHarvestTables = async (scope) => {
+//     const cspoints = await getTableRows({
+//       code: harvest,
+//       scope,
+//       table: 'cspoints',
+//       json: true
+//     })
+//     console.log(`cspoints (${scope}):`, cspoints)
+//   }
+
+//   console.log('add organizations')
+//   const orgs = ['org1', 'org2', 'org3', 'org4', 'org5']
+
+//   await contracts.token.transfer(firstuser, organization, '1000.0000 SEEDS', 'orgs supply', { authorization: `${firstuser}@active` })
+
+//   for (let i = 0; i < orgs.length; i++) {
+//     const org = orgs[i]
+//     await contracts.organization.create(firstuser, org, `Org Number ${i+1}`, eosDevKey, { authorization: `${firstuser}@active` })
+//     await contracts.accounts.testmigscope(org, 10*(i+1), { authorization: `${accounts}@active` })
+//     await contracts.harvest.testmigscope(org, 10*(i+1), { authorization: `${harvest}@active` })
+//   }
+
+//   await printAccountTables(accounts)
+//   await printAccountTables('org')
+//   await printHarvestTables(harvest)
+//   await printHarvestTables('org')
+  
+//   console.log('migrating orgs')
+//   await contracts.accounts.migorgs(0, { authorization: `${accounts}@active` })
+//   await contracts.harvest.migorgs(0, { authorization: `${harvest}@active` })
+//   await sleep(3000)
+
+//   console.log('----------------------------------------------')
+
+//   await printAccountTables(accounts)
+//   await printAccountTables('org')
+//   await printHarvestTables(harvest)
+//   await printHarvestTables('org')
+
+//   console.log('----------------------------------------------')
+
+//   console.log('deleting orgs from individual scope')
+//   await contracts.accounts.delcbsreporg(0, { authorization: `${accounts}@active` })
+//   await contracts.harvest.delcsorg(0, { authorization: `${harvest}@active` })
+//   await sleep(3000)
+
+//   await printAccountTables(accounts)
+//   await printAccountTables('org')
+//   await printHarvestTables(harvest)
+//   await printHarvestTables('org')
+
+// })
+
+
+describe('Enforce accounts', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1751,7 +1945,7 @@ describe('Migrate cbs and rep for orgs', async assert => {
 
   const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
 
-  const contracts = await initContracts({ accounts, token, organization, settings, harvest })
+  const contracts = await initContracts({ accounts, settings })
 
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -1759,92 +1953,121 @@ describe('Migrate cbs and rep for orgs', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
-  console.log('reset token')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  const generateString = (length) => {
+    var result = ''
+    var characters = 'abcdefghijklmnopqrstuvwxyz1234'
+    var charactersLength = characters.length
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    }
+    return result
+  }
 
-  console.log('reset settings')
-  await contracts.organization.reset({ authorization: `${organization}@active` })
+  const string600 = generateString(600)
+  const string512 = generateString(512)
 
-  console.log('reset harvest')
-  await contracts.harvest.reset({ authorization: `${harvest}@active` })
-
-  console.log('change batch size')
-  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
-
-  console.log('add users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.testmigscope(firstuser, 90, { authorization: `${accounts}@active` })
-  await contracts.accounts.testmigscope(seconduser, 90, { authorization: `${accounts}@active` })
-  await contracts.harvest.testmigscope(firstuser, 90, { authorization: `${harvest}@active` })
-  await contracts.harvest.testmigscope(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
-  const printAccountTables = async (scope) => {
-    const cbs = await getTableRows({
-      code: accounts,
-      scope,
-      table: 'cbs',
-      json: true
-    })
-    console.log(`cbs (${scope}):`, cbs)
-    const rep = await getTableRows({
-      code: accounts,
-      scope,
-      table: 'rep',
-      json: true
-    })
-    console.log(`rep (${scope}):`, rep)
-  }
+  let fail0 = false
 
-  const printHarvestTables = async (scope) => {
-    const cspoints = await getTableRows({
-      code: harvest,
-      scope,
-      table: 'cspoints',
-      json: true
-    })
-    console.log(`cspoints (${scope}):`, cspoints)
-  }
+  await contracts.accounts.update(
+    firstuser, 
+    "individual", 
+    "a valid nickname",
+    string512,
+    string512,
+    string512,
+    string512,
+    string512,
+    { authorization: `${firstuser}@active` })
 
-  console.log('add organizations')
-  const orgs = ['org1', 'org2', 'org3', 'org4', 'org5']
-
-  await contracts.token.transfer(firstuser, organization, '1000.0000 SEEDS', 'orgs supply', { authorization: `${firstuser}@active` })
-
-  for (let i = 0; i < orgs.length; i++) {
-    const org = orgs[i]
-    await contracts.organization.create(firstuser, org, `Org Number ${i+1}`, eosDevKey, { authorization: `${firstuser}@active` })
-    await contracts.accounts.testmigscope(org, 10*(i+1), { authorization: `${accounts}@active` })
-    await contracts.harvest.testmigscope(org, 10*(i+1), { authorization: `${harvest}@active` })
-  }
-
-  await printAccountTables(accounts)
-  await printAccountTables('org')
-  await printHarvestTables(harvest)
-  await printHarvestTables('org')
+  let fail1 = false
+  try {
+    await contracts.accounts.update(
+      seconduser, 
+      "individual", 
+      seconduser,
+      string600,
+      string600,
+      string512,
+      string512,
+      string512,
+      { authorization: `${seconduser}@active` })
   
-  console.log('migrating orgs')
-  await contracts.accounts.migorgs(0, { authorization: `${accounts}@active` })
-  await contracts.harvest.migorgs(0, { authorization: `${harvest}@active` })
-  await sleep(3000)
+  } catch (err) {
+    fail1 = true
+    console.log("expected error")
+  }
 
-  console.log('----------------------------------------------')
+  let fail2 = false
+  try {
+    await contracts.accounts.update(
+      thirduser, 
+      "individual", 
+      thirduser,
+      string600,
+      string600,
+      string600,
+      string600,
+      string600,
+      { authorization: `${thirduser}@active` })
+  } catch (err) {
+    fail2 = true
+    console.log("expected error")
+  }
 
-  await printAccountTables(accounts)
-  await printAccountTables('org')
-  await printHarvestTables(harvest)
-  await printHarvestTables('org')
+  let fail3 = false
+  try {
+    await contracts.accounts.update(
+      fourthuser, 
+      "individual", 
+      fourthuser,
+      string512,
+      string512,
+      string512,
+      generateString(132000),
+      string512,
+      { authorization: `${fourthuser}@active` })
+  
+  } catch (err) {
+    fail3 = true
+    console.log("expected error")
+  }
 
-  console.log('----------------------------------------------')
+  assert({
+    given: 'ok entry 1',
+    should: 'succeed',
+    actual: fail0,
+    expected: false
+  })
 
-  console.log('deleting orgs from individual scope')
-  await contracts.accounts.delcbsreporg(0, { authorization: `${accounts}@active` })
-  await contracts.harvest.delcsorg(0, { authorization: `${harvest}@active` })
-  await sleep(3000)
 
-  await printAccountTables(accounts)
-  await printAccountTables('org')
-  await printHarvestTables(harvest)
-  await printHarvestTables('org')
+  assert({
+    given: 'too long entry 1',
+    should: 'fail',
+    actual: fail1,
+    expected: true
+  })
+  assert({
+    given: 'too long entry 2',
+    should: 'fail',
+    actual: fail2,
+    expected: true
+  })
+  assert({
+    given: 'too long entry 3',
+    should: 'fail',
+    actual: fail3,
+    expected: true
+  })
+
+
+
+
 
 })
+
+

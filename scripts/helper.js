@@ -30,7 +30,7 @@ const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://test.hypha.earth',
-  telosMainnet: 'https://node.hypha.earth'
+  telosMainnet: 'https://api.telosfoundation.io'
 }
 
 const ownerAccounts = {
@@ -85,7 +85,7 @@ const payForCPUKeys = {
 const payForCPUPublicKey = payForCPUKeys[chainId]
 
 const applicationKeys = {
-  [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
 }
@@ -180,6 +180,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -216,6 +217,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -260,6 +262,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      pool: contract('pool.seeds', 'pool')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -362,6 +365,10 @@ var permissions = [{
   key: exchangePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@update`,
+  key: exchangePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.accounts.account}@api`,
   action: 'addrep'
 }, {
@@ -381,6 +388,9 @@ var permissions = [{
 }, {
   target: `${accounts.exchange.account}@purchase`,
   action: 'newpayment'
+}, {
+  target: `${accounts.exchange.account}@update`,
+  action: 'updatetlos'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
@@ -657,6 +667,28 @@ var permissions = [{
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.onboarding.account}@active`,
+}, { 
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.escrow.account}@active`
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  actor: `${accounts.history.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  action: 'addcbs'
+}, {
+  target: `${accounts.pool.account}@active`,
+  actor: `${accounts.pool.account}@eosio.code`
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  actor: `${accounts.harvest.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  action: 'payouts'
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -777,9 +809,27 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function asset (quantity) {
+  if (typeof quantity == 'object') {
+    if (quantity.symbol) {
+      return quantity
+    }
+    return null
+  }
+  const [amount, symbol] = quantity.split(' ')
+  const indexDecimal = amount.indexOf('.')
+  const precision = amount.substring(indexDecimal + 1).length
+  return {
+    amount: parseFloat(amount),
+    symbol,
+    precision,
+    toString: quantity
+  }
+}
+
 module.exports = {
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
 }
 

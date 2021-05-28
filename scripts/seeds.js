@@ -8,7 +8,11 @@ const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
 const deploy = require('./deploy.command')
-const { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken } = require('./deploy')
+const { deployAllContracts, updatePermissions, resetByName, 
+    changeOwnerAndActivePermission, 
+    changeExistingKeyPermission, 
+    addActorPermission,
+    createTestToken } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -247,6 +251,15 @@ program
     console.print(`Change key of ${contract} to `+key + "\n")
     await changeExistingKeyPermission(contract, role, parentrole, key)
   })
+
+  program
+  .command('add_permission <target> <targetrole> <actor> <actorrole>')
+  .description('Add permission')
+  .action(async function(target, targetrole, actor, actorrole) {
+    console.print(`Adding ${actor}@${actorrole} to ${target}@${targetrole}`+ "\n")
+    await addActorPermission(target, targetrole, actor, actorrole)
+  })
+
 
 program
   .command('docsgen <contract> [moreContracts...]')

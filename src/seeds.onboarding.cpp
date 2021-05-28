@@ -319,6 +319,10 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
 
 void onboarding::cancel(name sponsor, checksum256 invite_hash) {
   require_auth(sponsor);
+  _cancel(sponsor, invite_hash, true);
+}
+
+void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth) {
 
   checksum256 empty_checksum;
 
@@ -337,8 +341,10 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash) {
 
     if (citr != campaigns.end()) {
 
-      check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), sponsor), 
-        sponsor.to_string() + " is not authorized in this campaign");
+      if (check_auth) {
+        check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), sponsor), 
+          sponsor.to_string() + " is not authorized in this campaign");
+      }
 
       campaigns.modify(citr, _self, [&](auto & item){
         item.remaining_amount += total_quantity + citr->reward;
@@ -399,14 +405,11 @@ void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size
 
   while(iitr != invites.end() && count < batch_size && iitr->invite_id <= max_id) {
     if (iitr->account.value == empty_name_value) {
-      asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
-      transfer_seeds(iitr->sponsor, total_quantity, "refund for invite");
-      iitr = invites.erase(iitr);
-      auto refitr = referrers.find(iitr->invite_id);
-      if (refitr != referrers.end()) {
-        referrers.erase(refitr);
-      }
-      count += 4;
+      name sponsor = iitr->sponsor;
+      checksum256 hash = iitr->invite_hash;
+      iitr++;
+      count += 8;
+      _cancel(sponsor, hash, false);
     } else {
       iitr++;
       count++;

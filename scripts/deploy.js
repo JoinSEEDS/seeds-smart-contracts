@@ -567,4 +567,4 @@ const deployAllContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
+module.exports = { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, addActorPermission, createTestToken }

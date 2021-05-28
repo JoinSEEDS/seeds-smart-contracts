@@ -15,6 +15,7 @@
 #include <tables/config_float_table.hpp>
 #include <tables/cbs_table.hpp>
 #include <tables/cspoints_table.hpp>
+#include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
 #include <cmath> 
 
@@ -44,7 +45,8 @@ CONTRACT harvest : public contract {
         cbs(contracts::accounts, contracts::accounts.value),
         circulating(contracts::token, contracts::token.value),
         regions(contracts::region, contracts::region.value),
-        members(contracts::region, contracts::region.value)
+        members(contracts::region, contracts::region.value),
+        organizations(contracts::organization, contracts::organization.value)
         {}
         
     ACTION reset();
@@ -127,6 +129,8 @@ CONTRACT harvest : public contract {
     const name individual_scope_harvest = get_self();
     const name organization_scope = "org"_n;
 
+    const name rgn_status_active = "active"_n;
+
     void init_balance(name account);
     void init_harvest_stat(name account);
     void check_user(name account);
@@ -149,6 +153,7 @@ CONTRACT harvest : public contract {
     double config_float_get(name key);
     void send_distribute_harvest (name key, asset amount);
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
+    void send_pool_payout(asset quantity);
 
     // Contract Tables
 
@@ -368,7 +373,9 @@ CONTRACT harvest : public contract {
         indexed_by<"byregion"_n,const_mem_fun<members_table, uint64_t, &members_table::by_region>>
     > members_tables;
 
+    DEFINE_ORGANIZATION_TABLE
 
+    DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
     // Contract Tables
     balance_tables balances;
@@ -395,6 +402,7 @@ CONTRACT harvest : public contract {
     circulating_supply_tables circulating;
     region_tables regions;
     members_tables members;
+    organization_tables organizations;
 
 };
 

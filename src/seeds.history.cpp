@@ -53,6 +53,16 @@ void history::reset(name account) {
     }
   }
 
+  auto tcitr = trxcbprewards.begin();
+  while (tcitr != trxcbprewards.end()) {
+    tcitr = trxcbprewards.erase(tcitr);
+  }
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+  auto ptrx_itr = ptrx_t.begin();
+  while (ptrx_itr != ptrx_t.end()) {
+    ptrx_itr = ptrx_t.erase(ptrx_itr);
+  }
 }
 
 void history::deldailytrx (uint64_t day) {
@@ -155,7 +165,6 @@ void history::trxentry(name from, name to, asset quantity) {
     return;
   }
 
-
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   daily_transactions_tables transactions(get_self(), day);
 
@@ -223,7 +232,7 @@ void history::trxentry(name from, name to, asset quantity) {
     }
   }
 
-  cancel_deferred(from.value);
+  uint64_t deferred_id = get_deferred_id();
 
   action a(
     permission_level{contracts::history, "active"_n},
@@ -235,9 +244,19 @@ void history::trxentry(name from, name to, asset quantity) {
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1;
-  tx.send(from.value, _self);
+  tx.send(deferred_id, _self);
 }
 
+uint64_t history::get_deferred_id () {
+  deferred_id_tables deferredids(get_self(), get_self().value);
+  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+
+  d_s.id += 1;
+
+  deferredids.set(d_s, get_self());
+
+  return d_s.id;
+}
 
 void history::savepoints(uint64_t id, uint64_t timestamp) {
   require_auth(get_self());
@@ -258,7 +277,7 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
 
   uint64_t max_number_transactions = config_get("htry.trx.max"_n);
 
-  uint128_t from_to_id = (uint128_t(titr -> from.value) << 64) + titr -> to.value;
+  uint128_t from_to_id = (uint128_t(from.value) << 64) + to.value;
   uint64_t count = 0;
 
   auto ft_itr = transactions_by_from_to.find(from_to_id);
@@ -280,35 +299,62 @@ void history::savepoints(uint64_t id, uint64_t timestamp) {
   int64_t to_points = int64_t(titr -> to_points);
   int64_t qualifying_volume = int64_t(titr -> qualifying_volume);
 
+  bool save_points = true;
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+
   if (count > max_number_transactions) {
-    from_points -= current_itr -> from_points;
-    to_points -= current_itr -> to_points;
-    qualifying_volume -= current_itr -> qualifying_volume;
+    if (current_itr->id != id) {
+
+      auto ptrx_t_by_timestamp_id = ptrx_t.get_index<"bytimestmpid"_n>();
+      uint128_t ptrx_id = (uint128_t(day) << 64) + current_itr->id;
+
+      auto ptrx_itr = ptrx_t_by_timestamp_id.find(ptrx_id);
+
+      if (ptrx_itr != ptrx_t_by_timestamp_id.end()) {
+        from_points -= current_itr -> from_points;
+        to_points -= current_itr -> to_points;
+        qualifying_volume -= current_itr -> qualifying_volume;
+      }
+
+    } else {
+      save_points = false;
+    }
 
     transactions_by_from_to.erase(current_itr);
   }
 
-  save_from_metrics (from, from_points, qualifying_volume, day);
+  if (save_points) {
+    save_from_metrics (from, from_points, qualifying_volume, day);
 
-  if (uitr_to -> type == name("organisation")) {
-    transaction_points_tables trx_points_to(get_self(), to.value);
-    auto trx_itr_to = trx_points_to.find(day);
+    if (uitr_to -> type == name("organisation")) {
+      transaction_points_tables trx_points_to(get_self(), to.value);
+      auto trx_itr_to = trx_points_to.find(day);
 
-    if (trx_itr_to != trx_points_to.end()) {
-      trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
-        item.points += to_points;
-      });
-    } else {
-      trx_points_to.emplace(_self, [&](auto & item){
-        item.timestamp = day;
-        item.points = to_points;
-      });
+      if (trx_itr_to != trx_points_to.end()) {
+        trx_points_to.modify(trx_itr_to, _self, [&](auto & item){
+          item.points += to_points;
+        });
+      } else {
+        trx_points_to.emplace(_self, [&](auto & item){
+          item.timestamp = day;
+          item.points = to_points;
+        });
+      }
     }
+
+    if (uitr_from -> type != name("organisation")) {
+      send_update_txpoints(from);
+    }
+
+    ptrx_t.emplace(_self, [&](auto & ptrx){
+      ptrx.id = ptrx_t.available_primary_key();
+      ptrx.transaction_id = id;
+      ptrx.timestamp = day;
+    });
   }
 
-  if (uitr_from -> type != name("organisation")) {
-    send_update_txpoints(from);
-  }
+  send_trx_cbp_reward_action(from, to);
 }
 
 void history::save_from_metrics (name from, int64_t & from_points, int64_t & qualifying_volume, uint64_t & day) {
@@ -351,6 +397,88 @@ void history::save_from_metrics (name from, int64_t & from_points, int64_t & qua
       item.timestamp = day;
       item.qualifying_volume = qualifying_volume;
     });
+  }
+}
+
+void history::send_trx_cbp_reward_action (name from, name to) {
+
+  uint64_t deferred_id = get_deferred_id();
+
+  action a(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "sendtrxcbp"_n,
+    std::make_tuple(deferred_id, from, to)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(a);
+  tx.delay_sec = 1;
+  tx.send(deferred_id, _self);
+}
+
+void history::send_add_cbs (name account, int points) {
+  action(
+    permission_level(contracts::accounts, "addcbs"_n),
+    contracts::accounts,
+    "addcbs"_n,
+    std::make_tuple(account, points)
+  ).send();
+}
+
+void history::trx_cbp_reward (name account, name key) {
+
+  auto trxcbprewards_by_acct_key = trxcbprewards.get_index<"byacctkey"_n>();
+
+  uint128_t id = (uint128_t(account.value) << 64) + key.value;
+  auto itr = trxcbprewards_by_acct_key.find(id);
+
+  uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+  if (itr != trxcbprewards_by_acct_key.end()) {
+
+    uint64_t threshold = now - utils::moon_cycle;
+    if (itr->timestamp > threshold) { return; }
+
+    trxcbprewards_by_acct_key.modify(itr, _self, [&](auto & item){
+      item.timestamp = now;
+    });
+
+  } else {
+    trxcbprewards.emplace(_self, [&](auto & item){
+      item.id = trxcbprewards.available_primary_key();
+      item.account = account;
+      item.key = key;
+      item.timestamp = now;
+    });
+  }
+
+  send_add_cbs(account, int(config_get(key)));
+}
+
+void history::sendtrxcbp (uint64_t deferred_id, name from, name to) {
+  require_auth(get_self());
+
+  auto oitr = organizations.find(to.value);
+
+  if (oitr != organizations.end()) {
+    if (oitr->status == status_regenerative) {
+      trx_cbp_reward(from, "buyregen.cbp"_n);
+    }
+    if (oitr->status == status_thrivable) {
+      trx_cbp_reward(from, "buythriv.cbp"_n);
+    }
+  }
+
+  auto bitr_from = members.find(from.value);
+  auto bitr_to = members.find(to.value);
+
+  if (
+    bitr_from != members.end() && 
+    bitr_to != members.end() && 
+    bitr_from->region == bitr_to->region
+  ) {
+    trx_cbp_reward(from, "buylocal.cbp"_n);
   }
 }
 
@@ -418,21 +546,33 @@ uint64_t history::get_size(name id) {
   }
 }
 
-void history::send_update_txpoints (name from) {
-  // delayed update
-  cancel_deferred(from.value);
+void history::updatetxpt (uint64_t deferred_id, name from) {
+  require_auth(get_self());
 
   action a(
-      permission_level{contracts::harvest, "active"_n},
-      contracts::harvest,
-      "updatetxpt"_n,
-      std::make_tuple(from)
+    permission_level{contracts::harvest, "active"_n},
+    contracts::harvest,
+    "updatetxpt"_n,
+    std::make_tuple(from)
+  );
+}
+
+void history::send_update_txpoints (name from) {
+  // delayed update
+
+  uint64_t deferred_id = get_deferred_id();
+
+  action a(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    "updatetxpt"_n,
+    std::make_tuple(deferred_id, from)
   );
 
   transaction tx;
   tx.actions.emplace_back(a);
   tx.delay_sec = 1; 
-  tx.send(from.value, _self);
+  tx.send(deferred_id, _self);
 }
 
 void history::numtrx(name account) {
