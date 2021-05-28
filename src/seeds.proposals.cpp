@@ -2163,7 +2163,7 @@ ACTION proposals::testalliance (uint64_t id, name creator, asset quantity, asset
 
 }
 
-
+// TODO: Remove
 ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
   require_auth(get_self());
@@ -2179,21 +2179,24 @@ ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
     if (pitr->campaign_type == alliance_type) { // just to be extra sure it only affects alliance props
 
-      print("FUND ID:", pitr->id, ", status=", pitr->status, "\n");
+      print(" FUND ID:", pitr->id, ", status=", pitr->status, "\n");
 
-      if (pitr->status == status_evaluate || pitr->status == status_passed) {
+      if (pitr->status == status_evaluate) {
 
         asset payout_amount = pitr->quantity - pitr->current_payout;
 
-        print(" QUANTITY:", payout_amount, "\n");
+        print(" QUANTITY:", payout_amount, " \n");
 
         if (payout_amount.amount > 0) {
+          print(">>Sending! ", payout_amount, "\n");
 
-          send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+          check(false, "disabled");
+          
+          // send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
 
-          props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
-            prop.current_payout += payout_amount;
-          });
+          // props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
+          //   prop.current_payout += payout_amount;
+          // });
 
         }
 
