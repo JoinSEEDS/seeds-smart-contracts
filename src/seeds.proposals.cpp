@@ -2143,3 +2143,87 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
   }
 
 }
+
+
+ACTION proposals::testalliance (uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type) {
+
+  require_auth(get_self());
+
+  props.emplace(_self, [&](auto & prop){
+    prop.id = id;
+    prop.creator = creator;
+    prop.quantity = quantity;
+    prop.current_payout = current_payout;
+    prop.status = status;
+    prop.stage = stage;
+    prop.campaign_type = campaign_type;
+    prop.fund = bankaccts::alliances;
+    prop.recipient = creator;
+  });
+
+}
+
+// TODO: Remove
+ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  auto props_by_campaign_type_id = props.get_index<"bycmptypeid"_n>();
+
+  uint128_t id = (uint128_t(alliance_type.value) << 64) + start;
+  auto pitr = props_by_campaign_type_id.lower_bound(id);
+
+  uint64_t count = 0;
+
+  while (pitr != props_by_campaign_type_id.end() && pitr->campaign_type == alliance_type && count < chunksize) {
+
+    if (pitr->campaign_type == alliance_type) { // just to be extra sure it only affects alliance props
+
+      print(" FUND ID:", pitr->id, ", status=", pitr->status, "\n");
+
+      if (pitr->status == status_evaluate) {
+
+        asset payout_amount = pitr->quantity - pitr->current_payout;
+
+        print(" QUANTITY:", payout_amount, " \n");
+
+        if (payout_amount.amount > 0) {
+          print(">>Sending! ", payout_amount, "\n");
+
+          check(false, "disabled");
+          
+          // send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+
+          // props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
+          //   prop.current_payout += payout_amount;
+          // });
+
+        }
+
+      }
+
+    }
+
+    pitr++;
+    count++;
+  }
+
+  if (pitr != props_by_campaign_type_id.end() && pitr->campaign_type == alliance_type) {
+
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migalliances"_n,
+      std::make_tuple(pitr->id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(pitr->id, _self);
+
+  }
+
+}
+
+
