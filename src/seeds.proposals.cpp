@@ -539,7 +539,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
           proposal.passed_cycle = prop_cycle;
           proposal.age = 0; 
           proposal.staked = asset(0, seeds_symbol);
-          if (is_done) {
+          if (is_done && !is_alliance_type) { // alliance types remain in eval... 
             proposal.executed = true;
             proposal.status = status_passed;
             proposal.stage = stage_done;
