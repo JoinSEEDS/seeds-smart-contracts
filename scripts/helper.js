@@ -365,6 +365,10 @@ var permissions = [{
   key: exchangePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.exchange.account}@update`,
+  key: exchangePublicKey,
+  parent: 'active'
+}, {
   target: `${accounts.accounts.account}@api`,
   action: 'addrep'
 }, {
@@ -384,6 +388,9 @@ var permissions = [{
 }, {
   target: `${accounts.exchange.account}@purchase`,
   action: 'newpayment'
+}, {
+  target: `${accounts.exchange.account}@update`,
+  action: 'updatetlos'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
