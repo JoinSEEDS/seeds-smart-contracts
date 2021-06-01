@@ -34,7 +34,7 @@ const compile = async ({ contract, source, include = "" }) => {
   const dir = process.cwd() + "/"
   // check directory
   if (!dir.endsWith("seeds-smart-contracts/")) {
-    throw new Error("You have to run from seeds-contracts directory - comment out this line if installed in a different named folder ;)")
+    throw new Error("You have to run from seeds-smart-contracts directory - comment out this line if installed in a different named folder ;)")
   }
   const artifacts = dir + "artifacts"
 

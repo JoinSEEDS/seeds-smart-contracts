@@ -5,7 +5,7 @@ void settings::reset() {
 
   // config
   confwithdesc(name("propminstake"), uint64_t(555) * uint64_t(10000), "[Legacy] ]Minimum proposals stake threshold (in Seeds)", high_impact); 
-  confwithdesc(name("propmaxstake"), uint64_t(75000) * uint64_t(10000), "[Legacy] Max proposals stake 11,111 threshold (in Seeds)", high_impact);
+  confwithdesc(name("propmaxstake"), uint64_t(11111) * uint64_t(10000), "[Legacy] Max proposals stake 11,111 threshold (in Seeds)", high_impact);
   confwithdesc(name("propstakeper"), 3, "[Legacy] Proposal funding fee in % - 3%", high_impact);
 
   confwithdesc(name("prop.cmp.cap"), uint64_t(75000) * uint64_t(10000), "Campains proposals cap stake", high_impact);
