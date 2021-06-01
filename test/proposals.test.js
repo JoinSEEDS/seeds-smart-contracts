@@ -5,7 +5,7 @@ const { expect } = require('chai');
 
 const { 
   harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
-  campaignbank, milestonebank, alliancesbank, 
+  campaignbank, milestonebank, alliancesbank, hyphabank,
   firstuser, seconduser, thirduser, fourthuser, fifthuser
 } = names
 
@@ -1898,6 +1898,13 @@ describe('Voice decay', async assert => {
       json: true,
     })
 
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: 'milestone',
+      table: 'voice',
+      json: true,
+    })
+
     assert({
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices if required',
@@ -1908,6 +1915,12 @@ describe('Voice decay', async assert => {
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices for alliance if required',
       actual: voiceAlliance.rows.map(r => r.balance),
+      expected: expectedValues
+    })
+    assert({
+      given: 'ran voice decay for the ' + n + ' time',
+      should: 'decay voices for hypha if required',
+      actual: voiceHypha.rows.map(r => r.balance),
       expected: expectedValues
     })
   }
@@ -2071,9 +2084,13 @@ describe('delegate trust', async assert => {
   console.log('create alliance proposal')
   await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
   
+  console.log('create hypha proposal')
+  await contracts.proposals.create(firstuser, hyphabank, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', milestonebank, { authorization: `${firstuser}@active` })
+
   console.log('stake')
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '3', { authorization: `${firstuser}@active` })
   
   console.log('active proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2094,6 +2111,10 @@ describe('delegate trust', async assert => {
   await contracts.proposals.delegate(seconduser, firstuser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(seconduser, thirduser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(fourthuser, thirduser, scopeAlliance, { authorization: `${fourthuser}@active` })
+
+  console.log('delegate trust for hypha')
+  const scopeHypha = 'milestone'
+  await contracts.proposals.delegate(seconduser, thirduser, scopeHypha, { authorization: `${seconduser}@active` })
 
   let avoidCyclesWorks = true
   try {
@@ -2116,9 +2137,16 @@ describe('delegate trust', async assert => {
       table: 'voice',
       json: true,
     })
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: scopeHypha,
+      table: 'voice',
+      json: true,
+    })
     return {
       campaigns: voiceCampaigns.rows,
-      alliances: voiceAlliances.rows
+      alliances: voiceAlliances.rows,
+      hypha: voiceHypha.rows
     }
   }
 
@@ -2144,6 +2172,9 @@ describe('delegate trust', async assert => {
 
   console.log('vote for alliances')
   await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
+  await sleep(5000)
+
+  await contracts.proposals.against(thirduser, 3, 50, { authorization: `${thirduser}@active` })
   await sleep(5000)
 
   const usersTable = await eos.getTableRows({
@@ -2247,6 +2278,13 @@ describe('delegate trust', async assert => {
         { account: thirduser, balance: 0 },
         { account: fourthuser, balance: 0 },
         { account: fifthuser, balance: 22 }
+      ],
+      hypha: [
+        { account: firstuser,balance:20 },
+        { account: seconduser, balance: 0 },
+        { account: thirduser, balance: 0 },
+        { account: fourthuser, balance:35 },
+        { account: fifthuser, balance:22 }
       ]
     }
   })
@@ -2265,6 +2303,13 @@ describe('delegate trust', async assert => {
       ],
       alliances: [
         { account: firstuser, balance: 20 },
+        { account: seconduser, balance: 10 },
+        { account: thirduser, balance: 50 },
+        { account: fourthuser, balance: 35 },
+        { account: fifthuser, balance: 22 }
+      ],
+      hypha: [
+        { account: firstuser, balance:20 },
         { account: seconduser, balance: 10 },
         { account: thirduser, balance: 50 },
         { account: fourthuser, balance: 35 },
@@ -2711,14 +2756,15 @@ describe('Alliance campaigns', async assert => {
 })
 
 
-describe('fix alliances', async assert => {
- 
+
+describe('Hypha proposals', async assert => {
+
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ accounts, proposals, settings, escrow })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding, pool })
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -2726,63 +2772,144 @@ describe('fix alliances', async assert => {
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
-
-  console.log('escrow reset')
-  await contracts.escrow.reset({ authorization: `${escrow}@active` })
-
-  const printProposals = async () => {
-    const proposalsTable = await eos.getTableRows({
-      code: proposals,
-      scope: proposals,
-      table: 'props',
-      json: true
-    })
-    console.log(proposalsTable)
-    const escrowTable = await eos.getTableRows({
-      code: escrow,
-      scope: escrow,
-      table: 'locks',
-      json: true
-    })
-    console.log(escrowTable)
-  }
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
 
-  console.log('create alliances')
-  await contracts.proposals.testalliance(1, firstuser, '10.0000 SEEDS', '1.0000 SEEDS', 'evaluate', 'active', 'alliance', { authorization: `${proposals}@active` })
-  await contracts.proposals.testalliance(2, seconduser, '10.0000 SEEDS', '1.0000 SEEDS', 'passed', 'done', 'alliance', { authorization: `${proposals}@active` })
-  await contracts.proposals.testalliance(3, thirduser, '10.0000 SEEDS', '1.0000 SEEDS', 'rejected', 'done', 'alliance', { authorization: `${proposals}@active` })
-  await contracts.proposals.testalliance(4, thirduser, '10.0000 SEEDS', '0.0000 SEEDS', 'open', 'active', 'alliance', { authorization: `${proposals}@active` })
-  await contracts.proposals.testalliance(5, firstuser, '10.0000 SEEDS', '1.0000 SEEDS', 'evaluate', 'active', 'cmp.invite', { authorization: `${proposals}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
 
-  await printProposals()
+  console.log('create proposal '+milestonebank)
 
-  await contracts.proposals.migalliances(0, 2, { authorization: `${proposals}@active` })
-  await sleep(2000)
+  await contracts.proposals.createx(firstuser, hyphabank, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', milestonebank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, hyphabank, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', milestonebank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
 
-  await printProposals()
+  await contracts.proposals.createx(seconduser, seconduser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
 
-  const locksTable = await eos.getTableRows({
-    code: escrow,
-    scope: escrow,
-    table: 'locks',
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 90, { authorization: `${harvest}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
+
+  await contracts.proposals.favour(thirduser, 2, 1, { authorization: `${thirduser}@active` })
+
+  const voiceTable = await eos.getTableRows({
+    code: proposals,
+    scope: 'milestone',
+    table: 'voice',
+    json: true
+  })
+  console.log(voiceTable)
+
+  assert({
+    given: 'voted on hypha props',
+    should: 'have the correct voice',
+    actual: voiceTable.rows,
+    expected: [
+      { account: firstuser, balance: 90 },
+      { account: seconduser, balance: 80 },
+      { account: thirduser, balance: 79 }
+    ]
+  })
+
+  console.log('eval proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  assert({
+    given: 'hypha props created',
+    should: 'evaluated them correctly',
+    actual: props.rows.map(p => {
+      return {
+        id: p.id,
+        status: p.status,
+        stage: p.stage,
+        current_payout: p.current_payout,
+        campaign_type: p.campaign_type
+      }
+    }),
+    expected: [
+      {
+        id: 1,
+        status: 'passed',
+        stage: 'done',
+        current_payout: '100.0000 SEEDS',
+        campaign_type: 'milestone'
+      },
+      {
+        id: 2,
+        status: 'rejected',
+        stage: 'done',
+        current_payout: '0.0000 SEEDS',
+        campaign_type: 'milestone'
+      },
+      {
+        id: 3,
+        status: 'rejected',
+        stage: 'done',
+        current_payout: '0.0000 SEEDS',
+        campaign_type: 'cmp.funding'
+      }
+    ]
+  })
+
+  const supportTable = await eos.getTableRows({
+    code: proposals,
+    scope: 'milestone',
+    table: 'support',
     json: true
   })
 
   assert({
-    given: 'alliances not being paid out',
-    should: 'send the missing amount to escrow',
-    actual: locksTable.rows.length,
-    expected: 2
+    given: 'milestone props created',
+    should: 'have the correct support',
+    actual: supportTable.rows,
+    expected: [
+      {
+        propcycle: 1,
+        num_proposals: 2,
+        total_voice_cast: 21,
+        voice_needed: 9
+      },
+      {
+        propcycle: 2,
+        num_proposals: 0,
+        total_voice_cast: 0,
+        voice_needed: 0
+      }
+    ]
   })
 
-
 })
-
-

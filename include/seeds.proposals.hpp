@@ -107,7 +107,6 @@ CONTRACT proposals : public contract {
       ACTION testperiod ();
       ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
 
-      ACTION migvotepow(uint64_t cycle);
       ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
@@ -147,6 +146,12 @@ CONTRACT proposals : public contract {
       name campaign_funding_type = "cmp.funding"_n;
       name milestone_type = "milestone"_n;
 
+      std::vector<name> scopes = {
+        alliance_type,
+        get_self(),
+        milestone_type
+      };
+
       void update_cycle();
       void update_voicedecay();
       uint64_t get_cycle_period_sec();
@@ -176,7 +181,7 @@ CONTRACT proposals : public contract {
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
-      name get_type (name fund);
+      name get_type (const name & fund);
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
@@ -426,7 +431,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
-        (migvotepow)
         (reevalprop)
         (testalliance)(migalliances)
         )
