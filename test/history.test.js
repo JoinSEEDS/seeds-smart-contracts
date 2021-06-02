@@ -834,7 +834,6 @@ describe('individual transactions', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 
@@ -983,7 +982,6 @@ describe('Transaction CBS', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 
