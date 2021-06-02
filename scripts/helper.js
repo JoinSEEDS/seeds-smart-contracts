@@ -689,6 +689,12 @@ var permissions = [{
 }, {
   target: `${accounts.pool.account}@hrvst.pool`,
   action: 'payouts'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'calcmappuses'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankappuses'
 }]
 
 const isTestnet = chainId == networks.telosTestnet

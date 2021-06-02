@@ -386,6 +386,9 @@ describe('app', async assert => {
         organization, token, accounts, settings, harvest
     }))
 
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
     console.log('changing batch size')
     await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
@@ -396,8 +399,13 @@ describe('app', async assert => {
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
     console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+    const users = [firstuser, seconduser, thirduser]
+    for (const user of users) {
+        await contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })
+        await contracts.accounts.testsetrs(user, 50, { authorization: `${accounts}@active` })
+    }
+    await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+    await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
     
     console.log('create organization')
     await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
@@ -408,6 +416,8 @@ describe('app', async assert => {
     console.log('register app')
     await contracts.organization.registerapp(firstuser, 'testorg1', 'app1', 'app long name', { authorization: `${firstuser}@active` })
     await contracts.organization.registerapp(seconduser, 'testorg2', 'app2', 'app long name 2', { authorization: `${seconduser}@active` })
+    await contracts.organization.registerapp(seconduser, 'testorg2', 'app3', 'app long name 3', { authorization: `${seconduser}@active` })
+    await contracts.organization.registerapp(seconduser, 'testorg2', 'app4', 'app long name 4', { authorization: `${seconduser}@active` })
 
     let createOrgNotBeingOwner = true
     try {
@@ -420,11 +430,9 @@ describe('app', async assert => {
 
     console.log('use app')
     await contracts.organization.appuse('app1', firstuser, { authorization: `${firstuser}@active` })
-    await sleep(300)
     
     for (let i = 0; i < 10; i++) {
         await contracts.organization.appuse('app1', seconduser, { authorization: `${seconduser}@active` })
-        await sleep(400)
     }
 
     await contracts.organization.appuse('app2', seconduser, { authorization: `${seconduser}@active` })
@@ -435,6 +443,27 @@ describe('app', async assert => {
         table: 'daus',
         json: true
     })
+    console.log(daus1Table)
+
+    const daus1TotalsTable = await getTableRows({
+        code: organization,
+        scope: 'app1',
+        table: 'daustotals',
+        json: true
+    })
+    console.log(daus1TotalsTable)
+
+    console.log('change the max usage')
+    await contracts.settings.configure('dau.maxuse', 5, { authorization: `${settings}@active` })
+
+    console.log('use the app2 more')
+    for (let i = 0; i < 10; i++) {
+        await contracts.organization.appuse('app2', firstuser, { authorization: `${firstuser}@active` })
+        await contracts.organization.appuse('app4', firstuser, { authorization: `${firstuser}@active` })
+    }
+
+    console.log('visitor has no effect on the appuse')
+    await contracts.organization.appuse('app2', thirduser, { authorization: `${thirduser}@active` })
 
     const daus2Table = await getTableRows({
         code: organization,
@@ -442,58 +471,59 @@ describe('app', async assert => {
         table: 'daus',
         json: true
     })
+    console.log(daus2Table)
 
-    const appsTable = await getTableRows({
-        code: organization,
-        scope: organization,
-        table: 'apps',
-        json: true
-    })
-    const apps = appsTable.rows
-
-    console.log('clean daus today')
-    await contracts.organization.cleandaus({ authorization: `${organization}@active` })
-    await sleep(3000)
-
-    const daus1TableAfterClean1 = await getTableRows({
-        code: organization,
-        scope: 'app1',
-        table: 'daus',
-        json: true
-    })
-
-    const daus2TableAfterClean1 = await getTableRows({
+    const daus2TotalsTable = await getTableRows({
         code: organization,
         scope: 'app2',
-        table: 'daus',
+        table: 'daustotals',
         json: true
     })
+    console.log(daus2TotalsTable)
 
-    let today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
-    today = today.getTime() / 1000
+    console.log('change threshold')
+    await contracts.settings.configure('dau.thresh', 10, { authorization: `${settings}@active` })
 
-    let tomorrow = new Date()
-    tomorrow.setUTCHours(0, 0, 0, 0)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow = tomorrow.getTime() / 1000
+    await contracts.organization.calcmappuses({ authorization: `${organization}@active` })
+    await sleep(3000)
 
-    console.log('clean app1 dau')
-    await contracts.organization.cleandau('app1', tomorrow, 0, { authorization: `${organization}@active` })
-    await sleep(2000)
-
-    const daus1TableAfterClean2 = await getTableRows({
+    const dausScoresTable1 = await getTableRows({
         code: organization,
-        scope: 'app1',
-        table: 'daus',
+        scope: organization,
+        table: 'dausscores',
         json: true
     })
+    console.log(dausScoresTable1)
 
-    const daus1History1 = await getTableRows({
+    assert({
+        given: 'apps used',
+        should: 'have the correct app points',
+        actual: dausScoresTable1.rows,
+        expected: [
+            { app_name: 'app2', total_points: 22, total_uses: 2, rank: 0 },
+            { app_name: 'app4', total_points: 20, total_uses: 1, rank: 0 }    
+        ]
+    })
+
+    await contracts.organization.rankappuses({ authorization: `${organization}@active` })
+    await sleep(3000)
+
+    const dausScoresTable2 = await getTableRows({
         code: organization,
-        scope: 'app1',
-        table: 'dauhistory',
+        scope: organization,
+        table: 'dausscores',
         json: true
+    })
+    console.log(dausScoresTable2)
+
+    assert({
+        given: 'apps scored',
+        should: 'have the correct rank',
+        actual: dausScoresTable2.rows,
+        expected: [
+            { app_name: 'app2', total_points: 22, total_uses: 2, rank: 27 },
+            { app_name: 'app4', total_points: 20, total_uses: 1, rank: 0 }    
+        ]
     })
 
     console.log('ban app')
@@ -506,27 +536,40 @@ describe('app', async assert => {
         json: true
     })
 
-    console.log('reset settings')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
+    console.log(appsTableAfterBan)
 
     assert({
         given: 'registered an app',
         should: 'have an entry in the apps table',
-        actual: apps,
+        actual: appsTableAfterBan.rows,
         expected: [
-            { 
+            {
                 app_name: 'app1',
                 org_name: 'testorg1',
                 app_long_name: 'app long name',
-                is_banned: 0,
+                is_banned: 1,
                 number_of_uses: 11
             },
-            { 
+            {
                 app_name: 'app2',
                 org_name: 'testorg2',
                 app_long_name: 'app long name 2',
                 is_banned: 0,
-                number_of_uses: 1
+                number_of_uses: 12
+            },
+            {
+                app_name: 'app3',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 3',
+                is_banned: 0,
+                number_of_uses: 0
+            },
+            {
+                app_name: 'app4',
+                org_name: 'testorg2',
+                app_long_name: 'app long name 4',
+                is_banned: 0,
+                number_of_uses: 10
             }
         ]
     })
@@ -538,7 +581,7 @@ describe('app', async assert => {
             daus1Table.rows.map(values => values.number_app_uses),
             daus2Table.rows.map(values => values.number_app_uses)
         ],
-        expected: [[1, 10], [1]]
+        expected: [[1, 1], [1, 5]]
     })
 
     assert({
@@ -549,69 +592,10 @@ describe('app', async assert => {
     })
 
     assert({
-        given: 'call cleandaus on the same day',
-        should: 'not clean daus app1 table',
-        actual: daus1TableAfterClean1.rows,
-        expected: daus1Table.rows
-    })
-
-    assert({
-        given: 'call cleandaus on the same day',
-        should: 'not clean daus app2 table',
-        actual: daus2TableAfterClean1.rows,
-        expected: daus2Table.rows
-    })
-
-    assert({
-        given: 'call cleandau for app1 on a different day',
-        should: 'clean daus app1 table',
-        actual: daus1TableAfterClean2.rows,
-        expected: [ 
-            { account: 'seedsuseraaa', date: tomorrow, number_app_uses: 0 },
-            { account: 'seedsuserbbb', date: tomorrow, number_app_uses: 0 } 
-        ]
-    })
-
-    assert({
-        given: 'call cleandau for app1 on a different day',
-        should: 'have entries in the dau history table',
-        actual: daus1History1.rows,
-        expected: [ 
-            { 
-                dau_history_id: 0,
-                account: 'seedsuseraaa',
-                date: today,
-                number_app_uses: 1 
-            },
-            { 
-                dau_history_id: 1,
-                account: 'seedsuserbbb',
-                date: today,
-                number_app_uses: 10 
-            } 
-        ]
-    })
-
-    assert({
         given: 'ban app called',
         should: 'ban the app',
-        actual: appsTableAfterBan.rows,
-        expected: [
-            { 
-                app_name: 'app1',
-                org_name: 'testorg1',
-                app_long_name: 'app long name',
-                is_banned: 1,
-                number_of_uses: 11
-            },
-            { 
-                app_name: 'app2',
-                org_name: 'testorg2',
-                app_long_name: 'app long name 2',
-                is_banned: 0,
-                number_of_uses: 1
-            }
-        ]
+        actual: appsTableAfterBan.rows.map(r => r.is_banned),
+        expected: [1, 0, 0, 0]
     })
 
 })
@@ -1273,6 +1257,7 @@ describe('organization status', async assert => {
     await checkTrxpoints(fourthuser, 140 * multiplier * 2.0)
 
 })
+
 
 /* describe('transaction points', async assert => {
     const contracts = await initContracts({ settings, history, accounts, organization, token, harvest })

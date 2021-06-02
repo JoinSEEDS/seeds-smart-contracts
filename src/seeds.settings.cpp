@@ -116,6 +116,17 @@ void settings::reset() {
   confwithdesc(name("org.maxadd"), 7, "Maximum amount of rating points a user can give to an org", high_impact);
   confwithdesc(name("orgratethrsh"), 100, "Minimum rating points an organization needs to earn to start being ranked", medium_impact);
 
+  // =====================================
+  // apps 
+  // =====================================
+
+  confwithdesc(name("dau.cyc"), 3, "Only use that occurs in the preceding number of lunar cycles are counted", high_impact);
+  confwithdesc(name("dau.res.pt"), 2, "Base Points an Organisation Receives when a Resident uses their App/Dapp in a given 24/hr period", high_impact);
+  confwithdesc(name("dau.cit.pt"), 4, "Base Points an Organisation Receives when a Citizen uses their App/Dapp in a given 24/hr period", high_impact);
+  confwithdesc(name("dau.thresh"), 333, "Only applications that would receive at least this number of Use Points within a given 24/hr period qualify for earning CBP", high_impact);
+  confwithdesc(name("dau.maxuse"), 1, "Number of times a user is counted in a given 24/hr period", high_impact);
+
+
   // Scheduler cycle
   confwithdesc(name("secndstoexec"), 60, "Seconds to execute", high_impact);
 

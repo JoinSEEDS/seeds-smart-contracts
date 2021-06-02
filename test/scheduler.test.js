@@ -250,6 +250,7 @@ describe('scheduler, organization scores', async assert => {
         code: scheduler,
         scope: scheduler,
         table: 'operations',
+        limit: 200,
         json: true
     })
 
@@ -278,6 +279,16 @@ describe('scheduler, organization scores', async assert => {
             id: 'hrvst.orgtx',
             operation: 'rankorgtxs',
             contract: harvest
+        },
+        {
+            id: 'org.appuses',
+            operation: 'calcmappuses',
+            contract: organization
+        },
+        {
+            id: 'org.rankapps',
+            operation: 'rankappuses',
+            contract: organization
         }
     ]
 
