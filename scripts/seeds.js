@@ -7,6 +7,7 @@ const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAc
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
+const proposeDeploy = require('./propose_deploy')
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, 
     changeOwnerAndActivePermission, 
@@ -35,6 +36,14 @@ const compileAction = async (contract) => {
     } catch (err) {
         console.log("compile failed for " + contract + " error: " + err)
     }
+}
+
+const proposeDeployAction = async (contract) => {
+  try {
+    await proposeDeploy(contract)
+  } catch (err) {
+    console.log(err)
+  }
 }
 
 const deployAction = async (contract) => {
@@ -155,6 +164,13 @@ program
   .description('Compile custom contract')
   .action(async function (contract, moreContracts) {
     await batchCallFunc(contract, moreContracts, compileAction)
+  })
+
+program
+  .command('proposedeploy <contract>')
+  .description('Propose contract deployment')
+  .action(async function (contract) {
+    await proposeDeployAction(contract)
   })
 
 program
