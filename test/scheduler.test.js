@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows, initContracts } = require('../scripts/helper')
 const { equals, init } = require('ramda')
 
-const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum } = names
+const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, history } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -484,6 +484,11 @@ describe('scheduler, harvest', async assert => {
             id: 'hrvst.rorgcs',
             operation: 'rankorgcss',
             contract: harvest
+        },
+        {
+            id: 'hstry.ptrxs',
+            operation: 'cleanptrxs',
+            contract: history
         }
     ]
 
