@@ -26,6 +26,7 @@ namespace contracts {
   name gratitude = "gratz.seeds"_n;
   name pouch = "pouch.seeds"_n;
   name pool = "pool.seeds"_n;
+  name msig = "msig.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;
