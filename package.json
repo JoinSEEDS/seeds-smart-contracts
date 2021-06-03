@@ -14,12 +14,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ansi-escapes": "^5.0.0",
     "bignumber.js": "^8.1.1",
     "chai": "^4.2.0",
     "cheerio": "^1.0.0-rc.3",
     "commander": "^3.0.2",
     "commonmark": "^0.29.2",
     "dotenv": "^8.1.0",
+    "eosio-signing-request": "^2.2.1",
     "eosjs": "^21.0.3",
     "eosjs-ecc": "^4.0.7",
     "handlebars": "^4.7.6",
@@ -29,6 +31,7 @@
     "node-fetch": "^2.6.1",
     "ramda": "^0.26.1",
     "riteway": "^6.0.3",
-    "tap-nirvana": "^1.1.0"
+    "tap-nirvana": "^1.1.0",
+    "terminal-link": "^3.0.0"
   }
 }
