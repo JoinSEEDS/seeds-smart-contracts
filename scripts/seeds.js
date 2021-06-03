@@ -16,17 +16,11 @@ const { deployAllContracts, updatePermissions, resetByName,
 
 
 const getContractLocation = (contract) => {
-  if (contract == "msig") {
-    return {
-      source: `../msig/src/${contract}.cpp`,
-      include: `../msig/include`
-    }
-  } else {
     return {
       source: `./src/seeds.${contract}.cpp`,
       include: ""
     }
-  }
+  
 }
 
 const compileAction = async (contract) => {
