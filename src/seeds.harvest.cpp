@@ -240,6 +240,11 @@ void harvest::unplant(name from, asset quantity) {
   auto bitr = balances.find(from.value);
   check(bitr->planted.amount >= quantity.amount, "can't unplant more than planted!");
 
+  auto oitr = organizations.find(from.value);
+  if (oitr != organizations.end()) {
+    check(bitr->planted.amount >= quantity.amount + oitr->planted.amount, "organization can not unplant the initial fee");
+  }
+
   uint64_t lastRequestId = 0;
   uint64_t lastRefundId = 0;
 
