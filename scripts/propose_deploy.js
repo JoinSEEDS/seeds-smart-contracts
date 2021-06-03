@@ -57,7 +57,10 @@ const proposeDeploy = async (name, commit) => {
         vmversion: 0,
     }
 
-    const setCodeAuth = `${accounts.owner.account}@active`
+    const setCodeAuth = [{
+                actor: contractAccount,
+                permission: 'active',
+    }]
 
     console.log(" set code for account " + setCodeData.account + " from " + setCodeAuth)
 
@@ -72,7 +75,10 @@ const proposeDeploy = async (name, commit) => {
         abi: abiAsHex
     }
 
-    const setAbiAuth = `${accounts.owner.account}@active`
+    const setAbiAuth = [{
+        actor: contractAccount,
+        permission: 'active',   
+    }]
 
     const actions = [{
         account: 'eosio',
@@ -85,64 +91,112 @@ const proposeDeploy = async (name, commit) => {
         data: setAbiData,
         authorization: setAbiAuth
     }]
-    console.log("Actions:")
-    console.log(actions)
+    // console.log("Actions:")
+    // console.log(actions)
 
     const serializedActions = await api.serializeActions(actions)
 
-    console.log("SER Actions:")
-    console.log(serializedActions)
+    // console.log("SER Actions:")
+    // console.log(serializedActions)
 
-    const proposeAuth = `${accounts.owner.account}@active`
 
-    console.log('send propose transaction from ' + proposeAuth)
+    // * @param proposer - The account proposing a transaction
+    // * @param proposal_name - The name of the proposal (should be unique for proposer)
+    // * @param requested - Permission levels expected to approve the proposal
+    // * @param trx - Proposed transaction
 
-    await api.transact({
-        actions: [
+    console.log("====== PROPOSING ======")
+
+    const proposerAccount = "msig.seeds"
+
+    const proposeInput = {
+        proposer: proposerAccount,
+        proposal_name: 'propose',
+        requested: [ // NOTE: Ignored
             {
-                account: 'msig.seeds',
-                name: 'propose',
-                authorization: proposeAuth,
-                data: {
-                    proposer: `${accounts.owner.account}`,
-                    proposal_name: "upgrade",
-                    requested: [{
-                        actor: accounts.owner.account,
-                        permission: "active"
-                    }],
-                    trx: {
-                        expiration: '2019-09-16T16:39:15',
-                        ref_block_num: 0,
-                        ref_block_prefix: 0,
-                        max_net_usage_words: 0,
-                        max_cpu_usage_ms: 0,
-                        delay_sec: 0,
-                        context_free_actions: [],
-                        transaction_extensions: [],                        
-                        actions: serializedActions
-                    }
-                }
-            }
-        ]
-    }, {
+                actor: proposerAccount,
+                permission: "active"
+            },
+          {
+            actor: 'useraaaaaaaa',
+            permission: 'active'
+          },
+          {
+            actor: 'userbbbbbbbb',
+            permission: 'active'
+          }
+        ],
+        trx: {
+          expiration: '2021-09-14T16:39:15',
+          ref_block_num: 0,
+          ref_block_prefix: 0,
+          max_net_usage_words: 0,
+          max_cpu_usage_ms: 0,
+          delay_sec: 0,
+          context_free_actions: [],
+          actions: serializedActions,
+          transaction_extensions: []
+        }
+      };
+
+      console.log('send propose ' + JSON.stringify(proposeInput))
+
+      console.log("====== TRANSACT  ======")
+
+      const auth  = [{
+        actor: proposerAccount,
+        permission: 'active',
+      }]
+
+    const propActions = [{
+        account: 'msig.seeds',
+        name: 'propose',
+        authorization: auth,
+        data: proposeInput
+    }]
+
+      const trxConfig = {
         blocksBehind: 3,
         expireSeconds: 30,
-    })
+      }
 
-    const esr = await generateESR({
-        actions: [
-            {
-                account: 'msig.seeds',
-                name: 'approve',
-                authorization: [],
-                data: {
-                    proposal_id: 1
-                }
-            }
-        ]
-    })
+      let res = await api.transact({
+            actions: propActions
+        }, trxConfig)
 
-    console.log(esr)
+    //   const tx_id = await api.transact({
+    //     actions: [{
+    //       account: 'msig.seeds',
+    //       name: 'propose',
+    //       authorization: [{
+    //         actor: '${accounts.owner.account}',
+    //         permission: 'active',
+    //       }],
+    //       data: proposeInput,
+    //     }]
+    //   }, {
+    //     blocksBehind: 3,
+    //     expireSeconds: 30,
+    //     broadcast: true,
+    //     sign: true
+    //   });
+
+      console.log("propose success "+res)
+      
+    // const esr = await generateESR({
+    //     actions: [
+    //         {
+    //             account: 'msig.seeds',
+    //             name: 'approve',
+    //             authorization: [],
+    //             data: {
+    //                 proposal_id: 1
+    //             }
+    //         }
+    //     ]
+    // })
+
+    // console.log(esr)
 }
 
 module.exports = proposeDeploy

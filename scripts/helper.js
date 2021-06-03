@@ -695,7 +695,14 @@ var permissions = [{
 }, {
   target: `${accounts.organization.account}@execute`,
   action: 'rankappuses'
-}]
+// }, {
+//   target: `${accounts.policy.account}@active`,
+//   actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.policy.account}@active`, // TODO: Rethink this - it's just for deployment, msig
+  actor: `${accounts.msig.account}@active`
+}
+]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
