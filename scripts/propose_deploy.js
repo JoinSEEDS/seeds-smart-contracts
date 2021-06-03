@@ -5,17 +5,15 @@ const eosjs = require('eosjs')
 const { Api, JsonRpc, Serialize } = eosjs
 
 const { source } = require('./deploy')
-const { accounts } = require('./helper')
-const { keyProvider, httpEndpoint } = require('./helper')
+const { accounts, eos } = require('./helper')
 
-const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
-const signatureProvider = new JsSignatureProvider(keyProvider)
+// const Eos = require('./eosjs-port')
 
-const rpc = new JsonRpc(httpEndpoint, { fetch })
-
-const api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() })
+// let api = Eos.api
 
 const abiToHex = (abi) => {
+    const api = eos.api
+
     const buffer = new Serialize.SerialBuffer({
         textEncoder: api.textEncoder,
         textDecoder: api.textDecoder,
@@ -29,8 +27,6 @@ const abiToHex = (abi) => {
             abi
         )
 
-    console.dir(abi)
-
       abiDefinitions.serialize(buffer, abi)
       const serializedAbiHexString = Buffer.from(buffer.asUint8Array()).toString('hex')
   
@@ -39,6 +35,8 @@ const abiToHex = (abi) => {
 
 const proposeDeploy = async (name, commit) => {
     console.log('starting deployment')
+
+    const api = eos.api
 
     const { code, abi } = await source(name)
 
@@ -63,20 +61,20 @@ const proposeDeploy = async (name, commit) => {
 
     console.log(" set code for account " + setCodeData.account + " from " + setCodeAuth)
 
+    console.log(" setting abi " +contractAccount +"\nABI:"+ abi)
+
+    const abiAsHex = await abiToHex(JSON.parse(abi))
+
+    console.log("hex abi: "+abiAsHex)
+
     const setAbiData = {
         account: contractAccount,
-        abi: abiToHex(abi)
+        abi: abiAsHex
     }
 
     const setAbiAuth = `${accounts.owner.account}@active`
 
-    console.log("set abi for account " + setAbiData.account + " from " + setAbiAuth)
-
-    console.dir(setAbiData)
-
-    console.log("================================")
-
-    const serializedActions = await api.serializeActions([{
+    const actions = [{
         account: 'eosio',
         name: 'setcode',
         data: setCodeData,
@@ -86,7 +84,14 @@ const proposeDeploy = async (name, commit) => {
         name: 'setabi',
         data: setAbiData,
         authorization: setAbiAuth
-    }])
+    }]
+    console.log("Actions:")
+    console.log(actions)
+
+    const serializedActions = await api.serializeActions(actions)
+
+    console.log("SER Actions:")
+    console.log(serializedActions)
 
     const proposeAuth = `${accounts.owner.account}@active`
 
