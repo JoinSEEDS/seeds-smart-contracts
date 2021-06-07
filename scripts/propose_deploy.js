@@ -33,18 +33,18 @@ const abiToHex = (abi) => {
     return serializedAbiHexString
 }
 
-const proposeDeploy = async (name, commit) => {
+const proposeDeploy = async (contractName, proposalName) => {
     console.log('starting deployment')
 
     const api = eos.api
 
-    const { code, abi } = await source(name)
+    const { code, abi } = await source(contractName)
 
     console.log("compiled code with length " + code.length)
 
     console.log("constructed abi with length " + abi.length)
 
-    const contractAccount = accounts[name].account
+    const contractAccount = accounts[contractName].account
 
     console.log('serialize actions')
 
@@ -111,7 +111,7 @@ const proposeDeploy = async (name, commit) => {
 
     const proposeInput = {
         proposer: proposerAccount,
-        proposal_name: 'propose',
+        proposal_name: "propose",
         requested: [ // NOTE: Ignored
             {
                 actor: proposerAccount,

@@ -38,9 +38,9 @@ const compileAction = async (contract) => {
     }
 }
 
-const proposeDeployAction = async (contract) => {
+const proposeDeployAction = async (contract, proposalName) => {
   try {
-    await proposeDeploy(contract)
+    await proposeDeploy(contract, proposalName)
   } catch (err) {
     console.log(err)
   }
@@ -167,10 +167,10 @@ program
   })
 
 program
-  .command('proposedeploy <contract>')
+  .command('proposedeploy <contract> <proposal_name>')
   .description('Propose contract deployment')
-  .action(async function (contract) {
-    await proposeDeployAction(contract)
+  .action(async function (contract, proposal_name) {
+    await proposeDeployAction(contract, proposal_name)
   })
 
 program
