@@ -22,7 +22,7 @@ function sleep (ms) {
 async function getNonce () {
   try {
     if (isUnitTest) {
-      await rpc.getRawAbi('policy.seeds')
+      await Eos.rpc.getRawAbi('policy.seeds')
       const random = Math.random().toString(36).substring(4);
       return [{
         // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
@@ -75,7 +75,7 @@ class Eos {
   }
 
   async getInfo () {
-    return rpc.get_info()
+    return Eos.rpc.get_info()
   }
 
   async contract (accountName) {
@@ -167,11 +167,11 @@ class Eos {
   }
 
   async getTableRows (namedParameters) {
-    return rpc.get_table_rows(namedParameters)
+    return Eos.Eos.rpc.get_table_rows(namedParameters)
   }
 
   async getCurrencyBalance (contract, account, token) {
-    return rpc.get_currency_balance(contract, account, token)
+    return Eos.rpc.get_currency_balance(contract, account, token)
   }
 
   async setabi ({ account, abi }, { authorization }) {
@@ -265,11 +265,11 @@ class Eos {
   }
 
   async getAccount (account) {
-    return rpc.get_account(account)
+    return Eos.rpc.get_account(account)
   }
 
   async getActions (account, pos, offset) {
-    return rpc.history_get_actions(account, pos, offset)
+    return Eos.rpc.history_get_actions(account, pos, offset)
   }
 
   async updateauth ({ account, permission, parent, auth }, { authorization }) {

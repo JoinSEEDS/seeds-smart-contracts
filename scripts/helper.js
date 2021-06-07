@@ -747,7 +747,7 @@ const config = {
 const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
-  let info = await eos.getInfo({})
+  let info = await eos.rpc.get_info()
   if (info.chain_id != chainId) {
     console.error("Fix this by setting local chain ID to "+info.chain_id)
     console.error('Chain ID mismatch, signing will not work - \nactual Chain ID: "+info.chain_id + "\nexpected Chain ID: "+chainId')

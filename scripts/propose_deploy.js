@@ -2,24 +2,17 @@ const assert = require('assert')
 const zlib = require('zlib')
 
 const { SigningRequest } = require('eosio-signing-request')
-const fetch = require('node-fetch')
-const { JsonRpc, Api, Serialize } = require('eosjs')
-const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
-
+const { Serialize } = require('eosjs')
 const { source } = require('./deploy')
-const { keyProvider,  httpEndpoint, accounts } = require('./helper')
-
-const signatureProvider = new JsSignatureProvider(keyProvider)
-const rpc = new JsonRpc(httpEndpoint, { fetch })
-const api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() })
+const { eos, accounts } = require('./helper')
 
 const abiToHex = (abi) => {
     const buffer = new Serialize.SerialBuffer({
-        textEncoder: api.textEncoder,
-        textDecoder: api.textDecoder,
+        textEncoder: eos.api.textEncoder,
+        textDecoder: eos.api.textDecoder,
     })
 
-    const defs = api.abiTypes.get('abi_def')
+    const defs = eos.api.abiTypes.get('abi_def')
 
     const fields = defs.fields.reduce(
         (result, { name }) => Object.assign(result, { [name]: result[name] || [] }),
@@ -52,17 +45,19 @@ const getTrxOpts = () => ({
 })
 
 const getEsrOpts = () => ({
-    textEncoder: api.textEncoder,
-    textDecoder: api.textDecoder,
+    textEncoder: eos.api.textEncoder,
+    textDecoder: eos.api.textDecoder,
     zlib: {
         deflateRaw: (data) => new Uint8Array(zlib.deflateRawSync(Buffer.from(data))),
         inflateRaw: (data) => new Uint8Array(zlib.inflateRawSync(Buffer.from(data))),
     },
     abiProvider: {
-        getAbi: async (account) => (await api.getAbi(account))
+        getAbi: async (account) => (await eos.api.getAbi(account))
     }
 })
 
+// TODO get the list of signers from the cg.seeds account
+// cg = constitutional Guardians!
 const getContractGuardians = () => [{
     actor: accounts.owner,
     permission: 'active'
@@ -71,11 +66,12 @@ const getContractGuardians = () => [{
 const guardianPlaceholder = "............1"
 
 async function proposeDeploy({ contractName, proposalName }) {
+
     console.log('propose deployment of the contract ' + contractName)
     console.log('proposal name is ' + proposalName)
 
-    const chainInfo = await rpc.get_info()
-    const headBlock = await rpc.get_block(chainInfo.last_irreversible_block_num)
+    const chainInfo = await eos.rpc.get_info()
+    const headBlock = await eos.rpc.get_block(chainInfo.last_irreversible_block_num)
     const chainId = chainInfo.chain_id
 
     const contractAccount = accounts[contractName].account
@@ -119,7 +115,7 @@ async function proposeDeploy({ contractName, proposalName }) {
     console.log('deploy actions payload for ' + contractAccount)
     assert((deployActions[0].data.account === contractAccount) && (deployActions[0].authorization.account === contractAccount) && (deployActions[1].data.account === contractAccount) && (deployActions[1].authorization.account === contractAccount), "deploy actions invalid account");
 
-    const serializedDeployActions = await api.serializeActions(deployActions)
+    const serializedDeployActions = await eos.api.serializeActions(deployActions)
     console.log('deploy actions serialized to string with length ' + serializedDeployActions.length)
     assert(serializedDeployActions.length > 0, "invalid deploy actions serialization")
 
@@ -145,7 +141,19 @@ async function proposeDeploy({ contractName, proposalName }) {
         }
     }]
     console.log('propose actions payload for ' + contractName + " by " + proposeActions[0].data.proposer)
-    assert(proposeActions[0].data.proposer == contractName, "deployment should be proposed by the contract")
+   // assert(proposeActions[0].data.proposer == contractName, "deployment should be proposed by the contract")
+   // no the proposer needs to be one of the guardians, I think...s
+
+
+    // msign signatures required - all guardiians, in cg.seeds
+    // proposer signature - one of the guardians?!
+    // add some additional data to the proposal
+
+    await eos.api.transact({
+        actions: proposeActions
+    }, getTrxOpts())
+
+    console.log('create approve actions.. ')
 
     const approveActions = [{
         account: 'msig.seeds',
@@ -166,9 +174,6 @@ async function proposeDeploy({ contractName, proposalName }) {
     console.log('approve actions payload for ' + contractName)
     assert(approveActions[0].data.proposer == contractName, "approve invalid proposal")
 
-    // await api.transact({
-    //     actions: proposeActions
-    // }, getTrxOptions())
 
     const approveTransaction = await buildTransaction({
         actions: approveActions,
