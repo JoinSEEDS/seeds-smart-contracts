@@ -89,7 +89,7 @@ const proposeDeploy = async (contractName, proposalName) => {
 
   console.log("====== PROPOSING ======")
 
-  const proposerAccount = "msig.seeds"
+  const proposerAccount = "cg.seeds"
 
   const proposeInput = {
     proposer: proposerAccount,

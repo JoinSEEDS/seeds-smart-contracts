@@ -146,8 +146,10 @@ const accountsMetadata = (network) => {
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
       orguser: account('org1', '100.0000 SEEDS'),
       hyphabank: account('seeds.hypha', '100.0000 SEEDS'),
+      
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -195,6 +197,7 @@ const accountsMetadata = (network) => {
       bank: account('system.seeds'),
       globaldho: account('gdho.seeds'),
       testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
@@ -227,6 +230,7 @@ const accountsMetadata = (network) => {
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       owner: account(owner),
       rgn: account(rgn),
@@ -695,9 +699,6 @@ var permissions = [{
 }, {
   target: `${accounts.organization.account}@execute`,
   action: 'rankappuses'
-// }, {
-//   target: `${accounts.policy.account}@active`,
-//   actor: `${accounts.msig.account}@eosio.code`
 }, {
   target: `${accounts.msig.account}@owner`,
   actor: `${accounts.msig.account}@eosio.code`
@@ -706,8 +707,15 @@ var permissions = [{
   actor: `${accounts.msig.account}@eosio.code`
 }, {
   target: `${accounts.policy.account}@active`, // TODO: Rethink this - it's just for deployment, msig
-  actor: `${accounts.msig.account}@active`
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.policy.account}@owner`, 
+  actor: `${accounts.constitutionalGuardians.account}@owner`
+}, {
+  target: `${accounts.policy.account}@active`, 
+  actor: `${accounts.constitutionalGuardians.account}@active`
 }
+
 ]
 
 const isTestnet = chainId == networks.telosTestnet
