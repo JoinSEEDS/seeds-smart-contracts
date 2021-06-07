@@ -99,19 +99,13 @@ const proposeDeploy = async (contractName, proposalName) => {
     // console.log("SER Actions:")
     // console.log(serializedActions)
 
-
-    // * @param proposer - The account proposing a transaction
-    // * @param proposal_name - The name of the proposal (should be unique for proposer)
-    // * @param requested - Permission levels expected to approve the proposal
-    // * @param trx - Proposed transaction
-
     console.log("====== PROPOSING ======")
 
     const proposerAccount = "msig.seeds"
 
     const proposeInput = {
         proposer: proposerAccount,
-        proposal_name: "propose",
+        proposal_name: proposalName,
         requested: [ // NOTE: Ignored
             {
                 actor: proposerAccount,
@@ -181,7 +175,7 @@ const proposeDeploy = async (contractName, proposalName) => {
     //     sign: true
     //   });
 
-      console.log("propose success "+res)
+      console.log("propose success " + JSON.stringify(res, null, 2))
       
     // const esr = await generateESR({
     //     actions: [
