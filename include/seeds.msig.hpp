@@ -37,7 +37,7 @@ using namespace eosio;
           * @param trx - Proposed transaction
           */
          [[eosio::action]]
-         void propose(name proposer, name proposal_name, name proposal_type,
+         void propose(ignore<name> proposer, ignore<name> proposal_name,
                ignore<std::vector<permission_level>> requested, ignore<transaction> trx);
          /**
           * Approve action approves an existing proposal. Allows an account, the owner of `level` permission, to approve a proposal `proposal_name`
@@ -122,7 +122,6 @@ using namespace eosio;
 
          struct [[eosio::table]] proposal {
             name                            proposal_name;
-            name                            proposal_type;
             std::vector<char>               packed_transaction;
 
             uint64_t primary_key()const { return proposal_name.value; }

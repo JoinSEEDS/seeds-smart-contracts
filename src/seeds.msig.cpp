@@ -3,18 +3,11 @@
 #include <eosio/crypto.hpp>
 #include <eosio/permission.hpp>
 
-void msig::propose( name proposer,
-                        name proposal_name,
-                        name proposal_type,
+void msig::propose( ignore<name> proposer,
+                        ignore<name> proposal_name,
                         ignore<std::vector<permission_level>> requested,
                         ignore<transaction> trx )
 {
-   check(
-      proposal_type == type_setcode || 
-      proposal_type == type_permissions ||
-      proposal_type == type_generic, 
-      "invalid proposal type"
-   );
    name _proposer;
    name _proposal_name;
    std::vector<permission_level> _requested;
@@ -47,7 +40,6 @@ void msig::propose( name proposer,
    memcpy((char*)pkd_trans.data(), trx_pos, size);
    proptable.emplace( _proposer, [&]( auto& prop ) {
       prop.proposal_name       = _proposal_name;
-      prop.proposal_type       = proposal_type;
       prop.packed_transaction  = pkd_trans;
    });
 
