@@ -699,6 +699,12 @@ var permissions = [{
 //   target: `${accounts.policy.account}@active`,
 //   actor: `${accounts.msig.account}@eosio.code`
 }, {
+  target: `${accounts.msig.account}@owner`,
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.msig.account}@active`,
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
   target: `${accounts.policy.account}@active`, // TODO: Rethink this - it's just for deployment, msig
   actor: `${accounts.msig.account}@active`
 }
