@@ -32,7 +32,7 @@ const abiToHex = (abi) => {
   return serializedAbiHexString
 }
 
-const proposeDeploy = async (contractName, proposalName) => {
+const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
   console.log('starting deployment')
 
   const api = eos.api
@@ -88,8 +88,6 @@ const proposeDeploy = async (contractName, proposalName) => {
   // console.log(serializedActions)
 
   console.log("====== PROPOSING ======")
-
-  const proposerAccount = "cg.seeds"
 
   const proposeInput = {
     proposer: proposerAccount,
