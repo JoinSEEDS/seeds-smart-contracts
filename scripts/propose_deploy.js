@@ -32,6 +32,17 @@ const abiToHex = (abi) => {
   return serializedAbiHexString
 }
 
+const getConstitutionalGuardians = async () => {
+  const guardacct = "cg.seeds"
+  const { permissions } = await eos.getAccount(guardacct)
+  const activePerm = permissions.filter(item => item.perm_name == "active")
+  const result = activePerm[0].required_auth.accounts
+    .filter(item => item.permission.actor != "msig.seeds")
+    .map(item => item.permission)
+  //console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  return result
+}
+
 const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
   console.log('starting deployment')
 
@@ -89,23 +100,14 @@ const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
 
   console.log("====== PROPOSING ======")
 
+  const guardians = await getConstitutionalGuardians()
+
+  console.log("requested permissions active: "+JSON.stringify(guardians.map(item => item.actor)))
+
   const proposeInput = {
     proposer: proposerAccount,
     proposal_name: proposalName,
-    requested: [ // NOTE: Ignored
-      {
-        actor: proposerAccount,
-        permission: "active"
-      },
-      {
-        actor: 'seedsuseraaa',
-        permission: 'active'
-      },
-      {
-        actor: 'seedsuserbbb',
-        permission: 'active'
-      }
-    ],
+    requested: guardians,
     trx: {
       expiration: '2021-09-14T16:39:15',
       ref_block_num: 0,
