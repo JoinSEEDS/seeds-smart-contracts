@@ -43,8 +43,20 @@ const getConstitutionalGuardians = async () => {
   return result
 }
 
+const proposeGuardianPermissions = async (targetAccount, guardians) => {
+    console.log('proposeGuardianPermissions')
+
+    guardians.map(item => {
+
+    })
+
+}
+const proposePermissions = async (targetAccount, permissions, signers) => {
+    console.log('proposePermissions')
+}
+
 const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
-  console.log('starting deployment')
+  console.log('propose deployment')
 
   const api = eos.api
 
@@ -93,57 +105,8 @@ const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
     authorization: setAbiAuth
   }]
 
-  const serializedActions = await api.serializeActions(actions)
 
-  // console.log("SER Actions:")
-  // console.log(serializedActions)
-
-  console.log("====== PROPOSING ======")
-
-  const guardians = await getConstitutionalGuardians()
-
-  console.log("requested permissions active: "+JSON.stringify(guardians.map(item => item.actor)))
-
-  const proposeInput = {
-    proposer: proposerAccount,
-    proposal_name: proposalName,
-    requested: guardians,
-    trx: {
-      expiration: '2021-09-14T16:39:15',
-      ref_block_num: 0,
-      ref_block_prefix: 0,
-      max_net_usage_words: 0,
-      max_cpu_usage_ms: 0,
-      delay_sec: 0,
-      context_free_actions: [],
-      actions: serializedActions,
-      transaction_extensions: []
-    }
-  };
-
-  //console.log('send propose ' + JSON.stringify(proposeInput))
-  console.log("propose action")
-
-  const auth = [{
-    actor: proposerAccount,
-    permission: 'active',
-  }]
-
-  const propActions = [{
-    account: 'msig.seeds',
-    name: 'propose',
-    authorization: auth,
-    data: proposeInput
-  }]
-
-  const trxConfig = {
-    blocksBehind: 3,
-    expireSeconds: 30,
-  }
-
-  let res = await api.transact({
-    actions: propActions
-  }, trxConfig)
+  const res = await createMultisigProposal(proposerAccount, proposalName, actions)
 
   const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
 
@@ -153,6 +116,64 @@ const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
 
   console.log("ESR for Exec: " + JSON.stringify(execESR))
 
+}
+
+// take any input of actions, create a multisig proposal for guardians from it!
+
+const createMultisigProposal = async (proposerAccount, proposalName, actions) => {
+
+    const api = eos.api
+
+    const serializedActions = await api.serializeActions(actions)
+  
+    console.log("====== PROPOSING ======")
+  
+    const guardians = await getConstitutionalGuardians()
+  
+    console.log("requested permissions active: "+JSON.stringify(guardians.map(item => item.actor)))
+  
+    const proposeInput = {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      requested: guardians,
+      trx: {
+        expiration: '2021-09-14T16:39:15',
+        ref_block_num: 0,
+        ref_block_prefix: 0,
+        max_net_usage_words: 0,
+        max_cpu_usage_ms: 0,
+        delay_sec: 0,
+        context_free_actions: [],
+        actions: serializedActions,
+        transaction_extensions: []
+      }
+    };
+  
+    //console.log('send propose ' + JSON.stringify(proposeInput))
+    console.log("propose action")
+  
+    const auth = [{
+      actor: proposerAccount,
+      permission: 'active',
+    }]
+  
+    const propActions = [{
+      account: 'msig.seeds',
+      name: 'propose',
+      authorization: auth,
+      data: proposeInput
+    }]
+  
+    const trxConfig = {
+      blocksBehind: 3,
+      expireSeconds: 30,
+    }
+  
+    let res = await api.transact({
+      actions: propActions
+    }, trxConfig)
+
+    return res
 }
 
 const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
