@@ -145,11 +145,17 @@ const proposeDeploy = async (contractName, proposalName, proposerAccount) => {
     actions: propActions
   }, trxConfig)
 
-  await createESRCode({proposerAccount, proposalName})
+  const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
+
+  console.log("ESR for Approve: " + JSON.stringify(approveESR))
+
+  const execESR = await createESRCodeExec({proposerAccount, proposalName})
+
+  console.log("ESR for Exec: " + JSON.stringify(execESR))
 
 }
 
-const createESRCode = async ({proposerAccount, proposalName}) => {
+const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 
   const approveActions = [{
     account: 'msig.seeds',
@@ -168,38 +174,35 @@ const createESRCode = async ({proposerAccount, proposalName}) => {
     }]
   }]
 
-  // The below seems to create an ESR that eosio.to can't parse for some reason
-  // console.log('approve actions payload for ' + contractName)
-  // assert(approveActions[0].data.proposer == contractName, "approve invalid proposal")
-  // const chainInfo = await eos.api.rpc.get_info()
-  // const headBlock = await eos.api.rpc.get_block(chainInfo.last_irreversible_block_num)
-  // const chainId = chainInfo.chain_id
+  return createESRWithActions({actions: approveActions})
+}
 
-  // const approveTransaction = await buildTransaction({
-  //   actions: approveActions,
-  //   headBlock: headBlock
-  // })
-  // console.log('approve transaction will be expired at ' + approveTransaction.expiration.toString())
-  // assert(new Date(approveTransaction.expiration) > new Date(), "approve transaction expired")
+const createESRCodeExec = async ({proposerAccount, proposalName}) => {
 
-  // const request = await SigningRequest.create({
-  //   transaction: approveTransaction,
-  //   chainId: chainId
-  // }, getEsrOpts())
+  const execActions = [{
+    account: 'msig.seeds',
+    name: 'exec',
+    data: {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      executer: authPlaceholder
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
 
-  // console.log('signing request can be shared with guardians to approve deployment of the contract ' + contractName)
+  return createESRWithActions({actions: execActions})
+}
 
-  // const uri = request.encode()
+const createESRWithActions = async ({actions}) => {
 
-  //console.log(`https://eosio.to/${uri.replace('esr://', '')}`)
-
-  console.log("=========================================")
   console.log("========= Generating ESR Code ===========")
-  console.log("=========================================")
   
   const esr_uri = "https://api-esr.hypha.earth/qr"
   const body = {
-    "actions": approveActions
+    "actions": actions
   }
 
   const rawResponse = await fetch(esr_uri, {
@@ -213,34 +216,7 @@ const createESRCode = async ({proposerAccount, proposalName}) => {
 
   const parsedResponse = await rawResponse.json();
 
-  console.log("ESR response: " + JSON.stringify(parsedResponse))
-
   return parsedResponse
 }
-
-const buildTransaction = ({ actions, headBlock }) => ({
-  expiration: Serialize.timePointSecToDate(Serialize.dateToTimePointSec(headBlock.timestamp) + 3600 * 24),
-  ref_block_num: headBlock.block_num & 0xffff,
-  ref_block_prefix: headBlock.ref_block_prefix,
-  max_net_usage_words: 0,
-  delay_sec: 0,
-  context_free_actions: [],
-  actions: actions,
-  transaction_extensions: [],
-  signatures: [],
-  context_free_data: []
-})
-
-const getEsrOpts = () => ({
-  textEncoder: eos.api.textEncoder,
-  textDecoder: eos.api.textDecoder,
-  zlib: {
-    deflateRaw: (data) => new Uint8Array(zlib.deflateRawSync(Buffer.from(data))),
-    inflateRaw: (data) => new Uint8Array(zlib.inflateRawSync(Buffer.from(data))),
-  },
-  abiProvider: {
-    getAbi: async (account) => (await eos.api.getAbi(account))
-  }
-})
 
 module.exports = proposeDeploy
