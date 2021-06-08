@@ -563,6 +563,11 @@ const deployAllContracts = async () => {
     await sleep(1000)
   }
 
+  if (isLocal()) {
+    await addActorPermission("cg.seeds", "active", "seedsuseraaa", "active")
+    await addActorPermission("cg.seeds", "active", "seedsuserbbb", "active")
+  }
+  
   await updatePermissions()
   await reset(accounts.settings)
 }
