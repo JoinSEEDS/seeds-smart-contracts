@@ -114,6 +114,8 @@ const createPermissionsAction = (permission, guardians) => {
  * Sets active and owner to GuardianAccountName and msig.seeds
  * @param {*} targetAccount 
  */
+// TODO preserve existing owner and active permissions, remove key permissions
+
 const setCGPermissions = async (targetAccount, permission) => {
     console.log('setGuardiansPermissions on ' + targetAccount)
 
