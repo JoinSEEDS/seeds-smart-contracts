@@ -405,8 +405,9 @@ void onboarding::chkcleanup() {
 
   if (timestamps.begin() != timestamps.end()) {
 
-    auto titr = timestamps.end();
-    titr--;
+    // auto titr = timestamps.end();
+    // titr--;
+    auto titr = timestamps.rbegin();
 
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
@@ -419,7 +420,7 @@ void onboarding::chkcleanup() {
 
     if (titr->id > 0) {
       auto prev_itr = titr;
-      prev_itr--;
+      prev_itr++;
 
       if (prev_itr->invite_id < max_id) {
         start_id = prev_itr->invite_id;
