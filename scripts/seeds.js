@@ -7,7 +7,7 @@ const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAc
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
-const proposeDeploy = require('./propose_deploy')
+const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions } = require('./propose_deploy')
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, 
     changeOwnerAndActivePermission, 
@@ -36,14 +36,6 @@ const compileAction = async (contract) => {
     } catch (err) {
         console.log("compile failed for " + contract + " error: " + err)
     }
-}
-
-const proposeDeployAction = async (contract, proposalName, proposerAccount) => {
-  try {
-    await proposeDeploy(contract, proposalName, proposerAccount)
-  } catch (err) {
-    console.log(err)
-  }
 }
 
 const deployAction = async (contract) => {
@@ -166,11 +158,32 @@ program
     await batchCallFunc(contract, moreContracts, compileAction)
   })
 
-program
-  .command('proposedeploy <contract> <proposal_name> <proposer_account>')
-  .description('Propose contract deployment')
-  .action(async function (contract, proposal_name, proposer_account) {
-    await proposeDeployAction(contract, proposal_name, proposer_account)
+  program
+  .command('propose_deploy <proposer_account> <proposal_name> <contract>')
+  .description('Propose contract deployment: ./scripts/seeds.js propose_deploy seedsuseraaa ab policy')
+  .action(async function (proposer_account, proposal_name, contract) {
+    await proposeDeploy(proposer_account, proposal_name, contract)
+  })
+
+  program
+  .command('propose_change_guardians <proposer_account> <proposal_name> <account> [guardians...]')
+  .description('Propose change guardians')
+  .action(async function (proposerAccount, proposalName, account, guardians) {
+    await proposeChangeGuardians(proposerAccount, proposalName, account, guardians)
+  })
+
+  program
+  .command('propose_key_permissions <proposer_account> <proposal_name> <contract> <key>')
+  .description('Propose setting contract permissions to key - guardians need to sign')
+  .action(async function (proposer_account, proposal_name, contract, key) {
+    await proposeKeyPermissions(proposer_account, proposal_name, contract, key)
+  })
+
+  program
+  .command('set_cg_permission <contract> <permission>')
+  .description('Place contract under guardian control')
+  .action(async function (contract, permission) {
+    await setCGPermission(contract, permission)
   })
 
 program
