@@ -113,7 +113,7 @@ const createPermissionsAction = (permission, guardians) => {
  * @param {*} permission_name 
  */
 const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccount, permission_name, public_key) => {
-    console.log('proposeKeyPermissions '+targetAccount + " with key "+key)
+    console.log('proposeKeyPermissions '+targetAccount + " with key "+public_key)
   
     assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
 
