@@ -433,8 +433,7 @@ void onboarding::chkcleanup() {
 
   }
 
-  auto last_invite_itr = invites.end();
-  last_invite_itr--;
+  auto last_invite_itr = invites.rbegin();
 
   timestamps.emplace(_self, [&](auto & t){
     t.id = timestamps.available_primary_key();
