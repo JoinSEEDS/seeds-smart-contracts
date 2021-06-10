@@ -30,25 +30,37 @@ For most account interactions, including moving from visitor to citizen, vouchin
 </comment></p>
 <h2>Actions</h2>
 <ul>
+<li><strong>addcbs</strong> / <a href="#addcbs">addcbs</a> <comment type="action" name="addcbs"></comment></li>
 <li><strong>addref</strong> / <a href="#addref">addref</a> <comment type="action" name="addref"></comment></li>
 <li><strong>addrep</strong> / <a href="#addrep">addrep</a> <comment type="action" name="addrep"></comment></li>
 <li><strong>adduser</strong> / <a href="#adduser">adduser</a> <comment type="action" name="adduser"></comment></li>
 <li><strong>cancitizen</strong> / <a href="#cancitizen">cancitizen</a> <comment type="action" name="cancitizen"></comment></li>
 <li><strong>canresident</strong> / <a href="#canresident">canresident</a> <comment type="action" name="canresident"></comment></li>
 <li><strong>changesize</strong> / <a href="#changesize">changesize</a> <comment type="action" name="changesize"></comment></li>
-<li><strong>demotecitizn</strong> / <a href="#demotecitizn">demotecitizn</a> <comment type="action" name="demotecitizn"></comment></li>
+<li><strong>delcbsreporg</strong> / <a href="#delcbsreporg">delcbsreporg</a> <comment type="action" name="delcbsreporg"></comment></li>
+<li><strong>evaldemote</strong> / <a href="#evaldemote">evaldemote</a> <comment type="action" name="evaldemote"></comment></li>
+<li><strong>flag</strong> / <a href="#flag">flag</a> <comment type="action" name="flag"></comment></li>
 <li><strong>invitevouch</strong> / <a href="#invitevouch">invitevouch</a> <comment type="action" name="invitevouch"></comment></li>
 <li><strong>makecitizen</strong> / <a href="#makecitizen">makecitizen</a> <comment type="action" name="makecitizen"></comment></li>
 <li><strong>makeresident</strong> / <a href="#makeresident">makeresident</a> <comment type="action" name="makeresident"></comment></li>
+<li><strong>migorgs</strong> / <a href="#migorgs">migorgs</a> <comment type="action" name="migorgs"></comment></li>
+<li><strong>migratevouch</strong> / <a href="#migratevouch">migratevouch</a> <comment type="action" name="migratevouch"></comment></li>
+<li><strong>pnishvouched</strong> / <a href="#pnishvouched">pnishvouched</a> <comment type="action" name="pnishvouched"></comment></li>
+<li><strong>pnshvouchers</strong> / <a href="#pnshvouchers">pnshvouchers</a> <comment type="action" name="pnshvouchers"></comment></li>
 <li><strong>punish</strong> / <a href="#punish">punish</a> <comment type="action" name="punish"></comment></li>
 <li><strong>rankcbs</strong> / <a href="#rankcbs">rankcbs</a> <comment type="action" name="rankcbs"></comment></li>
 <li><strong>rankcbss</strong> / <a href="#rankcbss">rankcbss</a> <comment type="action" name="rankcbss"></comment></li>
+<li><strong>rankorgcbss</strong> / <a href="#rankorgcbss">rankorgcbss</a> <comment type="action" name="rankorgcbss"></comment></li>
+<li><strong>rankorgreps</strong> / <a href="#rankorgreps">rankorgreps</a> <comment type="action" name="rankorgreps"></comment></li>
 <li><strong>rankrep</strong> / <a href="#rankrep">rankrep</a> <comment type="action" name="rankrep"></comment></li>
 <li><strong>rankreps</strong> / <a href="#rankreps">rankreps</a> <comment type="action" name="rankreps"></comment></li>
+<li><strong>removeflag</strong> / <a href="#removeflag">removeflag</a> <comment type="action" name="removeflag"></comment></li>
 <li><strong>requestvouch</strong> / <a href="#requestvouch">requestvouch</a> <comment type="action" name="requestvouch"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
 <li><strong>subrep</strong> / <a href="#subrep">subrep</a> <comment type="action" name="subrep"></comment></li>
 <li><strong>testcitizen</strong> / <a href="#testcitizen">testcitizen</a> <comment type="action" name="testcitizen"></comment></li>
+<li><strong>testmigscope</strong> / <a href="#testmigscope">testmigscope</a> <comment type="action" name="testmigscope"></comment></li>
+<li><strong>testmvouch</strong> / <a href="#testmvouch">testmvouch</a> <comment type="action" name="testmvouch"></comment></li>
 <li><strong>testremove</strong> / <a href="#testremove">testremove</a> <comment type="action" name="testremove"></comment></li>
 <li><strong>testresident</strong> / <a href="#testresident">testresident</a> <comment type="action" name="testresident"></comment></li>
 <li><strong>testreward</strong> / <a href="#testreward">testreward</a> <comment type="action" name="testreward"></comment></li>
@@ -65,15 +77,20 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li><strong>accounts</strong> / <a href="#account">account</a> (i64) <comment type="table" name="accounts">The main accounts table.</comment></li>
 <li><strong>actives</strong> / <a href="#active_table">active_table</a> (i64) <comment type="table" name="actives"></comment></li>
 <li><strong>cbs</strong> / <a href="#cbs_table">cbs_table</a> (i64) <comment type="table" name="cbs"></comment></li>
+<li><strong>citizens</strong> / <a href="#citizen_table">citizen_table</a> (i64) <comment type="table" name="citizens"></comment></li>
 <li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
-<li><strong>pricehistory</strong> / <a href="#price_history_table">price_history_table</a> (i64) <comment type="table" name="pricehistory"></comment></li>
+<li><strong>configfloat</strong> / <a href="#config_float_table">config_float_table</a> (i64) <comment type="table" name="configfloat"></comment></li>
+<li><strong>flagpts</strong> / <a href="#flag_points_table">flag_points_table</a> (i64) <comment type="table" name="flagpts"></comment></li>
 <li><strong>refs</strong> / <a href="#ref_table">ref_table</a> (i64) <comment type="table" name="refs"></comment></li>
 <li><strong>rep</strong> / <a href="#rep_table">rep_table</a> (i64) <comment type="table" name="rep"></comment></li>
 <li><strong>reqvouch</strong> / <a href="#req_vouch_table">req_vouch_table</a> (i64) <comment type="table" name="reqvouch"></comment></li>
+<li><strong>residents</strong> / <a href="#resident_table">resident_table</a> (i64) <comment type="table" name="residents"></comment></li>
 <li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
-<li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) <comment type="table" name="transactions"></comment></li>
+<li><strong>totals</strong> / <a href="#totals_table">totals_table</a> (i64) <comment type="table" name="totals"></comment></li>
 <li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
 <li><strong>vouch</strong> / <a href="#vouch_table">vouch_table</a> (i64) <comment type="table" name="vouch"></comment></li>
+<li><strong>vouches</strong> / <a href="#vouches_table">vouches_table</a> (i64) <comment type="table" name="vouches"></comment></li>
+<li><strong>vouchtotals</strong> / <a href="#vouches_totals_table">vouches_totals_table</a> (i64) <comment type="table" name="vouchtotals"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
@@ -86,6 +103,11 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li>account / name</li>
 <li>timestamp / uint64</li>
 <li>active / bool</li>
+</ul>
+<h3 id="addcbs"> addcbs </h3>
+<ul>
+<li>account / name</li>
+<li>points / int32</li>
 </ul>
 <h3 id="addref"> addref </h3>
 <ul>
@@ -122,6 +144,19 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li>id / name</li>
 <li>delta / int64</li>
 </ul>
+<h3 id="citizen_table"> citizen_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="config_float_table"> config_float_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / float64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
 <h3 id="config_table"> config_table </h3>
 <ul>
 <li>param / name</li>
@@ -129,9 +164,26 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li>description / string</li>
 <li>impact / name</li>
 </ul>
-<h3 id="demotecitizn"> demotecitizn </h3>
+<h3 id="delcbsreporg"> delcbsreporg </h3>
 <ul>
-<li>user / name</li>
+<li>start_org / uint64</li>
+</ul>
+<h3 id="evaldemote"> evaldemote </h3>
+<ul>
+<li>to / name</li>
+<li>start_val / uint64</li>
+<li>chunk / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="flag"> flag </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+</ul>
+<h3 id="flag_points_table"> flag_points_table </h3>
+<ul>
+<li>account / name</li>
+<li>flag_points / uint64</li>
 </ul>
 <h3 id="invitevouch"> invitevouch </h3>
 <ul>
@@ -146,34 +198,59 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <ul>
 <li>user / name</li>
 </ul>
-<h3 id="price_history_table"> price_history_table </h3>
+<h3 id="migorgs"> migorgs </h3>
 <ul>
-<li>id / uint64</li>
-<li>seeds_usd / asset</li>
-<li>date / time_point</li>
+<li>start_org / uint64</li>
+</ul>
+<h3 id="migratevouch"> migratevouch </h3>
+<ul>
+<li>start_user / uint64</li>
+<li>start_sponsor / uint64</li>
+<li>batch_size / uint64</li>
+</ul>
+<h3 id="pnishvouched"> pnishvouched </h3>
+<ul>
+<li>sponsor / name</li>
+<li>start_account / uint64</li>
+</ul>
+<h3 id="pnshvouchers"> pnshvouchers </h3>
+<ul>
+<li>account / name</li>
+<li>points / uint64</li>
+<li>start / uint64</li>
 </ul>
 <h3 id="punish"> punish </h3>
 <ul>
 <li>account / name</li>
+<li>points / uint64</li>
 </ul>
 <h3 id="rankcbs"> rankcbs </h3>
 <ul>
 <li>start_val / uint64</li>
 <li>chunk / uint64</li>
 <li>chunksize / uint64</li>
+<li>scope / name</li>
 </ul>
 <h3 id="rankcbss"> rankcbss </h3>
+<h3 id="rankorgcbss"> rankorgcbss </h3>
+<h3 id="rankorgreps"> rankorgreps </h3>
 <h3 id="rankrep"> rankrep </h3>
 <ul>
 <li>start_val / uint64</li>
 <li>chunk / uint64</li>
 <li>chunksize / uint64</li>
+<li>scope / name</li>
 </ul>
 <h3 id="rankreps"> rankreps </h3>
 <h3 id="ref_table"> ref_table </h3>
 <ul>
 <li>referrer / name</li>
 <li>invited / name</li>
+</ul>
+<h3 id="removeflag"> removeflag </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
 </ul>
 <h3 id="rep_table"> rep_table </h3>
 <ul>
@@ -193,6 +270,12 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li>sponsor / name</li>
 </ul>
 <h3 id="reset"> reset </h3>
+<h3 id="resident_table"> resident_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+</ul>
 <h3 id="size_table"> size_table </h3>
 <ul>
 <li>id / name</li>
@@ -206,6 +289,17 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <h3 id="testcitizen"> testcitizen </h3>
 <ul>
 <li>user / name</li>
+</ul>
+<h3 id="testmigscope"> testmigscope </h3>
+<ul>
+<li>account / name</li>
+<li>amount / uint64</li>
+</ul>
+<h3 id="testmvouch"> testmvouch </h3>
+<ul>
+<li>sponsor / name</li>
+<li>account / name</li>
+<li>reps / uint64</li>
 </ul>
 <h3 id="testremove"> testremove </h3>
 <ul>
@@ -235,12 +329,13 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <ul>
 <li>user / name</li>
 </ul>
-<h3 id="transaction_table"> transaction_table </h3>
+<h3 id="totals_table"> totals_table </h3>
 <ul>
-<li>id / uint64</li>
-<li>to / name</li>
-<li>quantity / asset</li>
-<li>timestamp / uint64</li>
+<li>account / name</li>
+<li>total_volume / uint64</li>
+<li>total_number_of_transactions / uint64</li>
+<li>total_incoming_from_rep_orgs / uint64</li>
+<li>total_outgoing_to_rep_orgs / uint64</li>
 </ul>
 <h3 id="update"> update </h3>
 <ul>
@@ -277,6 +372,19 @@ For most account interactions, including moving from visitor to citizen, vouchin
 <li>account / name</li>
 <li>sponsor / name</li>
 <li>reps / uint64</li>
+</ul>
+<h3 id="vouches_table"> vouches_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>sponsor / name</li>
+<li>vouch_points / uint64</li>
+</ul>
+<h3 id="vouches_totals_table"> vouches_totals_table </h3>
+<ul>
+<li>account / name</li>
+<li>total_vouch_points / uint64</li>
+<li>total_rep_points / uint64</li>
 </ul>
 </div>
   <script id="template" type="x-tmpl-handlebars">
