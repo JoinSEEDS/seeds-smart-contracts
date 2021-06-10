@@ -377,7 +377,7 @@ const createMultisigProposal = async (proposerAccount, proposalName, actions, pe
   
     const auth = [{
       actor: proposerAccount,
-      permission: permission,
+      permission: "active",
     }]
   
     const propActions = [{
