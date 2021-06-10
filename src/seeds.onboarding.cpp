@@ -405,10 +405,7 @@ void onboarding::chkcleanup() {
 
   if (timestamps.begin() != timestamps.end()) {
 
-    // auto titr = timestamps.end();
-    // titr--;
     auto titr = timestamps.rbegin();
-
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
     // uncomment this line for tests
