@@ -44,11 +44,6 @@ const proposeChangeGuardians = async (proposerAccount, proposalName, targetAccou
     
 }
 
-const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccount, guardians) => {
-  console.log('proposeKeyPermissions '+targetAccount + " with key "+key)
-  console.log("not implemented!")
-}
-
 const createPermissionsAction = (permission, guardians) => {
 
   const targetAccount = GuardianAccountName
@@ -111,11 +106,66 @@ const createPermissionsAction = (permission, guardians) => {
 }
 
 /**
+ * Revert account back to key permission
+ * @param {*} proposerAccount 
+ * @param {*} proposalName 
+ * @param {*} targetAccount 
+ * @param {*} permission_name 
+ */
+const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccount, permission_name, public_key) => {
+    console.log('proposeKeyPermissions '+targetAccount + " with key "+key)
+  
+    assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
+
+    const parent = permission_name == 'owner' ? "." : "owner"
+    const { permissions } = await eos.getAccount(targetAccount)
+    const perm = permissions.find(p => p.perm_name === permission_name)
+    console.log("existing permission "+JSON.stringify(perm, null, 2))
+    const { required_auth } = perm
+    const { keys, accounts, waits } = required_auth
+    const auth = {
+        threshold: 1,
+        waits: [],
+        accounts: [],
+        keys: [{
+          key: public_key,
+          weight: 1
+        }]
+      }  
+    console.log("new permissions: "+JSON.stringify(auth, null, 2))
+
+    const actions = [{
+        account: 'eosio',
+        name: 'updateauth',
+        authorization: [{
+          actor: targetAccount,
+          permission: "owner",
+        }],
+        data: {
+          account: targetAccount,
+          permission: permission_name,
+          parent,
+          auth
+        },
+    }]
+
+    const res = await createMultisigProposal(proposerAccount, proposalName, actions, "owner")
+
+    const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
+
+    console.log("ESR for Approve: " + JSON.stringify(approveESR))
+  
+    const execESR = await createESRCodeExec({proposerAccount, proposalName})
+  
+    console.log("ESR for Exec: " + JSON.stringify(execESR))
+    
+
+  }
+  
+/**
  * Sets active and owner to GuardianAccountName and msig.seeds
  * @param {*} targetAccount 
  */
-// TODO preserve existing owner and active permissions, remove key permissions
-
 const setCGPermissions = async (targetAccount, permission_name) => {
     console.log('setGuardiansPermissions on ' + targetAccount)
 
@@ -130,8 +180,6 @@ const setCGPermissions = async (targetAccount, permission_name) => {
 
     const { required_auth } = perm
     const { keys, accounts, waits } = required_auth
-
-    
 
     let accountPermissions = [
         ...accounts,
@@ -282,10 +330,10 @@ const abiToHex = (abi) => {
   return serializedAbiHexString
 }
 
-const getConstitutionalGuardians = async () => {
+const getConstitutionalGuardians = async (permission_name = "active") => {
   const guardacct = GuardianAccountName
   const { permissions } = await eos.getAccount(guardacct)
-  const activePerm = permissions.filter(item => item.perm_name == "active")
+  const activePerm = permissions.filter(item => item.perm_name == permission_name)
   const result = activePerm[0].required_auth.accounts
     .filter(item => item.permission.actor != "msig.seeds")
     .map(item => item.permission)
@@ -303,7 +351,7 @@ const createMultisigProposal = async (proposerAccount, proposalName, actions, pe
   
     console.log("====== PROPOSING ======")
   
-    const guardians = await getConstitutionalGuardians()
+    const guardians = await getConstitutionalGuardians(permission)
   
     console.log("requested permissions: "+permission+ " " + JSON.stringify(guardians.map(item => item.actor)))
   

@@ -173,10 +173,10 @@ program
   })
 
   program
-  .command('propose_key_permissions <proposer_account> <proposal_name> <contract> <key>')
+  .command('propose_key_permission <proposer_account> <proposal_name> <contract> <key>')
   .description('Propose setting contract permissions to key - guardians need to sign')
   .action(async function (proposer_account, proposal_name, contract, key) {
-    await proposeKeyPermissions(proposer_account, proposal_name, contract, key)
+    await proposeKeyPermissions(proposer_account, proposal_name, contract, "owner", key)
   })
 
   program
