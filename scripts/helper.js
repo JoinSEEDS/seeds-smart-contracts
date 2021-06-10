@@ -633,7 +633,7 @@ var permissions = [{
   type: 'createActorPermission'
 }, {
   target: `${accounts.token.account}@minthrvst`,
-  action: 'minttst'
+  action: 'minthrvst'
 }, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`

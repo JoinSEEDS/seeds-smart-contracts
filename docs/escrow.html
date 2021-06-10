@@ -32,7 +32,9 @@ $(function() {
 <li><strong>claim</strong> / <a href="#claim">claim</a> <comment type="action" name="claim"></comment></li>
 <li><strong>lock</strong> / <a href="#lock">lock</a> <comment type="action" name="lock"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>resettrigger</strong> / <a href="#resettrigger">resettrigger</a> <comment type="action" name="resettrigger"></comment></li>
 <li><strong>trigger</strong> / <a href="#trigger">trigger</a> <comment type="action" name="trigger"></comment></li>
+<li><strong>triggertest</strong> / <a href="#triggertest">triggertest</a> <comment type="action" name="triggertest"></comment></li>
 <li><strong>withdraw</strong> / <a href="#withdraw">withdraw</a> <comment type="action" name="withdraw"></comment></li>
 </ul>
 <h2>Events</h2>
@@ -70,6 +72,10 @@ $(function() {
 <li>notes / string</li>
 </ul>
 <h3 id="reset"> reset </h3>
+<h3 id="resettrigger"> resettrigger </h3>
+<ul>
+<li>trigger_source / name</li>
+</ul>
 <h3 id="sponsors_table"> sponsors_table </h3>
 <ul>
 <li>sponsor / name</li>
@@ -91,6 +97,12 @@ $(function() {
 <li>updated_date / time_point</li>
 </ul>
 <h3 id="trigger"> trigger </h3>
+<ul>
+<li>trigger_source / name</li>
+<li>event_name / name</li>
+<li>notes / string</li>
+</ul>
+<h3 id="triggertest"> triggertest </h3>
 <ul>
 <li>trigger_source / name</li>
 <li>event_name / name</li>

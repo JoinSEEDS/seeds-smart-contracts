@@ -458,12 +458,10 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
         if (is_alliance_type) { 
           payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-        }
-        if (is_milestone_type) {
+        } else if (is_milestone_type) {
           payout_amount = pitr->quantity;
           withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-        }
-        else {
+        } else if (is_campaign_type) {
           payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
           if (pitr->campaign_type == campaign_invite_type) {
             withdraw(get_self(), payout_amount, pitr->fund, "invites");
@@ -745,7 +743,6 @@ void proposals::updatevoice(uint64_t start) {
   uint64_t cutoff_date = active_cutoff_date();
 
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
-  voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
 
