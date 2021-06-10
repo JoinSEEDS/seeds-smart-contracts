@@ -745,7 +745,6 @@ void proposals::updatevoice(uint64_t start) {
   uint64_t cutoff_date = active_cutoff_date();
 
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
-  voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
 

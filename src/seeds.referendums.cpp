@@ -173,7 +173,7 @@ void referendums::onperiod() {
   run_active();
   run_staged();
 
-  give_voice();
+  updatevoice(0, 50);
 
 }
 
@@ -260,6 +260,57 @@ void referendums::addvoice(name account, uint64_t amount) {
     balances.modify(bitr, get_self(), [&](auto& balance) {
       balance.voice += amount;
     });
+  }
+}
+
+ACTION referendums::updatevoice(uint64_t start, uint64_t batchsize) {
+  require_auth(get_self());
+  
+  // Voice table definition from proposals.hpp
+  TABLE voice_table {
+    name account;
+    uint64_t balance;
+    uint64_t primary_key()const { return account.value; }
+  };
+  typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
+  voice_tables voice(contracts::proposals, "referendum"_n.value);
+
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+
+  uint64_t count = 0;
+  
+  while (vitr != voice.end() && count < batchsize) {
+    auto bitr = balances.find(vitr->account.value);
+    if (bitr == balances.end()) {
+      balances.emplace(get_self(), [&](auto& item) {
+        item.account = vitr->account;
+        item.voice = vitr->balance;
+        item.stake = asset(0, seeds_symbol);
+      });
+      count++;// double weight for emplace
+    } else {
+      balances.modify(bitr, get_self(), [&](auto& item) {
+        item.voice = vitr->balance;
+      });
+    }
+
+    vitr++;
+    count++;
+  }
+  
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updatevoice"_n,
+        std::make_tuple(next_value, batchsize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
   }
 }
 
