@@ -70,6 +70,8 @@ CONTRACT referendums : public contract {
 
       ACTION addvoice(name account, uint64_t amount);
 
+      ACTION updatevoice(uint64_t start, uint64_t batchsize);
+
       ACTION cancelvote(name voter, uint64_t referendum_id);
 
       ACTION onperiod();
@@ -150,7 +152,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod))
+        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice))
       }
   }
 }
