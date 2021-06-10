@@ -131,8 +131,8 @@ CONTRACT referendums : public contract {
     };
 
     DEFINE_CONFIG_TABLE
-        
     DEFINE_CONFIG_TABLE_MULTI_INDEX
+    DEFINE_CONFIG_GET
 
     typedef multi_index<"balances"_n, balance_table> balance_tables;
     typedef multi_index<"referendums"_n, referendum_table,
