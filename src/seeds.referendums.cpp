@@ -46,6 +46,9 @@ void referendums::give_voice() {
 
 uint64_t referendums::get_quorum(const name & setting) {
   auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("quorum.high").value) -> value;
+  }
   switch (citr->impact) {
     case high_impact:
       return config.find(name("quorum.high").value) -> value;
@@ -61,6 +64,9 @@ uint64_t referendums::get_quorum(const name & setting) {
 
 uint64_t referendums::get_unity(const name & setting) {
   auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("unity.high").value) -> value;
+  }
   switch (citr->impact) {
     case high_impact:
       return config.find(name("unity.high").value) -> value;
