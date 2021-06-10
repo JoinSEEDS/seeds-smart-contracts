@@ -481,17 +481,6 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   action: 'rankcbss'
 }, {
-  target: `${accounts.accounts.account}@execute`,
-  target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
-}, {
-  target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -556,14 +545,12 @@ var permissions = [{
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
+  actor: `${accounts.scheduler.account}@active`,
+  parent: 'active',
+  type: 'createActorPermission'
 }, {
   target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
+  action: 'resetweekly',
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
