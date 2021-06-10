@@ -180,10 +180,10 @@ program
   })
 
   program
-  .command('set_cg_permission <contract> <permission>')
+  .command('set_cg_permissions <contract> <permission>')
   .description('Place contract under guardian control')
   .action(async function (contract, permission) {
-    await setCGPermission(contract, permission)
+    await setCGPermissions(contract, permission)
   })
 
 program

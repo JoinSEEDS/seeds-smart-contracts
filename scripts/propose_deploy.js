@@ -116,15 +116,15 @@ const createPermissionsAction = (permission, guardians) => {
  */
 // TODO preserve existing owner and active permissions, remove key permissions
 
-const setCGPermissions = async (targetAccount, role) => {
+const setCGPermissions = async (targetAccount, permission_name) => {
     console.log('setGuardiansPermissions on ' + targetAccount)
 
-    assert(role == "active" || role == "owner", "permission must be active or owner")
+    assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
 
-    const parent = role == 'owner' ? "." : "owner"
+    const parent = permission_name == 'owner' ? "." : "owner"
 
     const { permissions } = await eos.getAccount(targetAccount)
-    const perm = permissions.find(p => p.perm_name === role)
+    const perm = permissions.find(p => p.perm_name === permission_name)
 
     console.log("existing permission "+JSON.stringify(perm, null, 2))
 
@@ -138,7 +138,7 @@ const setCGPermissions = async (targetAccount, role) => {
       {
         permission: { 
           actor: GuardianAccountName, 
-          permission: role
+          permission: permission_name
         },
         weight: 1
       },
@@ -171,12 +171,12 @@ const setCGPermissions = async (targetAccount, role) => {
         account: 'eosio',
         name: 'updateauth',
         authorization: [{
-          targetAccount,
+          actor: targetAccount,
           permission: "owner",
         }],
         data: {
-          targetAccount,
-          permission: role,
+          account: targetAccount,
+          permission: permission_name,
           parent,
           auth
         },
@@ -187,14 +187,13 @@ const setCGPermissions = async (targetAccount, role) => {
       expireSeconds: 30,
     }
   
-    console.log("not executing... debug mode..")
-    // let res = await api.transact({
-    //   actions
-    // }, trxConfig)
+    let res = await eos.api.transact({
+      actions
+    }, trxConfig)
 
-    const { permissions } = await eos.getAccount(targetAccount)
+    const newPermissions = await eos.getAccount(targetAccount)
 
-    console.log("new permissions on "+targetAccount+" "+JSON.stringify(permissions, null, 2))
+    console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))
 
 }
 
