@@ -165,7 +165,9 @@ ACTION gratitude::payround() {
   stats.emplace(_self, [&](auto& item) {
     item.round_id = ++cur_round_id;
     item.num_transfers = 0;
+    item.num_acks = 0;
     item.volume = asset(0, gratitude_symbol);
+    item.round_pot = asset(0, seeds_symbol);
   });
 
 
