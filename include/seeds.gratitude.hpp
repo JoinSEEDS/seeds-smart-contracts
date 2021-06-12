@@ -43,12 +43,14 @@ CONTRACT gratitude : public contract {
     // Called after all acks are calculated
     ACTION payround();
 
-    //  Recursivelly calculate acks
+    // Recursivelly calculate acks
     ACTION calcacks(uint64_t start);
 
-    //  Calculate acks for testing
-    ACTION testacks();
+    // For stats migration
+    ACTION migratestats();
 
+    // Calculate acks for testing
+    ACTION testacks();
 
     // Called when depositing SEEDS into the pot
     ACTION deposit(name from, name to, asset quantity, string memo);
@@ -150,6 +152,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (payround)
           (calcacks)
           (testacks)
+          (migratestats)
         )
       }
   }

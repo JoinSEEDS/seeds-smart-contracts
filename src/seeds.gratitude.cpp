@@ -35,6 +35,26 @@ ACTION gratitude::reset () {
 
 }
 
+ACTION gratitude::migratestats() {
+  require_auth(get_self());
+
+  name old = "gratz.seeds"_n;
+
+  stats_tables other_stats(old, old.value);
+  auto sitr = other_stats.begin();
+  while(sitr != other_stats.end()) {
+    stats.emplace(get_self(), [&](auto& item) {
+      item.round_id = sitr->round_id;
+      item.num_transfers = sitr->num_transfers;
+      item.volume = sitr->volume;
+      // new values
+      item.num_acks = 0;
+      item.round_pot = asset(0, seeds_symbol);
+    });
+    sitr++;
+  }
+}
+
 ACTION gratitude::give (name from, name to, asset quantity, string memo) {
   require_auth(from);
 
@@ -187,6 +207,7 @@ ACTION gratitude::newround() {
 
 // Receive incoming SEEDS
 ACTION gratitude::deposit (name from, name to, asset quantity, string memo) {
+  require_auth(from);
 
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
       to  ==  get_self() &&                     // to here
