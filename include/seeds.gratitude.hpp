@@ -40,13 +40,25 @@ CONTRACT gratitude : public contract {
     // Generates a new gratitude round, regenerating gratitude and splitting stored SEEDS
     ACTION newround();
 
+    // Called after all acks are calculated
+    ACTION payround();
+
+    //  Recursivelly calculate acks
+    ACTION calcacks(uint64_t start);
+
+    //  Calculate acks for testing
     ACTION testacks();
+
+
+    // Called when depositing SEEDS into the pot
+    ACTION deposit(name from, name to, asset quantity, string memo);
+
 
   private:
 
     void check_user(name account);
     void init_balances(name account);
-    void calc_acks(name account);
+    void _calc_acks(name account);
     void add_gratitude(name account, asset quantity);
     void sub_gratitude(name account, asset quantity);
     uint64_t get_current_volume();
@@ -94,6 +106,8 @@ CONTRACT gratitude : public contract {
     TABLE stats_table {
       uint64_t round_id;
       uint64_t num_transfers;
+      uint64_t num_acks;
+      asset round_pot;
       asset volume;
 
       uint64_t primary_key() const { return round_id; }
@@ -120,8 +134,24 @@ CONTRACT gratitude : public contract {
     const name gratzgen_res = "gratz1.gen"_n; // Gratitude generated per cycle for residents
     const name gratzgen_cit = "gratz2.gen"_n; // Gratitude generated per cycle for citizens
     const name gratz_acks = "gratz.acks"_n; // Gratitude generated per cycle for citizens
+    const name gratz_potkp = "gratz.potkp"_n; // Percentil of the pot to keep each round
 };
 
-EOSIO_DISPATCH(gratitude, 
-  (reset)(give)(acknowledge)(newround)(testacks)
-);
+extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+  if (action == name("transfer").value && code == contracts::token.value) {
+      execute_action<gratitude>(name(receiver), name(code), &gratitude::deposit);
+  } else if (code == receiver) {
+      switch (action) {
+        EOSIO_DISPATCH_HELPER(gratitude, 
+          (reset)
+          (give)
+          (acknowledge)
+          (newround)
+          (payround)
+          (calcacks)
+          (testacks)
+        )
+      }
+  }
+}
+

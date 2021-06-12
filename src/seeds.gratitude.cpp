@@ -28,7 +28,9 @@ ACTION gratitude::reset () {
   stats.emplace(_self, [&](auto& item) {
     item.round_id = 1;
     item.num_transfers = 0;
+    item.num_acks = 0;
     item.volume = asset(0, gratitude_symbol);
+    item.round_pot = asset(0, seeds_symbol);
   });
 
 }
@@ -70,30 +72,80 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
         item.receivers.push_back(to);
     });
   }
+
+  // Updates ack stats
+  auto stitr = stats.rbegin();
+  auto round_id = stitr->round_id;
+
+  auto stitr2 = stats.find(round_id);
+  auto oldacks = stitr2->num_acks;
+  stats.modify(stitr2, _self, [&](auto& item) {
+      item.num_acks = oldacks + 1;
+  });
+
 }
+
 
 ACTION gratitude::testacks() {
   require_auth(get_self());
 
   auto actr = acks.begin();
+
   while (actr != acks.end()) {
-    calc_acks(actr->donor);
-    actr = acks.erase(actr);
+    _calc_acks(actr->donor);
+    actr++;
   }
 }
 
-ACTION gratitude::newround() {
+ACTION gratitude::calcacks(uint64_t start) {
+  require_auth(get_self());
+
+  auto actr = start == 0 ? acks.begin() : acks.find(start);
+
+  _calc_acks(actr->donor);
+
+  actr++;
+
+  // Recursion call
+  if (actr != acks.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "calcacks"_n,
+      std::make_tuple(actr->donor.value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(actr->donor.value, _self);
+  } else {
+    // Cleanup on last exec
+    auto actr2 = acks.begin();
+    while (actr2 != acks.end()) {
+      actr2 = acks.erase(actr2);
+    }
+
+    // Start payout
+    action(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "payround"_n,
+      std::make_tuple()
+    ).send();
+
+  }
+}
+
+// Called after all Acks are calculated
+ACTION gratitude::payround() {
   require_auth(get_self());
 
   auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
   uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
-
-  auto actr = acks.begin();
-  while (actr != acks.end()) {
-    calc_acks(actr->donor);
-    actr = acks.erase(actr);
-  }
+  float potkeep = config_get(gratz_potkp) / (float)100;
+  uint64_t usable_amount = contract_balance.amount - (contract_balance.amount * potkeep);
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
@@ -101,7 +153,7 @@ ACTION gratitude::newround() {
     // reset gratitude for account
     init_balances(bitr->account);
     float split_factor = my_received / (float)volume;
-    uint64_t payout = contract_balance.amount * split_factor;
+    uint64_t payout = usable_amount * split_factor;
     // Pay out SEEDS in store
     if (payout > 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
     bitr++;
@@ -115,7 +167,48 @@ ACTION gratitude::newround() {
     item.num_transfers = 0;
     item.volume = asset(0, gratitude_symbol);
   });
+
+
 }
+
+ACTION gratitude::newround() {
+  require_auth(get_self());
+
+  action(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    "calcacks"_n,    
+    std::make_tuple((uint64_t)0)
+  ).send();
+}
+
+
+// Receive incoming SEEDS
+ACTION gratitude::deposit (name from, name to, asset quantity, string memo) {
+
+  if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+      to  ==  get_self() &&                     // to here
+      quantity.symbol == seeds_symbol) {        // SEEDS symbol
+
+    utils::check_asset(quantity);
+
+    // Updates status
+    auto stitr = stats.rbegin();
+    auto round_id = stitr->round_id;
+
+    auto stitr2 = stats.find(round_id);
+    auto oldpot = stitr2->round_pot.amount;
+    stats.modify(stitr2, _self, [&](auto& item) {
+        item.round_pot = asset(oldpot + quantity.amount, seeds_symbol);
+    });
+
+    // // Continue with transfer
+    // token::transfer_action action{contracts::token, {_self, "active"_n}};
+    // action.send(_self, from, quantity, memo);
+  }
+
+}
+
 
 /// ----------================ PRIVATE ================----------
 
@@ -124,7 +217,7 @@ void gratitude::check_user (name account) {
   check(uitr != users.end(), "gratitude: user not found");
 }
 
-void gratitude::calc_acks (name donor) {
+void gratitude::_calc_acks (name donor) {
   auto bitr = balances.find(donor.value);
   uint64_t remaining = bitr->remaining.amount;
 

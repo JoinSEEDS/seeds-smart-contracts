@@ -49,7 +49,60 @@ describe('gratitude general', async assert => {
     const balance = balanceTable.rows.filter(r => r.account == account)
     return parseInt(balance[0].received)
   }
-  
+
+  const getGratitudeStats = async () => {
+    const statsTable = await getTableRows({
+      code: gratitude,
+      scope: gratitude,
+      table: 'stats',
+      json: true
+    })
+    if (statsTable.rows) {
+      return statsTable.rows[statsTable.rows.length-1];
+    }
+    return [];
+  }
+
+  const checkRoundPot = async (expected) => {
+    const grstats = await getGratitudeStats()
+    assert({
+      given: `received deposit`,
+      should: 'have the correct pot balance',
+      actual: grstats.round_pot,
+      expected: expected
+    })
+  }
+
+  const checkRoundTransfers = async (expected) => {
+    const grstats = await getGratitudeStats()
+    assert({
+      given: `given gratitude directly`,
+      should: 'have the correct num transfers',
+      actual: grstats.num_transfers,
+      expected: expected
+    })
+  }
+
+  const checkRoundAcks = async (expected) => {
+    const grstats = await getGratitudeStats()
+    assert({
+      given: `performed ack`,
+      should: 'have the correct num acks',
+      actual: grstats.num_acks,
+      expected: expected
+    })
+  }
+
+  const checkRoundVolume = async (expected) => {
+    const grstats = await getGratitudeStats()
+    assert({
+      given: `performed transfer`,
+      should: 'have the correct volume',
+      actual: grstats.volume,
+      expected: expected
+    })
+  }
+
   const checkReceivedGratitude = async (account, expected) => {
     const received = await getReceivedGratitude(account)
     assert({
@@ -92,11 +145,14 @@ describe('gratitude general', async assert => {
   const contractBalanceBefore = await getBalance(gratitude) || 0
   console.log('refill gratitude contract')
   await contracts.token.transfer(firstuser, gratitude, `${amount}.0000 SEEDS`, 'test', { authorization: `${firstuser}@active` })
-  const contractBalanceStart = await getBalance(gratitude)
+  checkRoundPot(`${amount}.0000 SEEDS`)
 
   console.log('give gratitude')
   const transferAmount = 10
   await contracts.gratitude.give(firstuser, seconduser, `${transferAmount}.0000 GRATZ`, '', { authorization: `${firstuser}@active` })
+
+  checkRoundTransfers(1)
+  checkRoundVolume(`${transferAmount}.0000 GRATZ`)
 
   checkRemainingGratitude(firstuser, initialGratitude-transferAmount)
   checkReceivedGratitude(seconduser, transferAmount)
@@ -104,7 +160,10 @@ describe('gratitude general', async assert => {
   console.log('test acknowledge')
   await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
 
-  console.log('calc acks')
+  // TODO check if round status updated (volume, transfers, acks)
+  checkRoundAcks(1)
+
+  console.log('test acks non recursive')
   await contracts.gratitude.testacks({ authorization: `${gratitude}@active` })
 
   const acksTable = await getTableRows({
@@ -119,6 +178,15 @@ describe('gratitude general', async assert => {
   const transferPerAckAmount = initialGratitude / gratzAcks
   checkRemainingGratitude(seconduser, initialGratitude-transferPerAckAmount)
   checkReceivedGratitude(firstuser, transferPerAckAmount)
+
+  console.log('one more time.....')
+  await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
+  console.log('refill gratitude contract')
+  await contracts.token.transfer(firstuser, gratitude, `${amount}.0000 SEEDS`, 'test', { authorization: `${firstuser}@active` })
+  console.log('give gratitude')
+  await contracts.gratitude.give(firstuser, seconduser, `${transferAmount}.0000 GRATZ`, '', { authorization: `${firstuser}@active` })
+  console.log('acknowledge')
+  await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
 
   console.log('restart gratitude round')
 
