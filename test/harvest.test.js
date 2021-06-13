@@ -1281,8 +1281,7 @@ async function testHarvest (assert, dSeeds) {
       'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
-      1.23, 
-      keypair.public, 
+      1.23,  
       { authorization: `${users[index]}@active` })
   }
 
@@ -1605,7 +1604,6 @@ describe('regions contribution score', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 
