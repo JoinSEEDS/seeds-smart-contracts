@@ -120,9 +120,7 @@ void scheduler::reset_aux(bool destructive) {
         name("hrvst.hrvst"),
 
         name("org.appuses"),
-        name("org.rankapps"),
-
-        name("onbrd.clean")
+        name("org.rankapps")
     };
     
     std::vector<name> operations_v = {
@@ -158,9 +156,7 @@ void scheduler::reset_aux(bool destructive) {
         name("runharvest"),
 
         name("calcmappuses"),
-        name("rankappuses"),
-
-        name("chkcleanup")
+        name("rankappuses")
     };
 
     std::vector<name> contracts_v = {
@@ -196,9 +192,7 @@ void scheduler::reset_aux(bool destructive) {
         contracts::harvest,
 
         contracts::organization,
-        contracts::organization,
-
-        contracts::onboarding
+        contracts::organization
     };
 
     std::vector<uint64_t> delay_v = {
@@ -234,8 +228,6 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_hour,
 
         utils::seconds_per_day,
-        utils::seconds_per_day,
-
         utils::seconds_per_day
     };
 
@@ -276,7 +268,6 @@ void scheduler::reset_aux(bool destructive) {
 
         now,
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
-        now
     };
 
     int i = 0;
