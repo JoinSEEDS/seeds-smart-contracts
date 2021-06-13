@@ -32,6 +32,8 @@ CONTRACT scheduler : public contract {
 
         ACTION configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime);
 
+        ACTION addmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, string start_phase_name);
+
         ACTION removeop(name id);
 
         ACTION pauseop(name id, uint8_t pause);
