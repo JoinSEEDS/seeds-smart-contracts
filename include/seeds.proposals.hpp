@@ -142,6 +142,8 @@ CONTRACT proposals : public contract {
 
       name alliance_type = "alliance"_n;
       name campaign_type = "campaign"_n;
+      name referendum_type = "referendum"_n;
+
       name campaign_invite_type = "cmp.invite"_n;
       name campaign_funding_type = "cmp.funding"_n;
       name milestone_type = "milestone"_n;
@@ -149,7 +151,8 @@ CONTRACT proposals : public contract {
       std::vector<name> scopes = {
         alliance_type,
         get_self(),
-        milestone_type
+        milestone_type,
+        referendum_type,
       };
 
       void update_cycle();

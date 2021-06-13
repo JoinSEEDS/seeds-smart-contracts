@@ -29,42 +29,61 @@ $(function() {
 <h2>Actions</h2>
 <ul>
 <li><strong>addactive</strong> / <a href="#addactive">addactive</a> <comment type="action" name="addactive"></comment></li>
+<li><strong>addcampaign</strong> / <a href="#addcampaign">addcampaign</a> <comment type="action" name="addcampaign"></comment></li>
 <li><strong>addvoice</strong> / <a href="#addvoice">addvoice</a> <comment type="action" name="addvoice"></comment></li>
 <li><strong>against</strong> / <a href="#against">against</a> <comment type="action" name="against"></comment></li>
+<li><strong>calcvotepow</strong> / <a href="#calcvotepow">calcvotepow</a> <comment type="action" name="calcvotepow"></comment></li>
 <li><strong>cancel</strong> / <a href="#cancel">cancel</a> <comment type="action" name="cancel"></comment></li>
 <li><strong>changetrust</strong> / <a href="#changetrust">changetrust</a> <comment type="action" name="changetrust"></comment></li>
+<li><strong>checkprop</strong> / <a href="#checkprop">checkprop</a> <comment type="action" name="checkprop"></comment></li>
 <li><strong>checkstake</strong> / <a href="#checkstake">checkstake</a> <comment type="action" name="checkstake"></comment></li>
+<li><strong>cleanmig</strong> / <a href="#cleanmig">cleanmig</a> <comment type="action" name="cleanmig"></comment></li>
 <li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create"></comment></li>
+<li><strong>createinvite</strong> / <a href="#createinvite">createinvite</a> <comment type="action" name="createinvite"></comment></li>
 <li><strong>createx</strong> / <a href="#createx">createx</a> <comment type="action" name="createx"></comment></li>
 <li><strong>decayvoice</strong> / <a href="#decayvoice">decayvoice</a> <comment type="action" name="decayvoice"></comment></li>
 <li><strong>decayvoices</strong> / <a href="#decayvoices">decayvoices</a> <comment type="action" name="decayvoices"></comment></li>
+<li><strong>delegate</strong> / <a href="#delegate">delegate</a> <comment type="action" name="delegate"></comment></li>
+<li><strong>doneprop</strong> / <a href="#doneprop">doneprop</a> <comment type="action" name="doneprop"></comment></li>
 <li><strong>erasepartpts</strong> / <a href="#erasepartpts">erasepartpts</a> <comment type="action" name="erasepartpts"></comment></li>
+<li><strong>evalproposal</strong> / <a href="#evalproposal">evalproposal</a> <comment type="action" name="evalproposal"></comment></li>
 <li><strong>favour</strong> / <a href="#favour">favour</a> <comment type="action" name="favour"></comment></li>
-<li><strong>initactives</strong> / <a href="#initactives">initactives</a> <comment type="action" name="initactives"></comment></li>
+<li><strong>initnumprop</strong> / <a href="#initnumprop">initnumprop</a> <comment type="action" name="initnumprop"></comment></li>
 <li><strong>initsz</strong> / <a href="#initsz">initsz</a> <comment type="action" name="initsz"></comment></li>
+<li><strong>migvotepow</strong> / <a href="#migvotepow">migvotepow</a> <comment type="action" name="migvotepow"></comment></li>
+<li><strong>mimicvote</strong> / <a href="#mimicvote">mimicvote</a> <comment type="action" name="mimicvote"></comment></li>
 <li><strong>neutral</strong> / <a href="#neutral">neutral</a> <comment type="action" name="neutral"></comment></li>
 <li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> <comment type="action" name="onperiod"></comment></li>
-<li><strong>removeactive</strong> / <a href="#removeactive">removeactive</a> <comment type="action" name="removeactive"></comment></li>
+<li><strong>reevalprop</strong> / <a href="#reevalprop">reevalprop</a> <comment type="action" name="reevalprop"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
 <li><strong>stake</strong> / <a href="#stake">stake</a> <comment type="action" name="stake"></comment></li>
+<li><strong>testevalprop</strong> / <a href="#testevalprop">testevalprop</a> <comment type="action" name="testevalprop"></comment></li>
+<li><strong>testperiod</strong> / <a href="#testperiod">testperiod</a> <comment type="action" name="testperiod"></comment></li>
+<li><strong>testpropquor</strong> / <a href="#testpropquor">testpropquor</a> <comment type="action" name="testpropquor"></comment></li>
+<li><strong>testquorum</strong> / <a href="#testquorum">testquorum</a> <comment type="action" name="testquorum"></comment></li>
+<li><strong>testsetvoice</strong> / <a href="#testsetvoice">testsetvoice</a> <comment type="action" name="testsetvoice"></comment></li>
 <li><strong>testvdecay</strong> / <a href="#testvdecay">testvdecay</a> <comment type="action" name="testvdecay"></comment></li>
+<li><strong>undelegate</strong> / <a href="#undelegate">undelegate</a> <comment type="action" name="undelegate"></comment></li>
 <li><strong>update</strong> / <a href="#update">update</a> <comment type="action" name="update"></comment></li>
-<li><strong>updateactive</strong> / <a href="#updateactive">updateactive</a> <comment type="action" name="updateactive"></comment></li>
-<li><strong>updateactivs</strong> / <a href="#updateactivs">updateactivs</a> <comment type="action" name="updateactivs"></comment></li>
 <li><strong>updatevoice</strong> / <a href="#updatevoice">updatevoice</a> <comment type="action" name="updatevoice"></comment></li>
 <li><strong>updatevoices</strong> / <a href="#updatevoices">updatevoices</a> <comment type="action" name="updatevoices"></comment></li>
 <li><strong>updatex</strong> / <a href="#updatex">updatex</a> <comment type="action" name="updatex"></comment></li>
+<li><strong>voteonbehalf</strong> / <a href="#voteonbehalf">voteonbehalf</a> <comment type="action" name="voteonbehalf"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
 <li><strong>actives</strong> / <a href="#active_table">active_table</a> (i64) <comment type="table" name="actives"></comment></li>
 <li><strong>cycle</strong> / <a href="#cycle_table">cycle_table</a> (i64) <comment type="table" name="cycle"></comment></li>
+<li><strong>cyclestats</strong> / <a href="#cycle_stats_table">cycle_stats_table</a> (i64) <comment type="table" name="cyclestats"></comment></li>
+<li><strong>cycvotedprps</strong> / <a href="#voted_proposals_table">voted_proposals_table</a> (i64) <comment type="table" name="cycvotedprps"></comment></li>
+<li><strong>deltrusts</strong> / <a href="#delegate_trust_table">delegate_trust_table</a> (i64) <comment type="table" name="deltrusts"></comment></li>
 <li><strong>lastprops</strong> / <a href="#last_proposal_table">last_proposal_table</a> (i64) <comment type="table" name="lastprops"></comment></li>
 <li><strong>minstake</strong> / <a href="#min_stake_table">min_stake_table</a> (i64) <comment type="table" name="minstake"></comment></li>
 <li><strong>participants</strong> / <a href="#participant_table">participant_table</a> (i64) <comment type="table" name="participants"></comment></li>
 <li><strong>props</strong> / <a href="#proposal_table">proposal_table</a> (i64) <comment type="table" name="props"></comment></li>
 <li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
+<li><strong>support</strong> / <a href="#support_level_table">support_level_table</a> (i64) <comment type="table" name="support"></comment></li>
 <li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
 <li><strong>voice</strong> / <a href="#voice_table">voice_table</a> (i64) <comment type="table" name="voice"></comment></li>
 <li><strong>votes</strong> / <a href="#vote_table">vote_table</a> (i64) <comment type="table" name="votes"></comment></li>
@@ -75,11 +94,15 @@ $(function() {
 <ul>
 <li>account / name</li>
 <li>timestamp / uint64</li>
-<li>active / bool</li>
 </ul>
 <h3 id="addactive"> addactive </h3>
 <ul>
 <li>account / name</li>
+</ul>
+<h3 id="addcampaign"> addcampaign </h3>
+<ul>
+<li>proposal_id / uint64</li>
+<li>campaign_id / uint64</li>
 </ul>
 <h3 id="addvoice"> addvoice </h3>
 <ul>
@@ -92,6 +115,7 @@ $(function() {
 <li>id / uint64</li>
 <li>amount / uint64</li>
 </ul>
+<h3 id="calcvotepow"> calcvotepow </h3>
 <h3 id="cancel"> cancel </h3>
 <ul>
 <li>id / uint64</li>
@@ -101,10 +125,16 @@ $(function() {
 <li>user / name</li>
 <li>trust / bool</li>
 </ul>
+<h3 id="checkprop"> checkprop </h3>
+<ul>
+<li>proposal_id / uint64</li>
+<li>message / string</li>
+</ul>
 <h3 id="checkstake"> checkstake </h3>
 <ul>
 <li>prop_id / uint64</li>
 </ul>
+<h3 id="cleanmig"> cleanmig </h3>
 <h3 id="create"> create </h3>
 <ul>
 <li>creator / name</li>
@@ -116,6 +146,21 @@ $(function() {
 <li>image / string</li>
 <li>url / string</li>
 <li>fund / name</li>
+</ul>
+<h3 id="createinvite"> createinvite </h3>
+<ul>
+<li>creator / name</li>
+<li>recipient / name</li>
+<li>quantity / asset</li>
+<li>title / string</li>
+<li>summary / string</li>
+<li>description / string</li>
+<li>image / string</li>
+<li>url / string</li>
+<li>fund / name</li>
+<li>max_amount_per_invite / asset</li>
+<li>planted / asset</li>
+<li>reward / asset</li>
 </ul>
 <h3 id="createx"> createx </h3>
 <ul>
@@ -130,6 +175,24 @@ $(function() {
 <li>fund / name</li>
 <li>pay_percentages / uint64[]</li>
 </ul>
+<h3 id="cycle_stats_table"> cycle_stats_table </h3>
+<ul>
+<li>propcycle / uint64</li>
+<li>start_time / uint64</li>
+<li>end_time / uint64</li>
+<li>num_proposals / uint64</li>
+<li>num_votes / uint64</li>
+<li>total_voice_cast / uint64</li>
+<li>total_favour / uint64</li>
+<li>total_against / uint64</li>
+<li>total_citizens / uint64</li>
+<li>quorum_vote_base / uint64</li>
+<li>quorum_votes_needed / uint64</li>
+<li>total_eligible_voters / uint64</li>
+<li>unity_needed / float32</li>
+<li>active_props / uint64[]</li>
+<li>eval_props / uint64[]</li>
+</ul>
 <h3 id="cycle_table"> cycle_table </h3>
 <ul>
 <li>propcycle / uint64</li>
@@ -142,9 +205,31 @@ $(function() {
 <li>chunksize / uint64</li>
 </ul>
 <h3 id="decayvoices"> decayvoices </h3>
+<h3 id="delegate"> delegate </h3>
+<ul>
+<li>delegator / name</li>
+<li>delegatee / name</li>
+<li>scope / name</li>
+</ul>
+<h3 id="delegate_trust_table"> delegate_trust_table </h3>
+<ul>
+<li>delegator / name</li>
+<li>delegatee / name</li>
+<li>weight / float64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="doneprop"> doneprop </h3>
+<ul>
+<li>proposal_id / uint64</li>
+</ul>
 <h3 id="erasepartpts"> erasepartpts </h3>
 <ul>
 <li>active_proposals / uint64</li>
+</ul>
+<h3 id="evalproposal"> evalproposal </h3>
+<ul>
+<li>proposal_id / uint64</li>
+<li>prop_cycle / uint64</li>
 </ul>
 <h3 id="favour"> favour </h3>
 <ul>
@@ -152,12 +237,26 @@ $(function() {
 <li>id / uint64</li>
 <li>amount / uint64</li>
 </ul>
-<h3 id="initactives"> initactives </h3>
+<h3 id="initnumprop"> initnumprop </h3>
 <h3 id="initsz"> initsz </h3>
 <h3 id="last_proposal_table"> last_proposal_table </h3>
 <ul>
 <li>account / name</li>
 <li>proposal_id / uint64</li>
+</ul>
+<h3 id="migvotepow"> migvotepow </h3>
+<ul>
+<li>cycle / uint64</li>
+</ul>
+<h3 id="mimicvote"> mimicvote </h3>
+<ul>
+<li>delegatee / name</li>
+<li>delegator / name</li>
+<li>scope / name</li>
+<li>proposal_id / uint64</li>
+<li>percentage_used / float64</li>
+<li>option / name</li>
+<li>chunksize / uint64</li>
 </ul>
 <h3 id="min_stake_table"> min_stake_table </h3>
 <ul>
@@ -200,10 +299,16 @@ $(function() {
 <li>passed_cycle / uint64</li>
 <li>age / uint32</li>
 <li>current_payout / asset</li>
+<li>campaign_type / name</li>
+<li>max_amount_per_invite / asset</li>
+<li>planted / asset</li>
+<li>reward / asset</li>
+<li>campaign_id / uint64</li>
 </ul>
-<h3 id="removeactive"> removeactive </h3>
+<h3 id="reevalprop"> reevalprop </h3>
 <ul>
-<li>account / name</li>
+<li>proposal_id / uint64</li>
+<li>prop_cycle / uint64</li>
 </ul>
 <h3 id="reset"> reset </h3>
 <h3 id="size_table"> size_table </h3>
@@ -218,9 +323,41 @@ $(function() {
 <li>quantity / asset</li>
 <li>memo / string</li>
 </ul>
+<h3 id="support_level_table"> support_level_table </h3>
+<ul>
+<li>propcycle / uint64</li>
+<li>num_proposals / uint64</li>
+<li>total_voice_cast / uint64</li>
+<li>voice_needed / uint64</li>
+</ul>
+<h3 id="testevalprop"> testevalprop </h3>
+<ul>
+<li>proposal_id / uint64</li>
+<li>prop_cycle / uint64</li>
+</ul>
+<h3 id="testperiod"> testperiod </h3>
+<h3 id="testpropquor"> testpropquor </h3>
+<ul>
+<li>current_cycle / uint64</li>
+<li>prop_id / uint64</li>
+</ul>
+<h3 id="testquorum"> testquorum </h3>
+<ul>
+<li>total_proposals / uint64</li>
+</ul>
+<h3 id="testsetvoice"> testsetvoice </h3>
+<ul>
+<li>user / name</li>
+<li>amount / uint64</li>
+</ul>
 <h3 id="testvdecay"> testvdecay </h3>
 <ul>
 <li>timestamp / uint64</li>
+</ul>
+<h3 id="undelegate"> undelegate </h3>
+<ul>
+<li>delegator / name</li>
+<li>scope / name</li>
 </ul>
 <h3 id="update"> update </h3>
 <ul>
@@ -231,11 +368,6 @@ $(function() {
 <li>image / string</li>
 <li>url / string</li>
 </ul>
-<h3 id="updateactive"> updateactive </h3>
-<ul>
-<li>start / uint64</li>
-</ul>
-<h3 id="updateactivs"> updateactivs </h3>
 <h3 id="updatevoice"> updatevoice </h3>
 <ul>
 <li>start / uint64</li>
@@ -276,6 +408,17 @@ $(function() {
 <li>account / name</li>
 <li>amount / uint64</li>
 <li>favour / bool</li>
+</ul>
+<h3 id="voted_proposals_table"> voted_proposals_table </h3>
+<ul>
+<li>proposal_id / uint64</li>
+</ul>
+<h3 id="voteonbehalf"> voteonbehalf </h3>
+<ul>
+<li>voter / name</li>
+<li>id / uint64</li>
+<li>amount / uint64</li>
+<li>option / name</li>
 </ul>
 </div>
   <script id="template" type="x-tmpl-handlebars">
