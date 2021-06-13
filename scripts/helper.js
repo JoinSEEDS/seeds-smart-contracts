@@ -299,27 +299,24 @@ allBankAccountNames.sort()
 
 var permissions = [{
   target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.milestonebank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.alliancesbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
-  actor: `${accounts.accounts.account}@active`
+  actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.globaldho.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
-  target: `${accounts.accounts.account}@owner`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
+  target: `${accounts.accounts.account}@owner`, // probably don't need this
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -332,7 +329,7 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.accounts.account}@active`
@@ -341,13 +338,13 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.referendums.account}@active`,
   actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.settings.account}@active`,
-  actor: `${accounts.referendums.account}@active`
+  actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.harvest.account}@active`
@@ -399,7 +396,7 @@ var permissions = [{
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
-  target: `${accounts.onboarding.account}@owner`,
+  target: `${accounts.onboarding.account}@owner`, // should be active
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -692,15 +689,6 @@ var permissions = [{
 }, {
   target: `${accounts.msig.account}@active`,
   actor: `${accounts.msig.account}@eosio.code`
-}, {
-  target: `${accounts.policy.account}@active`, // TODO: Rethink this - it's just for deployment, msig
-  actor: `${accounts.msig.account}@eosio.code`
-}, {
-  target: `${accounts.policy.account}@owner`, 
-  actor: `${accounts.constitutionalGuardians.account}@owner`
-}, {
-  target: `${accounts.policy.account}@active`, 
-  actor: `${accounts.constitutionalGuardians.account}@active`
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.history.account}@eosio.code`
