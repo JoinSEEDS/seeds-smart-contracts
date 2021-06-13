@@ -81,6 +81,12 @@ void scheduler::reset_aux(bool destructive) {
             itr++;
         }
     }
+    if (destructive) {
+        auto itr = moonops.begin();
+        while(itr != moonops.end()) {
+            itr = moonops.erase(itr);
+        }
+    }
 
     auto titr = test.begin();
     while(titr != test.end()){
@@ -289,11 +295,27 @@ void scheduler::reset_aux(bool destructive) {
         }
         i++;
     }
+
+    // Moon Operations
+    // All moon operations need to be preserved, so they need to be added/removed manually.
+/**
+cleos -u "https://test.hypha.earth" push action cycle.seeds configmoonop '{ 
+	"id":"inc.lprice",
+	"action":"incprice",
+	"contract":"tlosto.seeds",
+	"quarter_moon_cycles":"1",
+	"starttime":"1623322380"
+}' -p cycle.seeds@active
+*/
+
 }
 
 
 ACTION scheduler::configop(name id, name action, name contract, uint64_t period, uint64_t starttime) {
     require_auth(_self);
+
+    auto mop_itr = moonops.find(id.value);
+    check(mop_itr == moonops.end(), "op must have unique name, op exists in moon operations table");
 
     auto itr = operations.find(id.value);
     
@@ -329,8 +351,16 @@ ACTION scheduler::configmoonop(name id, name action, name contract, uint64_t qua
 
     check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
     
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    check(starttime >= now, "start time must be a valid moon phase in the future");
+
     auto mitr = moonphases.find(starttime);
     check(mitr != moonphases.end(), "start time must be a valid moon phase timestamp");
+
+
+
+    auto oitr = operations.find(id.value);
+    check(oitr == operations.end(), "moon op must have unique name, op exists in normal operations table");
 
     auto mop_itr = moonops.find(id.value);
 
@@ -603,6 +633,21 @@ void scheduler::exec_op(name id, name contract, name operation) {
     // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 
     a.send();
+}
+
+// not using this
+uint64_t scheduler::next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quarter_moon_cycles) {
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    uint64_t result = moon_cycle_id;
+
+    if (now > result) {
+        auto mpitr = moonphases.find(result);
+        while(now > result && mpitr != moonphases.end()) {
+            std::advance(mpitr, quarter_moon_cycles);
+            result = mpitr->timestamp;
+        }
+    }
+    return moon_cycle_id;
 }
 
 
