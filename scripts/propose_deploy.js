@@ -166,8 +166,8 @@ const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccoun
  * Sets active and owner to GuardianAccountName and msig.seeds
  * @param {*} targetAccount 
  */
-const setCGPermissions = async (targetAccount, permission_name) => {
-    console.log('setGuardiansPermissions on ' + targetAccount)
+const setCGPermissions = async (targetAccount, permission_name, hot = false) => {
+    console.log('setGuardiansPermissions on ' + targetAccount + " " + (hot ? "hot" : "test mode"))
 
     assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
 
@@ -182,7 +182,7 @@ const setCGPermissions = async (targetAccount, permission_name) => {
     const { keys, accounts, waits } = required_auth
 
     let accountPermissions = [
-        ...accounts,
+        //...accounts,
       {
         permission: { 
           actor: GuardianAccountName, 
@@ -213,7 +213,6 @@ const setCGPermissions = async (targetAccount, permission_name) => {
       keys: []
     }
 
-    console.log("new permissions: "+JSON.stringify(auth, null, 2))
 
     const actions = [{
         account: 'eosio',
@@ -235,13 +234,17 @@ const setCGPermissions = async (targetAccount, permission_name) => {
       expireSeconds: 30,
     }
   
-    let res = await eos.api.transact({
-      actions
-    }, trxConfig)
-
-    const newPermissions = await eos.getAccount(targetAccount)
-
-    console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))
+    if (hot) {
+      let res = await eos.api.transact({
+        actions
+      }, trxConfig)
+  
+      const newPermissions = await eos.getAccount(targetAccount)
+  
+      console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))  
+    } else {
+      console.log("new permissions would be: "+JSON.stringify(auth, null, 2))
+    }
 
 }
 

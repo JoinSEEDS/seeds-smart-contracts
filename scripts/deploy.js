@@ -308,6 +308,39 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
   }
 }
 
+const removeAllActorPermissions = async (target) => {
+  await removeActorPermission(target, "active")
+  await removeActorPermission(target, "owner")
+}
+
+const removeActorPermission = async (target, targetRole) => {
+  console.log("remove "+target + "@" + targetRole)
+  try {
+    const { parent, required_auth: { threshold, waits, keys, accounts } } =
+      (await eos.getAccount(target))
+        .permissions.find(p => p.perm_name == targetRole)
+
+    const permissions = {
+      account: target,
+      permission: targetRole,
+      parent,
+      auth: {
+        threshold,
+        waits,
+        accounts: [],
+        keys: [
+          ...keys
+        ]
+      }
+    }
+
+    await eos.updateauth(permissions, { authorization: `${target}@owner` })
+    console.log(`+ actor permissions removed on ${target}@${targetRole}`)
+  } catch (err) {
+    console.error(`failed permission update on ${target}\n* error: ` + err + `\n`)
+  }
+}
+
 const changeOwnerAndActivePermission = async (account, key) => {
   await changeExistingKeyPermission(account, "active", "owner", key)
   await changeExistingKeyPermission(account, "execute", "active", key)
@@ -572,4 +605,9 @@ const deployAllContracts = async () => {
   await reset(accounts.settings)
 }
 
-module.exports = { source, deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, addActorPermission, createTestToken }
+module.exports = { 
+  source, deployAllContracts, updatePermissions, 
+  resetByName, changeOwnerAndActivePermission, 
+  changeExistingKeyPermission, addActorPermission, createTestToken,
+  removeAllActorPermissions
+}

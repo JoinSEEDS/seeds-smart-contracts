@@ -13,7 +13,8 @@ const { deployAllContracts, updatePermissions, resetByName,
     changeOwnerAndActivePermission, 
     changeExistingKeyPermission, 
     addActorPermission,
-    createTestToken } = require('./deploy')
+    createTestToken,
+    removeAllActorPermissions } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -180,10 +181,34 @@ program
   })
 
   program
-  .command('set_cg_permissions <contract> <permission>')
+  .command('set_cg_permissions <contract> <permission> [hot]')
   .description('Place contract under guardian control')
-  .action(async function (contract, permission) {
-    await setCGPermissions(contract, permission)
+  .action(async function (contract, permission, hot) {
+    await setCGPermissions(contract, permission, hot)
+  })
+
+  program
+  .command('set_cg_all [hot]')
+  .description('Place contract under guardian control')
+  .action(async function (contract, permission, hot) {
+    await setCGPermissions(contract, permission, hot)
+  })
+
+  program
+  .command('remove_actor_permissions')
+  .description('Remove all actor permissions, updatePermissions can then cleanly add new permissions.')
+  .action(async function () {
+    
+    await removeAllActorPermissions("harvst.seeds")
+    await removeAllActorPermissions("settgs.seeds")
+    await removeAllActorPermissions("system.seeds")
+    await removeAllActorPermissions("refer.seeds")
+    await removeAllActorPermissions("allies.seeds")
+    await removeAllActorPermissions("gift.seeds")
+    await removeAllActorPermissions("milest.seeds")
+    await removeAllActorPermissions("gdho.seeds")
+    console.log("Permissions removed, updating permissions")
+    await updatePermissionAction()
   })
 
 program
