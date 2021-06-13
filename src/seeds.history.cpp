@@ -864,3 +864,51 @@ void history::adjust_transactions (uint64_t id, uint64_t timestamp) {
     }
   }
 }
+
+
+void history::testptrx (uint64_t timestamp) {
+  require_auth(get_self());
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+
+  ptrx_t.emplace(_self, [&](auto & item){
+    item.id = ptrx_t.available_primary_key();
+    item.timestamp = timestamp;
+    item.transaction_id = timestamp;
+  });
+}
+
+
+void history::cleanptrxs () {
+  require_auth(get_self());
+
+  auto batch_size = config_get("batchsize"_n);
+  uint64_t count = 0;
+  
+  uint64_t today = utils::get_beginning_of_day_in_seconds();
+
+  processed_trx_tables ptrx_t(get_self(), get_self().value);
+  auto ptrx_t_by_timestamp_id = ptrx_t.get_index<"bytimestmpid"_n>();
+
+  auto ptrx_itr = ptrx_t_by_timestamp_id.begin();
+
+  while (ptrx_itr != ptrx_t_by_timestamp_id.end() && ptrx_itr->timestamp < today && count < batch_size) {
+    ptrx_itr = ptrx_t_by_timestamp_id.erase(ptrx_itr);
+    count++;
+  }
+
+  if (ptrx_itr != ptrx_t_by_timestamp_id.end() && ptrx_itr->timestamp < today) {
+    action a(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "cleanptrxs"_n,
+      std::make_tuple()
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(a);
+    tx.delay_sec = 1; 
+    tx.send(get_deferred_id(), _self);
+  }
+}
+
