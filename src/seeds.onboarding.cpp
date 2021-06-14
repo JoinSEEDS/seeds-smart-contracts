@@ -385,12 +385,11 @@ void onboarding::acceptnew(name account, checksum256 invite_secret, string publi
 
 // accept invite using already existing account - needs to be signed by existing account
 // to prove ownership
-void onboarding::acceptexist(name account, checksum256 invite_secret) {
-  
-  // TODO: Add this later so users don't accidentally onboard an account they don't own.
-  //require_auth(account);
+void onboarding::acceptexist(name account, checksum256 invite_secret) {  
 
   check(is_account(account) == true, "Account does not exist " + account.to_string());
+
+  require_auth(account);
 
   accept_invite(account, invite_secret, string(""), string(""), true);
 }
