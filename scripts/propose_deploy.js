@@ -182,7 +182,7 @@ const setCGPermissions = async (targetAccount, permission_name, hot = false) => 
     const { keys, accounts, waits } = required_auth
 
     let accountPermissions = [
-        //...accounts,
+        ...accounts,
       {
         permission: { 
           actor: GuardianAccountName, 
