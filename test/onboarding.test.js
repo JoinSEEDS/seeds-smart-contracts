@@ -387,16 +387,16 @@ describe('Use application permission to accept', async assert => {
     console.log(`reset ${onboarding}`)
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
-    console.log(`adduser (${firstuser})`)
+    console.log(`${accounts}.adduser (${firstuser})`)
     await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })     
     
     await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetrs(firstuser, 22, { authorization: `${accounts}@active` })
 
-    console.log(`transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
+    console.log(`${token}.transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
     await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    
 
-    console.log(`invite from ${firstuser}`)
+    console.log(`${onboarding}.invite from ${firstuser}`)
     await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
 
     const vouchBeforeInvite = await eos.getTableRows({
@@ -406,7 +406,7 @@ describe('Use application permission to accept', async assert => {
         json: true
       })
 
-    console.log(`accept from Application`)
+    console.log(`${onboarding}.accept from Application`)
     await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
 
     const acceptUsers = await eos.getTableRows({
@@ -516,7 +516,7 @@ describe('Invite from non-seeds user - sp', async assert => {
 
     await invite()
 
-    console.log(`onboarding accept from Application for `+newAccount)
+    console.log(`onboarding ${onboarding}.accept from Application for `+newAccount)
     await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
 
     const { rows } = await getTableRows({
@@ -595,9 +595,9 @@ describe('Campaign reward for existing user', async assert => {
         await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
     }
 
-    const acceptExisting = async () => {
-        console.log(`Existing user accept from Application`)
-        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${onboarding}@application` })    
+    const accept = async () => {
+        console.log(`${onboarding}.accept from Application`)
+        await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
     }
 
     await adduser(firstuser)
@@ -621,7 +621,7 @@ describe('Campaign reward for existing user', async assert => {
 
     await invite()
 
-    await acceptExisting()
+    await accept()
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -839,33 +839,32 @@ describe('Private campaign', async assert => {
     await checkCampaignFunds(1, maxAmount1)
     await checkCampaignFunds(2, maxAmount2)
 
-    let user2 = randomAccountName()
-    console.log(`invite new user ${user2}`)
+    console.log(`invite ${seconduser}`)
     const firstuserBalanceBeforeAccept = await getBalance(firstuser)
     await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '3.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
-
-    await contracts.onboarding.accept(user2, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.accept(seconduser, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
     await checkCampaignFunds(1, '10.0000 SEEDS')
     await checkCampaignInvites(1, 1, 0)
-    await checkUsers(user2, 2)
-    await checkVouches(user2, 1)
+    await checkUsers(seconduser, 2)
+    await checkVouches(seconduser, 1)
     
-    console.log(`addauthorized ${user2}`)
-    await contracts.onboarding.addauthorized(1, user2, { authorization: `${firstuser}@active` })
+    console.log(`authorize ${seconduser}`)
+    await contracts.onboarding.addauthorized(1, seconduser, { authorization: `${firstuser}@active` })
+    console.log(`authorize ${seconduser} again`)
+    await contracts.onboarding.addauthorized(1, seconduser, { authorization: `${firstuser}@active` })
 
-    console.log(`testing max invite amount`)
     let cantExceedMaxInviteAmount = true
     try {
-        await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
+        await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
         cantExceedMaxInviteAmount = false
     } catch (err) {
         console.log('can not exceed max invitation amount (expected)')
     }
 
-    console.log(`${user2} invites ${thirduser}`)
-    await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
-    await contracts.onboarding.acceptexist(thirduser, inviteSecret2, { authorization: `${onboarding}@active` })
+    console.log(`${seconduser} invites ${thirduser}`)
+    await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${seconduser}@active` })
+    await contracts.onboarding.accept(thirduser, inviteSecret2, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
     const firstuserBalanceAfterAccept = await getBalance(firstuser)
 
@@ -874,13 +873,13 @@ describe('Private campaign', async assert => {
     await checkUsers(thirduser, 3)
     await checkVouches(thirduser, 1)
 
-    console.log(`remove ${user2} from the authorization list`)
-    await contracts.onboarding.remauthorized(1, user2, { authorization: `${firstuser}@active` })
+    console.log(`remove ${seconduser} from the authorization list`)
+    await contracts.onboarding.remauthorized(1, seconduser, { authorization: `${firstuser}@active` })
 
     console.log('invite without permission')
     let cantInviteWithoutPermission = true
     try {
-        await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${user2}@active` })
+        await contracts.onboarding.campinvite(1, seconduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${seconduser}@active` })
         cantInviteWithoutPermission = false
     } catch (err) {
         console.log('can not invite without permission (expected)')

@@ -103,7 +103,7 @@ void onboarding::send_campaign_reward (uint64_t campaign_id) {
   transfer_seeds(citr->reward_owner, citr->reward, string("campaign reward"));
 }
 
-void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool existingTelosAccount) {
+void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname) {
   require_auth(get_self());
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
@@ -133,12 +133,6 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
 
   bool is_existing_telos_user = is_account(account);
   bool is_existing_seeds_user = is_seeds_user(account);
-
-  if (existingTelosAccount) {
-    check(is_existing_telos_user, "telos account does not exist: " + account.to_string());
-  } else {
-    check(!is_existing_telos_user, "telos account already exists: " + account.to_string());
-  }
 
   if (!is_existing_telos_user) {
     create_account(account, publicKey, ""_n);
@@ -380,24 +374,19 @@ void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth)
 void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname) {
   check(is_account(account) == false, "Account already exists " + account.to_string());
 
-  accept_invite(account, invite_secret, publicKey, fullname, false);
+  accept_invite(account, invite_secret, publicKey, fullname);
 }
 
-// accept invite using already existing account - needs to be signed by existing account
-// to prove ownership
-void onboarding::acceptexist(name account, checksum256 invite_secret) {
-  
-  // TODO: Add this later so users don't accidentally onboard an account they don't own.
-  //require_auth(account);
-
+// accept invite using already existing account
+void onboarding::acceptexist(name account, checksum256 invite_secret, string publicKey) {
   check(is_account(account) == true, "Account does not exist " + account.to_string());
 
-  accept_invite(account, invite_secret, string(""), string(""), true);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }
 
-// accept invite creating new account
+// accept invite using already existing account or creating new account
 void onboarding::accept(name account, checksum256 invite_secret, string publicKey) {
-  accept_invite(account, invite_secret, publicKey, string(""), false);
+  accept_invite(account, invite_secret, publicKey, string(""));
 }
 
 void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size) {
@@ -530,15 +519,8 @@ ACTION onboarding::campinvite (uint64_t campaign_id, name authorizing_account, a
   auto citr = campaigns.find(campaign_id);
   check(citr != campaigns.end(), "campaign not found");
   
-  bool is_authorized = false;
-  for (std::size_t i = 0; i < citr->authorized_accounts.size(); i++) {
-      if (authorizing_account == citr->authorized_accounts[i]) {
-        is_authorized = true;
-        break;
-      }
-  }
-
-  check(is_authorized, authorizing_account.to_string() + " is not authorized to invite in this campaign");
+  check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), authorizing_account), 
+    authorizing_account.to_string() + " is not authorized to invite in this campaign");
 
   require_auth(authorizing_account);
 

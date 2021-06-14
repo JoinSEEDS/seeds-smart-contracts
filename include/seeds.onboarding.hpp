@@ -33,7 +33,7 @@ CONTRACT onboarding : public contract {
     ACTION invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
-    ACTION acceptexist(name account, checksum256 invite_secret);
+    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION createregion(name sponsor, name region, string publicKey);
 
@@ -64,7 +64,7 @@ CONTRACT onboarding : public contract {
     void sow_seeds(name account, asset quantity);
     void add_referral(name sponsor, name account);
     void invitevouch(name sponsor, name account);
-    void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool existingTelosAccount);
+    void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
     void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id);
     void check_user(name account);
     uint64_t config_get(name key);
