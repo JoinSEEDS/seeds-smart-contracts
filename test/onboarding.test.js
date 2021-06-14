@@ -597,7 +597,7 @@ describe('Campaign reward for existing user', async assert => {
 
     const acceptExisting = async () => {
         console.log(`Existing user accept from Application`)
-        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${onboarding}@application` })    
+        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@application` })    
     }
 
     await adduser(firstuser)
@@ -865,7 +865,7 @@ describe('Private campaign', async assert => {
 
     console.log(`${user2} invites ${thirduser}`)
     await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
-    await contracts.onboarding.acceptexist(thirduser, inviteSecret2, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.acceptexist(thirduser, inviteSecret2, { authorization: `${thirduser}@active` })
 
     const firstuserBalanceAfterAccept = await getBalance(firstuser)
 
