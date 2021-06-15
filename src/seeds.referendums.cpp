@@ -1,55 +1,76 @@
 #include <seeds.referendums.hpp>
+#include <proposals/referendum_factory.hpp>
+
+#include "referendums_settings.cpp"
 
 
-ACTION referendums::reset() {
+ACTION referendums::reset () {
   require_auth(get_self());
 
-
+  referendum_tables referendums_t(get_self(), get_self().value);
+  auto ritr = referendums_t.begin();
+  while (ritr != referendums_t.end()) {
+    ritr = referendums_t.erase(ritr);
+  }
 }
 
-ACTION referendums::create(
-  name creator,
-  name setting_name,
-  uint64_t setting_value,
-  string title,
-  string summary,
-  string description,
-  string image,
-  string url
-) {
-  require_auth(creator);
+ACTION referendums::create (std::map<std::string, VariantValue> & args) {
 
+  name creator = std::get<name>(args["creator"]);
+  name type = std::get<name>(args["type"]);
+
+  require_auth(creator);
   check_citizen(creator);
 
-  uint64_t price_amount = config.find(name("refsnewprice").value)->value;
-  asset stake_price = asset(price_amount, seeds_symbol);
+  std::unique_ptr<Referendum> ref = std::unique_ptr<Referendum>(ReferendumFactory::Factory(*this, type));
 
-  auto bitr = balances.find(creator.value);
-  check(bitr != balances.end(), "user has not balance");
-  check(bitr->stake >= stake_price, "user has not sufficient stake");
+  ref->create(args);
 
-  referendum_tables staged(get_self(), name("staged").value);
-
-  staged.emplace(get_self(), [&](auto& item) {
-    item.referendum_id = staged.available_primary_key();
-    item.favour = 0;
-    item.against = 0;
-    item.staked = asset(price_amount, seeds_symbol);
-    item.creator = creator;
-    item.setting_name = setting_name;
-    item.setting_value = setting_value;
-    item.title = title;
-    item.summary = summary;
-    item.description = description;
-    item.image = image;
-    item.url = url;
-    item.created_at = current_time_point().sec_since_epoch();
-  });
-
-  balances.modify(bitr, get_self(), [&](auto& balance) {
-    balance.stake -= stake_price;
-  });
 }
+
+// ACTION referendums::create(
+//   name creator,
+//   name setting_name,
+//   uint64_t setting_value,
+//   string title,
+//   string summary,
+//   string description,
+//   string image,
+//   string url
+// ) {
+//   require_auth(creator);
+
+//   check_citizen(creator);
+
+//   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
+//   asset stake_price = asset(price_amount, seeds_symbol);
+
+//   auto bitr = balances.find(creator.value);
+//   check(bitr != balances.end(), "user has not balance");
+//   check(bitr->stake >= stake_price, "user has not sufficient stake");
+
+//   referendum_tables staged(get_self(), name("staged").value);
+
+//   staged.emplace(get_self(), [&](auto& item) {
+//     item.referendum_id = staged.available_primary_key();
+//     item.favour = 0;
+//     item.against = 0;
+//     item.staked = asset(price_amount, seeds_symbol);
+//     item.creator = creator;
+//     item.setting_name = setting_name;
+//     item.setting_value = setting_value;
+//     item.title = title;
+//     item.summary = summary;
+//     item.description = description;
+//     item.image = image;
+//     item.url = url;
+//     item.created_at = current_time_point().sec_since_epoch();
+//   });
+
+//   balances.modify(bitr, get_self(), [&](auto& balance) {
+//     balance.stake -= stake_price;
+//   });
+// }
 
 
 
@@ -505,6 +526,8 @@ ACTION referendums::create(
 //     });
 //   }
 // }
+
+
 
 
 void referendums::check_citizen(name account) {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <contracts.hpp>
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
@@ -7,150 +9,152 @@
 #include <utils.hpp>
 #include <tables/config_table.hpp>
 #include <tables/user_table.hpp>
+#include <tables/referendums_table.hpp>
+
 
 using namespace eosio;
 using std::string;
 using std::make_tuple;
 using std::distance;
 
-#define MOVE_REFERENDUM(from, to) { \
-  to.referendum_id = from->referendum_id; \
-  to.created_at = from->created_at; \
-  to.setting_value = from->setting_value; \
-  to.favour = from->favour; \
-  to.against = from->against; \
-  to.setting_name = from->setting_name; \
-  to.creator = from->creator; \
-  to.staked = from->staked; \
-  to.title = from->title; \
-  to.summary = from->summary; \
-  to.description = from->description; \
-  to.image = from->image; \
-  to.url = from->url; \
-}
 
 CONTRACT referendums : public contract {
   public:
       using contract::contract;
       referendums(name receiver, name code, datastream<const char*> ds)
-        : contract(receiver, code, ds),
-          balances(receiver, receiver.value),
-          config(contracts::settings, contracts::settings.value)
+        : contract(receiver, code, ds)
           {}
 
       ACTION reset();
 
-      ACTION create(
-        name creator,
-        name setting_name,
-        uint64_t setting_value,
-        string title,
-        string summary,
-        string description,
-        string image,
-        string url
-      );
+      ACTION create(std::map<std::string, VariantValue> & args);
 
-      ACTION update(
-        name creator,
-        name setting_name,
-        uint64_t setting_value,
-        string title,
-        string summary,
-        string description,
-        string image,
-        string url
-      );
+      DEFINE_REFERENDUM_TABLE
+      DEFINE_REFERENDUM_TABLE_MULTI_INDEX
 
-      ACTION favour(name voter, uint64_t referendum_id, uint64_t amount);
+      DEFINE_CONFIG_TABLE
+      DEFINE_CONFIG_TABLE_MULTI_INDEX
 
-      ACTION against(name voter, uint64_t referendum_id, uint64_t amount);
+      DEFINE_CONFIG_FLOAT_TABLE
+      DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
-      ACTION stake(name from, name to, asset quantity, string memo);
+      // ACTION create(
+      //   name creator,
+      //   name setting_name,
+      //   uint64_t setting_value,
+      //   string title,
+      //   string summary,
+      //   string description,
+      //   string image,
+      //   string url
+      // );
 
-      ACTION addvoice(name account, uint64_t amount);
+      // ACTION update(
+      //   name creator,
+      //   name setting_name,
+      //   uint64_t setting_value,
+      //   string title,
+      //   string summary,
+      //   string description,
+      //   string image,
+      //   string url
+      // );
 
-      ACTION cancelvote(name voter, uint64_t referendum_id);
+      // ACTION favour(name voter, uint64_t referendum_id, uint64_t amount);
 
-      ACTION onperiod();
+      // ACTION against(name voter, uint64_t referendum_id, uint64_t amount);
+
+      // ACTION stake(name from, name to, asset quantity, string memo);
+
+      // ACTION addvoice(name account, uint64_t amount);
+
+      // ACTION cancelvote(name voter, uint64_t referendum_id);
+
+      // ACTION onperiod();
+
   private:
-    symbol seeds_symbol = symbol("SEEDS", 4);
 
-    static constexpr name high_impact = "high"_n;
-    static constexpr name medium_impact = "med"_n;
-    static constexpr name low_impact = "low"_n;
-
-    void give_voice();
-    void run_testing();
-    void run_active();
-    void run_staged();
-    void send_onperiod();
-    void send_refund_stake(name account, asset quantity);
-    void send_burn_stake(asset quantity);
-    void send_change_setting(name setting_name, uint64_t setting_value);
     void check_citizen(name account);
 
-    uint64_t get_quorum(const name & setting);
-    uint64_t get_unity(const name & setting);
+  //   symbol seeds_symbol = symbol("SEEDS", 4);
 
-    TABLE voter_table {
-      name account;
-      uint64_t referendum_id;
-      uint64_t amount;
-      bool favoured;
-      bool canceled;
+  //   static constexpr name high_impact = "high"_n;
+  //   static constexpr name medium_impact = "med"_n;
+  //   static constexpr name low_impact = "low"_n;
 
-      uint64_t primary_key()const { return account.value; }
-    };
+  //   void give_voice();
+  //   void run_testing();
+  //   void run_active();
+  //   void run_staged();
+  //   void send_onperiod();
+  //   void send_refund_stake(name account, asset quantity);
+  //   void send_burn_stake(asset quantity);
+  //   void send_change_setting(name setting_name, uint64_t setting_value);
+  //   void check_citizen(name account);
 
-    TABLE balance_table {
-      name account;
-      asset stake;
-      uint64_t voice;
+  //   uint64_t get_quorum(const name & setting);
+  //   uint64_t get_unity(const name & setting);
 
-      uint64_t primary_key()const { return account.value; }
-    };
+  //   TABLE voter_table {
+  //     name account;
+  //     uint64_t referendum_id;
+  //     uint64_t amount;
+  //     bool favoured;
+  //     bool canceled;
 
-    TABLE referendum_table {
-      uint64_t referendum_id;
-      uint64_t created_at;
-      uint64_t setting_value;
-      uint64_t favour;
-      uint64_t against;
-      name setting_name;
-      name creator;
-      asset staked;
-      string title;
-      string summary;
-      string description;
-      string image;
-      string url;
+  //     uint64_t primary_key()const { return account.value; }
+  //   };
 
-      uint64_t primary_key()const { return referendum_id; }
-      uint64_t by_name()const { return setting_name.value; }
-    };
+  //   TABLE balance_table {
+  //     name account;
+  //     asset stake;
+  //     uint64_t voice;
 
-    DEFINE_CONFIG_TABLE
-    DEFINE_CONFIG_TABLE_MULTI_INDEX
-    DEFINE_CONFIG_GET
+  //     uint64_t primary_key()const { return account.value; }
+  //   };
 
-    typedef multi_index<"balances"_n, balance_table> balance_tables;
-    typedef multi_index<"referendums"_n, referendum_table,
-      indexed_by<"byname"_n,
-      const_mem_fun<referendum_table, uint64_t, &referendum_table::by_name>>
-    > referendum_tables;
-    typedef multi_index<"voters"_n, voter_table> voter_tables;
+  //   TABLE referendum_table {
+  //     uint64_t referendum_id;
+  //     uint64_t created_at;
+  //     uint64_t setting_value;
+  //     uint64_t favour;
+  //     uint64_t against;
+  //     name setting_name;
+  //     name creator;
+  //     asset staked;
+  //     string title;
+  //     string summary;
+  //     string description;
+  //     string image;
+  //     string url;
 
-    balance_tables balances;
-    config_tables config;
+  //     uint64_t primary_key()const { return referendum_id; }
+  //     uint64_t by_name()const { return setting_name.value; }
+  //   };
+
+  //   DEFINE_CONFIG_TABLE
+  //   DEFINE_CONFIG_TABLE_MULTI_INDEX
+  //   DEFINE_CONFIG_GET
+
+  //   typedef multi_index<"balances"_n, balance_table> balance_tables;
+  //   typedef multi_index<"referendums"_n, referendum_table,
+  //     indexed_by<"byname"_n,
+  //     const_mem_fun<referendum_table, uint64_t, &referendum_table::by_name>>
+  //   > referendum_tables;
+  //   typedef multi_index<"voters"_n, voter_table> voter_tables;
+
+  //   balance_tables balances;
+  //   config_tables config;
 };
 
-extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  if (action == name("transfer").value && code == contracts::token.value) {
-      execute_action<referendums>(name(receiver), name(code), &referendums::stake);
-  } else if (code == receiver) {
-      switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod))
-      }
-  }
-}
+EOSIO_DISPATCH(referendums, (reset)(create))
+
+// extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+//   if (action == name("transfer").value && code == contracts::token.value) {
+//       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
+//   } else if (code == receiver) {
+//       switch (action) {
+//         EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod))
+//       }
+//   }
+// }
