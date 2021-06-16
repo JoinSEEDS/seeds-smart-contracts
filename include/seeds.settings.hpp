@@ -31,6 +31,8 @@ CONTRACT settings : public contract {
 
       ACTION setcontract(name contract, name account);
 
+      ACTION remove(name param);
+
   private:
       const name high_impact = "high"_n;
       const name medium_impact = "med"_n;
@@ -69,4 +71,4 @@ CONTRACT settings : public contract {
 
 };
 
-EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(confwithdesc)(conffloat)(conffloatdsc));
+EOSIO_DISPATCH(settings, (reset)(configure)(setcontract)(confwithdesc)(conffloat)(conffloatdsc)(remove));

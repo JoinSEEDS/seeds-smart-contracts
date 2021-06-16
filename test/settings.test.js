@@ -55,8 +55,10 @@ describe('settings', async assert => {
   const afterSetting = await eos.getTableRows({
     code: settings,
     scope: settings,
+    lower_bound: 'testing',
+    upper_bound: 'testing',
     table: 'config',
-    limit: 1000,
+    limit: 1,
     json: true
   })
 
@@ -65,6 +67,25 @@ describe('settings', async assert => {
     should: 'have value',
     actual: afterSetting.rows.filter( ({param}) => param == "testing")[0].value,
     expected: 77
+  })
+
+  await contract.remove("testing", { authorization: `${settings}@active` })
+
+  const afterSettingRemoved = await eos.getTableRows({
+    code: settings,
+    scope: settings,
+    lower_bound: 'testing',
+    upper_bound: 'testing',
+    table: 'config',
+    limit: 1,
+    json: true
+  })
+
+  assert({
+    given: 'remove a value',
+    should: 'value has been deleted',
+    actual: afterSettingRemoved.rows,
+    expected: []
   })
 
 
