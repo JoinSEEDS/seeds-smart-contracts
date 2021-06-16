@@ -127,6 +127,14 @@ describe('scheduler', async assert => {
         limit: 100
     })
 
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        limit: 200,
+        json: true
+    })
+
     console.log("before "+JSON.stringify(beforeValues, null, 2))
     for (const op of opTable.rows) {
         await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
