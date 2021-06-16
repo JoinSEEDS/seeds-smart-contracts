@@ -34,8 +34,9 @@ CONTRACT region : public contract {
             string description, 
             string locationJson, 
             float latitude, 
-            float longitude, 
-            string publicKey);
+            float longitude);
+
+        ACTION createacct(name region, string publicKey);
 
         ACTION join(name region, name account);
         ACTION leave(name region, name account);
@@ -194,7 +195,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<region>(name(receiver), name(code), &region::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
+          EOSIO_DISPATCH_HELPER(region, (reset)(create)(createacct)(join)(leave)(addrole)(removerole)
           (removemember)(leaverole)(setfounder)(removergn))
       }
   }

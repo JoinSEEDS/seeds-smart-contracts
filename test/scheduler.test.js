@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows, initContracts } = require('../scripts/helper')
 const { equals, init } = require('ramda')
 
-const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, onboarding } = names
+const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, onboarding, history } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -128,6 +128,53 @@ describe('scheduler', async assert => {
     })
 
     console.log("before "+JSON.stringify(beforeValues, null, 2))
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+
+    const operations = [
+        {
+            id: 'hrvst.trx',
+            operation: 'calctrxpts',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.qevs',
+            operation: 'calcmqevs',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.mintr',
+            operation: 'calcmintrate',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.hrvst',
+            operation: 'runharvest',
+            contract: harvest
+        },
+        {
+            id: 'acct.rorgrep',
+            operation: 'rankorgreps',
+            contract: accounts
+        },
+        {
+            id: 'acct.rorgcbs',
+            operation: 'rankorgcbss',
+            contract: accounts
+        },
+        {
+            id: 'hrvst.rorgcs',
+            operation: 'rankorgcss',
+            contract: harvest
+        },
+        {
+            id: 'hstry.ptrxs',
+            operation: 'cleanptrxs',
+            contract: history
+        }
+    ]
 
     console.log('scheduler execute')
     await contracts.scheduler.start( { authorization: `${scheduler}@active` } )

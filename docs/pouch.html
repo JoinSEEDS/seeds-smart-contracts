@@ -24,74 +24,72 @@ $(function() {
 </script>
 
 </head><body>
-  <div id="target"><h1>Smartcontract documentation for settings</h1>
+  <div id="target"><h1>Smartcontract documentation for pouch</h1>
 <p><comment type="main"></comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>conffloat</strong> / <a href="#conffloat">conffloat</a> <comment type="action" name="conffloat"></comment></li>
-<li><strong>conffloatdsc</strong> / <a href="#conffloatdsc">conffloatdsc</a> <comment type="action" name="conffloatdsc"></comment></li>
-<li><strong>configure</strong> / <a href="#configure">configure</a> <comment type="action" name="configure"></comment></li>
-<li><strong>confwithdesc</strong> / <a href="#confwithdesc">confwithdesc</a> <comment type="action" name="confwithdesc"></comment></li>
+<li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit"></comment></li>
+<li><strong>freeze</strong> / <a href="#freeze">freeze</a> <comment type="action" name="freeze"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
-<li><strong>setcontract</strong> / <a href="#setcontract">setcontract</a> <comment type="action" name="setcontract"></comment></li>
+<li><strong>transfer</strong> / <a href="#transfer">transfer</a> <comment type="action" name="transfer"></comment></li>
+<li><strong>unfreeze</strong> / <a href="#unfreeze">unfreeze</a> <comment type="action" name="unfreeze"></comment></li>
+<li><strong>withdraw</strong> / <a href="#withdraw">withdraw</a> <comment type="action" name="withdraw"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
-<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
-<li><strong>configfloat</strong> / <a href="#config_float_table">config_float_table</a> (i64) <comment type="table" name="configfloat"></comment></li>
-<li><strong>contracts</strong> / <a href="#contracts_table">contracts_table</a> (i64) <comment type="table" name="contracts"></comment></li>
+<li><strong>balances</strong> / <a href="#balance_table">balance_table</a> (i64) <comment type="table" name="balances"></comment></li>
+<li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
-<h3 id="conffloat"> conffloat </h3>
+<h3 id="balance_table"> balance_table </h3>
 <ul>
-<li>param / name</li>
-<li>value / float64</li>
+<li>account / name</li>
+<li>balance / asset</li>
+<li>is_frozen / bool</li>
 </ul>
-<h3 id="conffloatdsc"> conffloatdsc </h3>
+<h3 id="deposit"> deposit </h3>
 <ul>
-<li>param / name</li>
-<li>value / float64</li>
-<li>description / string</li>
-<li>impact / name</li>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
 </ul>
-<h3 id="config_float_table"> config_float_table </h3>
+<h3 id="freeze"> freeze </h3>
 <ul>
-<li>param / name</li>
-<li>value / float64</li>
-<li>description / string</li>
-<li>impact / name</li>
-</ul>
-<h3 id="config_table"> config_table </h3>
-<ul>
-<li>param / name</li>
-<li>value / uint64</li>
-<li>description / string</li>
-<li>impact / name</li>
-</ul>
-<h3 id="configure"> configure </h3>
-<ul>
-<li>param / name</li>
-<li>value / uint64</li>
-</ul>
-<h3 id="confwithdesc"> confwithdesc </h3>
-<ul>
-<li>param / name</li>
-<li>value / uint64</li>
-<li>description / string</li>
-<li>impact / name</li>
-</ul>
-<h3 id="contracts_table"> contracts_table </h3>
-<ul>
-<li>contract / name</li>
 <li>account / name</li>
 </ul>
 <h3 id="reset"> reset </h3>
-<h3 id="setcontract"> setcontract </h3>
+<h3 id="transfer"> transfer </h3>
 <ul>
-<li>contract / name</li>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
+</ul>
+<h3 id="unfreeze"> unfreeze </h3>
+<ul>
 <li>account / name</li>
+</ul>
+<h3 id="user_table"> user_table </h3>
+<ul>
+<li>account / name</li>
+<li>status / name</li>
+<li>type / name</li>
+<li>nickname / string</li>
+<li>image / string</li>
+<li>story / string</li>
+<li>roles / string</li>
+<li>skills / string</li>
+<li>interests / string</li>
+<li>reputation / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="withdraw"> withdraw </h3>
+<ul>
+<li>account / name</li>
+<li>quantity / asset</li>
 </ul>
 </div>
   <script id="template" type="x-tmpl-handlebars">

@@ -15,7 +15,7 @@ function sleep(ms) {
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-describe('Proposals', async assert => {
+describe.only('Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -98,7 +98,8 @@ describe('Proposals', async assert => {
   const numberOfProposalsAfterCancel = await numberOfProposals()
 
   console.log('create alliance proposal')
-  await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
+  const allianceSeedsAmount = 12
+  await contracts.proposals.createx(fourthuser, fourthuser, allianceSeedsAmount+'.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
@@ -246,6 +247,8 @@ describe('Proposals', async assert => {
     json: true,
   })
 
+  const alliancesBalanceBefore = await getBalance(alliancesbank)
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
@@ -290,6 +293,7 @@ describe('Proposals', async assert => {
     await getBalance(campaignbank),
   ]
 
+  const alliancesBalanceAfter = await getBalance(alliancesbank)
 
   const escrowLocks = await eos.getTableRows({
     code: escrow,
@@ -558,6 +562,13 @@ describe('Proposals', async assert => {
       "trigger_source": "dao.hypha",
       "notes": "proposal id: 4",
     }
+  })
+
+  assert({
+    given: 'alliance proposal passed allies - balances',
+    should: 'alliance balance reduced by '+allianceSeedsAmount,
+    actual: alliancesBalanceBefore - alliancesBalanceAfter,
+    expected: allianceSeedsAmount
   })
 
   delete propTableAfterFinish.rows[0].creation_date

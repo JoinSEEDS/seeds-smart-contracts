@@ -34,6 +34,7 @@ $(function() {
 <li><strong>initsale</strong> / <a href="#initsale">initsale</a> <comment type="action" name="initsale"></comment></li>
 <li><strong>migrate</strong> / <a href="#migrate">migrate</a> <comment type="action" name="migrate"></comment></li>
 <li><strong>newpayment</strong> / <a href="#newpayment">newpayment</a> <comment type="action" name="newpayment"></comment></li>
+<li><strong>onhusd</strong> / <a href="#onhusd">onhusd</a> <comment type="action" name="onhusd"></comment></li>
 <li><strong>onperiod</strong> / <a href="#onperiod">onperiod</a> <comment type="action" name="onperiod"></comment></li>
 <li><strong>ontransfer</strong> / <a href="#ontransfer">ontransfer</a> <comment type="action" name="ontransfer"></comment></li>
 <li><strong>pause</strong> / <a href="#pause">pause</a> <comment type="action" name="pause"></comment></li>
@@ -43,6 +44,7 @@ $(function() {
 <li><strong>unpause</strong> / <a href="#unpause">unpause</a> <comment type="action" name="unpause"></comment></li>
 <li><strong>updatelimit</strong> / <a href="#updatelimit">updatelimit</a> <comment type="action" name="updatelimit"></comment></li>
 <li><strong>updatetlos</strong> / <a href="#updatetlos">updatetlos</a> <comment type="action" name="updatetlos"></comment></li>
+<li><strong>updatevol</strong> / <a href="#updatevol">updatevol</a> <comment type="action" name="updatevol"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -91,6 +93,13 @@ $(function() {
 <li>paymentSymbol / string</li>
 <li>paymentId / string</li>
 <li>multipliedUsdValue / uint64</li>
+</ul>
+<h3 id="onhusd"> onhusd </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+<li>quantity / asset</li>
+<li>memo / string</li>
 </ul>
 <h3 id="onperiod"> onperiod </h3>
 <h3 id="ontransfer"> ontransfer </h3>
@@ -155,6 +164,11 @@ $(function() {
 <h3 id="updatetlos"> updatetlos </h3>
 <ul>
 <li>tlos_per_usd / asset</li>
+</ul>
+<h3 id="updatevol"> updatevol </h3>
+<ul>
+<li>round_id / uint64</li>
+<li>volume / uint64</li>
 </ul>
 </div>
   <script id="template" type="x-tmpl-handlebars">

@@ -100,8 +100,7 @@ describe("regions general", async assert => {
     'test rgn region',
     '{lat:0.0111,lon:1.3232}', 
     1.1, 
-    1.23, 
-    keypair.public, 
+    1.23,  
     { authorization: `${firstuser}@active` })
 
     const regions = await getTableRows({
@@ -127,9 +126,21 @@ describe("regions general", async assert => {
   console.log('join a region')
   await contracts.region.join(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
+  console.log('create the region account')
+  await contracts.region.createacct(rgnname, keypair.public, { authorization: `${firstuser}@active` })
+
+  let onlyCreateOnce = true
+  try {
+    await contracts.region.createacct(rgnname, keypair.public, { authorization: `${firstuser}@active` })
+    onlyCreateOnce = false
+  } catch (error) {
+    console.log('account region already exists (expected)')
+  }
+
   const members = await getMembers()
   //console.log("members "+JSON.stringify(members, null, 2))
   await checkStatus(rgnname, statusActive, `${seconduser} joined`, 'have the correct status')
+
 
   console.log('leave a region')
   await contracts.region.leave(rgnname, seconduser, { authorization: `${seconduser}@active` })
@@ -226,96 +237,101 @@ describe("regions general", async assert => {
     expected: seconduser
   })
   
+  assert({
+    given: 'region account created',
+    should: 'fail if called twice',
+    actual: onlyCreateOnce,
+    expected: true
+  })
 
 
+  assert({
+    given: 'create region',
+    should: 'have region',
+    actual: regions.rows.length,
+    expected: 1
+  })
 
-assert({
-  given: 'create region',
-  should: 'have region',
-  actual: regions.rows.length,
-  expected: 1
-})
+  assert({
+    given: 'create region',
+    should: 'have member',
+    actual: initialMembers.rows.length,
+    expected: 1
+  })
 
-assert({
-  given: 'create region',
-  should: 'have member',
-  actual: initialMembers.rows.length,
-  expected: 1
-})
+  assert({
+    given: 'join member',
+    should: 'have one more member',
+    actual: members.rows.length,
+    expected: 2
+  })
 
-assert({
-  given: 'join member',
-  should: 'have one more member',
-  actual: members.rows.length,
-  expected: 2
-})
+  assert({
+    given: 'leave',
+    should: 'have one less member',
+    actual: membersAfter.rows.length,
+    expected: 1
+  })
 
-assert({
-  given: 'leave',
-  should: 'have one less member',
-  actual: membersAfter.rows.length,
-  expected: 1
-})
+  assert({
+    given: 'member removed',
+    should: 'have one less member',
+    actual: membersAfterRemove.rows.length,
+    expected: 1
+  })
 
-assert({
-  given: 'member removed',
-  should: 'have one less member',
-  actual: membersAfterRemove.rows.length,
-  expected: 1
-})
-
-assert({
-  given: 'add role',
-  should: 'have role',
-  actual: roles.rows.map(({account})=>account),
-  expected: [
-    firstuser,
-    seconduser,
-]
-})
-assert({
-  given: 'remove role',
-  should: 'have role',
-  actual: rolesAfter.rows.map(({account})=>account),
-  expected: [
-    firstuser,
+  assert({
+    given: 'add role',
+    should: 'have role',
+    actual: roles.rows.map(({account})=>account),
+    expected: [
+      firstuser,
+      seconduser,
   ]
-})
+  })
+  assert({
+    given: 'remove role',
+    should: 'have role',
+    actual: rolesAfter.rows.map(({account})=>account),
+    expected: [
+      firstuser,
+    ]
+  })
 
-assert({
-  given: 'remove admin',
-  should: 'have one less member',
-  actual: membersBeforeAdminRemove.rows.length - membersAfterAdminRemove.rows.length,
-  expected: 1
-})
+  assert({
+    given: 'remove admin',
+    should: 'have one less member',
+    actual: membersBeforeAdminRemove.rows.length - membersAfterAdminRemove.rows.length,
+    expected: 1
+  })
 
-assert({
-  given: 'not allowed to remove member',
-  should: 'be true',
-  actual: cantremove,
-  expected: true
-})
+  assert({
+    given: 'not allowed to remove member',
+    should: 'be true',
+    actual: cantremove,
+    expected: true
+  })
 
-assert({
-  given: 'not allowed to add role',
-  should: 'be true',
-  actual: cantaddrole,
-  expected: true
-})
+  assert({
+    given: 'not allowed to add role',
+    should: 'be true',
+    actual: cantaddrole,
+    expected: true
+  })
 
-assert({
-  given: 'not allowed to set founder',
-  should: 'be true',
-  actual: cantsetfounder,
-  expected: true
-})
+  assert({
+    given: 'not allowed to set founder',
+    should: 'be true',
+    actual: cantsetfounder,
+    expected: true
+  })
 
-assert({
-  given: 'user left',
-  should: 'have to wait for the delay to end',
-  actual: delayWorks,
-  expected: true
-})
+  assert({
+    given: 'user left',
+    should: 'have to wait for the delay to end',
+    actual: delayWorks,
+    expected: true
+  })
 
 
 })
@@ -381,8 +397,7 @@ describe("regions Test Delete", async assert => {
     'test rgn region',
     '{lat:0.0111,lon:1.3232}', 
     1.1, 
-    1.23, 
-    keypair.public, 
+    1.23,
     { authorization: `${firstuser}@active` })
 
     lat = 39.0894
@@ -397,7 +412,6 @@ describe("regions Test Delete", async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${seconduser}@active` })
   
   

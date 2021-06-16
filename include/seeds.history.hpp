@@ -54,10 +54,13 @@ CONTRACT history : public contract {
 
         ACTION updatetxpt(uint64_t deferred_id, name from);
 
+        ACTION cleanptrxs();
+
         ACTION testtotalqev(uint64_t numdays, uint64_t volume);
         ACTION migrate();
         ACTION migrateusers();
         ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
+        ACTION testptrx(uint64_t timestamp);
 
 
     private:
@@ -342,6 +345,7 @@ EOSIO_DISPATCH(history,
   (deldailytrx)(savepoints)
   (testtotalqev)
   (sendtrxcbp)(updatetxpt)
+  (cleanptrxs)
   (migrateusers)(migrateuser)
-  (migrate)
+  (migrate)(testptrx)
 );

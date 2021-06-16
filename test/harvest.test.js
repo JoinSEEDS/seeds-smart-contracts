@@ -1,5 +1,5 @@
 const { describe } = require("riteway")
-const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, createKeypair, asset } = require("../scripts/helper")
+const { eos, encodeName, getBalance, getBalanceFloat, names, getTableRows, isLocal, initContracts, createKeypair, asset, eosDevKey } = require("../scripts/helper")
 const { equals } = require("ramda")
 const { parse } = require("commander")
 const moment = require('moment')
@@ -22,10 +22,13 @@ describe("Harvest General", async assert => {
     return
   }
 
-  const contracts = await initContracts({ accounts, token, harvest, settings, history })
+  const contracts = await initContracts({ accounts, token, harvest, settings, history, organization })
 
   console.log('harvest reset')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('reset organization')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -308,6 +311,33 @@ describe("Harvest General", async assert => {
   })
 
 
+  console.log('organizations planted fee')
+  const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+  const org1 = 'org1'
+
+  await contracts.token.transfer(firstuser, organization, "200.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.organization.create(firstuser, org1, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, org1, "200.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  
+  await contracts.token.transfer(org1, harvest, "200.0000 SEEDS", "sow " + org1, { authorization: `${org1}@active` })
+
+  let canNotUnplantOrgFee = true
+  try {
+    await contracts.harvest.unplant(org1, '200.0001 SEEDS', { authorization: `${org1}@active` })
+    canNotUnplantOrgFee = false
+  } catch (error) {
+    console.log('can not unplant org fee (expected)')
+  }
+
+  await contracts.harvest.unplant(org1, '200.0000 SEEDS', { authorization: `${org1}@active` })
+
+  const plantedOrgs = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'planted',
+    json: true
+  })
+
   let transactionAsString = JSON.stringify(transactionRefund.processed)
 
   console.log("includes history "+transactionAsString.includes(history))
@@ -406,6 +436,20 @@ describe("Harvest General", async assert => {
     should: 'work only when both authorizations are provided and user is seeds user',
     actual: [payforCPURequireAuth, payforCPURequireUserAuth, payforcpuSeedsUserOnly],
     expected: [true, true, true]
+  })
+
+  assert({
+    given: 'organization tried to unplant some of the org fee',
+    should: 'not allow that',
+    actual: canNotUnplantOrgFee,
+    expected: true
+  })
+
+  assert({
+    given: 'organization unplanted',
+    should: 'unplant',
+    actual: plantedOrgs.rows.filter(p => p.account == org1)[0].planted,
+    expected: '200.0000 SEEDS'
   })
 
 })
@@ -1237,8 +1281,7 @@ async function testHarvest (assert, dSeeds) {
       'test rgn region',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
-      1.23, 
-      keypair.public, 
+      1.23,  
       { authorization: `${users[index]}@active` })
   }
 
@@ -1561,7 +1604,6 @@ describe('regions contribution score', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 

@@ -29,41 +29,50 @@ $(function() {
 <h2>Actions</h2>
 <ul>
 <li><strong>addcitizen</strong> / <a href="#addcitizen">addcitizen</a> <comment type="action" name="addcitizen"></comment></li>
-<li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen"></comment></li>
-<li><strong>addreputable</strong> / <a href="#addreputable">addreputable</a> <comment type="action" name="addreputable"></comment></li>
 <li><strong>addresident</strong> / <a href="#addresident">addresident</a> <comment type="action" name="addresident"></comment></li>
+<li><strong>deldailytrx</strong> / <a href="#deldailytrx">deldailytrx</a> <comment type="action" name="deldailytrx"></comment></li>
 <li><strong>historyentry</strong> / <a href="#historyentry">historyentry</a> <comment type="action" name="historyentry"></comment></li>
+<li><strong>migrate</strong> / <a href="#migrate">migrate</a> <comment type="action" name="migrate"></comment></li>
+<li><strong>migrateuser</strong> / <a href="#migrateuser">migrateuser</a> <comment type="action" name="migrateuser"></comment></li>
+<li><strong>migrateusers</strong> / <a href="#migrateusers">migrateusers</a> <comment type="action" name="migrateusers"></comment></li>
 <li><strong>numtrx</strong> / <a href="#numtrx">numtrx</a> <comment type="action" name="numtrx"></comment></li>
-<li><strong>orgtxpoints</strong> / <a href="#orgtxpoints">orgtxpoints</a> <comment type="action" name="orgtxpoints"></comment></li>
-<li><strong>orgtxpt</strong> / <a href="#orgtxpt">orgtxpt</a> <comment type="action" name="orgtxpt"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>savepoints</strong> / <a href="#savepoints">savepoints</a> <comment type="action" name="savepoints"></comment></li>
+<li><strong>sendtrxcbp</strong> / <a href="#sendtrxcbp">sendtrxcbp</a> <comment type="action" name="sendtrxcbp"></comment></li>
+<li><strong>testtotalqev</strong> / <a href="#testtotalqev">testtotalqev</a> <comment type="action" name="testtotalqev"></comment></li>
 <li><strong>trxentry</strong> / <a href="#trxentry">trxentry</a> <comment type="action" name="trxentry"></comment></li>
+<li><strong>updatestatus</strong> / <a href="#updatestatus">updatestatus</a> <comment type="action" name="updatestatus"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
+<li><strong>acctstatus</strong> / <a href="#account_status_table">account_status_table</a> (i64) <comment type="table" name="acctstatus"></comment></li>
 <li><strong>citizens</strong> / <a href="#citizen_table">citizen_table</a> (i64) <comment type="table" name="citizens"></comment></li>
+<li><strong>dailytrxs</strong> / <a href="#daily_transactions_table">daily_transactions_table</a> (i64) <comment type="table" name="dailytrxs"></comment></li>
 <li><strong>history</strong> / <a href="#history_table">history_table</a> (i64) <comment type="table" name="history"></comment></li>
+<li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) <comment type="table" name="members"></comment></li>
+<li><strong>organization</strong> / <a href="#organization_table">organization_table</a> (i64) <comment type="table" name="organization"></comment></li>
 <li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) <comment type="table" name="orgtx"></comment></li>
-<li><strong>regens</strong> / <a href="#regenerative_table">regenerative_table</a> (i64) <comment type="table" name="regens"></comment></li>
-<li><strong>reputables</strong> / <a href="#reputable_table">reputable_table</a> (i64) <comment type="table" name="reputables"></comment></li>
+<li><strong>qevs</strong> / <a href="#qev_table">qev_table</a> (i64) <comment type="table" name="qevs"></comment></li>
 <li><strong>residents</strong> / <a href="#resident_table">resident_table</a> (i64) <comment type="table" name="residents"></comment></li>
+<li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
+<li><strong>totals</strong> / <a href="#totals_table">totals_table</a> (i64) <comment type="table" name="totals"></comment></li>
 <li><strong>transactions</strong> / <a href="#transaction_table">transaction_table</a> (i64) <comment type="table" name="transactions"></comment></li>
+<li><strong>trxcbpreward</strong> / <a href="#trx_cbp_rewards_table">trx_cbp_rewards_table</a> (i64) <comment type="table" name="trxcbpreward"></comment></li>
+<li><strong>trxpoints</strong> / <a href="#transaction_points_table">transaction_points_table</a> (i64) <comment type="table" name="trxpoints"></comment></li>
 <li><strong>users</strong> / <a href="#user_table">user_table</a> (i64) <comment type="table" name="users"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
+<h3 id="account_status_table"> account_status_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>timestamp / uint64</li>
+</ul>
 <h3 id="addcitizen"> addcitizen </h3>
 <ul>
 <li>account / name</li>
-</ul>
-<h3 id="addregen"> addregen </h3>
-<ul>
-<li>organization / name</li>
-</ul>
-<h3 id="addreputable"> addreputable </h3>
-<ul>
-<li>organization / name</li>
 </ul>
 <h3 id="addresident"> addresident </h3>
 <ul>
@@ -74,6 +83,21 @@ $(function() {
 <li>id / uint64</li>
 <li>account / name</li>
 <li>timestamp / uint64</li>
+</ul>
+<h3 id="daily_transactions_table"> daily_transactions_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>from / name</li>
+<li>to / name</li>
+<li>volume / uint64</li>
+<li>qualifying_volume / uint64</li>
+<li>from_points / uint64</li>
+<li>to_points / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="deldailytrx"> deldailytrx </h3>
+<ul>
+<li>day / uint64</li>
 </ul>
 <h3 id="history_table"> history_table </h3>
 <ul>
@@ -91,6 +115,20 @@ $(function() {
 <li>amount / uint64</li>
 <li>meta / string</li>
 </ul>
+<h3 id="members_table"> members_table </h3>
+<ul>
+<li>region / name</li>
+<li>account / name</li>
+<li>joined_date / time_point</li>
+</ul>
+<h3 id="migrate"> migrate </h3>
+<h3 id="migrateuser"> migrateuser </h3>
+<ul>
+<li>start / uint64</li>
+<li>transaction_id / uint64</li>
+<li>chunksize / uint64</li>
+</ul>
+<h3 id="migrateusers"> migrateusers </h3>
 <h3 id="numtrx"> numtrx </h3>
 <ul>
 <li>account / name</li>
@@ -103,28 +141,20 @@ $(function() {
 <li>quantity / asset</li>
 <li>timestamp / uint64</li>
 </ul>
-<h3 id="orgtxpoints"> orgtxpoints </h3>
+<h3 id="organization_table"> organization_table </h3>
 <ul>
-<li>organization / name</li>
+<li>org_name / name</li>
+<li>owner / name</li>
+<li>status / uint64</li>
+<li>regen / int64</li>
+<li>reputation / uint64</li>
+<li>voice / uint64</li>
+<li>planted / asset</li>
 </ul>
-<h3 id="orgtxpt"> orgtxpt </h3>
+<h3 id="qev_table"> qev_table </h3>
 <ul>
-<li>organization / name</li>
-<li>start_val / uint128</li>
-<li>chunksize / uint64</li>
-<li>running_total / uint64</li>
-</ul>
-<h3 id="regenerative_table"> regenerative_table </h3>
-<ul>
-<li>id / uint64</li>
-<li>organization / name</li>
 <li>timestamp / uint64</li>
-</ul>
-<h3 id="reputable_table"> reputable_table </h3>
-<ul>
-<li>id / uint64</li>
-<li>organization / name</li>
-<li>timestamp / uint64</li>
+<li>qualifying_volume / uint64</li>
 </ul>
 <h3 id="reset"> reset </h3>
 <ul>
@@ -136,6 +166,39 @@ $(function() {
 <li>account / name</li>
 <li>timestamp / uint64</li>
 </ul>
+<h3 id="savepoints"> savepoints </h3>
+<ul>
+<li>id / uint64</li>
+<li>timestamp / uint64</li>
+</ul>
+<h3 id="sendtrxcbp"> sendtrxcbp </h3>
+<ul>
+<li>from / name</li>
+<li>to / name</li>
+</ul>
+<h3 id="size_table"> size_table </h3>
+<ul>
+<li>id / name</li>
+<li>size / uint64</li>
+</ul>
+<h3 id="testtotalqev"> testtotalqev </h3>
+<ul>
+<li>numdays / uint64</li>
+<li>volume / uint64</li>
+</ul>
+<h3 id="totals_table"> totals_table </h3>
+<ul>
+<li>account / name</li>
+<li>total_volume / uint64</li>
+<li>total_number_of_transactions / uint64</li>
+<li>total_incoming_from_rep_orgs / uint64</li>
+<li>total_outgoing_to_rep_orgs / uint64</li>
+</ul>
+<h3 id="transaction_points_table"> transaction_points_table </h3>
+<ul>
+<li>timestamp / uint64</li>
+<li>points / uint64</li>
+</ul>
 <h3 id="transaction_table"> transaction_table </h3>
 <ul>
 <li>id / uint64</li>
@@ -143,11 +206,23 @@ $(function() {
 <li>quantity / asset</li>
 <li>timestamp / uint64</li>
 </ul>
+<h3 id="trx_cbp_rewards_table"> trx_cbp_rewards_table </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+<li>key / name</li>
+<li>timestamp / uint64</li>
+</ul>
 <h3 id="trxentry"> trxentry </h3>
 <ul>
 <li>from / name</li>
 <li>to / name</li>
 <li>quantity / asset</li>
+</ul>
+<h3 id="updatestatus"> updatestatus </h3>
+<ul>
+<li>account / name</li>
+<li>scope / name</li>
 </ul>
 <h3 id="user_table"> user_table </h3>
 <ul>
