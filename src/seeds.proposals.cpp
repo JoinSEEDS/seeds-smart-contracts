@@ -1107,6 +1107,75 @@ void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
   check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
 }
 
+void proposals::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "prop not found");
+
+  // make backup - only the first time
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.find(id);
+  if (bitr == bprops.end()) {
+    bprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = pitr->description;
+    });
+  } 
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+
+  auto fix_itr = fixprops.find(id);
+
+  if (fix_itr == fixprops.end()) {
+    fixprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = description;
+    });
+  } else {
+    fixprops.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void proposals::applyfixprop() {
+  require_auth(get_self());
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+  auto fitr = fixprops.begin();
+  while(fitr != fixprops.end()) {
+    print(" processing "+std::to_string(fitr->prop_id));
+    auto pitr = props.find(fitr->prop_id);
+    if (pitr != props.end()) {
+      print(" replace id "+std::to_string(fitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void proposals::backfixprop() {
+  require_auth(get_self());
+
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.begin();
+  while(bitr != bprops.end()) {
+    print(" b processing "+std::to_string(bitr->prop_id));
+    auto pitr = props.find(bitr->prop_id);
+    if (pitr != props.end()) {
+      print(" restore id "+std::to_string(bitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}
+
 void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
   auto pitr = props.find(id);
 

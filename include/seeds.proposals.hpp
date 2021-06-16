@@ -45,6 +45,10 @@ CONTRACT proposals : public contract {
       
       ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
+      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION applyfixprop(); // temp for fixing description
+      ACTION backfixprop(); // revert fixing description
+      
       ACTION stake(name from, name to, asset quantity, string memo);
 
       ACTION addvoice(name user, uint64_t amount);
@@ -278,6 +282,20 @@ CONTRACT proposals : public contract {
           uint64_t primary_key()const { return prop_id; }
       };
 
+      TABLE fix_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixprops"_n, fix_props_table> fix_props_tables;
+
+      TABLE fixb_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixbprops"_n, fixb_props_table> fixb_props_tables;
+
       DEFINE_USER_TABLE
 
       TABLE vote_table {
@@ -436,6 +454,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (cleanmig)(testpropquor)
         (reevalprop)
         (testalliance)(migalliances)
+        (fixdesc)(applyfixprop)(backfixprop)
         )
       }
   }
