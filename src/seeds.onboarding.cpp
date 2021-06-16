@@ -48,7 +48,7 @@ void onboarding::add_user(name account, string fullname, name type) {
 }
 
 void onboarding::transfer_seeds(name account, asset quantity, string memo) {
-  
+
   if (quantity.amount == 0) {
     return;
   }
@@ -143,10 +143,10 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   if (!is_existing_telos_user) {
     create_account(account, publicKey, ""_n);
   }
-  
+
   if (!is_existing_seeds_user) {
     add_user(account, fullname, "individual"_n);
-    add_referral(referrer, account);  
+    add_referral(referrer, account);
     invitevouch(referrer, account);
   }
 
@@ -170,10 +170,10 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
   if (!is_existing_telos_user) {
     create_account(account, publicKey, ""_n);
   }
-  
+
   if (!is_existing_seeds_user) {
     add_user(account, fullname, "organisation"_n);
-    add_referral(sponsor, account);  
+    add_referral(sponsor, account);
   }
 }
 
@@ -185,7 +185,7 @@ ACTION onboarding::createregion(name sponsor, name region, string publicKey) {
   if (!is_existing_telos_user) {
     create_account(region, publicKey, "rgn"_n);
   }
-  
+
 }
 
 void onboarding::reset() {
@@ -200,7 +200,7 @@ void onboarding::reset() {
   while (ritr != referrers.end()) {
     ritr = referrers.erase(ritr);
   }
-  
+
   invite_tables invites (get_self(), get_self().value);
   auto iitr = invites.begin();
   while (iitr != invites.end()) {
@@ -347,14 +347,14 @@ void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth)
   asset total_quantity = asset(iitr->transfer_quantity.amount + iitr->sow_quantity.amount, seeds_symbol);
 
   auto ciitr = campinvites.find(iitr->invite_id);
-  
+
   if (ciitr != campinvites.end()) {
     auto citr = campaigns.find(ciitr->campaign_id);
 
     if (citr != campaigns.end()) {
 
       if (check_auth) {
-        check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), sponsor), 
+        check(std::binary_search(citr->authorized_accounts.begin(), citr->authorized_accounts.end(), sponsor),
           sponsor.to_string() + " is not authorized in this campaign");
       }
 
@@ -391,7 +391,7 @@ void onboarding::acceptnew(name account, checksum256 invite_secret, string publi
 
 // accept invite using already existing account - needs to be signed by existing account
 // to prove ownership
-void onboarding::acceptexist(name account, checksum256 invite_secret) {  
+void onboarding::acceptexist(name account, checksum256 invite_secret) {
 
   check(is_account(account) == true, "Account does not exist " + account.to_string());
 
@@ -453,12 +453,59 @@ void onboarding::chkcleanup() {
 
 }
 
+void onboarding::chkcleanupt(uint64_t time) {
+    require_auth(get_self());
+
+  timestamp_tables timestamps(get_self(), get_self().value);
+  invite_tables invites(get_self(), get_self().value);
+
+  if (invites.begin() == invites.end()) { return; }
+
+  if (timestamps.begin() != timestamps.end()) {
+
+    auto titr = timestamps.rbegin();
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+    // uncomment this line for tests
+    if (titr->timestamp + time > now) { return; }
+    // if (titr->timestamp + (utils::seconds_per_day * 30) > now) { return; }
+
+    uint64_t start_id = 0;
+    uint64_t max_id = titr->invite_id - 1;
+
+    if (titr->id > 0) {
+      auto prev_itr = titr;
+      prev_itr++;
+
+      if (prev_itr->invite_id < max_id) {
+        start_id = prev_itr->invite_id;
+      }
+    }
+
+    action(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "cleanup"_n,
+      std::make_tuple(start_id, max_id, config_get("batchsize"_n))
+    ).send();
+
+  }
+
+  auto last_invite_itr = invites.rbegin();
+
+  timestamps.emplace(_self, [&](auto & t){
+    t.id = timestamps.available_primary_key();
+    t.invite_id = last_invite_itr->invite_id;
+    t.timestamp = eosio::current_time_point().sec_since_epoch();
+  });
+}
+
 void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size) {
   require_auth(get_self());
 
   check(batch_size > 0, "batch size must be > 0");
   check(max_id >= start_id, "max must be > start");
-  
+
   invite_tables invites(get_self(), get_self().value);
 
   auto iitr = start_id == 0 ? invites.begin() : invites.lower_bound(start_id);
@@ -495,7 +542,7 @@ void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(next_value, _self);
-    
+
   }
 
 }
@@ -507,17 +554,17 @@ void onboarding::check_user(name account) {
 
 uint64_t onboarding::config_get(name key) {
   auto citr = config.find(key.value);
-  if (citr == config.end()) { 
+  if (citr == config.end()) {
     check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
   }
   return citr->value;
 }
 
 ACTION onboarding::createcampg (
-  name origin_account, 
-  name owner, 
-  asset max_amount_per_invite, 
-  asset planted, 
+  name origin_account,
+  name owner,
+  asset max_amount_per_invite,
+  asset planted,
   name reward_owner,
   asset reward,
   asset total_amount,
@@ -579,10 +626,10 @@ ACTION onboarding::createcampg (
 }
 
 ACTION onboarding::campinvite (uint64_t campaign_id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash) {
-  
+
   auto citr = campaigns.find(campaign_id);
   check(citr != campaigns.end(), "campaign not found");
-  
+
   bool is_authorized = false;
   for (std::size_t i = 0; i < citr->authorized_accounts.size(); i++) {
       if (authorizing_account == citr->authorized_accounts[i]) {
@@ -642,7 +689,7 @@ ACTION onboarding::remauthorized (uint64_t campaign_id, name account) {
 ACTION onboarding::returnfunds (uint64_t campaign_id) {
 
   auto citr = campaigns.find(campaign_id);
-  check(citr != campaigns.end(), "campaign not found");  
+  check(citr != campaigns.end(), "campaign not found");
 
   name owner = citr->owner;
   name origin_account = citr->origin_account;
