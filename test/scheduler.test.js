@@ -291,7 +291,7 @@ describe('scheduler, moon phases', async assert => {
     }
 
     console.log('populate moonphases')
-    let dateTimestamp = parseInt(Date.now() / 1000)
+    let dateTimestamp = parseInt(Date.now() / 1000) + 1
     for (let i = 0; i < 50; i++) {
         await contracts.scheduler.moonphase(dateTimestamp + i, `phase ${(i % 4) + 1}`, '', { authorization: `${scheduler}@active` })
     }

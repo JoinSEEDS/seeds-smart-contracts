@@ -32,6 +32,8 @@ CONTRACT scheduler : public contract {
 
         ACTION configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime);
 
+        ACTION addmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, string start_phase_name);
+
         ACTION removeop(name id);
 
         ACTION pauseop(name id, uint8_t pause);
@@ -52,6 +54,7 @@ CONTRACT scheduler : public contract {
         void exec_op(name id, name contract, name action);
         void cancel_exec();
         void reset_aux(bool destructive);
+        uint64_t next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quarter_moon_cycles);
         bool should_preserve_op(name op_id) {
             return 
                 op_id == "exch.period"_n || 
