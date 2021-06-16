@@ -84,7 +84,7 @@ const payForCPUKeys = {
 const payForCPUPublicKey = payForCPUKeys[chainId]
 
 const applicationKeys = {
-  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
+  [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
 }
@@ -92,8 +92,8 @@ const applicationPublicKey = applicationKeys[chainId]
 
 const exchangeKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
-  [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo',
-  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm'
+  [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo', 
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' 
 }
 
 const exchangePublicKey = exchangeKeys[chainId]
@@ -149,7 +149,7 @@ const accountsMetadata = (network) => {
       constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
       orguser: account('org1', '100.0000 SEEDS'),
       hyphabank: account('seeds.hypha', '100.0000 SEEDS'),
-
+      
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -507,10 +507,10 @@ var permissions = [{
   target: `${accounts.scheduler.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.harvest.account}@execute`,
+  target: `${accounts.harvest.account}@execute`, 
   action: 'ranktxs'
 }, {
-  target: `${accounts.harvest.account}@execute`,
+  target: `${accounts.harvest.account}@execute`, 
   action: 'rankplanteds'
 }, {
   target: `${accounts.harvest.account}@execute`,
@@ -571,7 +571,7 @@ var permissions = [{
 }, {
   target: `${accounts.organization.account}@execute`,
   action: 'cleandaus'
-}, {
+}, { 
   target: `${accounts.organization.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
@@ -618,7 +618,7 @@ var permissions = [{
 }, {
   target: `${accounts.token.account}@minthrvst`,
   action: 'minthrvst'
-}, {
+}, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
 }, {
@@ -655,7 +655,7 @@ var permissions = [{
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.onboarding.account}@active`,
-}, {
+}, { 
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.escrow.account}@active`
 }, {
@@ -722,7 +722,7 @@ if (isTestnet || isLocalNet) {
       key: testnetDevelopmentKey,
       parent: 'active'
   })
-  // Note: This overrides @execute permission on onperiod - this means that on testnet, the proposals contract
+  // Note: This overrides @execute permission on onperiod - this means that on testnet, the proposals contract 
   // doesn't work with the scheduler
   permissions.push({
       target: `${accounts.proposals.account}@testnetdev`,
@@ -808,13 +808,13 @@ const initContracts = (accounts) =>
       })
     ))
   )
-
+  
 const ecc = require('eosjs-ecc')
 const sha256 = ecc.sha256
 
 const ramdom64ByteHexString = async () => {
   let privateKey = await ecc.randomKey()
-  const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64);
+  const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))

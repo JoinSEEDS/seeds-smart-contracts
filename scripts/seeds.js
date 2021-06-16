@@ -9,9 +9,9 @@ const { settings, scheduler } = names
 
 const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions } = require('./propose_deploy')
 const deploy = require('./deploy.command')
-const { deployAllContracts, updatePermissions, resetByName,
-    changeOwnerAndActivePermission,
-    changeExistingKeyPermission,
+const { deployAllContracts, updatePermissions, resetByName, 
+    changeOwnerAndActivePermission, 
+    changeExistingKeyPermission, 
     addActorPermission,
     createTestToken,
     removeAllActorPermissions } = require('./deploy')
@@ -22,7 +22,7 @@ const getContractLocation = (contract) => {
       source: `./src/seeds.${contract}.cpp`,
       include: ""
     }
-
+  
 }
 
 const compileAction = async (contract) => {
@@ -49,7 +49,7 @@ const deployAction = async (contract) => {
         console.log(`${contract} code was already deployed`)
       } else {
         console.log("error deploying ", contract)
-        console.log(err)
+        console.log(err)          
       }
     }
 }
@@ -75,7 +75,7 @@ const resetAction = async (contract) => {
       console.log(`${contract} code was already deployed`)
     } else {
       console.log("error deploying ", contract)
-      console.log(err)
+      console.log(err)          
     }
 }
 }
@@ -83,7 +83,7 @@ const resetAction = async (contract) => {
 const runAction = async (contract) => {
   await compileAction(contract)
   await deployAction(contract)
-  // await test(contract)
+  //await test(contract)
 }
 
 const batchCallFunc = async (contract, moreContracts, func) => {
@@ -124,7 +124,7 @@ const updatePermissionAction = async () => {
 const updateSettingsAction = async () => {
   console.log(`UPDATE Settings on ${settings}`)
   const name = "settings"
-
+  
   const contract = await eos.contract(settings)
 
   console.log(`reset settings`)
@@ -198,7 +198,7 @@ program
   .command('remove_actor_permissions')
   .description('Remove all actor permissions, updatePermissions can then cleanly add new permissions.')
   .action(async function () {
-
+    
     await removeAllActorPermissions("harvst.seeds")
     await removeAllActorPermissions("settgs.seeds")
     await removeAllActorPermissions("system.seeds")
@@ -243,7 +243,7 @@ program
   .command('init [compile]')
   .description('Initial creation of all accounts and contracts contract')
   .action(async function(compile) {
-    var comp = compile != "false"
+    var comp = compile != "false" 
     await initAction(comp)
   })
 

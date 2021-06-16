@@ -1102,7 +1102,7 @@ describe("clean up unused invites", async assert => {
     await deposit(seconduser)
     await invite(seconduser, inviteHash3)
 
-    await contracts.onboarding.chkcleanupt(1, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
     await sleep(500)
 
     await checkInvites(3, [{ id: 0, invite_id: 2 }])
@@ -1111,7 +1111,7 @@ describe("clean up unused invites", async assert => {
 
     await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
-    await contracts.onboarding.chkcleanupt(1, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
     await sleep(4000)
 
     await checkInvites(1, [
