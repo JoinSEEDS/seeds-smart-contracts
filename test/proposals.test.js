@@ -15,7 +15,7 @@ function sleep(ms) {
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-describe.only('Proposals', async assert => {
+describe('Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")

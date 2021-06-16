@@ -146,8 +146,10 @@ const accountsMetadata = (network) => {
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
       orguser: account('org1', '100.0000 SEEDS'),
       hyphabank: account('seeds.hypha', '100.0000 SEEDS'),
+      
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -195,6 +197,7 @@ const accountsMetadata = (network) => {
       bank: account('system.seeds'),
       globaldho: account('gdho.seeds'),
       testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
@@ -227,6 +230,7 @@ const accountsMetadata = (network) => {
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
       sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       owner: account(owner),
       rgn: account(rgn),
@@ -295,27 +299,24 @@ allBankAccountNames.sort()
 
 var permissions = [{
   target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.milestonebank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.alliancesbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
-  actor: `${accounts.accounts.account}@active`
+  actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.globaldho.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
-  target: `${accounts.accounts.account}@owner`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
+  target: `${accounts.accounts.account}@owner`, // probably don't need this
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -328,7 +329,7 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.accounts.account}@active`
@@ -337,13 +338,13 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.referendums.account}@active`,
   actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.settings.account}@active`,
-  actor: `${accounts.referendums.account}@active`
+  actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.harvest.account}@active`
@@ -395,7 +396,7 @@ var permissions = [{
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
-  target: `${accounts.onboarding.account}@owner`,
+  target: `${accounts.onboarding.account}@owner`, // should be active
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -477,17 +478,6 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   action: 'rankcbss'
 }, {
-  target: `${accounts.accounts.account}@execute`,
-  target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
-}, {
-  target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -552,14 +542,12 @@ var permissions = [{
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
+  actor: `${accounts.scheduler.account}@active`,
+  parent: 'active',
+  type: 'createActorPermission'
 }, {
   target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
+  action: 'resetweekly',
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
@@ -695,6 +683,12 @@ var permissions = [{
 }, {
   target: `${accounts.organization.account}@execute`,
   action: 'rankappuses'
+}, {
+  target: `${accounts.msig.account}@owner`,
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.msig.account}@active`,
+  actor: `${accounts.msig.account}@eosio.code`
 }, {
   target: `${accounts.onboarding.account}@execute`,
   actor: `${accounts.scheduler.account}@eosio.code`,
@@ -854,6 +848,7 @@ function asset (quantity) {
 }
 
 module.exports = {
+  keyProvider, httpEndpoint,
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset

@@ -114,6 +114,12 @@ using namespace eosio;
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &msig::invalidate>;
 
       private:
+
+         // set code type has additional info in the set code table - git commit and hash, oracle approval, code WASM hash
+         name type_setcode = name("setcode");
+         name type_permissions = name("permissions");
+         name type_generic = name("generic");
+
          struct [[eosio::table]] proposal {
             name                            proposal_name;
             std::vector<char>               packed_transaction;
@@ -158,4 +164,13 @@ using namespace eosio;
          };
 
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
+
+         TABLE setcode_table {
+            name proposal_name;
+            std::string git_url;
+            std::string git_commit_hash;
+            uint64_t primary_key()const { return proposal_name.value; }
+         };
+         typedef eosio::multi_index< "setcode"_n, setcode_table > setcode_tables;
+
    };
