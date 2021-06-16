@@ -460,3 +460,17 @@ void settings::setcontract(name contract, name account) {
     });
   }
 }
+
+void settings::remove(name param) {
+    require_auth(get_self());
+
+    auto cfitr = configfloat.find(param.value);
+    if (cfitr != configfloat.end()) {
+      configfloat.erase(cfitr);
+    }
+
+    auto citr = config.find(param.value);
+    if (citr != config.end()) {
+      config.erase(citr);
+    }
+}
