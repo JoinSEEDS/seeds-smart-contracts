@@ -33,12 +33,13 @@ CONTRACT onboarding : public contract {
     ACTION invitefor(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash);
     ACTION accept(name account, checksum256 invite_secret, string publicKey);
     ACTION acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname);
-    ACTION acceptexist(name account, checksum256 invite_secret, string publicKey);
+    ACTION acceptexist(name account, checksum256 invite_secret);
     ACTION onboardorg(name sponsor, name account, string fullname, string publicKey);
     ACTION createregion(name sponsor, name region, string publicKey);
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
+    ACTION chkcleanup();
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
     ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
@@ -64,7 +65,7 @@ CONTRACT onboarding : public contract {
     void sow_seeds(name account, asset quantity);
     void add_referral(name sponsor, name account);
     void invitevouch(name sponsor, name account);
-    void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname);
+    void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool existingTelosAccount);
     void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id);
     void check_user(name account);
     uint64_t config_get(name key);
@@ -130,6 +131,14 @@ CONTRACT onboarding : public contract {
       uint128_t by_campaign_invite() const { return (uint128_t(campaign_id) << 64) + invite_id; }
     };
 
+    TABLE timestamp_table {
+      uint64_t id;
+      uint64_t invite_id;
+      uint64_t timestamp;
+
+      uint64_t primary_key() const { return id; }
+    };
+
     DEFINE_CONFIG_TABLE
     DEFINE_CONFIG_TABLE_MULTI_INDEX
 
@@ -166,6 +175,8 @@ CONTRACT onboarding : public contract {
       const_mem_fun<campaign_invite_table, uint128_t, &campaign_invite_table::by_campaign_invite>>
     > campaign_invite_tables;
 
+    typedef eosio::multi_index<"timestamps"_n, timestamp_table> timestamp_tables;
+
     sponsor_tables sponsors;
     user_tables users;
     referrer_tables referrers;
@@ -180,7 +191,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<onboarding>(name(receiver), name(code), &onboarding::deposit);
   } else if (code == receiver) {
       switch (action) {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(cancel)(cleanup)
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(cancel)
+      (chkcleanup)(cleanup)
       (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux)
       )
       }

@@ -690,6 +690,14 @@ var permissions = [{
   target: `${accounts.msig.account}@active`,
   actor: `${accounts.msig.account}@eosio.code`
 }, {
+  target: `${accounts.onboarding.account}@execute`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.onboarding.account}@execute`,
+  action: 'chkcleanup'
+}, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.history.account}@eosio.code`
 }, {
@@ -700,7 +708,8 @@ var permissions = [{
 }, {
   target: `${accounts.history.account}@execute`,
   action: 'cleanptrxs'
-}]
+}
+]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
