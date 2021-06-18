@@ -405,7 +405,18 @@ void onboarding::accept(name account, checksum256 invite_secret, string publicKe
   accept_invite(account, invite_secret, publicKey, string(""), false);
 }
 
-void onboarding::chkcleanup(uint64_t time) {
+void onboarding::chkcleanup() {
+  require_auth(get_self());
+
+  action(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "chkcleanupau"_n,
+      std::make_tuple((utils::seconds_per_day * 30))
+  ).send();
+}
+
+void onboarding::chkcleanupau(uint64_t time) {
   require_auth(get_self());
 
   timestamp_tables timestamps(get_self(), get_self().value);
@@ -418,10 +429,7 @@ void onboarding::chkcleanup(uint64_t time) {
     auto titr = timestamps.rbegin();
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
-    // pass time <= 0 to production env  
-    auto time_period = (time > 0) ? time : (utils::seconds_per_day * 30);
-
-    if (titr->timestamp + time_period > now) { return; }
+    if (titr->timestamp + time > now) { return; }
 
     uint64_t start_id = 0;
     uint64_t max_id = titr->invite_id - 1;
@@ -451,17 +459,6 @@ void onboarding::chkcleanup(uint64_t time) {
     t.invite_id = last_invite_itr->invite_id;
     t.timestamp = eosio::current_time_point().sec_since_epoch();
   });
-
-}
-
-void onboarding::chkcleanupau(uint64_t time) {
-  require_auth(get_self());
-  action(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "chkcleanup"_n,
-      std::make_tuple(time)
-  ).send();
 }
 
 void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size) {

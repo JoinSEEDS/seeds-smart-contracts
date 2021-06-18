@@ -39,7 +39,7 @@ CONTRACT onboarding : public contract {
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
-    ACTION chkcleanup(uint64_t time);
+    ACTION chkcleanup();
     ACTION chkcleanupau(uint64_t time);
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
