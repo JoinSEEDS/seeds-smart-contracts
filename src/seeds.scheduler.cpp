@@ -321,7 +321,7 @@ void scheduler::reset_aux(bool destructive) {
             "action":"incprice",
             "contract":"tlosto.seeds",
             "quarter_moon_cycles":"1",
-            "start_phase_name":"First Quarter"
+            "start_phase_name":"Full Moon"
     }' -p cycle.seeds@active
     */
 
@@ -661,10 +661,15 @@ ACTION scheduler::test2() {
 
 ACTION scheduler::testexec(name op) {
     require_auth(get_self());
-    auto operation = operations.get(op.value, "op not found");
-    exec_op(op, operation.contract, operation.operation);
-
+    auto oitr = operations.find(op.value);
+    if (oitr != operations.end()) {
+        exec_op(op, oitr->contract, oitr->operation);
+    } else {
+        auto moonop = moonops.get(op.value, "op not found");
+        exec_op(op, moonop.contract, moonop.action);
+    }
 }
+
 void scheduler::exec_op(name id, name contract, name operation) {
     
     action a = action(

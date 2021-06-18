@@ -525,6 +525,9 @@ var permissions = [{
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'incprice'
+}, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'
 }, {
