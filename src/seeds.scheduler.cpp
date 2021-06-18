@@ -317,7 +317,7 @@ void scheduler::reset_aux(bool destructive) {
     // example below
     /**
     cleos -u "https://test.hypha.earth" push action cycle.seeds addmoonop '{ 
-            "id":"inc.lprice",
+            "id":"inc.price",
             "action":"incprice",
             "contract":"tlosto.seeds",
             "quarter_moon_cycles":"1",
