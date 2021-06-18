@@ -540,138 +540,138 @@ describe('Invite from non-seeds user - sp', async assert => {
     })
 })
 
-describe('Campaign reward for existing user', async assert => {
+// describe('Campaign reward for existing user', async assert => {
 
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-        return
-    }
+//     if (!isLocal()) {
+//         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//         return
+//     }
     
-    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+//     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
-    const transferQuantity = `22.0000 SEEDS`
-    const sowQuantity = '5.0000 SEEDS'
-    const totalQuantity = '27.0000 SEEDS'
+//     const transferQuantity = `22.0000 SEEDS`
+//     const sowQuantity = '5.0000 SEEDS'
+//     const totalQuantity = '27.0000 SEEDS'
     
-    const newAccount = seconduser;// randomAccountName()
-    console.log("New account "+newAccount)
-    const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
-    const newAccountPublicKey = keyPair.public
-    const inviteSecret = await ramdom64ByteHexString()
-    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+//     const newAccount = seconduser;// randomAccountName()
+//     console.log("New account "+newAccount)
+//     const keyPair = await createKeypair()
+//     console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+//     const newAccountPublicKey = keyPair.public
+//     const inviteSecret = await ramdom64ByteHexString()
+//     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
-    const inviteSecret2 = await ramdom64ByteHexString()
-    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+//     const inviteSecret2 = await ramdom64ByteHexString()
+//     const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
 
-    console.log(`reset ${accounts}`)
-    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+//     console.log(`reset ${accounts}`)
+//     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-    console.log(`reset ${token}`)
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
+//     console.log(`reset ${token}`)
+//     await contracts.token.resetweekly({ authorization: `${token}@active` })
 
-    console.log(`reset ${onboarding}`)
-    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+//     console.log(`reset ${onboarding}`)
+//     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
-    console.log(`reset ${harvest}`)
-    await contracts.harvest.reset({ authorization: `${harvest}@active` })    
+//     console.log(`reset ${harvest}`)
+//     await contracts.harvest.reset({ authorization: `${harvest}@active` })    
   
-    const adduser = async (user) => {
-        try {
-            console.log(`${accounts}.adduser (${user})`)
-            await contracts.accounts.adduser(user, '', 'individual',{ authorization: `${accounts}@active` })        
-        } catch (error) {
-            console.log("user exists")
-        }
-    }
+//     const adduser = async (user) => {
+//         try {
+//             console.log(`${accounts}.adduser (${user})`)
+//             await contracts.accounts.adduser(user, '', 'individual',{ authorization: `${accounts}@active` })        
+//         } catch (error) {
+//             console.log("user exists")
+//         }
+//     }
 
-    const deposit = async (user) => {
-        console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
-    }
+//     const deposit = async (user) => {
+//         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
+//         await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
+//     }
 
-    const invite = async () => {
-        console.log(`${onboarding}.invite from ${firstuser}`)
-        await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
-    }
+//     const invite = async () => {
+//         console.log(`${onboarding}.invite from ${firstuser}`)
+//         await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
+//     }
 
-    const acceptExisting = async () => {
-        console.log(`Existing user accept from Application`)
-        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@application` })    
-    }
+//     const acceptExisting = async () => {
+//         console.log(`Existing user accept from Application`)
+//         await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@application` })    
+//     }
 
-    await adduser(firstuser)
+//     await adduser(firstuser)
 
-    await adduser(newAccount)
+//     await adduser(newAccount)
 
-    console.log('plant seeds')
-    await contracts.token.transfer(firstuser, newAccount, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(newAccount, harvest, '500.0000 SEEDS', '', { authorization: `${newAccount}@active` })
+//     console.log('plant seeds')
+//     await contracts.token.transfer(firstuser, newAccount, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+//     await contracts.token.transfer(newAccount, harvest, '500.0000 SEEDS', '', { authorization: `${newAccount}@active` })
   
-    const before = await getTableRows({
-        code: harvest,
-        scope: harvest,
-        table: 'balances',
-        json: true
-    })
+//     const before = await getTableRows({
+//         code: harvest,
+//         scope: harvest,
+//         table: 'balances',
+//         json: true
+//     })
 
-    const beforeBalance = await getBalance(seconduser)
+//     const beforeBalance = await getBalance(seconduser)
 
-    await deposit(firstuser)
+//     await deposit(firstuser)
 
-    await invite()
+//     await invite()
 
-    await acceptExisting()
+//     await acceptExisting()
 
-    const { rows } = await getTableRows({
-        code: harvest,
-        scope: harvest,
-        table: 'balances',
-        json: true
-    })
+//     const { rows } = await getTableRows({
+//         code: harvest,
+//         scope: harvest,
+//         table: 'balances',
+//         json: true
+//     })
 
-    let invites3_before = await getNumInvites()
+//     let invites3_before = await getNumInvites()
 
-    console.log("cleanup")
-    await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
+//     console.log("cleanup")
+//     await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
     
-    let invites3_after = await getNumInvites()
+//     let invites3_after = await getNumInvites()
 
-    console.log(`${onboarding}.invite from ${firstuser}`)
-    await deposit(firstuser)
-    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
+//     console.log(`${onboarding}.invite from ${firstuser}`)
+//     await deposit(firstuser)
+//     await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
 
-    console.log("cleanup 2")
-    await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
+//     console.log("cleanup 2")
+//     await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
 
-    let invites4_after = await getNumInvites()
+//     let invites4_after = await getNumInvites()
 
-    const newUserHarvest = rows.find(row => row.account === newAccount)
+//     const newUserHarvest = rows.find(row => row.account === newAccount)
 
-    assert({
-        given: 'invited new user',
-        should: 'have planted seeds',
-        actual: newUserHarvest,
-        expected: {
-            account: newAccount,
-            planted: "505.0000 SEEDS",
-            reward: '0.0000 SEEDS'
-        }
-    })
+//     assert({
+//         given: 'invited new user',
+//         should: 'have planted seeds',
+//         actual: newUserHarvest,
+//         expected: {
+//             account: newAccount,
+//             planted: "505.0000 SEEDS",
+//             reward: '0.0000 SEEDS'
+//         }
+//     })
 
-    assert({
-        given: 'called cleanup',
-        should: 'same number of invites',
-        actual: invites3_after,
-        expected: invites3_before
-    })
-    assert({
-        given: 'called cleanup',
-        should: 'one less number of invites',
-        actual: invites4_after,
-        expected: invites3_after
-    })
-})
+//     assert({
+//         given: 'called cleanup',
+//         should: 'same number of invites',
+//         actual: invites3_after,
+//         expected: invites3_before
+//     })
+//     assert({
+//         given: 'called cleanup',
+//         should: 'one less number of invites',
+//         actual: invites4_after,
+//         expected: invites3_after
+//     })
+// })
 
 
 describe('Create region', async assert => {
@@ -708,298 +708,298 @@ describe('Create region', async assert => {
 })
 
 
-describe('Private campaign', async assert => {
+// describe('Private campaign', async assert => {
 
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-        return
-    }
+//     if (!isLocal()) {
+//         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//         return
+//     }
 
-    const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
+//     const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
 
-    console.log(`reset ${settings}`)
-    await contracts.settings.reset({ authorization: `${settings}@active` })
+//     console.log(`reset ${settings}`)
+//     await contracts.settings.reset({ authorization: `${settings}@active` })
 
-    const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+//     const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
     
-    const inviteSecret = await ramdom64ByteHexString()
-    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+//     const inviteSecret = await ramdom64ByteHexString()
+//     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
-    const inviteSecret2 = await ramdom64ByteHexString()
-    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+//     const inviteSecret2 = await ramdom64ByteHexString()
+//     const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
 
-    const inviteSecret3 = await ramdom64ByteHexString()
-    const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
+//     const inviteSecret3 = await ramdom64ByteHexString()
+//     const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
 
-    const inviteSecret4 = await ramdom64ByteHexString()
-    const inviteHash4 = sha256(fromHexString(inviteSecret4)).toString('hex')
+//     const inviteSecret4 = await ramdom64ByteHexString()
+//     const inviteHash4 = sha256(fromHexString(inviteSecret4)).toString('hex')
 
-    const inviteSecret5 = await ramdom64ByteHexString()
-    const inviteHash5 = sha256(fromHexString(inviteSecret5)).toString('hex')
+//     const inviteSecret5 = await ramdom64ByteHexString()
+//     const inviteHash5 = sha256(fromHexString(inviteSecret5)).toString('hex')
 
-    const checkCampaignFunds = async (campaignId, expectedFunds) => {
-        const camps = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'campaigns',
-            json: true
-        })
-        const funds = (camps.rows.filter(r => r.campaign_id === campaignId)[0]).remaining_amount
-        assert({
-            given: `invite created`,
-            should: `have the correct remaining funds`,
-            actual: funds,
-            expected: expectedFunds
-        })
-    }
+//     const checkCampaignFunds = async (campaignId, expectedFunds) => {
+//         const camps = await getTableRows({
+//             code: onboarding,
+//             scope: onboarding,
+//             table: 'campaigns',
+//             json: true
+//         })
+//         const funds = (camps.rows.filter(r => r.campaign_id === campaignId)[0]).remaining_amount
+//         assert({
+//             given: `invite created`,
+//             should: `have the correct remaining funds`,
+//             actual: funds,
+//             expected: expectedFunds
+//         })
+//     }
 
-    const checkCampaignInvites = async (campaignId, expectedLength, newInvite) => {
-        const campinvites = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'campinvites',
-            json: true
-        })
-        const invs = campinvites.rows.filter(r => r.campaign_id === campaignId).map(r => r.invite_id)
-        assert({
-            given: `invite created`,
-            should: `have the correct campinvites entries`,
-            actual: [invs.length, invs.includes(newInvite)],
-            expected: [expectedLength, true]
-        })
-    }
+//     const checkCampaignInvites = async (campaignId, expectedLength, newInvite) => {
+//         const campinvites = await getTableRows({
+//             code: onboarding,
+//             scope: onboarding,
+//             table: 'campinvites',
+//             json: true
+//         })
+//         const invs = campinvites.rows.filter(r => r.campaign_id === campaignId).map(r => r.invite_id)
+//         assert({
+//             given: `invite created`,
+//             should: `have the correct campinvites entries`,
+//             actual: [invs.length, invs.includes(newInvite)],
+//             expected: [expectedLength, true]
+//         })
+//     }
 
-    const checkUsers = async (newUser, numberOfUsers) => {
-        const users = await getTableRows({
-            code: accounts,
-            scope: accounts,
-            table: 'users',
-            json: true
-        })
-        const expectedUser = users.rows.filter(r => r.account === newUser)[0]
-        assert({
-            given: `given ${newUser} accepted invitation`,
-            should: 'have the correct number of users',
-            actual: [users.rows.length, expectedUser.account],
-            expected: [numberOfUsers, newUser]
-        })
-    }
+//     const checkUsers = async (newUser, numberOfUsers) => {
+//         const users = await getTableRows({
+//             code: accounts,
+//             scope: accounts,
+//             table: 'users',
+//             json: true
+//         })
+//         const expectedUser = users.rows.filter(r => r.account === newUser)[0]
+//         assert({
+//             given: `given ${newUser} accepted invitation`,
+//             should: 'have the correct number of users',
+//             actual: [users.rows.length, expectedUser.account],
+//             expected: [numberOfUsers, newUser]
+//         })
+//     }
 
-    const checkVouches = async (user, number) => {
-        const vouches = await getTableRows({
-            code: accounts,
-            scope: accounts,
-            table: 'vouches',
-            json: true
-        })
-        assert({
-            given: `${user} vouched`,
-            should: 'have the correct number of vouchers',
-            actual: (vouches.rows.filter(r => r.account === user)).length,
-            expected: number
-        })
-    }
+//     const checkVouches = async (user, number) => {
+//         const vouches = await getTableRows({
+//             code: accounts,
+//             scope: accounts,
+//             table: 'vouches',
+//             json: true
+//         })
+//         assert({
+//             given: `${user} vouched`,
+//             should: 'have the correct number of vouchers',
+//             actual: (vouches.rows.filter(r => r.account === user)).length,
+//             expected: number
+//         })
+//     }
 
-    console.log(`reset ${accounts}`)
-    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+//     console.log(`reset ${accounts}`)
+//     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-    console.log(`reset ${token}`)
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
+//     console.log(`reset ${token}`)
+//     await contracts.token.resetweekly({ authorization: `${token}@active` })
 
-    console.log(`reset ${onboarding}`)
-    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+//     console.log(`reset ${onboarding}`)
+//     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
-    console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
-    await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-    await contracts.accounts.testsetrs(firstuser, 50, { authorization: `${accounts}@active` })
+//     console.log('join users')
+//     await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+//     await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+//     await contracts.accounts.testsetrs(firstuser, 50, { authorization: `${accounts}@active` })
 
-    const deposit = async (from, to, quantity, memo = '') => {
-        console.log(`${token}.transfer from ${from} to ${to} (${quantity})`)
-        await contracts.token.transfer(from, to, quantity, memo, { authorization: `${from}@active` })    
-    }
+//     const deposit = async (from, to, quantity, memo = '') => {
+//         console.log(`${token}.transfer from ${from} to ${to} (${quantity})`)
+//         await contracts.token.transfer(from, to, quantity, memo, { authorization: `${from}@active` })    
+//     }
 
-    console.log('create campaign')
-    const maxAmount1 = '20.0000 SEEDS'
-    const maxAmount2 = '30.0000 SEEDS'
-    await deposit(firstuser, onboarding, '5.0000 SEEDS')
+//     console.log('create campaign')
+//     const maxAmount1 = '20.0000 SEEDS'
+//     const maxAmount2 = '30.0000 SEEDS'
+//     await deposit(firstuser, onboarding, '5.0000 SEEDS')
 
-    let cantCreateCampWithNotEnoughFunds = true
-    try {
-        await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
-        cantCreateCampWithNotEnoughFunds = false
-    } catch (err) {
-        console.log('not enough funds (expected)')
-    }
+//     let cantCreateCampWithNotEnoughFunds = true
+//     try {
+//         await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '5.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+//         cantCreateCampWithNotEnoughFunds = false
+//     } catch (err) {
+//         console.log('not enough funds (expected)')
+//     }
 
-    await deposit(firstuser, onboarding, '45.0000 SEEDS')
-    await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, 0, { authorization: `${firstuser}@active` })
+//     await deposit(firstuser, onboarding, '45.0000 SEEDS')
+//     await contracts.onboarding.createcampg(firstuser, firstuser, '10.0000 SEEDS', '6.0000 SEEDS', firstuser, '1.0000 SEEDS', maxAmount1, 0, { authorization: `${firstuser}@active` })
+//     await contracts.onboarding.createcampg(firstuser, firstuser, '15.0000 SEEDS', '5.0000 SEEDS', firstuser, '2.0000 SEEDS', maxAmount2, 0, { authorization: `${firstuser}@active` })
 
-    await checkCampaignFunds(1, maxAmount1)
-    await checkCampaignFunds(2, maxAmount2)
+//     await checkCampaignFunds(1, maxAmount1)
+//     await checkCampaignFunds(2, maxAmount2)
 
-    let user2 = randomAccountName()
-    console.log(`invite new user ${user2}`)
-    const firstuserBalanceBeforeAccept = await getBalance(firstuser)
-    await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '3.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+//     let user2 = randomAccountName()
+//     console.log(`invite new user ${user2}`)
+//     const firstuserBalanceBeforeAccept = await getBalance(firstuser)
+//     await contracts.onboarding.campinvite(1, firstuser, '6.0000 SEEDS', '3.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
 
-    await contracts.onboarding.accept(user2, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
+//     await contracts.onboarding.accept(user2, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
-    await checkCampaignFunds(1, '10.0000 SEEDS')
-    await checkCampaignInvites(1, 1, 0)
-    await checkUsers(user2, 2)
-    await checkVouches(user2, 1)
+//     await checkCampaignFunds(1, '10.0000 SEEDS')
+//     await checkCampaignInvites(1, 1, 0)
+//     await checkUsers(user2, 2)
+//     await checkVouches(user2, 1)
     
-    console.log(`addauthorized ${user2}`)
-    await contracts.onboarding.addauthorized(1, user2, { authorization: `${firstuser}@active` })
+//     console.log(`addauthorized ${user2}`)
+//     await contracts.onboarding.addauthorized(1, user2, { authorization: `${firstuser}@active` })
 
-    console.log(`testing max invite amount`)
-    let cantExceedMaxInviteAmount = true
-    try {
-        await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
-        cantExceedMaxInviteAmount = false
-    } catch (err) {
-        console.log('can not exceed max invitation amount (expected)')
-    }
+//     console.log(`testing max invite amount`)
+//     let cantExceedMaxInviteAmount = true
+//     try {
+//         await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '9.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
+//         cantExceedMaxInviteAmount = false
+//     } catch (err) {
+//         console.log('can not exceed max invitation amount (expected)')
+//     }
 
-    console.log(`${user2} invites ${thirduser}`)
-    await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
-    await contracts.onboarding.acceptexist(thirduser, inviteSecret2, { authorization: `${thirduser}@active` })
+//     console.log(`${user2} invites ${thirduser}`)
+//     await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash2, { authorization: `${user2}@active` })
+//     await contracts.onboarding.acceptexist(thirduser, inviteSecret2, { authorization: `${thirduser}@active` })
 
-    const firstuserBalanceAfterAccept = await getBalance(firstuser)
+//     const firstuserBalanceAfterAccept = await getBalance(firstuser)
 
-    await checkCampaignFunds(1, '2.0000 SEEDS')
-    await checkCampaignInvites(1, 2, 1)
-    await checkUsers(thirduser, 3)
-    await checkVouches(thirduser, 1)
+//     await checkCampaignFunds(1, '2.0000 SEEDS')
+//     await checkCampaignInvites(1, 2, 1)
+//     await checkUsers(thirduser, 3)
+//     await checkVouches(thirduser, 1)
 
-    console.log(`remove ${user2} from the authorization list`)
-    await contracts.onboarding.remauthorized(1, user2, { authorization: `${firstuser}@active` })
+//     console.log(`remove ${user2} from the authorization list`)
+//     await contracts.onboarding.remauthorized(1, user2, { authorization: `${firstuser}@active` })
 
-    console.log('invite without permission')
-    let cantInviteWithoutPermission = true
-    try {
-        await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${user2}@active` })
-        cantInviteWithoutPermission = false
-    } catch (err) {
-        console.log('can not invite without permission (expected)')
-    }
+//     console.log('invite without permission')
+//     let cantInviteWithoutPermission = true
+//     try {
+//         await contracts.onboarding.campinvite(1, user2, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${user2}@active` })
+//         cantInviteWithoutPermission = false
+//     } catch (err) {
+//         console.log('can not invite without permission (expected)')
+//     }
 
-    await contracts.onboarding.addauthorized(1, thirduser, { authorization: `${firstuser}@active` })
+//     await contracts.onboarding.addauthorized(1, thirduser, { authorization: `${firstuser}@active` })
 
-    let cantExceedRemainingAmount = true
-    try {
-        await contracts.onboarding.campinvite(1, thirduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${thirduser}@active` })
-        cantExceedRemainingAmount = false
-    } catch (err) {
-        console.log('can not exceed the remaining amount (expected)')
-    }
+//     let cantExceedRemainingAmount = true
+//     try {
+//         await contracts.onboarding.campinvite(1, thirduser, '6.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${thirduser}@active` })
+//         cantExceedRemainingAmount = false
+//     } catch (err) {
+//         console.log('can not exceed the remaining amount (expected)')
+//     }
 
-    console.log('retire funds')
-    const firstuserBalanceBefore = await getBalance(firstuser)
-    await contracts.onboarding.returnfunds(1, { authorization: `${firstuser}@active` })
-    const firstuserBalanceAfter = await getBalance(firstuser)
+//     console.log('retire funds')
+//     const firstuserBalanceBefore = await getBalance(firstuser)
+//     await contracts.onboarding.returnfunds(1, { authorization: `${firstuser}@active` })
+//     const firstuserBalanceAfter = await getBalance(firstuser)
 
-    console.log('cancel invite')
-    await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+//     console.log('cancel invite')
+//     await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
-    const firstuserBalanceBeforeCancel2 = await getBalance(firstuser)
+//     const firstuserBalanceBeforeCancel2 = await getBalance(firstuser)
 
-    await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${firstuser}@active` })
-    await checkCampaignFunds(2, '14.0000 SEEDS')
+//     await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash3, { authorization: `${firstuser}@active` })
+//     await contracts.onboarding.campinvite(2, firstuser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${firstuser}@active` })
+//     await checkCampaignFunds(2, '14.0000 SEEDS')
 
-    await contracts.onboarding.addauthorized(2, thirduser, { authorization: `${firstuser}@active` })
-    await contracts.onboarding.cancel(thirduser, inviteHash4, { authorization: `${thirduser}@active` })
-    await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${thirduser}@active` })
-    await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '5.0000 SEEDS', inviteHash5, { authorization: `${thirduser}@active` })
-    await checkCampaignFunds(2, '2.0000 SEEDS')
+//     await contracts.onboarding.addauthorized(2, thirduser, { authorization: `${firstuser}@active` })
+//     await contracts.onboarding.cancel(thirduser, inviteHash4, { authorization: `${thirduser}@active` })
+//     await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '1.0000 SEEDS', inviteHash4, { authorization: `${thirduser}@active` })
+//     await contracts.onboarding.campinvite(2, thirduser, '5.0000 SEEDS', '5.0000 SEEDS', inviteHash5, { authorization: `${thirduser}@active` })
+//     await checkCampaignFunds(2, '2.0000 SEEDS')
 
-    await contracts.onboarding.returnfunds(2, { authorization: `${firstuser}@active` })
+//     await contracts.onboarding.returnfunds(2, { authorization: `${firstuser}@active` })
 
-    await sleep(5000)
+//     await sleep(5000)
 
-    const firstuserBalanceAfterCancel2 = await getBalance(firstuser)
+//     const firstuserBalanceAfterCancel2 = await getBalance(firstuser)
 
-    const camps = await getTableRows({
-        code: onboarding,
-        scope: onboarding,
-        table: 'campaigns',
-        json: true
-    })
+//     const camps = await getTableRows({
+//         code: onboarding,
+//         scope: onboarding,
+//         table: 'campaigns',
+//         json: true
+//     })
 
-    const campinvites = await getTableRows({
-        code: onboarding,
-        scope: onboarding,
-        table: 'campinvites',
-        json: true
-    })
+//     const campinvites = await getTableRows({
+//         code: onboarding,
+//         scope: onboarding,
+//         table: 'campinvites',
+//         json: true
+//     })
 
-    const invites = await getTableRows({
-        code: onboarding,
-        scope: onboarding,
-        table: 'invites',
-        json: true
-    })
+//     const invites = await getTableRows({
+//         code: onboarding,
+//         scope: onboarding,
+//         table: 'invites',
+//         json: true
+//     })
 
-    assert({
-        given: 'origin with not enough funds',
-        should: 'fail',
-        actual: cantCreateCampWithNotEnoughFunds,
-        expected: true
-    })
+//     assert({
+//         given: 'origin with not enough funds',
+//         should: 'fail',
+//         actual: cantCreateCampWithNotEnoughFunds,
+//         expected: true
+//     })
 
-    assert({
-        given: 'user invites with no permission',
-        should: 'fail',
-        actual: cantInviteWithoutPermission,
-        expected: true
-    })
+//     assert({
+//         given: 'user invites with no permission',
+//         should: 'fail',
+//         actual: cantInviteWithoutPermission,
+//         expected: true
+//     })
     
-    assert({
-        given: 'user invites using more than the max amount allowed',
-        should: 'fail',
-        actual: cantExceedMaxInviteAmount,
-        expected: true
-    })
+//     assert({
+//         given: 'user invites using more than the max amount allowed',
+//         should: 'fail',
+//         actual: cantExceedMaxInviteAmount,
+//         expected: true
+//     })
 
-    assert({
-        given: 'user invites with not enough remaining amount',
-        should: 'fail',
-        actual: cantExceedRemainingAmount,
-        expected: true
-    })
+//     assert({
+//         given: 'user invites with not enough remaining amount',
+//         should: 'fail',
+//         actual: cantExceedRemainingAmount,
+//         expected: true
+//     })
 
-    assert({
-        given: `${firstuser} call returnfunds`,
-        should: 'return the correct amount',
-        actual: firstuserBalanceAfter - firstuserBalanceBefore,
-        expected: 2
-    })
+//     assert({
+//         given: `${firstuser} call returnfunds`,
+//         should: 'return the correct amount',
+//         actual: firstuserBalanceAfter - firstuserBalanceBefore,
+//         expected: 2
+//     })
 
-    assert({
-        given: 'invites been accepted',
-        should: `${firstuser} has more funds`,
-        actual: firstuserBalanceAfterAccept - firstuserBalanceBeforeAccept,
-        expected: 2
-    })
+//     assert({
+//         given: 'invites been accepted',
+//         should: `${firstuser} has more funds`,
+//         actual: firstuserBalanceAfterAccept - firstuserBalanceBeforeAccept,
+//         expected: 2
+//     })
 
-    assert({
-        given: `${firstuser} call returnfunds for camapaign 2`,
-        should: 'cancel the campaign, the invites and return all the funds',
-        actual: firstuserBalanceAfterCancel2 - firstuserBalanceBeforeCancel2,
-        expected: 30
-    })
+//     assert({
+//         given: `${firstuser} call returnfunds for camapaign 2`,
+//         should: 'cancel the campaign, the invites and return all the funds',
+//         actual: firstuserBalanceAfterCancel2 - firstuserBalanceBeforeCancel2,
+//         expected: 30
+//     })
 
-    assert({
-        given: 'all the campaigns finished',
-        should: 'have the correct length',
-        actual: [camps.rows.length, campinvites.rows.length, invites.rows.length],
-        expected: [0, 0, 2]
-    })
+//     assert({
+//         given: 'all the campaigns finished',
+//         should: 'have the correct length',
+//         actual: [camps.rows.length, campinvites.rows.length, invites.rows.length],
+//         expected: [0, 0, 2]
+//     })
     
-})
+// })
 
 
 describe("clean up unused invites", async assert => {
@@ -1102,7 +1102,7 @@ describe("clean up unused invites", async assert => {
     await deposit(seconduser)
     await invite(seconduser, inviteHash3)
 
-    await contracts.onboarding.chkcleanupt(1, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.chkcleanupau(1, { authorization: `${onboarding}@active` })
     await sleep(500)
 
     await checkInvites(3, [{ id: 0, invite_id: 2 }])
@@ -1111,7 +1111,7 @@ describe("clean up unused invites", async assert => {
 
     await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
 
-    await contracts.onboarding.chkcleanupt(1, { authorization: `${onboarding}@active` })
+    await contracts.onboarding.chkcleanupau(1, { authorization: `${onboarding}@active` })
     await sleep(4000)
 
     await checkInvites(1, [

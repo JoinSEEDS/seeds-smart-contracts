@@ -405,7 +405,7 @@ void onboarding::accept(name account, checksum256 invite_secret, string publicKe
   accept_invite(account, invite_secret, publicKey, string(""), false);
 }
 
-void onboarding::chkcleanup() {
+void onboarding::chkcleanup(uint64_t time) {
   require_auth(get_self());
 
   timestamp_tables timestamps(get_self(), get_self().value);
@@ -418,9 +418,10 @@ void onboarding::chkcleanup() {
     auto titr = timestamps.rbegin();
     uint64_t now = eosio::current_time_point().sec_since_epoch();
 
-    // uncomment this line for tests
-    // if (titr->timestamp + 2 > now) { return; }
-    if (titr->timestamp + (utils::seconds_per_day * 30) > now) { return; }
+    // pass time <= 0 to production env  
+    auto time_period = (time > 0) ? time : (utils::seconds_per_day * 30);
+
+    if (titr->timestamp + time_period > now) { return; }
 
     uint64_t start_id = 0;
     uint64_t max_id = titr->invite_id - 1;
@@ -453,50 +454,14 @@ void onboarding::chkcleanup() {
 
 }
 
-void onboarding::chkcleanupt(uint64_t time) {
+void onboarding::chkcleanupau(uint64_t time) {
   require_auth(get_self());
-
-  timestamp_tables timestamps(get_self(), get_self().value);
-  invite_tables invites(get_self(), get_self().value);
-
-  if (invites.begin() == invites.end()) { return; }
-
-  if (timestamps.begin() != timestamps.end()) {
-
-    auto titr = timestamps.rbegin();
-    uint64_t now = eosio::current_time_point().sec_since_epoch();
-
-    if (titr->timestamp + time > now) { return; }
-
-    uint64_t start_id = 0;
-    uint64_t max_id = titr->invite_id - 1;
-
-    if (titr->id > 0) {
-      auto prev_itr = titr;
-      prev_itr++;
-
-      if (prev_itr->invite_id < max_id) {
-        start_id = prev_itr->invite_id;
-      }
-    }
-
-    action(
-      permission_level(get_self(), "active"_n),
+  action(
+      permission_level{get_self(), "active"_n},
       get_self(),
-      "cleanup"_n,
-      std::make_tuple(start_id, max_id, config_get("batchsize"_n))
-    ).send();
-
-  }
-
-  auto last_invite_itr = invites.rbegin();
-
-  timestamps.emplace(_self, [&](auto & t){
-    t.id = timestamps.available_primary_key();
-    t.invite_id = last_invite_itr->invite_id;
-    t.timestamp = eosio::current_time_point().sec_since_epoch();
-  });
-
+      "chkcleanup"_n,
+      std::make_tuple(time)
+  ).send();
 }
 
 void onboarding::cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size) {

@@ -39,8 +39,8 @@ CONTRACT onboarding : public contract {
 
     ACTION cancel(name sponsor, checksum256 invite_hash);
 
-    ACTION chkcleanup();
-    ACTION chkcleanupt(uint64_t time);
+    ACTION chkcleanup(uint64_t time);
+    ACTION chkcleanupau(uint64_t time);
     ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
     ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
@@ -193,7 +193,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
       EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(cancel)
-      (chkcleanup)(cleanup)(chkcleanupt)
+      (chkcleanup)(cleanup)(chkcleanupau)
       (createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux)
       )
       }
