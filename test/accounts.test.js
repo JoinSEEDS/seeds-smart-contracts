@@ -1621,7 +1621,7 @@ const accept = async (newAccount, inviteSecret, publicKey, contracts) => {
   console.log("accept success!")
 }
 
-describe.only('Punishment', async assert => {
+describe('Punishment', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1646,6 +1646,7 @@ describe.only('Punishment', async assert => {
       table: 'rep',
       json: true
     })
+
     assert({
       given: 'user punished',
       should: 'have the correct reputation',

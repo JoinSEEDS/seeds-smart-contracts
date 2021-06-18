@@ -1269,9 +1269,6 @@ void accounts::flag (name from, name to) {
   
   points = base_points * utils::rep_multiplier_for_score(ritr.rank);
 
-
-  print("flag points", points);
-
   flags.emplace(_self, [&](auto & item){
     item.account = from;
     item.flag_points = points;
@@ -1288,8 +1285,6 @@ void accounts::flag (name from, name to) {
   if (removed_flag_p_itr != removed_flags.end()) { removed_flag_points = removed_flag_p_itr -> flag_points; }
 
   uint64_t flag_threshold = config_get("flag.thresh"_n);
-
-  print("flag tresh", flag_threshold);
 
   if (total_flag_points >= flag_threshold && removed_flag_points < total_flag_points) {
 
@@ -1399,8 +1394,6 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
       uint64_t min_rep_score_resident = config_get("res.rep.pt"_n);
 
       name current_status = uitr->status;
-      print("\nDEMOTE", ritr->account);
-      print("\nstatus_b", current_status);
 
       if (rep < min_rep_score_resident) {
         current_status = visitor;
@@ -1409,8 +1402,6 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
       } else {
         current_status = citizen;
       }
-
-      print("\nstatus_a", current_status);
 
       if (uitr->status == citizen && current_status != citizen) {
         updatestatus(uitr->account, current_status);
