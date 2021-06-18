@@ -42,8 +42,6 @@ const main = async () => {
 
   fs.writeFileSync('refss_backup_.json', JSON.stringify(props, null, 2))
 
-  var allKeys = []
-
   for (var i=0; i<props.rows.length; i++) {
     var prop = props.rows[i]
     if (prop.description.indexOf("{") != 0) {
@@ -65,9 +63,6 @@ const main = async () => {
     console.log("keys: "+JSON.stringify(keys))
 
     keys.forEach(k => {
-      if (allKeys.indexOf(k) == -1) { 
-        allKeys.push(k)
-      } 
       var content = desc[k]
       if (content != "") {
         var title = titles[k].label
@@ -77,6 +72,9 @@ const main = async () => {
         output = output + "* "+ title
         output = output + "\n\n"
         //console.log(JSON.stringify(content, null, 2))
+        if (titles[k].rank == 0) {
+          content = "Ratifying the SEEDS Constitution\n\n" + content
+        }
 
         output = output + content
         if (content[content.length-1] != "\n") {
@@ -89,6 +87,8 @@ const main = async () => {
       
     })
     console.log("final text:\n"+output)
+
+
 
     //console.log('apply fix')
     //console.log("disabled!!! ")
