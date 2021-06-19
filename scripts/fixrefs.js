@@ -92,7 +92,7 @@ const main = async () => {
 
     //console.log('apply fix')
     //console.log("disabled!!! ")
-    //await contracts.referendums.fixdesc(prop.referendum_id, output, { authorization: `${proposals}@active` })
+    await contracts.referendums.fixdesc(prop.referendum_id, output, { authorization: `${referendums}@active` })
   
 
   }
