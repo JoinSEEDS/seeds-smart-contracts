@@ -222,6 +222,7 @@ CONTRACT proposals : public contract {
       void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
       void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
       uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
+      void check_values(string title, string summary, string description, string image, string url);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE

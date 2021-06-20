@@ -351,6 +351,8 @@ void referendums::create(
 
   check_citizen(creator);
 
+  check_values(title, summary, description, image, url);
+
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
   asset stake_price = asset(price_amount, seeds_symbol);
 
@@ -381,6 +383,31 @@ void referendums::create(
   });
 }
 
+void referendums::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
+
 void referendums::update(
   name creator,
   name setting_name,
@@ -403,8 +430,10 @@ void referendums::update(
     }
     sitr++;
   }
-  
+
   check (sitr != refs.end(), "referendum creator not found " + creator.to_string());
+
+  check_values(title, summary, description, image, url);
 
   require_auth(sitr->creator);
 
