@@ -518,6 +518,17 @@ void referendums::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
+void referendums::fixtitle(uint64_t id, string title) 
+{
+  require_auth(get_self());
+  referendum_tables refs(get_self(), name("active").value);
+
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum id not found");
+  refs.modify(ritr, _self, [&](auto& item) {
+    item.title = title;
+  });
+}
 
 void referendums::fixdesc(uint64_t id, string description) {
   require_auth(get_self());
