@@ -75,6 +75,12 @@ CONTRACT referendums : public contract {
       ACTION cancelvote(name voter, uint64_t referendum_id);
 
       ACTION onperiod();
+
+      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION fixtitle(uint64_t id, string title); // temp for fixing title
+      ACTION applyfixref(); // temp for fixing description
+      ACTION backfixref(); // revert fixing description
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -137,6 +143,21 @@ CONTRACT referendums : public contract {
         
     DEFINE_CONFIG_TABLE_MULTI_INDEX
 
+    TABLE fix_refs_table {
+        uint64_t ref_id;
+        string description;
+        uint64_t primary_key()const { return ref_id; }
+    };
+    typedef eosio::multi_index<"fixrefs"_n, fix_refs_table> fix_refs_tables;
+
+    TABLE back_refs_table {
+        uint64_t ref_id;
+        string description;
+        uint64_t primary_key()const { return ref_id; }
+    };
+    typedef eosio::multi_index<"backrefs"_n, back_refs_table> back_refs_tables;
+
+
     typedef multi_index<"balances"_n, balance_table> balance_tables;
     typedef multi_index<"referendums"_n, referendum_table,
       indexed_by<"byname"_n,
@@ -153,7 +174,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice))
+        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice)
+        (fixdesc)(applyfixref)(backfixref)(fixtitle)
+        )
       }
   }
 }

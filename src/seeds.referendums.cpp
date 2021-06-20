@@ -547,3 +547,89 @@ void referendums::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
+void referendums::fixtitle(uint64_t id, string title) 
+{
+  require_auth(get_self());
+  referendum_tables refs(get_self(), name("active").value);
+
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum id not found");
+  refs.modify(ritr, _self, [&](auto& item) {
+    item.title = title;
+  });
+}
+
+void referendums::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+  referendum_tables staged(get_self(), name("staged").value);
+
+  referendum_tables refs(get_self(), name("active").value);
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum not found");
+
+  // make backup - only the first time
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.find(id);
+  if (bitr == backrefs.end()) {
+    backrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = ritr->description;
+    });
+  } 
+
+  fix_refs_tables fixrefs(get_self(), get_self().value);
+
+  auto fix_itr = fixrefs.find(id);
+
+  if (fix_itr == fixrefs.end()) {
+    fixrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = description;
+    });
+  } else {
+    fixrefs.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void referendums::applyfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  fix_refs_tables fixrefs(get_self(), get_self().value);
+  auto fitr = fixrefs.begin();
+  while(fitr != fixrefs.end()) {
+    print(" processing "+std::to_string(fitr->ref_id));
+    auto ritr = refs.find(fitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" replace id "+std::to_string(fitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void referendums::backfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.begin();
+  while(bitr != backrefs.end()) {
+    print(" b processing "+std::to_string(bitr->ref_id));
+    auto ritr = refs.find(bitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" restore id "+std::to_string(bitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}

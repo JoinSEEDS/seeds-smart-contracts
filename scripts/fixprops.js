@@ -138,39 +138,11 @@ const main = async () => {
     console.log("final text:\n"+output)
 
     console.log('apply fix')
-    await contracts.proposals.fixdesc(prop.id, output, { authorization: `${proposals}@active` })
+    console.log("disabled!!! ")
+    //await contracts.proposals.fixdesc(prop.id, output, { authorization: `${proposals}@active` })
   
-    //console.log("parsed json: "+JSON.stringify(desc, null, 2))
-
-    // console.log("HOW IT WILL SERVE")
-
-    // console.log("parsed json: "+JSON.stringify(desc.howWillServe, null, 2))
-    
-    // console.log("Usage")
-
-    // console.log("parsed json: "+JSON.stringify(desc.usage, null, 2))
-
-    // console.log("Why This Amount")
-
-    // console.log("parsed json: "+JSON.stringify(desc.whyThisAmount, null, 2))
-
-    // console.log("How Many People")
-
-    // console.log("parsed json: "+JSON.stringify(desc.howManyPeople, null, 2))
 
   }
-
-  //allKeys.sort()
-
-  //console.log(allKeys)
-
-  //console.log('users: '+JSON.stringify(users, null,2))
-
-  //let user_accounts = users.rows.map(({ account }) => account )
-
-  //console.log('accounts: '+JSON.stringify(user_accounts, null,2))
-
-  //console.log("saved "+user_accounts.length + " users")
 
     
   
