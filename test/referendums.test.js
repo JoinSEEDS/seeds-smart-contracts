@@ -5,7 +5,7 @@ const { referendums, token, settings, accounts, firstuser, seconduser } = names
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-function formatReferendums (referendums) {
+function formatSpecialAttributes (referendums) {
   const refs = []
 
   for (const referendum of referendums) {
@@ -22,7 +22,7 @@ function formatReferendums (referendums) {
   return refs
 }
 
-describe('Referendums', async assert => {
+describe('Referendums Settings', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -43,6 +43,28 @@ describe('Referendums', async assert => {
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+
+  const checkReferendums = async () => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: referendums,
+      table: 'referendums',
+      json: true
+    })
+    console.log(referendumsTable.rows)
+
+    const refauxTable = await getTableRows({
+      code: referendums,
+      scope: referendums,
+      table: 'refaux',
+      json: true
+    })
+    console.log(formatSpecialAttributes(refauxTable.rows))
+  }
+
+  console.log('init propcycle')
+  await contracts.referendums.initcycle(1, { authorization: `${referendums}@active` })
+
   console.log('insert test settings')
   await contracts.settings.configure(testSetting, 1, { authorization: `${settings}@active` })
   await contracts.settings.conffloat(testSettingFloat, 1.2, { authorization: `${settings}@active` })
@@ -55,26 +77,78 @@ describe('Referendums', async assert => {
 
   console.log('create referendum')
   await contracts.referendums.create([
-    {"key": "type", "value": ["name", 'r.setting'] },
-    {"key": "creator", "value": ["name", firstuser] },
-    {"key": "setting_name", "value": ["name", testSetting] },
-    {"key": "title", "value": ["string", 'title'] },
-    {"key": "summary", "value": ["string", 'summary'] },
-    {"key": "description", "value": ["string", 'description'] },
-    {"key": "image", "value": ["string", 'image'] },
-    {"key": "url", "value": ["string", 'url'] },
-    {"key": "setting_value", "value": ["uint64", 100] }
+    { "key": "type", "value": ["name", 'r.setting'] },
+    { "key": "creator", "value": ["name", firstuser] },
+    { "key": "setting_name", "value": ["name", testSetting] },
+    { "key": "title", "value": ["string", 'title'] },
+    { "key": "summary", "value": ["string", 'summary'] },
+    { "key": "description", "value": ["string", 'description'] },
+    { "key": "image", "value": ["string", 'image'] },
+    { "key": "url", "value": ["string", 'url'] },
+    { "key": "setting_value", "value": ["uint64", 100] },
+    { "key": "test_cycles", "value": ["uint64", 1] }
   ], { authorization: `${firstuser}@active` })
 
+  await contracts.referendums.create([
+    { "key": "type", "value": ["name", 'r.setting'] },
+    { "key": "creator", "value": ["name", firstuser] },
+    { "key": "setting_name", "value": ["name", testSetting] },
+    { "key": "title", "value": ["string", 'title'] },
+    { "key": "summary", "value": ["string", 'summary'] },
+    { "key": "description", "value": ["string", 'description'] },
+    { "key": "image", "value": ["string", 'image'] },
+    { "key": "url", "value": ["string", 'url'] },
+    { "key": "setting_value", "value": ["uint64", 100] },
+    { "key": "test_cycles", "value": ["uint64", 1] }
+  ], { authorization: `${firstuser}@active` })
 
-  const referendumsTable = await getTableRows({
-    code: referendums,
-    scope: referendums,
-    table: 'referendums',
-    json: true
-  })
+  await contracts.referendums.create([
+    { "key": "type", "value": ["name", 'r.setting'] },
+    { "key": "creator", "value": ["name", seconduser] },
+    { "key": "setting_name", "value": ["name", testSettingFloat] },
+    { "key": "title", "value": ["string", 'title 2'] },
+    { "key": "summary", "value": ["string", 'summary 2'] },
+    { "key": "description", "value": ["string", 'description 2'] },
+    { "key": "image", "value": ["string", 'image 2'] },
+    { "key": "url", "value": ["string", 'url 2'] },
+    { "key": "setting_value", "value": ["float64", 2.2] },
+    { "key": "test_cycles", "value": ["uint64", 1] }
+  ], { authorization: `${seconduser}@active` })
 
-  console.log(formatReferendums(referendumsTable.rows))
+  await checkReferendums()
+
+  console.log('update referendum')
+  await contracts.referendums.update([
+    { "key": "referendum_id", "value": ["uint64", 0] },
+    { "key": "setting_name", "value": ["name", testSetting] },
+    { "key": "title", "value": ["string", 'title updated'] },
+    { "key": "summary", "value": ["string", 'summary updated'] },
+    { "key": "description", "value": ["string", 'description updated'] },
+    { "key": "image", "value": ["string", 'image updated'] },
+    { "key": "url", "value": ["string", 'url updated'] },
+    { "key": "setting_value", "value": ["uint64", 10] },
+    { "key": "test_cycles", "value": ["uint64", 1] }
+  ], { authorization: `${firstuser}@active` })
+
+  await checkReferendums()
+
+  console.log('delete referendum')
+  await contracts.referendums.cancel([{ "key": "referendum_id", "value": ["uint64", 1] }], { authorization: `${firstuser}@active` })
+
+  await checkReferendums()
+
+  console.log('changing minimum amount to stake')
+  const minStake = 1111
+  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, referendums, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod')
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+  await sleep(2000)
+
+  await checkReferendums()
 
   // const stake_price = '1111.0000 SEEDS'
   // const favour = 4

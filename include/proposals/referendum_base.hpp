@@ -8,6 +8,7 @@ namespace ReferendumsCommon {
   constexpr name type_code = name("r.code");
   
   constexpr name status_open = name("open");
+  constexpr name status_voting = name("voting");
   constexpr name status_test = name("test");
   constexpr name status_evaluate = name("evaluate");
   constexpr name status_passed = name("passed");
@@ -16,6 +17,12 @@ namespace ReferendumsCommon {
   constexpr name stage_staged = name("staged");
   constexpr name stage_active = name("active");
   constexpr name stage_done = name("done");
+
+  constexpr name trust = name("trust");
+  constexpr name distrust = name("distrust");
+  constexpr name neutral = name("neutral");
+
+  constexpr name vote_scope = name("votes");
 }
 
 class Referendum {
