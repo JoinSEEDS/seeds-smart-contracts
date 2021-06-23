@@ -1646,7 +1646,6 @@ describe('Punishment', async assert => {
       table: 'rep',
       json: true
     })
-
     assert({
       given: 'user punished',
       should: 'have the correct reputation',
@@ -1827,6 +1826,12 @@ describe('Punishment', async assert => {
     expected: true
   })
 
+  await contracts.accounts.addrep(fifthuser, 300, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(fifthuser, 30, { authorization: `${accounts}@active` })
+  await contracts.accounts.evaldemote(fifthuser, 0, 0, 1, { authorization: `${accounts}@active` })
+
+  await checkReps([66, 165, 300, 306])
+  await checkUserStatus(fifthuser, 'citizen')
 })
 
 // describe('Migrate cbs and rep for orgs', async assert => {
