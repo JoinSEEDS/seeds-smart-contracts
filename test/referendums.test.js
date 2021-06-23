@@ -372,7 +372,7 @@ console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting'
     expected: {
       account: firstuser,
       stake: '0.0000 SEEDS',
-      voice: 0
+      voice: 90
     }
   })
 })
