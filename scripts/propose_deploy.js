@@ -445,6 +445,27 @@ const createESRCodeExec = async ({proposerAccount, proposalName}) => {
   return createESRWithActions({actions: execActions})
 }
 
+const createESRCodeTransfer = async ({recepient, amount, memo}) => {
+
+  const actions = [{
+    account: 'token.seeds',
+    name: 'transfer',
+    data: {
+      from: authPlaceholder,
+      to: recepient,
+      amount: amount.toFixed(4) + " SEEDS",
+      memo: memo
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
+
+  return createESRWithActions({actions: actions})
+}
+
+
 const createESRWithActions = async ({actions}) => {
 
   console.log("========= Generating ESR Code ===========")
