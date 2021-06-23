@@ -193,6 +193,8 @@ describe('Referendums', async assert => {
     for (let i = 0; i < keys.length; i++) {
       const fn = fns[keys[i]]
 
+      console.log("running "+keys[i])
+
       await fn()
       await saveState(keys[i])
     }
@@ -216,17 +218,19 @@ describe('Referendums', async assert => {
   await runTransactions({
     'reset': reset(),
     'addUsers': addUsers(),
-    'addVoice': addVoice(),
+    'addVoice': addVoice("addvoice1"),
     'failedReferendum': fail(createReferendums()),
     'stake': stake(),
     'createReferendums': createReferendums(),
     'updateReferendum': updateReferendum(),
-    'failedSendVotes': fail(sendVotes()),
-    'executeReferendumsActive': executeReferendums(),
-    'sendVotes': sendVotes(),
-    'executeReferendumsTesting': executeReferendums(),
+    'failedSendVotes': fail(sendVotes("send1")),
+    'executeReferendumsActive': executeReferendums("A"),
+    'addVoice-2': addVoice("addvoice2"),
+    'addVoice-3': addVoice("addvoice3"),
+    'sendVotes': sendVotes("send2"),
+    'executeReferendumsTesting': executeReferendums("B"),
     'cancelVote': cancelVote(),
-    'executeReferendumsFinal': executeReferendums(),
+    'executeReferendumsFinal': executeReferendums("C"),
   })
 
   assert({
@@ -361,7 +365,7 @@ describe('Referendums', async assert => {
     expected: {
       account: firstuser,
       stake: '0.0000 SEEDS',
-      voice: 10
+      voice: 0
     }
   })
 })
