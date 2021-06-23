@@ -97,6 +97,7 @@ CONTRACT referendums : public contract {
     void send_burn_stake(asset quantity);
     void send_change_setting(name setting_name, uint64_t setting_value);
     void check_citizen(name account);
+    void check_values(string title, string summary, string description, string image, string url);
 
     uint64_t get_quorum(const name & setting);
     uint64_t get_unity(const name & setting);

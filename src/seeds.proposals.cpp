@@ -931,6 +931,8 @@ void proposals::create_aux (
   // For the time being, organizations are allowed to create alliance type proposals
   check_resident(creator, campaign_type == alliance_type );
   
+  check_values(title, summary, description, image, url);
+
   if (campaign_type != campaign_invite_type) {
     if (campaign_type == alliance_type || campaign_type == milestone_type) {
       pay_percentages = { 100 };
@@ -1181,6 +1183,9 @@ void proposals::updatex(uint64_t id, string title, string summary, string descri
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
+  
+  check_values(title, summary, description, image, url);
+
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
   
@@ -2266,4 +2271,27 @@ ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
 }
 
+void proposals::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
 
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
