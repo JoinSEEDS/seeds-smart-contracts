@@ -148,7 +148,6 @@ class Eos {
           res = await api.transact({
             actions
           }, trxConfig)
-          console.log(res)
         }
         catch (err) {
           const errStr = ''+err

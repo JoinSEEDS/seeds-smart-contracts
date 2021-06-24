@@ -16,6 +16,10 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
   check(test_cycles >= min_test_cycles, "the number of test cycles must be at least " + std::to_string(min_test_cycles));
 
+  uint64_t min_eval_cycles = this->m_contract.config_get("refmineval"_n);
+  uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
+  check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
+
   referendums_t.emplace(contract_name, [&](auto & item) {
     item.referendum_id = referendum_id;
     item.favour = 0;
@@ -35,8 +39,8 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
     item.age = 0;
     item.cycles_per_status = {
       uint64_t(1), // voting
-      test_cycles, // test
-      this->m_contract.config_get("refmineval"_n) // evaluate
+      test_cycles,
+      eval_cycles
     };
   });
 
@@ -45,10 +49,10 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
     item.special_attributes.insert(std::make_pair("setting_name", setting_name));
     item.special_attributes.insert(std::make_pair("is_float", s_info->is_float));
     if (s_info->is_float) {
-      item.special_attributes.insert(std::make_pair("setting_value", std::get<double>(args["setting_value"])));
+      item.special_attributes.insert(std::make_pair("new_value", std::get<double>(args["new_value"])));
       item.special_attributes.insert(std::make_pair("previous_value", s_info->previous_value_double));
     } else {
-      item.special_attributes.insert(std::make_pair("setting_value", std::get<uint64_t>(args["setting_value"])));
+      item.special_attributes.insert(std::make_pair("new_value", std::get<uint64_t>(args["new_value"])));
       item.special_attributes.insert(std::make_pair("previous_value", s_info->previous_value_uint));
     }
   });
@@ -76,6 +80,9 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
   check(test_cycles >= min_test_cycles, "the number of test cycles must be at least " + std::to_string(min_test_cycles));
 
+  uint64_t min_eval_cycles = this->m_contract.config_get("refmineval"_n);
+  uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
+  check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
 
   referendums_t.modify(ritr, contract_name, [&](auto & item) {
     item.title = std::get<string>(args["title"]);
@@ -85,8 +92,8 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
     item.url = std::get<string>(args["url"]);
     item.cycles_per_status = {
       uint64_t(1), // voting
-      test_cycles, // test
-      this->m_contract.config_get("refmineval"_n) // evaluate
+      test_cycles,
+      eval_cycles
     };
   });
 
@@ -94,10 +101,10 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
     item.special_attributes.at("setting_name") = setting_name;
     item.special_attributes.at("is_float") = s_info->is_float;
     if (s_info->is_float) {
-      item.special_attributes.at("setting_value") = std::get<double>(args["setting_value"]);
+      item.special_attributes.at("new_value") = std::get<double>(args["new_value"]);
       item.special_attributes.at("previous_value") = s_info->previous_value_double;
     } else {
-      item.special_attributes.at("setting_value") = std::get<uint64_t>(args["setting_value"]);
+      item.special_attributes.at("new_value") = std::get<uint64_t>(args["new_value"]);
       item.special_attributes.at("previous_value") = s_info->previous_value_uint;
     }
   });
@@ -153,7 +160,8 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
       referendums::size_tables sizes_votes_t(contract_name, ReferendumsCommon::vote_scope.value);
       auto total_voters_itr = sizes_votes_t.find(referendum_id);
 
-      referendums::size_tables sizes_t(contracts::voice, contracts::voice.value);
+      // referendums::size_tables sizes_t(contracts::voice, contracts::voice.value);
+      referendums::size_tables sizes_t(contracts::proposals, contracts::proposals.value);
       auto total_citizens_itr = sizes_t.require_find(name("voice.sz").value, "voice size not found");
 
       uint64_t required_quorum = get_required_quorum(setting_name, is_float);
@@ -166,7 +174,7 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
           permission_level(contract_name, "active"_n),
           contracts::token,
           "transfer"_n,
-          std::make_tuple(contract_name, ritr->creator, ritr->staked, "")
+          std::make_tuple(contract_name, ritr->creator, ritr->staked, string("refund"))
         );
       }
 
@@ -175,9 +183,10 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
       
       if (next_status == ReferendumsCommon::status_evaluate && current_status == ReferendumsCommon::status_test) {
         if (is_float) {
-          print("the setting is float!\n");
-        } else {
-          print("the setting is integer!\n");
+          change_setting(setting_name, std::get<double>(raitr->special_attributes.at("new_value")), is_float);
+        }
+        else {
+          change_setting(setting_name, std::get<uint64_t>(raitr->special_attributes.at("new_value")), is_float);
         }
       }
 
@@ -200,10 +209,18 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
         );
       }
 
+      if (current_status == ReferendumsCommon::status_evaluate) {
+        if (is_float) {
+          change_setting(setting_name, std::get<double>(raitr->special_attributes.at("previous_value")), is_float);
+        }
+        else {
+          change_setting(setting_name, std::get<uint64_t>(raitr->special_attributes.at("previous_value")), is_float);
+        }
+      }
+
       referendums_t.modify(ritr, contract_name, [&](auto & item){
         item.stage = ReferendumsCommon::stage_done;
         item.status = ReferendumsCommon::status_rejected;
-        item.age += 1;
         item.last_ran_cycle = c_t.propcycle;
       });
     }
@@ -225,13 +242,12 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
 
 uint64_t ReferendumSettings::get_required_unity (const name & setting, const bool & is_float) {
-  name contract_name = this->m_contract.get_self();
   name impact;
 
-  referendums::config_tables config_t(contract_name, contract_name.value);
+  referendums::config_tables config_t(contracts::settings, contracts::settings.value);
 
   if (is_float) {
-    referendums::config_float_tables fconfig_t(contract_name, contract_name.value);
+    referendums::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
     auto fitr = fconfig_t.find(setting.value);
     impact = fitr->impact;
   } else {
@@ -253,13 +269,12 @@ uint64_t ReferendumSettings::get_required_unity (const name & setting, const boo
 }
 
 uint64_t ReferendumSettings::get_required_quorum (const name & setting, const bool & is_float) {
-  name contract_name = this->m_contract.get_self();
   name impact;
 
-  referendums::config_tables config_t(contract_name, contract_name.value);
+  referendums::config_tables config_t(contracts::settings, contracts::settings.value);
 
   if (is_float) {
-    referendums::config_float_tables fconfig_t(contract_name, contract_name.value);
+    referendums::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
     auto fitr = fconfig_t.find(setting.value);
     impact = fitr->impact;
   } else {
@@ -282,14 +297,19 @@ uint64_t ReferendumSettings::get_required_quorum (const name & setting, const bo
 
 name ReferendumSettings::get_next_status (const std::vector<uint64_t> & cycles_per_status, const uint64_t & age) {
 
-  if (age < cycles_per_status[0]) {
-    return ReferendumsCommon::status_voting;
-  } 
-  else if (age < cycles_per_status[1]) {
-    return ReferendumsCommon::status_test;
-  }
-  else if (age < cycles_per_status[2]) {
-    return ReferendumsCommon::status_evaluate;
+  name valid_statuses[3] = { 
+    ReferendumsCommon::status_voting, 
+    ReferendumsCommon::status_test, 
+    ReferendumsCommon::status_evaluate 
+  };
+
+  uint64_t accumulated = 0;
+
+  for (int i = 0; i < cycles_per_status.size(); i++) {
+    accumulated += cycles_per_status[i];
+    if (age < accumulated) {
+      return valid_statuses[i];
+    }
   }
   
   return ReferendumsCommon::status_passed;
@@ -319,6 +339,20 @@ ReferendumSettings::SettingInfo * ReferendumSettings::get_setting_info (const na
   }
 
   return s_info;
+
+}
+
+template <typename T>
+void ReferendumSettings::change_setting (const name & setting_name, const T & setting_value, const bool & is_float) {
+
+  name action = is_float ? "conffloat"_n : "configure"_n;
+
+  this->m_contract.send_inline_action(
+    permission_level(contracts::settings, "active"_n),
+    contracts::settings,
+    action,
+    std::make_tuple(setting_name, setting_value)
+  );
 
 }
 

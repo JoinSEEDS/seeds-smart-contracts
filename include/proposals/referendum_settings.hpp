@@ -39,5 +39,8 @@ class ReferendumSettings : public Referendum {
 
     SettingInfo * get_setting_info (const name & setting_name);
 
+    template <typename T>
+    void change_setting(const name & setting_name, const T & setting_value, const bool & is_float);
+
 };
 

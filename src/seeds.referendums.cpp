@@ -10,6 +10,13 @@ ACTION referendums::reset () {
   referendum_tables referendums_t(get_self(), get_self().value);
   auto ritr = referendums_t.begin();
   while (ritr != referendums_t.end()) {
+
+    votes_tables votes_t(get_self(), ritr->referendum_id);
+    auto vitr = votes_t.begin();
+    while (vitr != votes_t.end()) {
+      vitr = votes_t.erase(vitr);
+    }
+
     ritr = referendums_t.erase(ritr);
   }
 
@@ -42,6 +49,7 @@ ACTION referendums::create (std::map<std::string, VariantValue> & args) {
 
   require_auth(creator);
   check_citizen(creator);
+  check_attributes(args);
 
   std::unique_ptr<Referendum> ref = std::unique_ptr<Referendum>(ReferendumFactory::Factory(*this, type));
 
@@ -57,6 +65,7 @@ ACTION referendums::update (std::map<std::string, VariantValue> & args) {
   auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
 
   require_auth(ritr->creator);
+  check_attributes(args);
 
   std::unique_ptr<Referendum> ref = std::unique_ptr<Referendum>(ReferendumFactory::Factory(*this, ritr->type));
 
@@ -126,7 +135,7 @@ ACTION referendums::onperiod () {
 
   print("running onperiod\n");
 
-  auto staged_itr = referendums_by_stage_id.find(uint128_t(ReferendumsCommon::stage_staged.value) << 64);
+  auto staged_itr = referendums_by_stage_id.lower_bound(uint128_t(ReferendumsCommon::stage_staged.value) << 64);
   while (staged_itr != referendums_by_stage_id.end() && staged_itr->stage == ReferendumsCommon::stage_staged) {
     print("referendum:", staged_itr->referendum_id, "\n");
     send_deferred_transaction(
@@ -138,8 +147,9 @@ ACTION referendums::onperiod () {
     staged_itr++;
   }
 
-  auto active_itr = referendums_by_stage_id.find(uint128_t(ReferendumsCommon::stage_active.value) << 64);
+  auto active_itr = referendums_by_stage_id.lower_bound(uint128_t(ReferendumsCommon::stage_active.value) << 64);
   while (active_itr != referendums_by_stage_id.end() && active_itr->stage == ReferendumsCommon::stage_active) {
+    print("active referendum:", active_itr->referendum_id, "\n");
     send_deferred_transaction(
       permission_level(get_self(), "active"_n),
       get_self(),
@@ -151,7 +161,6 @@ ACTION referendums::onperiod () {
 
 }
 
-
 ACTION referendums::favour (const name & voter, const uint64_t & referendum_id, const uint64_t & amount) {
   require_auth(voter);
   vote_aux(voter, referendum_id, amount, ReferendumsCommon::trust, false);
@@ -159,7 +168,8 @@ ACTION referendums::favour (const name & voter, const uint64_t & referendum_id, 
 
 ACTION referendums::against (const name & voter, const uint64_t & referendum_id, const uint64_t & amount) {
   require_auth(voter);
-  vote_aux(voter, referendum_id, amount, ReferendumsCommon::distrust, false); // this will change when implementing the change vote functionality
+  bool vote_reverted = revert_vote(voter, referendum_id);
+  vote_aux(voter, referendum_id, amount, ReferendumsCommon::distrust, !vote_reverted);
 }
 
 ACTION referendums::neutral (const name & voter, const uint64_t & referendum_id) {
@@ -170,23 +180,20 @@ ACTION referendums::neutral (const name & voter, const uint64_t & referendum_id)
 
 void referendums::vote_aux (const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_new) {
 
-  // do some logic related to the referendums
   check_citizen(voter);
 
   referendum_tables referendums_t(get_self(), get_self().value);
   auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
 
+  votes_tables votes_t(get_self(), referendum_id);
+  auto vitr = votes_t.find(voter.value);
+  check(vitr == votes_t.end(), "only one vote");
+
   if (is_new) {
     check(ritr->status == ReferendumsCommon::status_voting, "can not vote, it is not voting period");
   } else {
     check(ritr->stage == ReferendumsCommon::stage_active, "can not vote, referendum is not active");
-    // this case happens when a user reverts its vote
-    // some logic here
   }
-
-  votes_tables votes_t(get_self(), referendum_id);
-  auto vitr = votes_t.find(voter.value);
-  check(vitr == votes_t.end(), "only one vote");
 
   if (option == ReferendumsCommon::trust) {
     referendums_t.modify(ritr, _self, [&](auto & item){
@@ -221,137 +228,42 @@ void referendums::vote_aux (const name & voter, const uint64_t & referendum_id, 
   }
 
   // send reduce voice
-  name scope = get_self();
-  send_inline_action(
-    permission_level(contracts::voice, "active"_n),
-    contracts::voice,
-    "vote"_n,
-    std::make_tuple(voter, amount, scope)
-  );
+  // name scope = get_self();
+  // send_inline_action(
+  //   permission_level(contracts::voice, "active"_n),
+  //   contracts::voice,
+  //   "vote"_n,
+  //   std::make_tuple(voter, amount, scope)
+  // );
 
 }
 
+bool referendums::revert_vote (const name & voter, const uint64_t & referendum_id) {
 
-// void referendums::give_voice() {
-//   auto bitr = balances.begin();
+  referendum_tables referendums_t(get_self(), get_self().value);
+  auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
 
-//   while (bitr != balances.end()) {
-//     balances.modify(bitr, get_self(), [&](auto& item) {
-//       item.voice = 10;
-//     });
+  votes_tables votes_t(get_self(), referendum_id);
+  auto vitr = votes_t.find(voter.value);
 
-//     bitr++;
-//   }
-// }
+  if (vitr != votes_t.end()) {
+    check(ritr->stage == ReferendumsCommon::stage_active, "referendum is not active");
+    check(vitr->favour == true && vitr->amount > 0, "only trust votes can be changed");
 
+    referendums_t.modify(ritr, _self, [&](auto & item){
+      item.favour -= vitr->amount;
+    });
 
-// void referendums::addvoice(name account, uint64_t amount) {
-//   auto bitr = balances.find(account.value);
+    votes_t.erase(vitr);
 
-//   if (bitr == balances.end()) {
-//     balances.emplace(get_self(), [&](auto& balance) {
-//       balance.account = account;
-//       balance.voice = amount;
-//       balance.stake = asset(0, seeds_symbol);
-//     });
-//   } else {
-//     balances.modify(bitr, get_self(), [&](auto& balance) {
-//       balance.voice += amount;
-//     });
-//   }
-// }
+    return true;
+  }
 
-// void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
-//   auto bitr = balances.find(voter.value);
-//   check(bitr != balances.end(), "user has no voice");
-//   check(bitr->voice >= amount, "not enough voice");
+  return false;
 
-//   voter_tables voters(get_self(), referendum_id);
-//   auto vitr = voters.find(voter.value);
-//   check(vitr == voters.end(), "user can only vote one time");
+}
 
-//   referendum_tables active(get_self(), name("active").value);
-//   auto aitr = active.find(referendum_id);
-//   check (aitr != active.end(), "referendum does not exist");
-
-//   balances.modify(bitr, get_self(), [&](auto& balance) {
-//     balance.voice -= amount;
-//   });
-
-//   active.modify(aitr, get_self(), [&](auto& referendum) {
-//     referendum.favour += amount;
-//   });
-
-//   voters.emplace(get_self(), [&](auto& item) {
-//     item.account = voter;
-//     item.referendum_id = referendum_id;
-//     item.amount = amount;
-//     item.favoured = true;
-//     item.canceled = false;
-//   });
-// }
-
-// void referendums::against(name voter, uint64_t referendum_id, uint64_t amount) {
-//   require_auth(voter);
-
-//   auto bitr = balances.find(voter.value);
-//   check(bitr != balances.end(), "user has no voice");
-//   check(bitr->voice >= amount, "not enough voice");
-
-//   referendum_tables active(get_self(), name("active").value);
-//   auto aitr = active.find(referendum_id);
-//   check(aitr != active.end(), "referendum not found");
-
-//   voter_tables voters(get_self(), referendum_id);
-//   auto vitr = voters.find(voter.value);
-//   check(vitr == voters.end(), "user can only vote one time");
-
-//   balances.modify(bitr, get_self(), [&](auto& balance) {
-//     balance.voice -= amount;
-//   });
-
-//   active.modify(aitr, get_self(), [&](auto& item) {
-//     item.against += amount;
-//   });
-
-//   voters.emplace(get_self(), [&](auto& item) {
-//     item.account = voter;
-//     item.referendum_id = referendum_id;
-//     item.amount = amount;
-//     item.favoured = false;
-//     item.canceled = false;
-//   });
-// }
-
-// void referendums::cancelvote(name voter, uint64_t referendum_id) {
-//   require_auth(voter);
-
-//   voter_tables voters(get_self(), referendum_id);
-//   auto vitr = voters.find(voter.value);
-//   check(vitr != voters.end(), "vote not found");
-//   check(vitr->canceled == false, "vote already canceled");
-
-//   referendum_tables testing(get_self(), name("testing").value);
-//   auto titr = testing.find(referendum_id);
-//   check(titr != testing.end(), "testing referendum not found");
-
-//   voters.modify(vitr, get_self(), [&](auto& voter) {
-//     voter.canceled = true;
-//   });
-
-//   if (vitr->favoured == true) {
-//     testing.modify(titr, get_self(), [&](auto& item) {
-//       item.favour -= vitr->amount;
-//     });
-//   } else {
-//     testing.modify(titr, get_self(), [&](auto& item) {
-//       item.against -= vitr->amount;
-//     });
-//   }
-// }
-
-
-void referendums::check_citizen(const name & account) {
+void referendums::check_citizen (const name & account) {
   DEFINE_USER_TABLE;
   DEFINE_USER_TABLE_MULTI_INDEX;
   user_tables users(contracts::accounts, contracts::accounts.value);
@@ -359,6 +271,28 @@ void referendums::check_citizen(const name & account) {
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "user not found");
   check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+void referendums::check_attributes (const std::map<std::string, VariantValue> & args) {
+
+  string title = std::get<string>(args.at("title"));
+  string summary = std::get<string>(args.at("summary"));
+  string description = std::get<string>(args.at("description"));
+  string image = std::get<string>(args.at("image"));
+  string url = std::get<string>(args.at("url"));
+
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  check(description.size() > 0, "must have description");
+
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+  
 }
 
 template <typename... T>
@@ -381,31 +315,31 @@ void referendums::send_deferred_transaction (
 
   print("calling deferred transaction!\n");
 
-  eosio::action(
-    permission,
-    contract,
-    action,
-    data
-  ).send();
-
-  // deferred_id_tables deferredids(get_self(), get_self().value);
-  // deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
-
-  // d_s.id += 1;
-
-  // deferredids.set(d_s, get_self());
-
-  // transaction trx{};
-
-  // trx.actions.emplace_back(
+  // eosio::action(
   //   permission,
   //   contract,
   //   action,
   //   data
-  // );
+  // ).send();
 
-  // trx.delay_sec = 1;
-  // trx.send(d_s.id, _self);
+  deferred_id_tables deferredids(get_self(), get_self().value);
+  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+
+  d_s.id += 1;
+
+  deferredids.set(d_s, get_self());
+
+  transaction trx{};
+
+  trx.actions.emplace_back(
+    permission,
+    contract,
+    action,
+    data
+  );
+
+  trx.delay_sec = 1;
+  trx.send(d_s.id, _self);
 
 }
 

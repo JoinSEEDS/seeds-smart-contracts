@@ -106,39 +106,6 @@ CONTRACT referendums : public contract {
 
       config_tables config;
 
-      // ACTION create(
-      //   name creator,
-      //   name setting_name,
-      //   uint64_t setting_value,
-      //   string title,
-      //   string summary,
-      //   string description,
-      //   string image,
-      //   string url
-      // );
-
-      // ACTION update(
-      //   name creator,
-      //   name setting_name,
-      //   uint64_t setting_value,
-      //   string title,
-      //   string summary,
-      //   string description,
-      //   string image,
-      //   string url
-      // );
-
-      // ACTION favour(name voter, uint64_t referendum_id, uint64_t amount);
-
-      // ACTION against(name voter, uint64_t referendum_id, uint64_t amount);
-
-      // ACTION stake(name from, name to, asset quantity, string memo);
-
-      // ACTION addvoice(name account, uint64_t amount);
-
-      // ACTION cancelvote(name voter, uint64_t referendum_id);
-
-      // ACTION onperiod();
 
   private:
 
@@ -148,70 +115,9 @@ CONTRACT referendums : public contract {
 
     void check_citizen(const name & account);
     void vote_aux(const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_new);
+    bool revert_vote(const name & voter, const uint64_t & referendum_id);
+    void check_attributes(const std::map<std::string, VariantValue> & args);
 
-  //   void give_voice();
-  //   void run_testing();
-  //   void run_active();
-  //   void run_staged();
-  //   void send_onperiod();
-  //   void send_refund_stake(name account, asset quantity);
-  //   void send_burn_stake(asset quantity);
-  //   void send_change_setting(name setting_name, uint64_t setting_value);
-  //   void check_citizen(name account);
-
-  //   uint64_t get_quorum(const name & setting);
-  //   uint64_t get_unity(const name & setting);
-
-  //   TABLE voter_table {
-  //     name account;
-  //     uint64_t referendum_id;
-  //     uint64_t amount;
-  //     bool favoured;
-  //     bool canceled;
-
-  //     uint64_t primary_key()const { return account.value; }
-  //   };
-
-  //   TABLE balance_table {
-  //     name account;
-  //     asset stake;
-  //     uint64_t voice;
-
-  //     uint64_t primary_key()const { return account.value; }
-  //   };
-
-  //   TABLE referendum_table {
-  //     uint64_t referendum_id;
-  //     uint64_t created_at;
-  //     uint64_t setting_value;
-  //     uint64_t favour;
-  //     uint64_t against;
-  //     name setting_name;
-  //     name creator;
-  //     asset staked;
-  //     string title;
-  //     string summary;
-  //     string description;
-  //     string image;
-  //     string url;
-
-  //     uint64_t primary_key()const { return referendum_id; }
-  //     uint64_t by_name()const { return setting_name.value; }
-  //   };
-
-  //   DEFINE_CONFIG_TABLE
-  //   DEFINE_CONFIG_TABLE_MULTI_INDEX
-  //   DEFINE_CONFIG_GET
-
-  //   typedef multi_index<"balances"_n, balance_table> balance_tables;
-  //   typedef multi_index<"referendums"_n, referendum_table,
-  //     indexed_by<"byname"_n,
-  //     const_mem_fun<referendum_table, uint64_t, &referendum_table::by_name>>
-  //   > referendum_tables;
-  //   typedef multi_index<"voters"_n, voter_table> voter_tables;
-
-  //   balance_tables balances;
-  //   config_tables config;
 };
 
 
