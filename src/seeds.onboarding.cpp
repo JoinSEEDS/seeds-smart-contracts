@@ -408,12 +408,7 @@ void onboarding::accept(name account, checksum256 invite_secret, string publicKe
 void onboarding::chkcleanup() {
   require_auth(get_self());
 
-  action(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "chkcleanupau"_n,
-      std::make_tuple((utils::seconds_per_day * 30))
-  ).send();
+  chkcleanupau(utils::seconds_per_day * 30);
 }
 
 void onboarding::chkcleanupau(uint64_t time) {
