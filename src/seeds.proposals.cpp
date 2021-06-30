@@ -1289,30 +1289,6 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-bool proposals::revert_vote (name voter, uint64_t id) {
-  auto pitr = props.find(id);
-  
-  check(pitr != props.end(), "Proposal not found");
-
-  votes_tables votes(get_self(), id);
-  auto voteitr = votes.find(voter.value);
-
-  if (voteitr != votes.end()) {
-    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
-    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-      proposal.total -= voteitr->amount;
-      proposal.favour -= voteitr->amount;
-    });
-
-    votes.erase(voteitr);
-    return true;
-  }
-
-  return false;
-}
-
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
@@ -1345,14 +1321,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     });
   }
 
-  name scope;
-  name fund_type = get_type(pitr -> fund);
-
-  if (fund_type == campaign_type) {
-    scope = get_self();
-  } else {
-    scope = fund_type;
-  }
+  name scope = get_scope(pitr -> fund);
 
   double percenetage_used = voice_change(voter, amount, true, scope);
   
@@ -1418,8 +1387,21 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
-  increase_voice_cast(amount, option, fund_type);
+  increase_voice_cast(amount, option, get_type(pitr -> fund));
 
+}
+
+name proposals::get_scope(name fund) {
+  name scope;
+  name fund_type = get_type(fund);
+
+  if (fund_type == campaign_type) {
+    scope = get_self();
+  } else {
+    scope = fund_type;
+  }
+
+  return scope;
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -1429,8 +1411,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
-  bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
+  vote_aux(voter, id, amount, distrust, true, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
@@ -1438,12 +1419,87 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
+void proposals::revertvote(name voter, uint64_t id) {
+  require_auth(voter);
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  check(voteitr != votes.end(), "Voter has not voted on this proposal, can't revert");
+
+  uint64_t amount = voteitr->amount;
+
+  check(voteitr->favour == true && amount > 0, "Only trust votes can be changed");
+
+  votes.modify(voteitr, _self, [&](auto& item) {
+    item.favour = false;
+  });
+
+  props.modify(pitr, _self, [&](auto& proposal) {
+    proposal.against += amount;
+    proposal.favour -= amount;
+  });
+
+  name scope = get_scope(pitr -> fund);
+  if (has_delegates(voter, scope)) {
+
+    action(
+      permission_level{get_self(), "active"_n},
+      get_self(), 
+      "mimicrevert"_n,
+      std::make_tuple(voter, (uint64_t)0, scope, id, (uint64_t)30)
+    ).send();
+
+  }
+
+}
+
+bool proposals::has_delegates(name voter, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto ditr = deltrusts_by_delegatee.find(voter.value);
+  return ditr != deltrusts_by_delegatee.end();
+}
+
+void proposals::revertvote_delegate(name voter, uint64_t id) {
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    uint64_t amount = voteitr->amount;
+
+    if (voteitr->favour == true && amount > 0) {
+      votes.modify(voteitr, _self, [&](auto& item) {
+        item.favour = false;
+       });
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+        proposal.against += amount;
+        proposal.favour -= amount;
+      });
+    }
+  }
+}
+
+
 void proposals::voteonbehalf(name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(get_self());
   bool is_new = true;
-  if (option == distrust) {
-    is_new = !(revert_vote(voter, id));
-  }
+  // if (option == distrust) {
+  //   is_new = !(revert_vote(voter, id));
+  // TODO not sure I think revert vote needs to somehow work for delegated votes too
+  // }
   vote_aux(voter, id, amount, option, is_new, true);
 }
 
@@ -1959,6 +2015,45 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
       get_self(),
       "mimicvote"_n,
       std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
+
+  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
+  
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+
+    revertvote_delegate(voter, proposal_id);
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicrevert"_n,
+      std::make_tuple(delegatee, ditr -> delegator.value, scope, proposal_id, chunksize)
     );
 
     transaction tx;

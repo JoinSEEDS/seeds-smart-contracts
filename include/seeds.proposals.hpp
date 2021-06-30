@@ -61,6 +61,9 @@ CONTRACT proposals : public contract {
 
       ACTION neutral(name user, uint64_t id);
 
+      ACTION revertvote(name user, uint64_t id);
+      ACTION mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize);
+
       ACTION voteonbehalf(name voter, uint64_t id, uint64_t amount, name option);
 
       ACTION erasepartpts(uint64_t active_proposals);
@@ -178,7 +181,8 @@ CONTRACT proposals : public contract {
       void burn(asset quantity);
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated);
-      bool revert_vote (name voter, uint64_t id);
+      void revertvote_delegate(name voter, uint64_t id);
+
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
@@ -189,6 +193,9 @@ CONTRACT proposals : public contract {
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
       name get_type (const name & fund);
+      name get_scope(name fund);
+      bool has_delegates(name voter, name scope);
+
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
@@ -456,6 +463,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (reevalprop)
         (testalliance)(migalliances)
         (fixdesc)(applyfixprop)(backfixprop)
+        (revertvote)(mimicrevert)
         )
       }
   }
