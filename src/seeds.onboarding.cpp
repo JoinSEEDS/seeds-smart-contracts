@@ -420,7 +420,7 @@ void onboarding::chkcleanup() {
 
     // uncomment this line for tests
     // if (titr->timestamp + 2 > now) { return; }
-    if (titr->timestamp + (utils::seconds_per_day * 30) > now) { return; }
+    if (titr->timestamp + (utils::seconds_per_day * 90) > now) { return; }
 
     uint64_t start_id = 0;
     uint64_t max_id = titr->invite_id - 1;
