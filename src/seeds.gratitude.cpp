@@ -24,13 +24,18 @@ ACTION gratitude::reset () {
     stitr = stats.erase(stitr);
   }
 
+  auto stitr2 = stats2.begin();
+  while (stitr2 != stats2.end()) {
+    stitr2 = stats2.erase(stitr2);
+  }
+
   // setup first round
-  stats.emplace(_self, [&](auto& item) {
+  stats2.emplace(_self, [&](auto& item) {
     item.round_id = 1;
     item.num_transfers = 0;
     item.num_acks = 0;
     item.volume = asset(0, gratitude_symbol);
-    item.round_pot = asset(0, seeds_symbol);
+    item.round_pot = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
   });
 
 }
@@ -38,12 +43,9 @@ ACTION gratitude::reset () {
 ACTION gratitude::migratestats() {
   require_auth(get_self());
 
-  name old = "gratz.seeds"_n;
-
-  stats_tables other_stats(old, old.value);
-  auto sitr = other_stats.begin();
-  while(sitr != other_stats.end()) {
-    stats.emplace(get_self(), [&](auto& item) {
+  auto sitr = stats.begin();
+  while(sitr != stats.end()) {
+    stats2.emplace(get_self(), [&](auto& item) {
       item.round_id = sitr->round_id;
       item.num_transfers = sitr->num_transfers;
       item.volume = sitr->volume;
@@ -51,7 +53,8 @@ ACTION gratitude::migratestats() {
       item.num_acks = 0;
       item.round_pot = asset(0, seeds_symbol);
     });
-    sitr++;
+    // Remove old one
+    sitr = stats.erase(sitr);
   }
 }
 
@@ -81,6 +84,10 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   check(is_account(to), "gratitude: to account does not exist");
   check_user(to);
 
+  // Should create balances if not there yet
+  init_balances(to);
+  init_balances(from);
+
   auto actr = acks.find(from.value);
   if (actr == acks.end()) {
     acks.emplace(_self, [&](auto& item) {
@@ -94,12 +101,12 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   }
 
   // Updates ack stats
-  auto stitr = stats.rbegin();
+  auto stitr = stats2.rbegin();
   auto round_id = stitr->round_id;
 
-  auto stitr2 = stats.find(round_id);
+  auto stitr2 = stats2.find(round_id);
   auto oldacks = stitr2->num_acks;
-  stats.modify(stitr2, _self, [&](auto& item) {
+  stats2.modify(stitr2, _self, [&](auto& item) {
       item.num_acks = oldacks + 1;
   });
 
@@ -113,7 +120,7 @@ ACTION gratitude::testacks() {
 
   while (actr != acks.end()) {
     _calc_acks(actr->donor);
-    actr++;
+    actr = acks.erase(actr);
   }
 }
 
@@ -122,12 +129,9 @@ ACTION gratitude::calcacks(uint64_t start) {
 
   auto actr = start == 0 ? acks.begin() : acks.find(start);
 
-  _calc_acks(actr->donor);
-
-  actr++;
-
   // Recursion call
   if (actr != acks.end()) {
+    _calc_acks(actr->donor);
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
@@ -139,59 +143,79 @@ ACTION gratitude::calcacks(uint64_t start) {
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(actr->donor.value, _self);
+    actr++;
   } else {
-    // Cleanup on last exec
     auto actr2 = acks.begin();
     while (actr2 != acks.end()) {
       actr2 = acks.erase(actr2);
     }
 
-    // Start payout
+    // Starts recursive payout
+    auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
+    float potkeep = config_get(gratz_potkp) / (float)100;
+    uint64_t usable_amount = contract_balance.amount - (contract_balance.amount * potkeep);
+
     action(
       permission_level{get_self(), "active"_n},
       get_self(),
       "payround"_n,
-      std::make_tuple()
+      std::make_tuple((uint64_t)0, usable_amount)
     ).send();
-
   }
 }
 
-// Called after all Acks are calculated
-ACTION gratitude::payround() {
+// Recursively pay accounts
+ACTION gratitude::payround(uint64_t start, uint64_t usable_bal) {
   require_auth(get_self());
 
-  auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
-  uint64_t tot_accounts = get_size("balances.sz"_n);
   uint64_t volume = get_current_volume();
-  float potkeep = config_get(gratz_potkp) / (float)100;
-  uint64_t usable_amount = contract_balance.amount - (contract_balance.amount * potkeep);
+  auto bitr = start == 0 ? balances.begin() : balances.find(start);
+  uint64_t current = 0;
+  auto chunksize = config_get("batchsize"_n);
 
-  auto bitr = balances.begin();
-  while (bitr != balances.end()) {
-    uint64_t my_received = bitr->received.amount;
-    // reset gratitude for account
-    init_balances(bitr->account);
-    float split_factor = my_received / (float)volume;
-    uint64_t payout = usable_amount * split_factor;
-    // Pay out SEEDS in store
-    if (payout > 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
-    bitr++;
+  if (bitr != balances.end()) 
+    if (current < chunksize) {
+      eosio::print("PAYROUND1\n");
+      uint64_t my_received = bitr->received.amount;
+      // reset gratitude for account
+      init_balances(bitr->account);
+      float split_factor = my_received / (float)volume;
+      uint64_t payout = usable_bal * split_factor;
+      // Pay out SEEDS in store if value >= 1.0 SEEDS
+      if (payout >= 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
+      bitr++;
+      current++;
+    } else {
+      eosio::print("PAYROUND2\n");
+      action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "payround"_n,
+        std::make_tuple(bitr->account.value, usable_bal)
+      );
+
+      transaction tx;
+      tx.actions.emplace_back(next_execution);
+      tx.delay_sec = 1;
+      tx.send(bitr->account.value, _self);
+    }
+  // After all payouts are complete
+  else {
+    eosio::print("PAYROUND3\n");
+    // adds a new round
+    auto stitr = stats2.rbegin();
+    auto cur_round_id = stitr->round_id;
+    stats2.emplace(_self, [&](auto& item) {
+      item.round_id = ++cur_round_id;
+      item.num_transfers = 0;
+      item.num_acks = 0;
+      item.volume = asset(0, gratitude_symbol);
+      item.round_pot = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
+    });
   }
 
-  // adds a new round
-  auto stitr = stats.rbegin();
-  auto cur_round_id = stitr->round_id;
-  stats.emplace(_self, [&](auto& item) {
-    item.round_id = ++cur_round_id;
-    item.num_transfers = 0;
-    item.num_acks = 0;
-    item.volume = asset(0, gratitude_symbol);
-    item.round_pot = asset(0, seeds_symbol);
-  });
-
-
 }
+
 
 ACTION gratitude::newround() {
   require_auth(get_self());
@@ -216,12 +240,12 @@ ACTION gratitude::deposit (name from, name to, asset quantity, string memo) {
     utils::check_asset(quantity);
 
     // Updates status
-    auto stitr = stats.rbegin();
+    auto stitr = stats2.rbegin();
     auto round_id = stitr->round_id;
 
-    auto stitr2 = stats.find(round_id);
+    auto stitr2 = stats2.find(round_id);
     auto oldpot = stitr2->round_pot.amount;
-    stats.modify(stitr2, _self, [&](auto& item) {
+    stats2.modify(stitr2, _self, [&](auto& item) {
         item.round_pot = asset(oldpot + quantity.amount, seeds_symbol);
     });
 
@@ -241,6 +265,7 @@ void gratitude::check_user (name account) {
 }
 
 void gratitude::_calc_acks (name donor) {
+  eosio::print("DEBUG2 ", eosio::name(donor), "\n");
   auto bitr = balances.find(donor.value);
   uint64_t remaining = bitr->remaining.amount;
 
@@ -270,19 +295,19 @@ void gratitude::_calc_acks (name donor) {
 }
 
 uint64_t gratitude::get_current_volume() {
-  auto stitr = stats.rbegin();
+  auto stitr = stats2.rbegin();
   // Should always work because reset always creates first round
   return stitr->volume.amount;
 }
 
 void gratitude::update_stats(name from, name to, asset quantity) {
-  auto stitr = stats.rbegin();
+  auto stitr = stats2.rbegin();
   auto round_id = stitr->round_id;
 
-  auto stitr2 = stats.find(round_id);
+  auto stitr2 = stats2.find(round_id);
   auto oldvolume = stitr2->volume.amount;
   auto oldtransfers = stitr2->num_transfers;
-  stats.modify(stitr2, _self, [&](auto& item) {
+  stats2.modify(stitr2, _self, [&](auto& item) {
       item.volume = asset(oldvolume + quantity.amount, gratitude_symbol);
       item.num_transfers = oldtransfers + 1;
   });

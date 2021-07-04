@@ -1,5 +1,5 @@
 const { describe } = require("riteway")
-const { eos, names, getTableRows, isLocal, initContracts, getBalance } = require("../scripts/helper")
+const { eos, names, getTableRows, isLocal, initContracts, getBalance, sleep } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 const { firstuser, seconduser, settings, gratitude, accounts, token, bank } = names
@@ -54,7 +54,7 @@ describe('gratitude general', async assert => {
     const statsTable = await getTableRows({
       code: gratitude,
       scope: gratitude,
-      table: 'stats',
+      table: 'stats2',
       json: true
     })
     if (statsTable.rows) {
@@ -132,6 +132,8 @@ describe('gratitude general', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  await contracts.settings.configure("batchsize", 1, { authorization: `${settings}@active` })
+
   const initialGratitude = await get_settings("gratz1.gen") / 10000; // in GRATZ
 
   console.log('add SEEDS users')
@@ -142,13 +144,15 @@ describe('gratitude general', async assert => {
   }
 
   const amount = 1000
+  const transferAmount = 10
+
   const contractBalanceBefore = await getBalance(gratitude) || 0
+  console.log('current contract bal: '+contractBalanceBefore)
   console.log('refill gratitude contract')
   await contracts.token.transfer(firstuser, gratitude, `${amount}.0000 SEEDS`, 'test', { authorization: `${firstuser}@active` })
-  checkRoundPot(`${amount}.0000 SEEDS`)
+  checkRoundPot(`${contractBalanceBefore+amount}.0000 SEEDS`)
 
   console.log('give gratitude')
-  const transferAmount = 10
   await contracts.gratitude.give(firstuser, seconduser, `${transferAmount}.0000 GRATZ`, '', { authorization: `${firstuser}@active` })
 
   checkRoundTransfers(1)
@@ -179,12 +183,13 @@ describe('gratitude general', async assert => {
   checkRemainingGratitude(seconduser, initialGratitude-transferPerAckAmount)
   checkReceivedGratitude(firstuser, transferPerAckAmount)
 
+  console.log('current contract bal: ' + await getBalance(gratitude))
   console.log('one more time.....')
   await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
-  console.log('refill gratitude contract')
-  await contracts.token.transfer(firstuser, gratitude, `${amount}.0000 SEEDS`, 'test', { authorization: `${firstuser}@active` })
+
   console.log('give gratitude')
   await contracts.gratitude.give(firstuser, seconduser, `${transferAmount}.0000 GRATZ`, '', { authorization: `${firstuser}@active` })
+
   console.log('acknowledge')
   await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
 
@@ -193,6 +198,8 @@ describe('gratitude general', async assert => {
   const firstBalanceBefore = await getBalance(firstuser)  
   const secondBalanceBefore = await getBalance(seconduser)  
   await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
+  await sleep(3000)
+
   const contractBalanceAfter = await getBalance(gratitude)
   const firstBalanceAfter = await getBalance(firstuser)
   const secondBalanceAfter = await getBalance(seconduser)

@@ -24,6 +24,7 @@ CONTRACT gratitude : public contract {
         balances(receiver, receiver.value),
         acks(receiver, receiver.value),
         stats(receiver, receiver.value),
+        stats2(receiver, receiver.value),
         sizes(receiver, receiver.value),
         users(contracts::accounts, contracts::accounts.value),
         config(contracts::settings, contracts::settings.value)
@@ -41,7 +42,7 @@ CONTRACT gratitude : public contract {
     ACTION newround();
 
     // Called after all acks are calculated
-    ACTION payround();
+    ACTION payround(uint64_t start, uint64_t usable_bal);
 
     // Recursivelly calculate acks
     ACTION calcacks(uint64_t start);
@@ -108,6 +109,14 @@ CONTRACT gratitude : public contract {
     TABLE stats_table {
       uint64_t round_id;
       uint64_t num_transfers;
+      asset volume;
+
+      uint64_t primary_key() const { return round_id; }
+    };
+
+    TABLE stats_table_v2 {
+      uint64_t round_id;
+      uint64_t num_transfers;
       uint64_t num_acks;
       asset round_pot;
       asset volume;
@@ -124,9 +133,12 @@ CONTRACT gratitude : public contract {
 
     typedef eosio::multi_index<"stats"_n, stats_table> stats_tables;
 
+    typedef eosio::multi_index<"stats2"_n, stats_table_v2> stats_tables_v2;
+
     balance_tables balances;
     acks_tables acks;
     stats_tables stats;
+    stats_tables_v2 stats2;
 
     // External tables
     user_tables users;
