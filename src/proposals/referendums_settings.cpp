@@ -7,10 +7,10 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  referendums::referendum_tables referendums_t(contract_name, contract_name.value);
-  referendums::referendum_auxiliary_tables refaux_t(contract_name, contract_name.value);
+  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
+  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
-  uint64_t referendum_id = referendums_t.available_primary_key();
+  uint64_t proposal_id = proposals_t.available_primary_key();
 
   uint64_t min_test_cycles = this->m_contract.config_get("refmintest"_n);
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
@@ -20,8 +20,8 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
   uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
   check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
 
-  referendums_t.emplace(contract_name, [&](auto & item) {
-    item.referendum_id = referendum_id;
+  proposals_t.emplace(contract_name, [&](auto & item) {
+    item.proposal_id = proposal_id;
     item.favour = 0;
     item.against = 0;
     item.staked = asset(0, utils::seeds_symbol);
@@ -32,20 +32,15 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
     item.image = std::get<string>(args["image"]);
     item.url = std::get<string>(args["url"]);
     item.created_at = current_time_point();
-    item.status = ReferendumsCommon::status_open;
-    item.stage = ReferendumsCommon::stage_staged;
-    item.type = ReferendumsCommon::type_settings;
+    item.status = ProposalsCommon::status_open;
+    item.stage = ProposalsCommon::stage_staged;
+    item.type = ProposalsCommon::type_ref_setting;
     item.last_ran_cycle = 0;
     item.age = 0;
-    item.cycles_per_status = {
-      uint64_t(1), // voting
-      test_cycles,
-      eval_cycles
-    };
   });
 
-  refaux_t.emplace(contract_name, [&](auto & item){
-    item.referendum_id = referendum_id;
+  propaux_t.emplace(contract_name, [&](auto & item){
+    item.proposal_id = proposal_id;
     item.special_attributes.insert(std::make_pair("setting_name", setting_name));
     item.special_attributes.insert(std::make_pair("is_float", s_info->is_float));
     if (s_info->is_float) {
@@ -55,6 +50,7 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
       item.special_attributes.insert(std::make_pair("new_value", std::get<uint64_t>(args["new_value"])));
       item.special_attributes.insert(std::make_pair("previous_value", s_info->previous_value_uint));
     }
+    item.special_attributes.insert(std::make_pair("cycles_per_status", "1," + std::to_string(test_cycles) + "," + std::to_string(eval_cycles)));
   });
 
 }
@@ -63,18 +59,18 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
 
   name contract_name = this->m_contract.get_self();
   name setting_name = std::get<name>(args["setting_name"]);
-  uint64_t referendum_id = std::get<uint64_t>(args["referendum_id"]);
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  referendums::referendum_tables referendums_t(contract_name, contract_name.value);
-  referendums::referendum_auxiliary_tables refaux_t(contract_name, contract_name.value);
+  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
+  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
-  auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
-  auto raitr = refaux_t.require_find(referendum_id, "refaux entry not found");
+  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
+  auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
 
-  check(ritr->stage == ReferendumsCommon::stage_staged, "can not update referendum, it is not staged");
-  check(ritr->type == ReferendumsCommon::type_settings, "referendum has to be of type settings");
+  check(ritr->stage == ProposalsCommon::stage_staged, "can not update referendum, it is not staged");
+  check(ritr->type == ProposalsCommon::type_ref_setting, "referendum has to be of type settings");
 
   uint64_t min_test_cycles = this->m_contract.config_get("refmintest"_n);
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
@@ -84,20 +80,15 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
   uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
   check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
 
-  referendums_t.modify(ritr, contract_name, [&](auto & item) {
+  proposals_t.modify(ritr, contract_name, [&](auto & item) {
     item.title = std::get<string>(args["title"]);
     item.summary = std::get<string>(args["summary"]);
     item.description = std::get<string>(args["description"]);
     item.image = std::get<string>(args["image"]);
     item.url = std::get<string>(args["url"]);
-    item.cycles_per_status = {
-      uint64_t(1), // voting
-      test_cycles,
-      eval_cycles
-    };
   });
 
-  refaux_t.modify(raitr, contract_name, [&](auto & item){
+  propaux_t.modify(raitr, contract_name, [&](auto & item){
     item.special_attributes.at("setting_name") = setting_name;
     item.special_attributes.at("is_float") = s_info->is_float;
     if (s_info->is_float) {
@@ -107,6 +98,7 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
       item.special_attributes.at("new_value") = std::get<uint64_t>(args["new_value"]);
       item.special_attributes.at("previous_value") = s_info->previous_value_uint;
     }
+    item.special_attributes.at("cycles_per_status") = "1," + std::to_string(test_cycles) + "," + std::to_string(eval_cycles);
   });
 
 }
@@ -114,35 +106,35 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
 void ReferendumSettings::cancel (std::map<std::string, VariantValue> & args) {
 
   name contract_name = this->m_contract.get_self();
-  uint64_t referendum_id = std::get<uint64_t>(args["referendum_id"]);
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
-  referendums::referendum_tables referendums_t(contract_name, contract_name.value);
-  referendums::referendum_auxiliary_tables refaux_t(contract_name, contract_name.value);
+  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
+  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
-  auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
-  auto raitr = refaux_t.require_find(referendum_id, "refaux entry not found");
+  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
+  auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
 
-  check(ritr->stage == ReferendumsCommon::stage_staged, "can not cancel referendum, it is not staged");
-  check(ritr->type == ReferendumsCommon::type_settings, "referendum has to be of type settings");
+  check(ritr->stage == ProposalsCommon::stage_staged, "can not cancel referendum, it is not staged");
+  check(ritr->type == ProposalsCommon::type_ref_setting, "referendum has to be of type settings");
 
-  referendums_t.erase(ritr);
-  refaux_t.erase(raitr);
+  proposals_t.erase(ritr);
+  propaux_t.erase(raitr);
 
 }
 
 void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
   name contract_name = this->m_contract.get_self();
-  uint64_t referendum_id = std::get<uint64_t>(args["referendum_id"]);
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   referendums::cycle_tables cycle_t(contract_name, contract_name.value);
   referendums::cycle_table c_t = cycle_t.get();
 
-  referendums::referendum_tables referendums_t(contract_name, contract_name.value);
-  referendums::referendum_auxiliary_tables refaux_t(contract_name, contract_name.value);
+  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
+  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
-  auto ritr = referendums_t.require_find(referendum_id, "referendum not found");
-  auto raitr = refaux_t.require_find(referendum_id, "refaux entry not found");
+  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
+  auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
 
   name setting_name = std::get<name>(raitr->special_attributes.at("setting_name"));
   bool is_float = std::get<bool>(raitr->special_attributes.at("is_float"));
@@ -150,15 +142,15 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
   name current_stage = ritr->stage;
   name current_status = ritr->status;
 
-  if (current_stage == ReferendumsCommon::stage_active) {
+  if (current_stage == ProposalsCommon::stage_active) {
     
     uint64_t required_unity = get_required_unity(setting_name, is_float);
     bool unity_passed = utils::is_valid_majority(ritr->favour, ritr->against, required_unity);
 
     bool quorum_passed = true;
-    if (current_status == ReferendumsCommon::status_voting) {
-      referendums::size_tables sizes_votes_t(contract_name, ReferendumsCommon::vote_scope.value);
-      auto total_voters_itr = sizes_votes_t.find(referendum_id);
+    if (current_status == ProposalsCommon::status_voting) {
+      referendums::size_tables sizes_votes_t(contract_name, ProposalsCommon::vote_scope.value);
+      auto total_voters_itr = sizes_votes_t.find(proposal_id);
 
       // referendums::size_tables sizes_t(contracts::voice, contracts::voice.value);
       referendums::size_tables sizes_t(contracts::proposals, contracts::proposals.value);
@@ -179,9 +171,10 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
       }
 
       uint64_t new_age = ritr->age + 1;
-      name next_status = get_next_status(ritr->cycles_per_status, new_age);
+      string cycles_per_status = std::get<string>(raitr->special_attributes.at("cycles_per_status"));
+      name next_status = get_next_status(cycles_per_status, new_age);
       
-      if (next_status == ReferendumsCommon::status_evaluate && current_status == ReferendumsCommon::status_test) {
+      if (next_status == ProposalsCommon::status_evaluate && current_status == ProposalsCommon::status_test) {
         if (is_float) {
           change_setting(setting_name, std::get<double>(raitr->special_attributes.at("new_value")), is_float);
         }
@@ -190,17 +183,17 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
         }
       }
 
-      referendums_t.modify(ritr, contract_name, [&](auto & item){
+      proposals_t.modify(ritr, contract_name, [&](auto & item){
         item.age = new_age;
         item.last_ran_cycle = c_t.propcycle;
         item.status = next_status;
-        if (next_status == ReferendumsCommon::status_passed) {
-          item.stage = ReferendumsCommon::stage_done;
+        if (next_status == ProposalsCommon::status_passed) {
+          item.stage = ProposalsCommon::stage_done;
         }
       });
 
     } else {
-      if (current_status == ReferendumsCommon::status_voting) {
+      if (current_status == ProposalsCommon::status_voting) {
         this->m_contract.send_inline_action(
           permission_level(contract_name, "active"_n),
           contracts::token,
@@ -209,7 +202,7 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
         );
       }
 
-      if (current_status == ReferendumsCommon::status_evaluate) {
+      if (current_status == ProposalsCommon::status_evaluate) {
         if (is_float) {
           change_setting(setting_name, std::get<double>(raitr->special_attributes.at("previous_value")), is_float);
         }
@@ -218,21 +211,21 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
         }
       }
 
-      referendums_t.modify(ritr, contract_name, [&](auto & item){
-        item.stage = ReferendumsCommon::stage_done;
-        item.status = ReferendumsCommon::status_rejected;
+      proposals_t.modify(ritr, contract_name, [&](auto & item){
+        item.stage = ProposalsCommon::stage_done;
+        item.status = ProposalsCommon::status_rejected;
         item.last_ran_cycle = c_t.propcycle;
       });
     }
 
-  } else if (ritr->stage == ReferendumsCommon::stage_staged) {
+  } else if (ritr->stage == ProposalsCommon::stage_staged) {
 
     uint64_t price_amount = this->m_contract.config_get("refsnewprice"_n);
     if (ritr->staked.amount < price_amount) { return; }
 
-    referendums_t.modify(ritr, contract_name, [&](auto & item){
-      item.stage = ReferendumsCommon::stage_active;
-      item.status = ReferendumsCommon::status_voting;
+    proposals_t.modify(ritr, contract_name, [&](auto & item){
+      item.stage = ProposalsCommon::stage_active;
+      item.status = ProposalsCommon::status_voting;
       item.last_ran_cycle = c_t.propcycle;
     });
 
@@ -240,6 +233,17 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
 }
 
+name ReferendumSettings::get_scope () {
+  return this->m_contract.referendums_scope;
+}
+
+name ReferendumSettings::get_fund_type () {
+  return ProposalsCommon::fund_type_none;
+}
+
+void ReferendumSettings::check_can_vote (const name & status, const name & stage) {
+  check(status == ProposalsCommon::status_voting, "can not vote, proposal is not in voting status");
+}
 
 uint64_t ReferendumSettings::get_required_unity (const name & setting, const bool & is_float) {
   name impact;
@@ -295,24 +299,55 @@ uint64_t ReferendumSettings::get_required_quorum (const name & setting, const bo
   }
 }
 
-name ReferendumSettings::get_next_status (const std::vector<uint64_t> & cycles_per_status, const uint64_t & age) {
-
-  name valid_statuses[3] = { 
-    ReferendumsCommon::status_voting, 
-    ReferendumsCommon::status_test, 
-    ReferendumsCommon::status_evaluate 
-  };
+name ReferendumSettings::get_next_status (const string & cycles_per_status_string, const uint64_t & age) {
 
   uint64_t accumulated = 0;
 
-  for (int i = 0; i < cycles_per_status.size(); i++) {
-    accumulated += cycles_per_status[i];
-    if (age < accumulated) {
-      return valid_statuses[i];
+  print("..................................................\n");
+  print("..................................................\n");
+  print("..................................................\n");
+  print("\ncycles_per_status_string: ", cycles_per_status_string, "\n");
+  print("age: ", age, "\n");
+
+  name valid_statuses[3] = { 
+    ProposalsCommon::status_voting, 
+    ProposalsCommon::status_test, 
+    ProposalsCommon::status_evaluate 
+  };
+
+  string val("");
+  int j = 0;
+
+  for (int i = 0; i < cycles_per_status_string.size(); i++) {
+    if (cycles_per_status_string[i] == ',') {
+
+      print("val: ", val, "\n");
+
+      accumulated += uint64_t(std::stoi(val));
+
+      print("accumulated: ", std::to_string(accumulated), "\n");
+
+      if (age < accumulated) {
+        return valid_statuses[j];
+      }
+      j++;
+      val = "";
+    }
+    else {
+      val += cycles_per_status_string[i];
     }
   }
-  
-  return ReferendumsCommon::status_passed;
+
+  print("final val: ", val, "\n");
+
+  accumulated += uint64_t(std::stoi(val));
+  print("final accumulated: ", std::to_string(accumulated), "\n");
+
+  if (age < accumulated) {
+    return valid_statuses[j];
+  }
+
+  return ProposalsCommon::status_passed;
 
 }
 

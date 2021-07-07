@@ -3,21 +3,21 @@
 #include "referendum_settings.hpp"
 
 
-class ReferendumFactory {
+class ProposalsFactory {
 
   public:
 
-    static Referendum * Factory(referendums & _contract, const name & type) {
+    static Proposal * Factory(referendums & _contract, const name & type) {
       switch (type.value)
       {
-      case ReferendumsCommon::type_settings.value:
+      case ProposalsCommon::type_ref_setting.value:
         return new ReferendumSettings(_contract);
       
       default:
         break;
       }
 
-      check(false, "Unknown referendum type " + type.to_string());
+      check(false, "Unknown proposal type " + type.to_string());
       return nullptr;
     }
 

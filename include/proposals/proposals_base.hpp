@@ -1,11 +1,10 @@
 #pragma once
 
 #include <seeds.referendums.hpp>
-#include "tables/referendums_table.hpp"
 
-namespace ReferendumsCommon {
-  constexpr name type_settings = name("r.setting");
-  constexpr name type_code = name("r.code");
+namespace ProposalsCommon {
+  constexpr name type_ref_setting = name("r.setting");
+  constexpr name type_ref_code = name("r.code");
   
   constexpr name status_open = name("open");
   constexpr name status_voting = name("voting");
@@ -23,14 +22,16 @@ namespace ReferendumsCommon {
   constexpr name neutral = name("neutral");
 
   constexpr name vote_scope = name("votes");
+
+  constexpr name fund_type_none = name("none");
 }
 
-class Referendum {
+class Proposal {
 
   public:
 
-    Referendum(referendums & _contract) : m_contract(_contract) {};
-    virtual ~Referendum(){};
+    Proposal(referendums & _contract) : m_contract(_contract) {};
+    virtual ~Proposal(){};
 
     virtual void create(std::map<std::string, VariantValue> & args) = 0;
 
@@ -39,6 +40,12 @@ class Referendum {
     virtual void cancel(std::map<std::string, VariantValue> & args) = 0;
 
     virtual void evaluate(std::map<std::string, VariantValue> & args) = 0;
+
+    virtual name get_scope() = 0;
+
+    virtual name get_fund_type() = 0;
+
+    virtual void check_can_vote(const name & status, const name & stage) = 0;
 
     referendums & m_contract;
 

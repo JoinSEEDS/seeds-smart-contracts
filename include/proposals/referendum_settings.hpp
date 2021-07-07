@@ -1,13 +1,13 @@
 #pragma once
 
-#include "referendum_base.hpp"
+#include "proposals_base.hpp"
 
 
-class ReferendumSettings : public Referendum {
+class ReferendumSettings : public Proposal {
 
   public:
 
-    using Referendum::Referendum;
+    using Proposal::Proposal;
 
     void create(std::map<std::string, VariantValue> & args) override;
 
@@ -16,6 +16,12 @@ class ReferendumSettings : public Referendum {
     void cancel(std::map<std::string, VariantValue> & args) override;
 
     void evaluate(std::map<std::string, VariantValue> & args) override;
+
+    name get_scope() override;
+
+    name get_fund_type() override;
+
+    void check_can_vote(const name & status, const name & stage) override;
 
     typedef struct sttg_info 
     {
@@ -35,7 +41,7 @@ class ReferendumSettings : public Referendum {
 
     uint64_t get_required_quorum(const name & setting, const bool & is_float);
 
-    name get_next_status(const std::vector<uint64_t> & cycles_per_status, const uint64_t & age);
+    name get_next_status(const string & cycles_per_status_string, const uint64_t & age);
 
     SettingInfo * get_setting_info (const name & setting_name);
 

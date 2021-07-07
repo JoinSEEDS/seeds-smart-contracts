@@ -87,7 +87,7 @@ describe('Referendums Settings', async assert => {
     const referendumsTable = await getTableRows({
       code: referendums,
       scope: referendums,
-      table: 'referendums',
+      table: 'proposals',
       json: true
     })
     console.log(referendumsTable.rows)
@@ -97,7 +97,7 @@ describe('Referendums Settings', async assert => {
       should,
       actual: referendumsTable.rows.map(r => {
         return {
-          referendum_id: r.referendum_id,
+          proposal_id: r.proposal_id,
           favour: r.favour,
           against: r.against,
           staked: r.staked,
@@ -112,7 +112,7 @@ describe('Referendums Settings', async assert => {
     const refauxTable = await getTableRows({
       code: referendums,
       scope: referendums,
-      table: 'refaux',
+      table: 'propaux',
       json: true
     })
     console.log(formatSpecialAttributes(refauxTable.rows))
@@ -122,11 +122,12 @@ describe('Referendums Settings', async assert => {
       should,
       actual: formatSpecialAttributes(refauxTable.rows).map(r => {
         return {
-          referendum_id: r.referendum_id,
+          proposal_id: r.proposal_id,
           is_float: r.is_float,
           new_value: r.is_float ? parseFloat(r.new_value) : parseInt(r.new_value),
           previous_value: r.is_float ? parseFloat(r.previous_value) : parseInt(r.previous_value),
-          setting_name: r.setting_name
+          setting_name: r.setting_name,
+          cycles_per_status: r.cycles_per_status
         }
       }),
       expected: expectedAuxs
@@ -141,6 +142,16 @@ describe('Referendums Settings', async assert => {
 
     for (let i = 0; i < number; i++) {
       await vote(users[i], referendumId, 2, { authorization: `${users[i]}@active` })
+    }
+
+  }
+
+  const revertVote = async (referendumId, number=null) => {
+
+    number = number == null ? users.length : number
+
+    for (let i = 0; i < number; i++) {
+      await contracts.referendums.revertvote(users[i], referendumId, { authorization: `${users[i]}@active` })
     }
 
   }
@@ -174,6 +185,7 @@ describe('Referendums Settings', async assert => {
   console.log('join users')
   await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
   await Promise.all(users.map(user => contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })))
+  await Promise.all(users.map(user => contracts.referendums.testsetvoice(user, 99, { authorization: `${referendums}@active` })))
 
   console.log('create referendum')
   await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
@@ -182,7 +194,7 @@ describe('Referendums Settings', async assert => {
 
   console.log('update referendum')
   await contracts.referendums.update([
-    { key: 'referendum_id', value: ['uint64', 0] },
+    { key: 'proposal_id', value: ['uint64', 0] },
     { key: 'setting_name', value: ['name', testSetting] },
     { key: 'title', value: ['string', 'title updated'] },
     { key: 'summary', value: ['string', 'summary updated'] },
@@ -195,12 +207,12 @@ describe('Referendums Settings', async assert => {
   ], { authorization: `${firstuser}@active` })
 
   console.log('delete referendum')
-  await contracts.referendums.cancel([{ key: 'referendum_id', value: ['uint64', 1] }], { authorization: `${firstuser}@active` })
+  await contracts.referendums.cancel([{ key: 'proposal_id', value: ['uint64', 1] }], { authorization: `${firstuser}@active` })
 
   const refTables = await getTableRows({
     code: referendums,
     scope: referendums,
-    table: 'referendums',
+    table: 'proposals',
     json: true,
     limit: 200
   })
@@ -214,7 +226,7 @@ describe('Referendums Settings', async assert => {
     }),
     expected: [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         favour: 0,
         against: 0,
         staked: '0.0000 SEEDS',
@@ -228,11 +240,10 @@ describe('Referendums Settings', async assert => {
         stage: 'staged',
         type: 'r.setting',
         last_ran_cycle: 0,
-        age: 0,
-        cycles_per_status: [ 1, 1, 4 ]
+        age: 0
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         favour: 0,
         against: 0,
         staked: '0.0000 SEEDS',
@@ -246,8 +257,7 @@ describe('Referendums Settings', async assert => {
         stage: 'staged',
         type: 'r.setting',
         last_ran_cycle: 0,
-        age: 0,
-        cycles_per_status: [ 1, 1, 3 ]
+        age: 0
       }
     ]
   })
@@ -275,7 +285,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -284,7 +294,7 @@ describe('Referendums Settings', async assert => {
         age: 1,
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         favour: 0,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -294,18 +304,20 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
-        setting_name: testSetting
+        setting_name: testSetting,
+        cycles_per_status: '1,1,4'
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat
+        setting_name: testSettingFloat,
+        cycles_per_status: '1,1,3'
       }
     ]
   )
@@ -328,7 +340,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -337,7 +349,7 @@ describe('Referendums Settings', async assert => {
         age: 2,
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -347,18 +359,20 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
-        setting_name: testSetting
+        setting_name: testSetting,
+        cycles_per_status: '1,1,4'
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat
+        setting_name: testSettingFloat,
+        cycles_per_status: '1,1,3'
       }
     ]
   )
@@ -380,7 +394,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -389,7 +403,7 @@ describe('Referendums Settings', async assert => {
         age: 5,
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -399,18 +413,20 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
-        setting_name: testSetting
+        setting_name: testSetting,
+        cycles_per_status: '1,1,4'
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat
+        setting_name: testSettingFloat,
+        cycles_per_status: '1,1,3'
       }
     ]
   )
@@ -430,7 +446,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -439,7 +455,7 @@ describe('Referendums Settings', async assert => {
         age: 6,
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -449,18 +465,20 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        referendum_id: 0,
+        proposal_id: 0,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
-        setting_name: testSetting
+        setting_name: testSetting,
+        cycles_per_status: '1,1,4'
       },
       {
-        referendum_id: 2,
+        proposal_id: 2,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat
+        setting_name: testSettingFloat,
+        cycles_per_status: '1,1,3'
       }
     ]
   )
@@ -493,7 +511,7 @@ describe('Referendums Settings', async assert => {
   await sleep(2000)
 
   console.log('change trust for referendum 1')
-  await voteReferendum(4, 3, false)
+  await revertVote(4, 3)
 
   console.log('running onperiod')
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
@@ -520,8 +538,8 @@ describe('Referendums Settings', async assert => {
   })
 
   console.log('change trust for referendum 3 and 6')
-  await voteReferendum(3, 3, false)
-  await voteReferendum(6, 3, false)
+  await revertVote(3, 3)
+  await revertVote(6, 3)
 
   console.log('running onperiod')
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
@@ -530,7 +548,7 @@ describe('Referendums Settings', async assert => {
   const refTables2 = await getTableRows({
     code: referendums,
     scope: referendums,
-    table: 'referendums',
+    table: 'proposals',
     json: true,
     limit: 200
   })
@@ -538,16 +556,16 @@ describe('Referendums Settings', async assert => {
   assert({
     given: 'referendums failing',
     should: 'have the correct status',
-    actual: refTables2.rows.filter(r => r.referendum_id > 2).map(r => {
+    actual: refTables2.rows.filter(r => r.proposal_id > 2).map(r => {
       return {
-        referendum_id: r.referendum_id,
+        proposal_id: r.proposal_id,
         status: r.status,
         stage: r.stage
       }
     }),
     expected: Array.from(Array(4).keys()).map(key => {
       return {
-        referendum_id: key + 3,
+        proposal_id: key + 3,
         status: 'rejected',
         stage: 'done'
       }
