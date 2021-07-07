@@ -98,7 +98,8 @@ describe('Proposals', async assert => {
   const numberOfProposalsAfterCancel = await numberOfProposals()
 
   console.log('create alliance proposal')
-  await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
+  const allianceSeedsAmount = 12
+  await contracts.proposals.createx(fourthuser, fourthuser, allianceSeedsAmount+'.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
@@ -246,6 +247,8 @@ describe('Proposals', async assert => {
     json: true,
   })
 
+  const alliancesBalanceBefore = await getBalance(alliancesbank)
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
@@ -290,6 +293,7 @@ describe('Proposals', async assert => {
     await getBalance(campaignbank),
   ]
 
+  const alliancesBalanceAfter = await getBalance(alliancesbank)
 
   const escrowLocks = await eos.getTableRows({
     code: escrow,
@@ -558,6 +562,13 @@ describe('Proposals', async assert => {
       "trigger_source": "dao.hypha",
       "notes": "proposal id: 4",
     }
+  })
+
+  assert({
+    given: 'alliance proposal passed allies - balances',
+    should: 'alliance balance reduced by '+allianceSeedsAmount,
+    actual: alliancesBalanceBefore - alliancesBalanceAfter,
+    expected: allianceSeedsAmount
   })
 
   delete propTableAfterFinish.rows[0].creation_date
@@ -847,7 +858,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote1 = false
   try {
-    await contracts.proposals.against(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+    await contracts.proposals.revertvote(thirduser, 2, { authorization: `${thirduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that did not vote, tries to vote in evaluate phase (fails)')
@@ -855,7 +866,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote2 = false
   try {
-    await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
@@ -863,15 +874,15 @@ describe('Evaluation phase', async assert => {
 
   let changeVote3 = false
   try {
-    await contracts.proposals.against(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
   }
 
-  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
-  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(thirduser, 1, 8, { authorization: `${thirduser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+  await contracts.proposals.revertvote(thirduser, 1, { authorization: `${thirduser}@active` })
 
   const repsBefore = await eos.getTableRows({
     code: accounts,
@@ -2041,7 +2052,7 @@ describe('Voice scope', async assert => {
 
 })
 
-describe('delegate trust', async assert => {
+describe.only('delegate trust', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -2167,8 +2178,26 @@ describe('delegate trust', async assert => {
   }
 
   console.log('vote for campaigns')
+  const campBeforeDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campBeforeDelegateVote " + JSON.stringify(campBeforeDelegateVote,null,2))
+
   await contracts.proposals.favour(firstuser, 1, 5, { authorization: `${firstuser}@active` })
   await sleep(5000)
+
+  const campAfterDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateVote " + JSON.stringify(campAfterDelegateVote,null,2))
 
   console.log('vote for alliances')
   await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
@@ -2202,9 +2231,33 @@ describe('delegate trust', async assert => {
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
   
+  const votesBeforeDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
   console.log('change opinion')
-  await contracts.proposals.against(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+
   await sleep(3000)
+
+  const campAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+  
+  const votesAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateRevert " + JSON.stringify(campAfterDelegateRevert,null,2))
 
   const voicesAfterOnperiod = await getVoices()
 
@@ -2290,33 +2343,98 @@ describe('delegate trust', async assert => {
   })
 
   assert({
-    given: 'trust delegated and opinion changed',
-    should: 'decrease the voice of delegators',
-    actual: voicesAfterOnperiod,
-    expected: {
-      campaigns: [
-        { account: firstuser, balance: 10 },
-        { account: seconduser, balance: 5 },
-        { account: thirduser, balance: 25 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ],
-      alliances: [
-        { account: firstuser, balance: 20 },
-        { account: seconduser, balance: 10 },
-        { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ],
-      hypha: [
-        { account: firstuser, balance:20 },
-        { account: seconduser, balance: 10 },
-        { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ]
+    given: 'vote table after delegatee has voted',
+    should: 'have delegate votes in it',
+    actual: votesBeforeDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
     }
+  ]
   })
+
+  assert({
+    given: 'vote table after delegatee has reverted their vote, but seedsuserxxx has canceled their delegation',
+    should: 'delegate votes are now against, except seedsuserxxx',
+    actual: votesAfterDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
+    }
+  ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate vote',
+    should: 'have all delegates voices counted',
+    actual: [
+      campAfterDelegateVote.rows[0].total,
+      campAfterDelegateVote.rows[0].favour,
+      campAfterDelegateVote.rows[0].against,
+    ],
+    expected: [
+      27,
+      27,
+      0,
+    ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate reverse vote',
+    should: 'have all delegates voices reversed, except one with 8 votes',
+    actual: [
+      campAfterDelegateRevert.rows[0].total,
+      campAfterDelegateRevert.rows[0].favour,
+      campAfterDelegateRevert.rows[0].against,
+    ],
+    expected: [
+      27,
+      8,
+      19,
+    ]
+  })
+
+  assert({
+    given: 'total delegated voted before reverse trust',
+    should: 'have all delegates voices counted',
+    actual: delCampaigns.rows,
+    expected: []
+  })
+
 
   assert({
     given: 'trust canceled by delegatee',

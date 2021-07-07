@@ -458,12 +458,10 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
         if (is_alliance_type) { 
           payout_amount = pitr->quantity;
           send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-        }
-        if (is_milestone_type) {
+        } else if (is_milestone_type) {
           payout_amount = pitr->quantity;
           withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-        }
-        else {
+        } else if (is_campaign_type) {
           payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
           if (pitr->campaign_type == campaign_invite_type) {
             withdraw(get_self(), payout_amount, pitr->fund, "invites");
@@ -745,7 +743,6 @@ void proposals::updatevoice(uint64_t start) {
   uint64_t cutoff_date = active_cutoff_date();
 
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
-  voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
 
@@ -934,6 +931,8 @@ void proposals::create_aux (
   // For the time being, organizations are allowed to create alliance type proposals
   check_resident(creator, campaign_type == alliance_type );
   
+  check_values(title, summary, description, image, url);
+
   if (campaign_type != campaign_invite_type) {
     if (campaign_type == alliance_type || campaign_type == milestone_type) {
       pay_percentages = { 100 };
@@ -1110,11 +1109,83 @@ void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
   check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
 }
 
+void proposals::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "prop not found");
+
+  // make backup - only the first time
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.find(id);
+  if (bitr == bprops.end()) {
+    bprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = pitr->description;
+    });
+  } 
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+
+  auto fix_itr = fixprops.find(id);
+
+  if (fix_itr == fixprops.end()) {
+    fixprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = description;
+    });
+  } else {
+    fixprops.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void proposals::applyfixprop() {
+  require_auth(get_self());
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+  auto fitr = fixprops.begin();
+  while(fitr != fixprops.end()) {
+    print(" processing "+std::to_string(fitr->prop_id));
+    auto pitr = props.find(fitr->prop_id);
+    if (pitr != props.end()) {
+      print(" replace id "+std::to_string(fitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void proposals::backfixprop() {
+  require_auth(get_self());
+
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.begin();
+  while(bitr != bprops.end()) {
+    print(" b processing "+std::to_string(bitr->prop_id));
+    auto pitr = props.find(bitr->prop_id);
+    if (pitr != props.end()) {
+      print(" restore id "+std::to_string(bitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}
+
 void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
   auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
+  
+  check_values(title, summary, description, image, url);
+
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
   
@@ -1218,30 +1289,6 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-bool proposals::revert_vote (name voter, uint64_t id) {
-  auto pitr = props.find(id);
-  
-  check(pitr != props.end(), "Proposal not found");
-
-  votes_tables votes(get_self(), id);
-  auto voteitr = votes.find(voter.value);
-
-  if (voteitr != votes.end()) {
-    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
-    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-      proposal.total -= voteitr->amount;
-      proposal.favour -= voteitr->amount;
-    });
-
-    votes.erase(voteitr);
-    return true;
-  }
-
-  return false;
-}
-
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
@@ -1274,14 +1321,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     });
   }
 
-  name scope;
-  name fund_type = get_type(pitr -> fund);
-
-  if (fund_type == campaign_type) {
-    scope = get_self();
-  } else {
-    scope = fund_type;
-  }
+  name scope = get_scope(pitr -> fund);
 
   double percenetage_used = voice_change(voter, amount, true, scope);
   
@@ -1347,8 +1387,21 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
-  increase_voice_cast(amount, option, fund_type);
+  increase_voice_cast(amount, option, get_type(pitr -> fund));
 
+}
+
+name proposals::get_scope(name fund) {
+  name scope;
+  name fund_type = get_type(fund);
+
+  if (fund_type == campaign_type) {
+    scope = get_self();
+  } else {
+    scope = fund_type;
+  }
+
+  return scope;
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -1358,8 +1411,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
-  bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
+  vote_aux(voter, id, amount, distrust, true, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
@@ -1367,12 +1419,87 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
+void proposals::revertvote(name voter, uint64_t id) {
+  require_auth(voter);
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  check(voteitr != votes.end(), "Voter has not voted on this proposal, can't revert");
+
+  uint64_t amount = voteitr->amount;
+
+  check(voteitr->favour == true && amount > 0, "Only trust votes can be changed");
+
+  votes.modify(voteitr, _self, [&](auto& item) {
+    item.favour = false;
+  });
+
+  props.modify(pitr, _self, [&](auto& proposal) {
+    proposal.against += amount;
+    proposal.favour -= amount;
+  });
+
+  name scope = get_scope(pitr -> fund);
+  if (has_delegates(voter, scope)) {
+
+    action(
+      permission_level{get_self(), "active"_n},
+      get_self(), 
+      "mimicrevert"_n,
+      std::make_tuple(voter, (uint64_t)0, scope, id, (uint64_t)30)
+    ).send();
+
+  }
+
+}
+
+bool proposals::has_delegates(name voter, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto ditr = deltrusts_by_delegatee.find(voter.value);
+  return ditr != deltrusts_by_delegatee.end();
+}
+
+void proposals::revertvote_delegate(name voter, uint64_t id) {
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    uint64_t amount = voteitr->amount;
+
+    if (voteitr->favour == true && amount > 0) {
+      votes.modify(voteitr, _self, [&](auto& item) {
+        item.favour = false;
+       });
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+        proposal.against += amount;
+        proposal.favour -= amount;
+      });
+    }
+  }
+}
+
+
 void proposals::voteonbehalf(name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(get_self());
   bool is_new = true;
-  if (option == distrust) {
-    is_new = !(revert_vote(voter, id));
-  }
+  // if (option == distrust) {
+  //   is_new = !(revert_vote(voter, id));
+  // TODO not sure I think revert vote needs to somehow work for delegated votes too
+  // }
   vote_aux(voter, id, amount, option, is_new, true);
 }
 
@@ -1898,6 +2025,45 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
 
 }
 
+ACTION proposals::mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
+
+  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
+  
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+
+    revertvote_delegate(voter, proposal_id);
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicrevert"_n,
+      std::make_tuple(delegatee, ditr -> delegator.value, scope, proposal_id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
 ACTION proposals::undelegate (name delegator, name scope) {
   check_voice_scope(scope);
 
@@ -2200,4 +2366,27 @@ ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
 }
 
+void proposals::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
 
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}

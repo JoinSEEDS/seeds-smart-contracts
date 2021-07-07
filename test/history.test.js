@@ -97,6 +97,24 @@ describe('make a transaction entry', async assert => {
   const timestamp = txresult.timestamp
   delete txresult.timestamp
 
+
+  console.log('Delete ptrxs')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+  await contracts.history.testptrx(0, { authorization: `${history}@active` })
+  await contracts.history.testptrx(0, { authorization: `${history}@active` })
+
+  await contracts.history.cleanptrxs({ authorization: `${history}@active` })
+  await sleep(4000)
+
+  const ptrxTable = await getTableRows({
+    code: history,
+    scope: history,
+    table: 'ptrx',
+    json: true
+  })
+
+
   assert({
     given: 'transactions table',
     should: 'have transaction entry',
@@ -163,6 +181,13 @@ describe('make a transaction entry', async assert => {
         total_outgoing_to_rep_orgs: 0
       }
     ]
+  })
+
+  assert({
+    given: 'ptrx deleted',
+    should: 'only delete the previous transactions',
+    actual: ptrxTable.rows.length,
+    expected: 1
   })
 
 })
@@ -834,7 +859,6 @@ describe('individual transactions', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 
@@ -983,7 +1007,6 @@ describe('Transaction CBS', async assert => {
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
       1.23, 
-      keypair.public, 
       { authorization: `${users[index]}@active` })
   }
 
@@ -1009,6 +1032,8 @@ describe('Transaction CBS', async assert => {
     table: 'cbs',
     json: true
   })
+
+  await contracts.history.cleanptrxs({ authorization: `${history}@active` })
 
   assert({
     given: 'transactions made',

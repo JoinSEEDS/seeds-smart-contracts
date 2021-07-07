@@ -39,18 +39,27 @@ $(function() {
 <li><strong>accept</strong> / <a href="#accept">accept</a> <comment type="action" name="accept">Accepts an invitation invite using already existing account or creating new account, based on provided `invite_secret`.</comment></li>
 <li><strong>acceptexist</strong> / <a href="#acceptexist">acceptexist</a> <comment type="action" name="acceptexist">Accepts an invitation using existing account.</comment></li>
 <li><strong>acceptnew</strong> / <a href="#acceptnew">acceptnew</a> <comment type="action" name="acceptnew">Accepts an invitation creating a new account.</comment></li>
+<li><strong>addauthorized</strong> / <a href="#addauthorized">addauthorized</a> <comment type="action" name="addauthorized"></comment></li>
+<li><strong>campinvite</strong> / <a href="#campinvite">campinvite</a> <comment type="action" name="campinvite"></comment></li>
 <li><strong>cancel</strong> / <a href="#cancel">cancel</a> <comment type="action" name="cancel">Cancels an invitation based on `invite_hash`.</comment></li>
 <li><strong>cleanup</strong> / <a href="#cleanup">cleanup</a> <comment type="action" name="cleanup">Cleanup very old invites</comment></li>
-<li><strong>createbio</strong> / <a href="#createbio">createbio</a> <comment type="action" name="createbio">Creates a new bioregion.</comment></li>
+<li><strong>createcampg</strong> / <a href="#createcampg">createcampg</a> <comment type="action" name="createcampg"></comment></li>
+<li><strong>createregion</strong> / <a href="#createregion">createregion</a> <comment type="action" name="createregion"></comment></li>
 <li><strong>deposit</strong> / <a href="#deposit">deposit</a> <comment type="action" name="deposit">Deposit funds using another account as sponsor account</comment></li>
 <li><strong>invite</strong> / <a href="#invite">invite</a> <comment type="action" name="invite">Creates an invitation, specifying the `sponsor`, `transfer_quantity`, `sow_quantity`(planted amount) and the unique `invite_hash`</comment></li>
 <li><strong>invitefor</strong> / <a href="#invitefor">invitefor</a> <comment type="action" name="invitefor">Invite in the name of the referer account.</comment></li>
 <li><strong>onboardorg</strong> / <a href="#onboardorg">onboardorg</a> <comment type="action" name="onboardorg">Onboards a new organization.</comment></li>
+<li><strong>remauthorized</strong> / <a href="#remauthorized">remauthorized</a> <comment type="action" name="remauthorized"></comment></li>
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
+<li><strong>returnfunds</strong> / <a href="#returnfunds">returnfunds</a> <comment type="action" name="returnfunds"></comment></li>
+<li><strong>rtrnfundsaux</strong> / <a href="#rtrnfundsaux">rtrnfundsaux</a> <comment type="action" name="rtrnfundsaux"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
 <ul>
+<li><strong>campaigns</strong> / <a href="#campaign_table">campaign_table</a> (i64) <comment type="table" name="campaigns"></comment></li>
+<li><strong>campinvites</strong> / <a href="#campaign_invite_table">campaign_invite_table</a> (i64) <comment type="table" name="campinvites"></comment></li>
+<li><strong>config</strong> / <a href="#config_table">config_table</a> (i64) <comment type="table" name="config"></comment></li>
 <li><strong>invites</strong> / <a href="#invite_table">invite_table</a> (i64) <comment type="table" name="invites">Table holding the invitations.</comment></li>
 <li><strong>referrers</strong> / <a href="#referrer_table">referrer_table</a> (i64) <comment type="table" name="referrers">Table with the referrer for each invitation.</comment></li>
 <li><strong>sponsors</strong> / <a href="#sponsor_table">sponsor_table</a> (i64) <comment type="table" name="sponsors">Table for storing the deposit sponsors and the balance they commited.</comment></li>
@@ -76,6 +85,38 @@ $(function() {
 <li>publicKey / string</li>
 <li>fullname / string</li>
 </ul>
+<h3 id="addauthorized"> addauthorized </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+</ul>
+<h3 id="campaign_invite_table"> campaign_invite_table </h3>
+<ul>
+<li>invite_id / uint64</li>
+<li>campaign_id / uint64</li>
+</ul>
+<h3 id="campaign_table"> campaign_table </h3>
+<ul>
+<li>campaign_id / uint64</li>
+<li>type / name</li>
+<li>origin_account / name</li>
+<li>owner / name</li>
+<li>max_amount_per_invite / asset</li>
+<li>planted / asset</li>
+<li>reward_owner / name</li>
+<li>reward / asset</li>
+<li>authorized_accounts / name[]</li>
+<li>total_amount / asset</li>
+<li>remaining_amount / asset</li>
+</ul>
+<h3 id="campinvite"> campinvite </h3>
+<ul>
+<li>id / uint64</li>
+<li>authorizing_account / name</li>
+<li>planted / asset</li>
+<li>quantity / asset</li>
+<li>invite_hash / checksum256</li>
+</ul>
 <h3 id="cancel"> cancel </h3>
 <ul>
 <li>sponsor / name</li>
@@ -87,10 +128,28 @@ $(function() {
 <li>max_id / uint64</li>
 <li>batch_size / uint64</li>
 </ul>
-<h3 id="createbio"> createbio </h3>
+<h3 id="config_table"> config_table </h3>
+<ul>
+<li>param / name</li>
+<li>value / uint64</li>
+<li>description / string</li>
+<li>impact / name</li>
+</ul>
+<h3 id="createcampg"> createcampg </h3>
+<ul>
+<li>origin_account / name</li>
+<li>owner / name</li>
+<li>max_amount_per_invite / asset</li>
+<li>planted / asset</li>
+<li>reward_owner / name</li>
+<li>reward / asset</li>
+<li>total_amount / asset</li>
+<li>proposal_id / uint64</li>
+</ul>
+<h3 id="createregion"> createregion </h3>
 <ul>
 <li>sponsor / name</li>
-<li>bioregion / name</li>
+<li>region / name</li>
 <li>publicKey / string</li>
 </ul>
 <h3 id="deposit"> deposit </h3>
@@ -137,7 +196,20 @@ $(function() {
 <li>invite_id / uint64</li>
 <li>referrer / name</li>
 </ul>
+<h3 id="remauthorized"> remauthorized </h3>
+<ul>
+<li>id / uint64</li>
+<li>account / name</li>
+</ul>
 <h3 id="reset"> reset </h3>
+<h3 id="returnfunds"> returnfunds </h3>
+<ul>
+<li>id / uint64</li>
+</ul>
+<h3 id="rtrnfundsaux"> rtrnfundsaux </h3>
+<ul>
+<li>campaign_id / uint64</li>
+</ul>
 <h3 id="sponsor_table"> sponsor_table </h3>
 <ul>
 <li>account / name</li>

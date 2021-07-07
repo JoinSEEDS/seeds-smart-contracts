@@ -27,7 +27,7 @@ void settings::reset() {
   confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.low"), 80, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 20, "High threshold for quorum (in percentage of total citizens)", high_impact);
+  confwithdesc(name("quorum.high"), 15, "High threshold for quorum (in percentage of total citizens)", high_impact);
   confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
   confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
@@ -463,4 +463,18 @@ void settings::setcontract(name contract, name account) {
       item.account = account;
     });
   }
+}
+
+void settings::remove(name param) {
+    require_auth(get_self());
+
+    auto cfitr = configfloat.find(param.value);
+    if (cfitr != configfloat.end()) {
+      configfloat.erase(cfitr);
+    }
+
+    auto citr = config.find(param.value);
+    if (citr != config.end()) {
+      config.erase(citr);
+    }
 }

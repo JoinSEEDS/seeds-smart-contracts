@@ -240,6 +240,11 @@ void harvest::unplant(name from, asset quantity) {
   auto bitr = balances.find(from.value);
   check(bitr->planted.amount >= quantity.amount, "can't unplant more than planted!");
 
+  auto oitr = organizations.find(from.value);
+  if (oitr != organizations.end()) {
+    check(bitr->planted.amount >= quantity.amount + oitr->planted.amount, "organization can not unplant the initial fee");
+  }
+
   uint64_t lastRequestId = 0;
   uint64_t lastRefundId = 0;
 
@@ -1272,7 +1277,7 @@ void harvest::runharvest() {
 
   print("minted:", quantity, "\n");
 
-  token::issue_action_test t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
+  token::mint_action t_issue{contracts::token, { contracts::token, "minthrvst"_n }};
   t_issue.send(get_self(), quantity, memo);
 
   double users_percentage = config_get("hrvst.users"_n) / 1000000.0;

@@ -2,13 +2,87 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows, initContracts } = require('../scripts/helper')
 const { equals, init } = require('ramda')
 
-const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum } = names
+const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, onboarding, history } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 var contracts = null
+
+async function testOperations (operations, assert) {
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset on mainnet or testnet")
+        return
+    }
+
+    contracts = await Promise.all([
+        eos.contract(scheduler),
+        eos.contract(settings),
+        eos.contract(accounts),
+        eos.contract(organization),
+        eos.contract(token)
+    ]).then(([scheduler, settings, accounts, organization, token]) => ({
+        scheduler, settings, accounts, organization, token
+    }))
+
+    let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+    
+    console.log('scheduler reset')
+    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        limit: 200,
+        json: true
+    })
+
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+
+    console.log('add operations')
+    for (const op of operations) {
+        await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
+        // await sleep(200)
+    }
+    
+    console.log('scheduler execute')
+    let canExecute = false
+    try {
+        for(const op of operations) {
+            console.log('to execute:', op.operation)
+            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
+            await sleep(300)
+            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+            await sleep(300)
+            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
+        }
+        canExecute = true
+    } catch (error) {
+        console.log(error)
+        console.log('can not execute (unexpected, permission may be needed)')
+        
+    }
+    assert({
+        given: 'called execute',
+        should: 'be able to execute organization scores actions',
+        actual: canExecute,
+        expected: true
+    })
+
+    await sleep(1 * 1000)
+
+    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
+    await sleep(200)
+}
+
 
 describe('scheduler', async assert => {
 
@@ -53,7 +127,62 @@ describe('scheduler', async assert => {
         limit: 100
     })
 
+    const opTable = await getTableRows({
+        code: scheduler,
+        scope: scheduler,
+        table: 'operations',
+        limit: 200,
+        json: true
+    })
+
     console.log("before "+JSON.stringify(beforeValues, null, 2))
+    for (const op of opTable.rows) {
+        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
+        await sleep(200)
+    }
+
+    const operations = [
+        {
+            id: 'hrvst.trx',
+            operation: 'calctrxpts',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.qevs',
+            operation: 'calcmqevs',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.mintr',
+            operation: 'calcmintrate',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.hrvst',
+            operation: 'runharvest',
+            contract: harvest
+        },
+        {
+            id: 'acct.rorgrep',
+            operation: 'rankorgreps',
+            contract: accounts
+        },
+        {
+            id: 'acct.rorgcbs',
+            operation: 'rankorgcbss',
+            contract: accounts
+        },
+        {
+            id: 'hrvst.rorgcs',
+            operation: 'rankorgcss',
+            contract: harvest
+        },
+        {
+            id: 'hstry.ptrxs',
+            operation: 'cleanptrxs',
+            contract: history
+        }
+    ]
 
     console.log('scheduler execute')
     await contracts.scheduler.start( { authorization: `${scheduler}@active` } )
@@ -116,414 +245,6 @@ describe('scheduler', async assert => {
         expected: [afterValues2.rows[0].value, afterValues2.rows[1].value],
     })
 
-    
-
-})
-
-describe('scheduler, organization.cleandaus', async assert => {
-
-      if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset on mainnet or testnet")
-        return
-    }
-
-    contracts = await Promise.all([
-        eos.contract(scheduler),
-        eos.contract(settings)
-    ]).then(([scheduler, settings]) => ({
-        scheduler, settings
-    }))
-
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    console.log('add operations')
-    await contracts.scheduler.configop('org.clndaus', 'cleandaus', organization, 1, 0, { authorization: `${scheduler}@active` })
-
-    console.log('scheduler execute')
-    let canExecute = false
-    try {
-        await contracts.scheduler.execute( { authorization: `${scheduler}@active` } )
-        canExecute = true
-    } catch (err) {
-        console.log('can not execute cleandaus (unexpected, permission may be needed)')
-    }
-
-    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-
-    assert({
-        given: 'called execute',
-        should: 'be able to execute cleandaus',
-        actual: canExecute,
-        expected: true
-    })
-
-    await sleep(1 * 1000)
-
-})
-
-describe('scheduler, token.resetweekly', async assert => {
-
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset on mainnet or testnet")
-        return
-    }
-
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    console.log('add operations')
-    await contracts.scheduler.configop('tokn.resetw', 'resetweekly', 'token.seeds', 1, 0, { authorization: `${scheduler}@active` })
-
-    console.log('scheduler execute')
-    let canExecute = false
-    try {
-        await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
-        canExecute = true
-    } catch (error) {
-        console.log('can not execute resetweekly (unexpected, permission may be needed)')
-    }
-    
-    assert({
-        given: 'called execute',
-        should: 'be able to execute resetweekly',
-        actual: canExecute,
-        expected: true
-    })
-
-    await sleep(1 * 1000)
-
-    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-
-})
-
-describe('scheduler, organization scores', async assert => {
-
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset on mainnet or testnet")
-        return
-    }
-
-    contracts = await Promise.all([
-        eos.contract(scheduler),
-        eos.contract(settings),
-        eos.contract(accounts),
-        eos.contract(organization),
-        eos.contract(token)
-    ]).then(([scheduler, settings, accounts, organization, token]) => ({
-        scheduler, settings, accounts, organization, token
-    }))
-
-    let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
-
-    console.log('token reset')
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
-    
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    console.log('accounts reset')
-    await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
-    console.log('orgs reset')
-    await contracts.organization.reset({ authorization: `${organization}@active` })
-
-    console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
-
-    console.log('create balance')
-    await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
-    
-    console.log('create organization')
-    await contracts.organization.create(firstuser, 'firstorg', "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
-
-    const opTable = await getTableRows({
-        code: scheduler,
-        scope: scheduler,
-        table: 'operations',
-        limit: 200,
-        json: true
-    })
-
-    for (const op of opTable.rows) {
-        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
-        await sleep(200)
-    }
-
-    const operations = [
-        {
-            id: 'org.rankrgen',
-            operation: 'rankregens',
-            contract: organization
-        },
-        {
-            id: 'org.rankcbs',
-            operation: 'rankcbsorgs',
-            contract: organization
-        },
-        {
-            id: 'org.screorgs',
-            operation: 'scoretrxs',
-            contract: organization
-        },
-        {
-            id: 'hrvst.orgtx',
-            operation: 'rankorgtxs',
-            contract: harvest
-        },
-        {
-            id: 'org.appuses',
-            operation: 'calcmappuses',
-            contract: organization
-        },
-        {
-            id: 'org.rankapps',
-            operation: 'rankappuses',
-            contract: organization
-        }
-    ]
-
-    console.log('add operations')
-    for (const op of operations) {
-            await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
-           // await sleep(200)
-    }
-    
-    console.log('scheduler execute')
-    let canExecute = false
-    try {
-        for(const op of operations) {
-            console.log('to execute:', op.operation)
-            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
-            await sleep(300)
-            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-            await sleep(300)
-            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
-        }
-        canExecute = true
-    } catch (error) {
-        console.log(error)
-        console.log('can not execute (unexpected, permission may be needed)')
-        
-    }
-    assert({
-        given: 'called execute',
-        should: 'be able to execute organization scores actions',
-        actual: canExecute,
-        expected: true
-    })
-
-    await sleep(1 * 1000)
-
-    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-    await sleep(200)
-
-    //console.log('scheduler reset')
-    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-    //await sleep(300)
-
-})
-
-describe('scheduler, forum', async assert => {
-
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset on mainnet or testnet")
-        return
-    }
-
-    contracts = await Promise.all([
-        eos.contract(scheduler),
-        eos.contract(settings)
-    ]).then(([scheduler, settings]) => ({
-        scheduler, settings
-    }))
-
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    const opTable = await getTableRows({
-        code: scheduler,
-        scope: scheduler,
-        table: 'operations',
-        json: true
-    })
-
-    for (const op of opTable.rows) {
-        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
-        await sleep(200)
-    }
-
-    const operations = [
-        {
-            id: 'forum.rank',
-            operation: 'rankforums',
-            contract: forum
-        },
-        {
-            id: 'forum.give',
-            operation: 'givereps',
-            contract: forum
-        }
-    ]
-
-    console.log('add operations')
-    for (const op of operations) {
-        await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
-        await sleep(200)
-    }
-    
-    console.log('scheduler execute')
-    let canExecute = false
-    try {
-        for(const op of operations) {
-            console.log('to execute:', op.operation)
-            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
-            await sleep(300)
-            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-            await sleep(300)
-            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
-        }
-        canExecute = true
-    } catch (error) {
-        console.log(error)
-        console.log('can not execute (unexpected, permission may be needed)')
-        
-    }
-    assert({
-        given: 'called execute',
-        should: 'be able to execute organization scores actions',
-        actual: canExecute,
-        expected: true
-    })
-
-    await sleep(1 * 1000)
-
-    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-
-    //console.log('scheduler reset')
-    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-})
-
-describe('scheduler, harvest', async assert => {
-
-    if (!isLocal()) {
-        console.log("only run unit tests on local - don't reset on mainnet or testnet")
-        return
-    }
-
-    contracts = await Promise.all([
-        eos.contract(scheduler),
-        eos.contract(settings)
-    ]).then(([scheduler, settings]) => ({
-        scheduler, settings
-    }))
-
-    console.log('scheduler reset')
-    await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
-    console.log('settings reset')
-    await contracts.settings.reset({ authorization: `${settings}@active` })
-
-    const opTable = await getTableRows({
-        code: scheduler,
-        scope: scheduler,
-        table: 'operations',
-        json: true
-    })
-
-    for (const op of opTable.rows) {
-        await contracts.scheduler.removeop(op.id, { authorization: `${scheduler}@active` })
-        await sleep(200)
-    }
-
-    const operations = [
-        {
-            id: 'hrvst.trx',
-            operation: 'calctrxpts',
-            contract: harvest
-        },
-        {
-            id: 'hrvst.qevs',
-            operation: 'calcmqevs',
-            contract: harvest
-        },
-        {
-            id: 'hrvst.mintr',
-            operation: 'calcmintrate',
-            contract: harvest
-        },
-        {
-            id: 'hrvst.hrvst',
-            operation: 'runharvest',
-            contract: harvest
-        },
-        {
-            id: 'acct.rorgrep',
-            operation: 'rankorgreps',
-            contract: accounts
-        },
-        {
-            id: 'acct.rorgcbs',
-            operation: 'rankorgcbss',
-            contract: accounts
-        },
-        {
-            id: 'hrvst.rorgcs',
-            operation: 'rankorgcss',
-            contract: harvest
-        }
-    ]
-
-    console.log('add operations')
-    for (const op of operations) {
-        await contracts.scheduler.configop(op.id, op.operation, op.contract, 1, 0, { authorization: `${scheduler}@active` })
-        await sleep(200)
-    }
-    
-    console.log('scheduler execute')
-    let canExecute = false
-    try {
-        for(const op of operations) {
-            console.log('to execute:', op.operation)
-            await contracts.scheduler.execute({ authorization: `${scheduler}@active` })
-            await sleep(300)
-            await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-            await sleep(300)
-            await contracts.scheduler.configop(op.id, op.operation, op.contract, 200, 0, { authorization: `${scheduler}@active` })
-        }
-        canExecute = true
-    } catch (error) {
-        console.log(error)
-        console.log('can not execute (unexpected, permission may be needed)')
-        
-    }
-    assert({
-        given: 'called execute',
-        should: 'be able to execute organization scores actions',
-        actual: canExecute,
-        expected: true
-    })
-
-    await sleep(1 * 1000)
-
-    await contracts.scheduler.stop( { authorization: `${scheduler}@active` } )
-
-    //console.log('scheduler reset')
-    //await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
-
 })
 
 
@@ -570,7 +291,7 @@ describe('scheduler, moon phases', async assert => {
     }
 
     console.log('populate moonphases')
-    let dateTimestamp = parseInt(Date.now() / 1000)
+    let dateTimestamp = parseInt(Date.now() / 1000) + 1
     for (let i = 0; i < 50; i++) {
         await contracts.scheduler.moonphase(dateTimestamp + i, `phase ${(i % 4) + 1}`, '', { authorization: `${scheduler}@active` })
     }
@@ -670,6 +391,131 @@ describe('scheduler, moon phases', async assert => {
         actual: [afterValues.rows[0].value, afterValues.rows[1].value],
         expected: [afterValues2.rows[0].value, afterValues2.rows[1].value],
     })
+
+})
+
+describe('scheduler, organization', async assert => {
+
+    await testOperations([
+        {
+            id: 'org.rankrgen',
+            operation: 'rankregens',
+            contract: organization
+        },
+        {
+            id: 'org.rankcbs',
+            operation: 'rankcbsorgs',
+            contract: organization
+        },
+        {
+            id: 'org.screorgs',
+            operation: 'scoretrxs',
+            contract: organization
+        },
+        {
+            id: 'hrvst.orgtx',
+            operation: 'rankorgtxs',
+            contract: harvest
+        },
+        {
+            id: 'org.appuses',
+            operation: 'calcmappuses',
+            contract: organization
+        },
+        {
+            id: 'org.rankapps',
+            operation: 'rankappuses',
+            contract: organization
+        },
+        {
+            id: 'org.clndaus',
+            operation: 'cleandaus',
+            contract: organization
+        }
+    ], assert)
+
+})
+
+describe('scheduler, forum', async assert => {
+
+    await testOperations([
+        {
+            id: 'forum.rank',
+            operation: 'rankforums',
+            contract: forum
+        },
+        {
+            id: 'forum.give',
+            operation: 'givereps',
+            contract: forum
+        }
+    ], assert)
+
+})
+
+describe('scheduler, harvest', async assert => {
+
+    await testOperations([
+        {
+            id: 'hrvst.trx',
+            operation: 'calctrxpts',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.qevs',
+            operation: 'calcmqevs',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.mintr',
+            operation: 'calcmintrate',
+            contract: harvest
+        },
+        {
+            id: 'hrvst.hrvst',
+            operation: 'runharvest',
+            contract: harvest
+        },
+        {
+            id: 'acct.rorgrep',
+            operation: 'rankorgreps',
+            contract: accounts
+        },
+        {
+            id: 'acct.rorgcbs',
+            operation: 'rankorgcbss',
+            contract: accounts
+        },
+        {
+            id: 'hrvst.rorgcs',
+            operation: 'rankorgcss',
+            contract: harvest
+        }
+    ], assert)
+
+})
+
+describe('scheduler, token', async assert => {
+
+    await testOperations([
+        {
+            id: 'tokn.resetw',
+            operation: 'resetweekly',
+            contract: token
+        }
+    ], assert)
+
+})
+
+describe('scheduler, onboarding', async assert => {
+
+    await testOperations([
+        {
+            id: 'onbrd.clean',
+            operation: 'chkcleanup',
+            contract: onboarding
+        }
+    ], assert)
 
 })
 

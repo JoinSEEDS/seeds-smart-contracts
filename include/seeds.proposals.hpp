@@ -45,6 +45,10 @@ CONTRACT proposals : public contract {
       
       ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
+      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION applyfixprop(); // temp for fixing description
+      ACTION backfixprop(); // revert fixing description
+      
       ACTION stake(name from, name to, asset quantity, string memo);
 
       ACTION addvoice(name user, uint64_t amount);
@@ -56,6 +60,9 @@ CONTRACT proposals : public contract {
       ACTION against(name user, uint64_t id, uint64_t amount);
 
       ACTION neutral(name user, uint64_t id);
+
+      ACTION revertvote(name user, uint64_t id);
+      ACTION mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize);
 
       ACTION voteonbehalf(name voter, uint64_t id, uint64_t amount, name option);
 
@@ -142,6 +149,8 @@ CONTRACT proposals : public contract {
 
       name alliance_type = "alliance"_n;
       name campaign_type = "campaign"_n;
+      name referendum_type = "referendum"_n;
+
       name campaign_invite_type = "cmp.invite"_n;
       name campaign_funding_type = "cmp.funding"_n;
       name milestone_type = "milestone"_n;
@@ -149,7 +158,8 @@ CONTRACT proposals : public contract {
       std::vector<name> scopes = {
         alliance_type,
         get_self(),
-        milestone_type
+        milestone_type,
+        referendum_type,
       };
 
       void update_cycle();
@@ -171,7 +181,8 @@ CONTRACT proposals : public contract {
       void burn(asset quantity);
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated);
-      bool revert_vote (name voter, uint64_t id);
+      void revertvote_delegate(name voter, uint64_t id);
+
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
@@ -182,6 +193,9 @@ CONTRACT proposals : public contract {
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
       name get_type (const name & fund);
+      name get_scope(name fund);
+      bool has_delegates(name voter, name scope);
+
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
@@ -215,6 +229,7 @@ CONTRACT proposals : public contract {
       void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
       void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
       uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
+      void check_values(string title, string summary, string description, string image, string url);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -274,6 +289,20 @@ CONTRACT proposals : public contract {
           uint64_t min_stake;
           uint64_t primary_key()const { return prop_id; }
       };
+
+      TABLE fix_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixprops"_n, fix_props_table> fix_props_tables;
+
+      TABLE fixb_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixbprops"_n, fixb_props_table> fixb_props_tables;
 
       DEFINE_USER_TABLE
 
@@ -433,6 +462,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (cleanmig)(testpropquor)
         (reevalprop)
         (testalliance)(migalliances)
+        (fixdesc)(applyfixprop)(backfixprop)
+        (revertvote)(mimicrevert)
         )
       }
   }

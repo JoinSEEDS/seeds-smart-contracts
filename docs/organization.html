@@ -49,21 +49,20 @@ Each daily use by the APP must call the `appuse` action to inform that.
 </comment></p>
 <h2>Actions</h2>
 <ul>
-<li><strong>addcbpoints</strong> / <a href="#addcbpoints">addcbpoints</a> <comment type="action" name="addcbpoints">Adds Contribution points to the Org score.</comment></li>
 <li><strong>addmember</strong> / <a href="#addmember">addmember</a> <comment type="action" name="addmember">Adds a member to the Organization</comment></li>
 <li><strong>addregen</strong> / <a href="#addregen">addregen</a> <comment type="action" name="addregen">Adds Regenerative score to the Organization.</comment></li>
 <li><strong>appuse</strong> / <a href="#appuse">appuse</a> <comment type="action" name="appuse">Called to indicate daily Org APP usage.</comment></li>
 <li><strong>banapp</strong> / <a href="#banapp">banapp</a> <comment type="action" name="banapp">Bans an APP from the Organization.</comment></li>
-<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> <comment type="action" name="changeowner">Let's the Org owner pass it along to some other account.</comment></li>
+<li><strong>changeowner</strong> / <a href="#changeowner">changeowner</a> <comment type="action" name="changeowner">Let&apos;s the Org owner pass it along to some other account.</comment></li>
 <li><strong>changerole</strong> / <a href="#changerole">changerole</a> <comment type="action" name="changerole">Change the role for an Org member.</comment></li>
-<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> <comment type="action" name="cleandau"></comment>Cleans the DAU from a batch of Org APPs.</li>
+<li><strong>cleandau</strong> / <a href="#cleandau">cleandau</a> <comment type="action" name="cleandau"></comment></li>
 <li><strong>cleandaus</strong> / <a href="#cleandaus">cleandaus</a> <comment type="action" name="cleandaus">Batch cleans the DAU from all Org apps.</comment></li>
 <li><strong>create</strong> / <a href="#create">create</a> <comment type="action" name="create">Creates a new Organization, proving the sponsor has allocated enough funds</comment></li>
 <li><strong>destroy</strong> / <a href="#destroy">destroy</a> <comment type="action" name="destroy">Destroys an Organization, called by the owner.</comment></li>
 <li><strong>makeregen</strong> / <a href="#makeregen">makeregen</a> <comment type="action" name="makeregen">Converts and Org status to Regenerative if all pre-requisites are met.</comment></li>
 <li><strong>makereptable</strong> / <a href="#makereptable">makereptable</a> <comment type="action" name="makereptable">Converts and Org status to Reputable if all pre-requisites are met.</comment></li>
-<li><strong>rankcbsorg</strong> / <a href="#rankcbsorg">rankcbsorg</a> <comment type="action" name="rankcbsorg">Ranks a batch or Orgs in terms of Contribution score.</comment></li>
-<li><strong>rankcbsorgs</strong> / <a href="#rankcbsorgs">rankcbsorgs</a> <comment type="action" name="rankcbsorgs">Batch ranks all Orgs based on Contribution score.</comment></li>
+<li><strong>makesustnble</strong> / <a href="#makesustnble">makesustnble</a> <comment type="action" name="makesustnble"></comment></li>
+<li><strong>makethrivble</strong> / <a href="#makethrivble">makethrivble</a> <comment type="action" name="makethrivble"></comment></li>
 <li><strong>rankregen</strong> / <a href="#rankregen">rankregen</a> <comment type="action" name="rankregen">Ranks a batch or Orgs in terms of Regenerative score.</comment></li>
 <li><strong>rankregens</strong> / <a href="#rankregens">rankregens</a> <comment type="action" name="rankregens">Batch ranks all Orgs based on Regenerative score.</comment></li>
 <li><strong>refund</strong> / <a href="#refund">refund</a> <comment type="action" name="refund">Refunds the Org creation fees.</comment></li>
@@ -72,10 +71,9 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <li><strong>reset</strong> / <a href="#reset">reset</a> <comment type="action" name="reset"></comment></li>
 <li><strong>scoreorgs</strong> / <a href="#scoreorgs">scoreorgs</a> <comment type="action" name="scoreorgs">Called periodically to calculate Org scores.</comment></li>
 <li><strong>scoretrxs</strong> / <a href="#scoretrxs">scoretrxs</a> <comment type="action" name="scoretrxs">Called to recalculate Org transaction scores.</comment></li>
-<li><strong>subcbpoints</strong> / <a href="#subcbpoints">subcbpoints</a> <comment type="action" name="subcbpoints">Subtracts Contribution points from the Org score.</comment></li>
 <li><strong>subregen</strong> / <a href="#subregen">subregen</a> <comment type="action" name="subregen">Subtracts Regenerative points from the Org score.</comment></li>
-<li><strong>testregen</strong> / <a href="#testregen">testregen</a> <comment type="action" name="testregen">Converts the org to Regenerative, used only for testing.</comment></li>
-<li><strong>testreptable</strong> / <a href="#testreptable">testreptable</a> <comment type="action" name="testreptable">Converts the org to Reputable, used only for testing.</comment></li>
+<li><strong>testregensc</strong> / <a href="#testregensc">testregensc</a> <comment type="action" name="testregensc"></comment></li>
+<li><strong>teststatus</strong> / <a href="#teststatus">teststatus</a> <comment type="action" name="teststatus"></comment></li>
 </ul>
 <h2>Events</h2>
 <h2>Tables</h2>
@@ -89,19 +87,17 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <li><strong>members</strong> / <a href="#members_table">members_table</a> (i64) <comment type="table" name="members"></comment></li>
 <li><strong>organization</strong> / <a href="#organization_table">organization_table</a> (i64) <comment type="table" name="organization"></comment></li>
 <li><strong>orgtx</strong> / <a href="#org_tx_table">org_tx_table</a> (i64) <comment type="table" name="orgtx"></comment></li>
+<li><strong>planted</strong> / <a href="#planted_table">planted_table</a> (i64) <comment type="table" name="planted"></comment></li>
 <li><strong>refs</strong> / <a href="#ref_table">ref_table</a> (i64) <comment type="table" name="refs"></comment></li>
 <li><strong>regenscores</strong> / <a href="#regen_score_table">regen_score_table</a> (i64) <comment type="table" name="regenscores"></comment></li>
+<li><strong>rep</strong> / <a href="#rep_table">rep_table</a> (i64) <comment type="table" name="rep"></comment></li>
 <li><strong>sizes</strong> / <a href="#size_table">size_table</a> (i64) <comment type="table" name="sizes"></comment></li>
 <li><strong>sponsors</strong> / <a href="#sponsors_table">sponsors_table</a> (i64) <comment type="table" name="sponsors"></comment></li>
+<li><strong>totals</strong> / <a href="#totals_table">totals_table</a> (i64) <comment type="table" name="totals"></comment></li>
 <li><strong>votes</strong> / <a href="#vote_table">vote_table</a> (i64) <comment type="table" name="votes"></comment></li>
 </ul>
 <h2>ABI Extensions</h2>
 <h2>Structs</h2>
-<h3 id="addcbpoints"> addcbpoints </h3>
-<ul>
-<li>organization / name</li>
-<li>cbscore / uint32</li>
-</ul>
 <h3 id="addmember"> addmember </h3>
 <ul>
 <li>organization / name</li>
@@ -205,6 +201,14 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <ul>
 <li>organization / name</li>
 </ul>
+<h3 id="makesustnble"> makesustnble </h3>
+<ul>
+<li>organization / name</li>
+</ul>
+<h3 id="makethrivble"> makethrivble </h3>
+<ul>
+<li>organization / name</li>
+</ul>
 <h3 id="members_table"> members_table </h3>
 <ul>
 <li>account / name</li>
@@ -228,13 +232,12 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <li>voice / uint64</li>
 <li>planted / asset</li>
 </ul>
-<h3 id="rankcbsorg"> rankcbsorg </h3>
+<h3 id="planted_table"> planted_table </h3>
 <ul>
-<li>start / uint64</li>
-<li>chunk / uint64</li>
-<li>chunksize / uint64</li>
+<li>account / name</li>
+<li>planted / asset</li>
+<li>rank / uint64</li>
 </ul>
-<h3 id="rankcbsorgs"> rankcbsorgs </h3>
 <h3 id="rankregen"> rankregen </h3>
 <ul>
 <li>start / uint64</li>
@@ -271,6 +274,12 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <li>owner / name</li>
 <li>account / name</li>
 </ul>
+<h3 id="rep_table"> rep_table </h3>
+<ul>
+<li>account / name</li>
+<li>rep / uint32</li>
+<li>rank / uint64</li>
+</ul>
 <h3 id="reset"> reset </h3>
 <h3 id="scoreorgs"> scoreorgs </h3>
 <ul>
@@ -287,24 +296,29 @@ Each daily use by the APP must call the `appuse` action to inform that.
 <li>account / name</li>
 <li>balance / asset</li>
 </ul>
-<h3 id="subcbpoints"> subcbpoints </h3>
-<ul>
-<li>organization / name</li>
-<li>cbscore / uint32</li>
-</ul>
 <h3 id="subregen"> subregen </h3>
 <ul>
 <li>organization / name</li>
 <li>account / name</li>
 <li>amount / uint64</li>
 </ul>
-<h3 id="testregen"> testregen </h3>
+<h3 id="testregensc"> testregensc </h3>
 <ul>
 <li>organization / name</li>
+<li>score / uint64</li>
 </ul>
-<h3 id="testreptable"> testreptable </h3>
+<h3 id="teststatus"> teststatus </h3>
 <ul>
 <li>organization / name</li>
+<li>status / uint64</li>
+</ul>
+<h3 id="totals_table"> totals_table </h3>
+<ul>
+<li>account / name</li>
+<li>total_volume / uint64</li>
+<li>total_number_of_transactions / uint64</li>
+<li>total_incoming_from_rep_orgs / uint64</li>
+<li>total_outgoing_to_rep_orgs / uint64</li>
 </ul>
 <h3 id="vote_table"> vote_table </h3>
 <ul>
