@@ -2,7 +2,7 @@ const { describe } = require("riteway")
 const { eos, names, getTableRows, isLocal, initContracts, getBalance, sleep } = require("../scripts/helper")
 const eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-const { firstuser, seconduser, settings, gratitude, accounts, token, bank } = names
+const { firstuser, seconduser, thirduser, fourthuser, settings, gratitude, accounts, token, bank } = names
 
 describe('gratitude general', async assert => {
 
@@ -120,9 +120,6 @@ describe('gratitude general', async assert => {
 
   const contracts = await initContracts({ gratitude, accounts, settings, token })
 
-  console.log('gratitude reset')
-  await contracts.gratitude.reset({ authorization: `${gratitude}@active` })
-
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   
@@ -132,12 +129,15 @@ describe('gratitude general', async assert => {
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('gratitude reset')
+  await contracts.gratitude.reset({ authorization: `${gratitude}@active` })
+
   await contracts.settings.configure("batchsize", 1, { authorization: `${settings}@active` })
 
   const initialGratitude = await get_settings("gratz1.gen") / 10000; // in GRATZ
 
   console.log('add SEEDS users')
-  const users = [firstuser, seconduser]
+  const users = [firstuser, seconduser, thirduser, fourthuser]
   for (const user of users) {
     await contracts.accounts.adduser(user, '', 'individual', { authorization: `${accounts}@active` })
     await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
@@ -167,6 +167,14 @@ describe('gratitude general', async assert => {
   // TODO check if round status updated (volume, transfers, acks)
   checkRoundAcks(1)
 
+  var balTable = await getTableRows({
+    code: gratitude,
+    scope: gratitude,
+    table: 'balances',
+    json: true
+  })
+  //console.log("balances:" + JSON.stringify(balTable))
+
   console.log('test acks non recursive')
   await contracts.gratitude.testacks({ authorization: `${gratitude}@active` })
 
@@ -176,34 +184,37 @@ describe('gratitude general', async assert => {
     table: 'acks',
     json: true
   })
-  //console.log(acksTable)
+  //console.log("acks:" + JSON.stringify(acksTable))
 
   const gratzAcks = await get_settings("gratz.acks")
   const transferPerAckAmount = initialGratitude / gratzAcks
   checkRemainingGratitude(seconduser, initialGratitude-transferPerAckAmount)
   checkReceivedGratitude(firstuser, transferPerAckAmount)
 
-  console.log('current contract bal: ' + await getBalance(gratitude))
-  console.log('one more time.....')
-  await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
-
-  console.log('give gratitude')
-  await contracts.gratitude.give(firstuser, seconduser, `${transferAmount}.0000 GRATZ`, '', { authorization: `${firstuser}@active` })
-
-  console.log('acknowledge')
-  await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
-
-  console.log('restart gratitude round')
-
   const firstBalanceBefore = await getBalance(firstuser)  
-  const secondBalanceBefore = await getBalance(seconduser)  
+  const secondBalanceBefore = await getBalance(seconduser)
+
+  //console.log('stats: '+ JSON.stringify(await getGratitudeStats()))
+
+  balTable = await getTableRows({
+    code: gratitude,
+    scope: gratitude,
+    table: 'balances',
+    json: true
+  })
+  //console.log("balances:"+JSON.stringify(balTable))
+
+  console.log('new round')
   await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
-  await sleep(3000)
+  await sleep(1000) // wait for parallel processing
 
   const contractBalanceAfter = await getBalance(gratitude)
   const firstBalanceAfter = await getBalance(firstuser)
   const secondBalanceAfter = await getBalance(seconduser)
 
+  checkRoundPot(`${contractBalanceAfter}.0000 SEEDS`)
+
+  //console.log('stats: '+ JSON.stringify(await getGratitudeStats()))
 
   assert({
     given: 'gratitude round finished',
@@ -227,4 +238,118 @@ describe('gratitude general', async assert => {
   })
 
 
+})
+
+
+describe('gratitude many acks', async assert => {
+ 
+  const getGratitudeStats = async () => {
+    const statsTable = await getTableRows({
+      code: gratitude,
+      scope: gratitude,
+      table: 'stats2',
+      json: true
+    })
+    if (statsTable.rows) {
+      return statsTable.rows[statsTable.rows.length-1];
+    }
+    return [];
+  }
+
+  const checkRoundAcks = async (expected) => {
+    const grstats = await getGratitudeStats()
+    assert({
+      given: `performed ack`,
+      should: 'have the correct num acks',
+      actual: grstats.num_acks,
+      expected: expected
+    })
+  }
+
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ gratitude, accounts, settings, token })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  
+  console.log('token reset weekly')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('gratitude reset')
+  await contracts.gratitude.reset({ authorization: `${gratitude}@active` })
+
+  await contracts.settings.configure("batchsize", 1, { authorization: `${settings}@active` })
+
+  console.log('add SEEDS users')
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  for (const user of users) {
+    await contracts.accounts.adduser(user, '', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testresident(user, { authorization: `${accounts}@active` })
+  }
+
+  const amount = 1000
+
+  const contractBalanceBefore = await getBalance(gratitude) || 0
+
+  console.log('refill gratitude contract')
+  await contracts.token.transfer(firstuser, gratitude, `${amount}.0000 SEEDS`, 'test', { authorization: `${firstuser}@active` })
+
+  const balancesBefore = [await getBalance(firstuser), await getBalance(seconduser), await getBalance(thirduser), await getBalance(fourthuser)]
+
+  console.log('test ack 1')
+  await contracts.gratitude.acknowledge(firstuser, seconduser, 'Thanks!', { authorization: `${firstuser}@active` })
+
+  console.log('test ack 2')
+  await contracts.gratitude.acknowledge(firstuser, fourthuser, 'Thanks!', { authorization: `${firstuser}@active` })
+
+  console.log('test ack 3')
+  await contracts.gratitude.acknowledge(firstuser, thirduser, 'Thanks!', { authorization: `${firstuser}@active` })
+
+  console.log('test ack 4')
+  await contracts.gratitude.acknowledge(seconduser, thirduser, 'Thanks!', { authorization: `${seconduser}@active` })
+
+  console.log('test ack 5')
+  await contracts.gratitude.acknowledge(seconduser, fourthuser, 'Thanks!', { authorization: `${seconduser}@active` })
+
+  console.log('test ack 6')
+  await contracts.gratitude.acknowledge(seconduser, firstuser, 'Thanks!', { authorization: `${seconduser}@active` })
+
+  console.log('test ack 7')
+  await contracts.gratitude.acknowledge(thirduser, firstuser, 'Thanks!', { authorization: `${thirduser}@active` })
+
+  // TODO check if round status updated (volume, transfers, acks)
+  checkRoundAcks(7)
+
+  console.log('new round')
+  await contracts.gratitude.newround({ authorization: `${gratitude}@active` })
+  await sleep(5000) // wait for parallel processing
+
+  const contractBalanceAfter = await getBalance(gratitude)
+  const balancesAfter = [await getBalance(firstuser), await getBalance(seconduser), await getBalance(thirduser), await getBalance(fourthuser)]
+
+  const statsTable = await getTableRows({
+    code: gratitude,
+    scope: gratitude,
+    table: 'stats2',
+    json: true
+  })
+  console.log('stats: '+ JSON.stringify(statsTable))
+  console.log('balances orig: '+ balancesBefore)
+  console.log('balances diff: '+ balancesAfter)
+
+
+  assert({
+    given: 'gratitude round finished',
+    should: 'reset contract balance',
+    actual: contractBalanceAfter,
+    expected: contractBalanceBefore
+  })
 })

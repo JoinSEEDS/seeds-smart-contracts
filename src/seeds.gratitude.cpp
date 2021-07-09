@@ -35,7 +35,7 @@ ACTION gratitude::reset () {
     item.num_transfers = 0;
     item.num_acks = 0;
     item.volume = asset(0, gratitude_symbol);
-    item.round_pot = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
+    item.round_pot = asset(0, seeds_symbol);
   });
 
 }
@@ -129,9 +129,12 @@ ACTION gratitude::calcacks(uint64_t start) {
 
   auto actr = start == 0 ? acks.begin() : acks.find(start);
 
-  // Recursion call
   if (actr != acks.end()) {
     _calc_acks(actr->donor);
+    actr = acks.erase(actr);
+  }
+  // If there is still more, do recursion call
+  if (actr != acks.end()) {
     action next_execution(
       permission_level{get_self(), "active"_n},
       get_self(),
@@ -143,14 +146,8 @@ ACTION gratitude::calcacks(uint64_t start) {
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(actr->donor.value, _self);
-    actr++;
   } else {
-    auto actr2 = acks.begin();
-    while (actr2 != acks.end()) {
-      actr2 = acks.erase(actr2);
-    }
-
-    // Starts recursive payout
+    // Otherwise, starts recursive payout
     auto contract_balance = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
     float potkeep = config_get(gratz_potkp) / (float)100;
     uint64_t usable_amount = contract_balance.amount - (contract_balance.amount * potkeep);
@@ -168,49 +165,53 @@ ACTION gratitude::calcacks(uint64_t start) {
 ACTION gratitude::payround(uint64_t start, uint64_t usable_bal) {
   require_auth(get_self());
 
-  uint64_t volume = get_current_volume();
   auto bitr = start == 0 ? balances.begin() : balances.find(start);
   uint64_t current = 0;
   auto chunksize = config_get("batchsize"_n);
 
-  if (bitr != balances.end()) 
-    if (current < chunksize) {
-      eosio::print("PAYROUND1\n");
+  while (current < chunksize) {
+    if (bitr != balances.end()) {
+      uint64_t volume = get_current_volume();
       uint64_t my_received = bitr->received.amount;
       // reset gratitude for account
-      init_balances(bitr->account);
+      reset_balances(bitr->account);
       float split_factor = my_received / (float)volume;
       uint64_t payout = usable_bal * split_factor;
-      // Pay out SEEDS in store if value >= 1.0 SEEDS
-      if (payout >= 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
+      if (payout > 0) _transfer(bitr->account, asset(payout, seeds_symbol), "gratitude bonus");
       bitr++;
       current++;
-    } else {
-      eosio::print("PAYROUND2\n");
-      action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "payround"_n,
-        std::make_tuple(bitr->account.value, usable_bal)
-      );
+    } else break;
+  }
 
-      transaction tx;
-      tx.actions.emplace_back(next_execution);
-      tx.delay_sec = 1;
-      tx.send(bitr->account.value, _self);
-    }
-  // After all payouts are complete
+  // if there's more
+  if (bitr != balances.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "payround"_n,
+      std::make_tuple(bitr->account.value, usable_bal)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(bitr->account.value, _self);
+  }
+  // Else, after all payouts are complete
   else {
-    eosio::print("PAYROUND3\n");
     // adds a new round
     auto stitr = stats2.rbegin();
     auto cur_round_id = stitr->round_id;
+    auto oldpot = stitr->round_pot;
+    float potkeep = config_get(gratz_potkp) / (float)100;
+    uint64_t newpot = oldpot.amount * potkeep;
+
     stats2.emplace(_self, [&](auto& item) {
       item.round_id = ++cur_round_id;
       item.num_transfers = 0;
       item.num_acks = 0;
       item.volume = asset(0, gratitude_symbol);
-      item.round_pot = eosio::token::get_balance(contracts::token, get_self(), seeds_symbol.code());
+      item.round_pot = asset(newpot, seeds_symbol);
     });
   }
 
@@ -239,7 +240,7 @@ ACTION gratitude::deposit (name from, name to, asset quantity, string memo) {
 
     utils::check_asset(quantity);
 
-    // Updates status
+    // Updates stats
     auto stitr = stats2.rbegin();
     auto round_id = stitr->round_id;
 
@@ -265,7 +266,6 @@ void gratitude::check_user (name account) {
 }
 
 void gratitude::_calc_acks (name donor) {
-  eosio::print("DEBUG2 ", eosio::name(donor), "\n");
   auto bitr = balances.find(donor.value);
   uint64_t remaining = bitr->remaining.amount;
 
@@ -301,19 +301,48 @@ uint64_t gratitude::get_current_volume() {
 }
 
 void gratitude::update_stats(name from, name to, asset quantity) {
-  auto stitr = stats2.rbegin();
-  auto round_id = stitr->round_id;
+  // Updating the last stats item
+  auto itr = stats2.rbegin();
+  auto round_id = itr->round_id;
 
-  auto stitr2 = stats2.find(round_id);
-  auto oldvolume = stitr2->volume.amount;
-  auto oldtransfers = stitr2->num_transfers;
-  stats2.modify(stitr2, _self, [&](auto& item) {
-      item.volume = asset(oldvolume + quantity.amount, gratitude_symbol);
-      item.num_transfers = oldtransfers + 1;
+  auto stitr = stats2.find(round_id);
+  auto oldvolume = stitr->volume.amount;
+  auto oldtransfers = stitr->num_transfers;
+  stats2.modify(stitr, _self, [&](auto& item) {
+    item.volume = asset(oldvolume + quantity.amount, gratitude_symbol);
+    item.num_transfers = oldtransfers + 1;
   });
 }
 
 void gratitude::init_balances (name account) {
+  auto bitr = balances.find(account.value);
+
+  uint64_t generated_gratz = 0;
+  auto uitr = users.find(account.value);
+  if (uitr != users.end()) {
+    switch (uitr->status)
+    {
+    case "citizen"_n:
+      generated_gratz = config_get(gratzgen_cit);
+      break;
+    
+    case "resident"_n:
+      generated_gratz = config_get(gratzgen_res);
+      break;
+    }
+  }
+
+  if (bitr == balances.end()) {
+    balances.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.received = asset(0, gratitude_symbol);
+      item.remaining = asset(generated_gratz, gratitude_symbol);
+    });
+    size_change("balances.sz"_n, 1);
+  }
+}
+
+void gratitude::reset_balances (name account) {
   auto bitr = balances.find(account.value);
 
   uint64_t generated_gratz = 0;
@@ -345,6 +374,7 @@ void gratitude::init_balances (name account) {
     });
   }
 }
+
 
 void gratitude::add_gratitude (name account, asset quantity) {
   check_asset(quantity);

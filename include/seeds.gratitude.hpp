@@ -61,6 +61,7 @@ CONTRACT gratitude : public contract {
 
     void check_user(name account);
     void init_balances(name account);
+    void reset_balances(name account);
     void _calc_acks(name account);
     void add_gratitude(name account, asset quantity);
     void sub_gratitude(name account, asset quantity);
