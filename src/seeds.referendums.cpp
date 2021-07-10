@@ -603,6 +603,37 @@ void referendums::fixdesc(uint64_t id, string description) {
 
 }
 
+void referendums::fixid() 
+{
+  require_auth(get_self());
+  referendum_tables active(get_self(), name("active").value);
+
+  auto ritr = active.find(0);
+  check(ritr != active.end(), "referendum 0 not found");
+
+  auto ritr_1 = active.find(1);
+  check(ritr_1 == active.end(), "referendum 1 already exists");
+
+  active.emplace(get_self(), [&](auto& item) {
+    item.referendum_id = 1;
+    item.favour = ritr->favour;
+    item.against = ritr->against;
+    item.staked = ritr->staked;
+    item.creator = ritr->creator;
+    item.setting_name = ritr->setting_name;
+    item.setting_value = ritr->setting_value;
+    item.title = ritr->title;
+    item.summary = ritr->summary;
+    item.description = ritr->description;
+    item.image = ritr->image;
+    item.url = ritr->url;
+    item.created_at = ritr->created_at;
+  });
+
+  active.erase(ritr);
+
+}
+
 void referendums::applyfixref() {
   require_auth(get_self());
 

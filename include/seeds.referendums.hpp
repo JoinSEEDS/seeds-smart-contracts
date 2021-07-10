@@ -77,6 +77,7 @@ CONTRACT referendums : public contract {
       ACTION onperiod();
 
       ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION fixid(); // fix id issue
       ACTION fixtitle(uint64_t id, string title); // temp for fixing title
       ACTION applyfixref(); // temp for fixing description
       ACTION backfixref(); // revert fixing description
@@ -175,7 +176,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice)
-        (fixdesc)(applyfixref)(backfixref)(fixtitle)
+        (fixdesc)(applyfixref)(backfixref)(fixtitle)(fixid)
         )
       }
   }
