@@ -361,9 +361,18 @@ void referendums::create(
   check(bitr->stake >= stake_price, "user has not sufficient stake");
 
   referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  uint64_t key = std::max(staged.available_primary_key(), active.available_primary_key());
+  key = std::max(key, testing.available_primary_key());
+  key = std::max(key, passed.available_primary_key());
+  key = std::max(key, failed.available_primary_key());
 
   staged.emplace(get_self(), [&](auto& item) {
-    item.referendum_id = staged.available_primary_key();
+    item.referendum_id = key;
     item.favour = 0;
     item.against = 0;
     item.staked = asset(price_amount, seeds_symbol);

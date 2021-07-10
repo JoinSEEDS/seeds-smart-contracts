@@ -166,8 +166,13 @@ describe('Referendums', async assert => {
     console.log('accounts reset')
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
     console.log('settings configure')
     await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
+    console.log('set stake price to 1')
+    //await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
 
   }
   const addUsers = () => async () => {
@@ -372,7 +377,152 @@ console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting'
     expected: {
       account: firstuser,
       stake: '0.0000 SEEDS',
-      voice: 90
+      voice: 0
     }
   })
+})
+
+
+describe('Referendums Keys', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ referendums, token, settings, accounts })
+
+  const stake_price = '1111.0000 SEEDS'
+  const referendumId = 0
+  const failedReferendumId = 1
+
+  const settingName = 'tempsetting'
+  const settingDescription = 'test setting for referendums'
+  const settingImpact = 'high'
+  const settingValue = 21
+  const settingInitialValue = 0
+  const metadata = ['title', 'summary', 'description', 'image', 'url']
+
+  const getReferendums = async (status) => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: status,
+      table: 'referendums',
+      json: true
+    })
+
+    referendumsTable.rows.forEach(row => {
+      delete row.created_at
+    })
+
+    return referendumsTable
+  }
+
+  const getRefs = async() => {
+    const staged = await getReferendums("staged")
+    const active = await getReferendums("active")
+    const testing = await getReferendums('testing')
+    const passed = await getReferendums("passed")
+    const failed = await getReferendums("failed")
+  
+    return [staged, active, testing, passed, failed]
+  }
+
+  const checkRefs = async (numbers) => {
+    
+    let nums = await getRefs()
+    nums = nums.map(e => e.rows.length)
+
+    console.log("refs: ", nums)
+
+    assert({
+      given: 'refs',
+      should: 'have the correct statuses',
+      actual: nums,
+      expected: numbers
+    })
+  
+  }
+
+  console.log('referendums reset')
+  await contracts.referendums.reset({ authorization: `${referendums}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings configure')
+  await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
+
+  console.log('add users, make citizens')
+  await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  const addVoice2 = async (voice) => {
+    console.log(`add voice `+voice)
+    await contracts.referendums.addvoice(firstuser, voice, { authorization: `${referendums}@active` })
+    await contracts.referendums.addvoice(seconduser, voice, { authorization: `${referendums}@active` })
+  }
+  
+  console.log(`add voice`)
+  await addVoice2(20)
+
+  console.log('set quorum to 80 for high impact')
+  await contracts.settings.configure('quorum.high', 80, { authorization: `${settings}@active` })
+  console.log('set stake price to 1')
+  await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
+
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "1.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  console.log(`create referendum`)
+  await contracts.referendums.create(firstuser, settingName, settingValue, 'R 1', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+
+  await checkRefs([1, 0, 0, 0, 0])
+
+  console.log(`move to active`)
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+
+  await checkRefs([0, 1, 0, 0, 0])
+
+  console.log(`add voice 2`)
+  await addVoice2(21)
+
+  console.log(`vote 2`)
+  await contracts.referendums.favour(firstuser, 0, 8, { authorization: `${firstuser}@active` })
+  await contracts.referendums.favour(seconduser, 0, 8, { authorization: `${seconduser}@active` })
+
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "1.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  console.log(`create referendum`)
+  await contracts.referendums.create(firstuser, settingName, 2, 'REF 2', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+
+  await checkRefs([1, 1, 0, 0, 0])
+
+  console.log(`execute referendum - move to passed, active`)
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+  
+  // const r1 = await getRefs()
+
+  // console.log("refs "+JSON.stringify(r1, null, 2))
+
+  await checkRefs([0, 1, 1, 0, 0])
+
+  console.log(`add voice 3`)
+  await addVoice2(21)
+
+  console.log(`vote 3`)
+  await contracts.referendums.favour(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+  await contracts.referendums.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+
+  console.log(`execute referendum 4`)
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+
+  await checkRefs([0, 0, 1, 1, 0])
+
+  console.log(`execute referendum 5`)
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+
+  await checkRefs([0, 0, 0, 2, 0])
+
 })
