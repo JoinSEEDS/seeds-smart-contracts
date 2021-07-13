@@ -68,7 +68,7 @@ private:
   void sow_seeds(name account, asset quantity);
   void add_referral(name sponsor, name account);
   void invitevouch(name sponsor, name account);
-  void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool existingTelosAccount);
+  void accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool is_existing_telos_account, bool is_plant_seeds);
   void _invite(name sponsor, name referrer, asset transfer_quantity, asset sow_quantity, checksum256 invite_hash, uint64_t campaign_id);
   void check_user(name account);
   uint64_t config_get(name key);
