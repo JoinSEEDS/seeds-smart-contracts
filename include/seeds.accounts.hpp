@@ -92,7 +92,6 @@ CONTRACT accounts : public contract {
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
       ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size);
 
-      ACTION migorgs(uint64_t start_org);
       ACTION delcbsreporg(uint64_t start_org);
       ACTION testmigscope(name account, uint64_t amount);
 
@@ -382,7 +381,7 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
 (testmvouch)(migratevouch)
-(migorgs)(delcbsreporg)(testmigscope)
+(delcbsreporg)(testmigscope)
 (addcbs)
 (migusersizes)(migusrsize)
 );

@@ -106,7 +106,6 @@ CONTRACT harvest : public contract {
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount);
 
-    ACTION migorgs(uint64_t start);
     ACTION delcsorg(uint64_t start);
     ACTION testmigscope(name account, uint64_t amount);
 
@@ -420,7 +419,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
-          (delcsorg)(migorgs)(testmigscope)
+          (delcsorg)(testmigscope)
         )
       }
   }
