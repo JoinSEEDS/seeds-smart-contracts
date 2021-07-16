@@ -1377,38 +1377,3 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
   }
 }
 
-ACTION harvest::delcsorg (uint64_t start) {
-  require_auth(get_self());
-
-  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
-
-  uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t count = 0;
-
-  while (csitr != cspoints.end() && count < batch_size) {
-    auto uitr = users.find(csitr->account.value);
-    if (uitr->type == name("organisation")) {
-      csitr = cspoints.erase(csitr);
-    } else {
-      csitr++;
-    }
-    count++;
-  }
-
-  if (csitr != cspoints.end()) {
-    action next_execution(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "delcsorg"_n,
-      std::make_tuple(csitr->account.value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(csitr->account.value, _self);
-  }
-
-}
-
-
