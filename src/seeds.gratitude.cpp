@@ -104,12 +104,12 @@ ACTION gratitude::acknowledge (name from, name to, string memo) {
   auto stitr = stats2.rbegin();
   auto round_id = stitr->round_id;
 
+  // Have to use find to get a modifiable operator
   auto stitr2 = stats2.find(round_id);
   auto oldacks = stitr2->num_acks;
   stats2.modify(stitr2, _self, [&](auto& item) {
       item.num_acks = oldacks + 1;
   });
-
 }
 
 
@@ -214,9 +214,7 @@ ACTION gratitude::payround(uint64_t start, uint64_t usable_bal) {
       item.round_pot = asset(newpot, seeds_symbol);
     });
   }
-
 }
-
 
 ACTION gratitude::newround() {
   require_auth(get_self());
@@ -244,19 +242,15 @@ ACTION gratitude::deposit (name from, name to, asset quantity, string memo) {
     auto stitr = stats2.rbegin();
     auto round_id = stitr->round_id;
 
+    // Have to use find to get a modifiable operator
     auto stitr2 = stats2.find(round_id);
     auto oldpot = stitr2->round_pot.amount;
     stats2.modify(stitr2, _self, [&](auto& item) {
         item.round_pot = asset(oldpot + quantity.amount, seeds_symbol);
     });
-
-    // // Continue with transfer
-    // token::transfer_action action{contracts::token, {_self, "active"_n}};
-    // action.send(_self, from, quantity, memo);
   }
 
 }
-
 
 /// ----------================ PRIVATE ================----------
 
