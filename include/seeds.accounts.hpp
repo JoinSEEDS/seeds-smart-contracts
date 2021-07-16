@@ -172,8 +172,6 @@ CONTRACT accounts : public contract {
       name get_scope(name type);
       void send_add_cbs_org(name user, uint64_t amount);
 
-      void migrate_calc_vouch_rep(name account); // migration - remove
-
       DEFINE_USER_TABLE
 
       DEFINE_USER_TABLE_MULTI_INDEX

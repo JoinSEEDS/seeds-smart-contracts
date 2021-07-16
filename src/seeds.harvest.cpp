@@ -293,15 +293,6 @@ ACTION harvest::updatecs(name account) {
   calc_contribution_score(account, uitr.type);
 }
 
-ACTION harvest::updtotal() { // remove when balances are retired
-  require_auth(get_self());
-
-  auto bitr = balances.find(_self.value);
-  total_table tt = total.get_or_create(get_self(), total_table());
-  tt.total_planted = bitr->planted;
-  total.set(tt, get_self());
-}
-
 ACTION harvest::calctotal(uint64_t startval) {
   require_auth(get_self());
 
