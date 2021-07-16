@@ -152,11 +152,8 @@ ACTION referendums::onperiod () {
   proposal_tables proposals_t(get_self(), get_self().value);
   auto referendums_by_stage_id = proposals_t.get_index<"bystageid"_n>();
 
-  print("running onperiod\n");
-
   auto staged_itr = referendums_by_stage_id.lower_bound(uint128_t(ProposalsCommon::stage_staged.value) << 64);
   while (staged_itr != referendums_by_stage_id.end() && staged_itr->stage == ProposalsCommon::stage_staged) {
-    print("referendum:", staged_itr->proposal_id, "\n");
     send_deferred_transaction(
       permission_level(get_self(), "active"_n),
       get_self(),
@@ -168,7 +165,6 @@ ACTION referendums::onperiod () {
 
   auto active_itr = referendums_by_stage_id.lower_bound(uint128_t(ProposalsCommon::stage_active.value) << 64);
   while (active_itr != referendums_by_stage_id.end() && active_itr->stage == ProposalsCommon::stage_active) {
-    print("active referendum:", active_itr->proposal_id, "\n");
     send_deferred_transaction(
       permission_level(get_self(), "active"_n),
       get_self(),
@@ -967,15 +963,6 @@ void referendums::send_deferred_transaction (
   const name & contract, 
   const name & action,  
   const std::tuple<T...> & data) {
-
-  print("calling deferred transaction!\n");
-
-  // eosio::action(
-  //   permission,
-  //   contract,
-  //   action,
-  //   data
-  // ).send();
 
   deferred_id_tables deferredids(get_self(), get_self().value);
   deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());

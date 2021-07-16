@@ -217,8 +217,6 @@ describe('Referendums Settings', async assert => {
     limit: 200
   })
 
-console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting')))
-
   assert({
     given: 'referendums crated',
     should: 'have the correct entries',

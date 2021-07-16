@@ -371,9 +371,6 @@ var permissions = [{
   parent: 'active'
 }, {
   target: `${accounts.accounts.account}@api`,
-  action: 'addrep'
-}, {
-  target: `${accounts.accounts.account}@api`,
   action: 'subrep'
 }, {
   target: `${accounts.harvest.account}@setorgtxpt`,
@@ -712,7 +709,15 @@ var permissions = [{
   target: `${accounts.history.account}@execute`,
   action: 'cleanptrxs'
 }, {
-  target: `${accounts.accounts.account}@active`,
+  target: `${accounts.accounts.account}@addrep`,
+  actor: `${accounts.referendums.account}@eosio.code`,
+  parent: 'api',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  action: 'addrep'
+}, {
+  target: `${accounts.accounts.account}@addrep`,
   actor: `${accounts.referendums.account}@eosio.code`
 }]
 

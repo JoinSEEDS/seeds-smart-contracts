@@ -303,12 +303,6 @@ name ReferendumSettings::get_next_status (const string & cycles_per_status_strin
 
   uint64_t accumulated = 0;
 
-  print("..................................................\n");
-  print("..................................................\n");
-  print("..................................................\n");
-  print("\ncycles_per_status_string: ", cycles_per_status_string, "\n");
-  print("age: ", age, "\n");
-
   name valid_statuses[3] = { 
     ProposalsCommon::status_voting, 
     ProposalsCommon::status_test, 
@@ -321,11 +315,7 @@ name ReferendumSettings::get_next_status (const string & cycles_per_status_strin
   for (int i = 0; i < cycles_per_status_string.size(); i++) {
     if (cycles_per_status_string[i] == ',') {
 
-      print("val: ", val, "\n");
-
       accumulated += uint64_t(std::stoi(val));
-
-      print("accumulated: ", std::to_string(accumulated), "\n");
 
       if (age < accumulated) {
         return valid_statuses[j];
@@ -338,10 +328,7 @@ name ReferendumSettings::get_next_status (const string & cycles_per_status_strin
     }
   }
 
-  print("final val: ", val, "\n");
-
   accumulated += uint64_t(std::stoi(val));
-  print("final accumulated: ", std::to_string(accumulated), "\n");
 
   if (age < accumulated) {
     return valid_statuses[j];
