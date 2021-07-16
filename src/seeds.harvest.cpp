@@ -1386,26 +1386,6 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
   }
 }
 
-
-ACTION harvest::testmigscope (name account, uint64_t amount) {
-  require_auth(get_self());
-
-  auto citr = cspoints.find(account.value);
-  if (citr != cspoints.end()) {
-    cspoints.modify(citr, _self, [&](auto & item){
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  } else {
-    cspoints.emplace(_self, [&](auto & item){
-      item.account = account;
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  }
-
-}
-
 ACTION harvest::delcsorg (uint64_t start) {
   require_auth(get_self());
 
