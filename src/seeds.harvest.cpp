@@ -293,15 +293,6 @@ ACTION harvest::updatecs(name account) {
   calc_contribution_score(account, uitr.type);
 }
 
-ACTION harvest::updtotal() { // remove when balances are retired
-  require_auth(get_self());
-
-  auto bitr = balances.find(_self.value);
-  total_table tt = total.get_or_create(get_self(), total_table());
-  tt.total_planted = bitr->planted;
-  total.set(tt, get_self());
-}
-
 ACTION harvest::calctotal(uint64_t startval) {
   require_auth(get_self());
 
@@ -1385,59 +1376,4 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
     tx.send(sum_rank_orgs.value, _self);
   }
 }
-
-
-ACTION harvest::testmigscope (name account, uint64_t amount) {
-  require_auth(get_self());
-
-  auto citr = cspoints.find(account.value);
-  if (citr != cspoints.end()) {
-    cspoints.modify(citr, _self, [&](auto & item){
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  } else {
-    cspoints.emplace(_self, [&](auto & item){
-      item.account = account;
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  }
-
-}
-
-ACTION harvest::delcsorg (uint64_t start) {
-  require_auth(get_self());
-
-  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
-
-  uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t count = 0;
-
-  while (csitr != cspoints.end() && count < batch_size) {
-    auto uitr = users.find(csitr->account.value);
-    if (uitr->type == name("organisation")) {
-      csitr = cspoints.erase(csitr);
-    } else {
-      csitr++;
-    }
-    count++;
-  }
-
-  if (csitr != cspoints.end()) {
-    action next_execution(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "delcsorg"_n,
-      std::make_tuple(csitr->account.value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(csitr->account.value, _self);
-  }
-
-}
-
 
