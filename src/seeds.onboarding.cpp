@@ -122,7 +122,8 @@ void onboarding::send_campaign_reward(uint64_t campaign_id)
   transfer_seeds(citr->reward_owner, citr->reward, string("campaign reward"));
 }
 
-void onboarding::accept_invite(name account, checksum256 invite_secret, string publicKey, string fullname, bool existingTelosAccount)
+void onboarding::accept_invite(
+    name account, checksum256 invite_secret, string publicKey, string fullname, bool is_existing_telos_account, bool is_plant_seeds)
 {
 
   auto _invite_secret = invite_secret.extract_as_byte_array();
@@ -155,7 +156,7 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
   bool is_existing_telos_user = is_account(account);
   bool is_existing_seeds_user = is_seeds_user(account);
 
-  if (existingTelosAccount)
+  if (is_existing_telos_account)
   {
     check(is_existing_telos_user, "telos account does not exist: " + account.to_string());
   }
@@ -182,9 +183,16 @@ void onboarding::accept_invite(name account, checksum256 invite_secret, string p
     send_campaign_reward(ciitr->campaign_id);
   }
 
-  transfer_seeds(account, transfer_quantity, string("invite seeds"));
-  plant_seeds(sow_quantity);
-  sow_seeds(account, sow_quantity);
+  if (is_plant_seeds)
+  {
+    transfer_seeds(account, transfer_quantity, string("invite seeds"));
+    plant_seeds(sow_quantity);
+    sow_seeds(account, sow_quantity);
+  }
+  else
+  {
+    transfer_seeds(account, transfer_quantity + sow_quantity, string("invite seeds"));
+  }
 }
 
 ACTION onboarding::onboardorg(name sponsor, name account, string fullname, string publicKey)
@@ -442,14 +450,25 @@ void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth)
   invites_byhash.erase(iitr);
 }
 
+// accept invite creating new account - needs to be called with application key
+void onboarding::accept(name account, checksum256 invite_secret, string publicKey)
+{
+  check(is_account(account) == false, "Account already exists " + account.to_string());
+
+  require_auth(get_self());
+
+  accept_invite(account, invite_secret, publicKey, string(""), false, true);
+}
+
 // accept invite with creating new account -  needs to be called with application key
+// same as accept but with a full name
 void onboarding::acceptnew(name account, checksum256 invite_secret, string publicKey, string fullname)
 {
   check(is_account(account) == false, "Account already exists " + account.to_string());
 
   require_auth(get_self());
 
-  accept_invite(account, invite_secret, publicKey, fullname, false);
+  accept_invite(account, invite_secret, publicKey, fullname, false, true);
 }
 
 // accept invite using existing Telos account - needs to be signed by existing account
@@ -458,10 +477,11 @@ void onboarding::acceptexist(name account, checksum256 invite_secret)
 {
 
   check(is_account(account) == true, "Account does not exist " + account.to_string());
+  check(is_seeds_user(account) == false, "Account already is Seeds user " + account.to_string());
 
   require_auth(account);
 
-  accept_invite(account, invite_secret, string(""), string(""), true);
+  accept_invite(account, invite_secret, string(""), string(""), true, true);
 }
 
 // reward an existing Seeds user
@@ -471,15 +491,7 @@ void onboarding::reward(name account, checksum256 invite_secret)
 
   require_auth(account);
 
-  accept_invite(account, invite_secret, string(""), string(""), true);
-}
-
-// accept invite creating new account - needs to be called with application key
-void onboarding::accept(name account, checksum256 invite_secret, string publicKey)
-{
-  require_auth(get_self());
-
-  accept_invite(account, invite_secret, publicKey, string(""), false);
+  accept_invite(account, invite_secret, string(""), string(""), true, false);
 }
 
 void onboarding::chkcleanup()
