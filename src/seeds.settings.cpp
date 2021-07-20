@@ -37,6 +37,10 @@ void settings::reset() {
   confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
 
+  confwithdesc(name("refmintest"), 1, "Minimum number of cycles a referendum must be in test state", high_impact);
+  confwithdesc(name("refmineval"), 3, "Minimum number of cycles a referendum must be in evaluate/trial state", high_impact);
+  
+
   confwithdesc(name("quorum.base"), 100, "Quorum base percentage = 90% / number of proposals.", high_impact);
   confwithdesc(name("quor.min.pct"), 7, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
   confwithdesc(name("quor.max.pct"), 40, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);

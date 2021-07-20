@@ -182,7 +182,8 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao')
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -220,7 +221,8 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao')
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -266,7 +268,8 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao')
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -369,9 +372,6 @@ var permissions = [{
   target: `${accounts.exchange.account}@update`,
   key: exchangePublicKey,
   parent: 'active'
-}, {
-  target: `${accounts.accounts.account}@api`,
-  action: 'addrep'
 }, {
   target: `${accounts.accounts.account}@api`,
   action: 'subrep'
@@ -711,8 +711,29 @@ var permissions = [{
 }, {
   target: `${accounts.history.account}@execute`,
   action: 'cleanptrxs'
-}
-]
+}, {
+  target: `${accounts.dao.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'api',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  action: 'addrep'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  action: 'configure'
+},{
+  target: `${accounts.settings.account}@referendum`,
+  action: 'conffloat'
+}]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local

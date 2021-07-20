@@ -2052,7 +2052,7 @@ describe('Voice scope', async assert => {
 
 })
 
-describe.only('delegate trust', async assert => {
+describe('delegate trust', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")

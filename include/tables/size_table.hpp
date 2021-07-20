@@ -19,7 +19,7 @@ using eosio::name;
             item.size = delta; \
           }); \
         } else { \
-          uint64_t newsize = sitr->size + delta; \ 
+          uint64_t newsize = sitr->size + delta; \
           if (delta < 0) { \
             if (sitr->size < -delta) { \
               newsize = 0; \
@@ -31,7 +31,7 @@ using eosio::name;
         } \
       }
 
-#define DEFINE_SIZE_SET \ 
+#define DEFINE_SIZE_SET \
       void size_set(name id, uint64_t newsize) { \
         auto sitr = sizes.find(id.value); \
         if (sitr == sizes.end()) { \
