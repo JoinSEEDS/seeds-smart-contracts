@@ -261,6 +261,11 @@ void gratitude::check_user (name account) {
 
 void gratitude::_calc_acks (name donor) {
   auto bitr = balances.find(donor.value);
+  if (bitr == balances.end()) {
+    init_balances(donor);
+    bitr = balances.find(donor.value);
+  }
+
   uint64_t remaining = bitr->remaining.amount;
 
   auto min_acks = config_get(gratz_acks);
