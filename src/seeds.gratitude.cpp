@@ -379,7 +379,10 @@ void gratitude::add_gratitude (name account, asset quantity) {
   check_asset(quantity);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "gratitude: no balance object found for " + account.to_string());
+  if (bitr == balances.end()) {
+    init_balances(account);
+    bitr = balances.find(account.value);
+  }
 
   balances.modify(bitr, _self, [&](auto & item){
     item.received += quantity;
@@ -391,7 +394,11 @@ void gratitude::sub_gratitude (name account, asset quantity) {
   check_asset(quantity);
 
   auto bitr = balances.find(account.value);
-  check(bitr != balances.end(), "gratitude: no balances object found for " + account.to_string());
+  if (bitr == balances.end()) {
+    init_balances(account);
+    bitr = balances.find(account.value);
+  }
+
   check(bitr -> remaining.amount >= quantity.amount, "gratitude: not enough gratitude to give");
 
   balances.modify(bitr, _self, [&](auto & item){
