@@ -1,987 +1,675 @@
 #include <seeds.referendums.hpp>
-#include <proposals/proposals_factory.hpp>
 
-#include "proposals/referendums_settings.cpp"
-
-
-ACTION referendums::reset () {
-  require_auth(get_self());
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.begin();
-  while (ritr != proposals_t.end()) {
-
-    votes_tables votes_t(get_self(), ritr->proposal_id);
-    auto vitr = votes_t.begin();
-    while (vitr != votes_t.end()) {
-      vitr = votes_t.erase(vitr);
-    }
-
-    ritr = proposals_t.erase(ritr);
-  }
-
-  proposal_auxiliary_tables propaux_t(get_self(), get_self().value);
-  auto raitr = propaux_t.begin();
-  while (raitr != propaux_t.end()) {
-    raitr = propaux_t.erase(raitr);
-  }
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_t.remove();
+void referendums::send_change_setting(name setting_name, uint64_t setting_value) {
+  action(
+    permission_level{contracts::settings, "active"_n},
+    contracts::settings, "configure"_n,
+    make_tuple(setting_name, setting_value)
+  ).send();
 }
 
-ACTION referendums::initcycle (const uint64_t & cycle_id) {
-  require_auth(get_self());
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c_t = cycle_t.get_or_create(get_self(), cycle_table());
-
-  c_t.propcycle = cycle_id;
-  c_t.t_onperiod = current_time_point().sec_since_epoch();
-
-  cycle_t.set(c_t, get_self());
+void referendums::send_burn_stake(asset quantity) {
+  action(
+    permission_level{contracts::referendums, "active"_n},
+    contracts::token, "burn"_n,
+    make_tuple(contracts::referendums, quantity)
+  ).send();
 }
 
-ACTION referendums::initsz() {
-  require_auth(_self);
-
-  uint64_t cutoff_date = active_cutoff_date();
-  int64_t count = 0;
-
-  active_tables actives_t(get_self(), get_self().value);
-
-  auto aitr = actives_t.begin();
-  while(aitr != actives_t.end()) {
-    if (aitr -> timestamp >= cutoff_date) {
-      count++;
-    }
-    aitr++;
-  }
-  print("size change "+std::to_string(count));
-  size_set(user_active_size, count);
+void referendums::send_refund_stake(name account, asset quantity) {
+  action(
+    permission_level{contracts::referendums, "active"_n},
+    contracts::token, "transfer"_n,
+    make_tuple(contracts::referendums, account, quantity, string(""))
+  ).send();
 }
 
-ACTION referendums::create (std::map<std::string, VariantValue> & args) {
-
-  name creator = std::get<name>(args["creator"]);
-  name type = std::get<name>(args["type"]);
-
-  require_auth(creator);
-  check_citizen(creator);
-  check_attributes(args);
-
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
-
-  ref->create(args);
-
+void referendums::send_onperiod() {
+  action(
+    permission_level{contracts::referendums, "active"_n},
+    get_self(), "onperiod"_n,
+    make_tuple()
+  ).send();
 }
 
-ACTION referendums::update (std::map<std::string, VariantValue> & args) {
+void referendums::give_voice() {
+  auto bitr = balances.begin();
 
-  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  require_auth(ritr->creator);
-  check_attributes(args);
-
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
-
-  ref->update(args);
-
-}
-
-ACTION referendums::cancel (std::map<std::string, VariantValue> & args) {
-
-  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  require_auth(ritr->creator);
-
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
-
-  ref->cancel(args);
-
-}
-
-ACTION referendums::stake (const name & from, const name & to, const asset & quantity, const string & memo) {
-
-  if ( get_first_receiver() == contracts::token && 
-       to == get_self() && 
-       quantity.symbol == utils::seeds_symbol ) {
-      
-    utils::check_asset(quantity);
-
-    uint64_t proposal_id = std::stoi(memo);
-
-    proposal_tables proposals_t(get_self(), get_self().value);
-    auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
-
-    proposals_t.modify(ritr, _self, [&](auto & item){
-      item.staked += quantity;
+  while (bitr != balances.end()) {
+    balances.modify(bitr, get_self(), [&](auto& item) {
+      item.voice = 10;
     });
 
+    bitr++;
   }
+}
+
+uint64_t referendums::get_quorum(const name & setting) {
+  auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("quorum.high").value) -> value;
+  }
+  switch (citr->impact) {
+    case high_impact:
+      return config.find(name("quorum.high").value) -> value;
+    case medium_impact:
+      return config.find(name("quorum.med").value) -> value;
+    case low_impact:
+      return config.find(name("quorum.low").value) -> value;
+    default:
+      check(false, "unknown impact for setting " + setting.to_string());
+      break;
+  }
+}
+
+uint64_t referendums::get_unity(const name & setting) {
+  auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("unity.high").value) -> value;
+  }
+  switch (citr->impact) {
+    case high_impact:
+      return config.find(name("unity.high").value) -> value;
+    case medium_impact:
+      return config.find(name("unity.medium").value) -> value;
+    case low_impact:
+      return config.find(name("unity.low").value) -> value;
+    default:
+      check(false, "unknown impact for setting " + setting.to_string());
+      break;
+  }
+}
+
+void referendums::run_testing() {
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  auto titr = testing.begin();
+
+  uint64_t majority = 0;
+
+  while (titr != testing.end()) {
+    majority = get_unity(titr->setting_name);
+
+    bool referendum_passed = utils::is_valid_majority(titr->favour, titr->against, majority);
+
+    if (referendum_passed) {
+      send_change_setting(titr->setting_name, titr->setting_value);
+
+      passed.emplace(_self, [&](auto& item) {
+        MOVE_REFERENDUM(titr, item)
+      });
+
+      titr = testing.erase(titr);
+    } else {
+      failed.emplace(_self, [&](auto& item) {
+        MOVE_REFERENDUM(titr, item)
+      });
+
+      titr = testing.erase(titr);
+    }
+  }
+}
+
+void referendums::run_active() {
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  auto aitr = active.begin();
+
+  uint64_t majority = 0;
+  uint64_t quorum = 0;
+
+  while (aitr != active.end()) {
+    majority = get_unity(aitr->setting_name);
+    quorum = get_quorum(aitr->setting_name);
+
+    voter_tables voters(get_self(), aitr->referendum_id);
+    uint64_t voters_number = distance(voters.begin(), voters.end());
+    
+    bool valid_majority = utils::is_valid_majority(aitr->favour, aitr->against, majority);
+    bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, distance(balances.begin(), balances.end()));
+    bool referendum_passed = valid_majority && valid_quorum;
+
+    if (referendum_passed) {
+      testing.emplace(_self, [&](auto& item) {
+        MOVE_REFERENDUM(aitr, item)
+      });
+
+      send_refund_stake(aitr->creator, aitr->staked);
+
+      aitr = active.erase(aitr);
+    } else {
+      send_burn_stake(aitr->staked);
+
+      failed.emplace(_self, [&](auto& item) {
+        MOVE_REFERENDUM(aitr, item)
+      });
+
+      aitr = active.erase(aitr);
+    }
+  }
+}
+
+void referendums::run_staged() {
+  referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+
+  auto sitr = staged.begin();
+
+  while (sitr != staged.end()) {
+    active.emplace(_self, [&](auto& item) {
+      MOVE_REFERENDUM(sitr, item)
+    });
+
+    sitr = staged.erase(sitr);
+  }
+}
+
+void referendums::onperiod() {
+  run_testing();
+  run_active();
+  run_staged();
+
+  updatevoice(0, 50);
 
 }
 
-ACTION referendums::evaluate (const uint64_t & proposal_id) {
+void referendums::reset() {
+  auto bitr = balances.begin();
 
+  while (bitr != balances.end()) {
+    bitr = balances.erase(bitr);
+  }
+
+  referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  auto sitr = staged.begin();
+  auto aitr = active.begin();
+  auto titr = testing.begin();
+  auto pitr = passed.begin();
+  auto fitr = failed.begin();
+
+  while (sitr != staged.end()) {
+    voter_tables voters(get_self(), sitr->referendum_id);
+    auto vitr = voters.begin();
+    while (vitr != voters.end()) {
+      vitr = voters.erase(vitr);
+    }
+
+    sitr = staged.erase(sitr);
+  }
+
+  while (aitr != active.end()) {
+    voter_tables voters(get_self(), aitr->referendum_id);
+    auto vitr = voters.begin();
+    while (vitr != voters.end()) {
+      vitr = voters.erase(vitr);
+    }
+
+    aitr = active.erase(aitr);
+  }
+
+  while (titr != testing.end()) {
+    voter_tables voters(get_self(), titr->referendum_id);
+    auto vitr = voters.begin();
+    while (vitr != voters.end()) {
+      vitr = voters.erase(vitr);
+    }
+
+    titr = testing.erase(titr);
+  }
+
+  while (pitr != passed.end()) {
+    voter_tables voters(get_self(), pitr->referendum_id);
+    auto vitr = voters.begin();
+    while (vitr != voters.end()) {
+      vitr = voters.erase(vitr);
+    }
+
+    pitr = passed.erase(pitr);
+  }
+
+  while (fitr != failed.end()) {
+    voter_tables voters(get_self(), fitr->referendum_id);
+    auto vitr = voters.begin();
+    while (vitr != voters.end()) {
+      vitr = voters.erase(vitr);
+    }
+
+    fitr = failed.erase(fitr);
+  }
+}
+
+void referendums::addvoice(name account, uint64_t amount) {
+  auto bitr = balances.find(account.value);
+
+  if (bitr == balances.end()) {
+    balances.emplace(get_self(), [&](auto& balance) {
+      balance.account = account;
+      balance.voice = amount;
+      balance.stake = asset(0, seeds_symbol);
+    });
+  } else {
+    balances.modify(bitr, get_self(), [&](auto& balance) {
+      balance.voice += amount;
+    });
+  }
+}
+
+ACTION referendums::updatevoice(uint64_t start, uint64_t batchsize) {
   require_auth(get_self());
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
-
-  std::map<string, VariantValue> args = {
-    { string("proposal_id"), proposal_id }
+  
+  // Voice table definition from proposals.hpp
+  TABLE voice_table {
+    name account;
+    uint64_t balance;
+    uint64_t primary_key()const { return account.value; }
   };
+  typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
+  voice_tables voice(contracts::proposals, "referendum"_n.value);
 
-  ref->evaluate(args);
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
 
-}
-
-ACTION referendums::onperiod () {
-
-  require_auth(get_self());
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto referendums_by_stage_id = proposals_t.get_index<"bystageid"_n>();
-
-  auto staged_itr = referendums_by_stage_id.lower_bound(uint128_t(ProposalsCommon::stage_staged.value) << 64);
-  while (staged_itr != referendums_by_stage_id.end() && staged_itr->stage == ProposalsCommon::stage_staged) {
-    send_deferred_transaction(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "evaluate"_n,
-      std::make_tuple(staged_itr->proposal_id)
-    );
-    staged_itr++;
-  }
-
-  auto active_itr = referendums_by_stage_id.lower_bound(uint128_t(ProposalsCommon::stage_active.value) << 64);
-  while (active_itr != referendums_by_stage_id.end() && active_itr->stage == ProposalsCommon::stage_active) {
-    send_deferred_transaction(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "evaluate"_n,
-      std::make_tuple(active_itr->proposal_id)
-    );
-    active_itr++;
-  }
-
-}
-
-
-
-// ==================================================================== //
-// ACTIVE //
-
-
-ACTION referendums::addactive (const name & account) {
-  require_auth(get_self());
-
-  active_tables actives_t(get_self(), get_self().value);
-  auto aitr = actives_t.find(account.value);
-  
-  if (aitr == actives_t.end()) {
-    actives_t.emplace(_self, [&](auto & a){
-      a.account = account;
-      a.timestamp = eosio::current_time_point().sec_since_epoch();
-    });
-    size_change(user_active_size, 1);
-    recover_voice(account); // this action is repeated twice when an account becomes citizen
-  }
-}
-
-
-// ==================================================================== //
-
-
-
-
-
-// ==================================================================== //
-// PARTICIPANTS //
-
-
-
-
-
-// ==================================================================== //
-
-
-
-
-
-// ==================================================================== //
-// VOICE //
-
-ACTION referendums::decayvoices () {
-  require_auth(get_self());
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-
-  uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t decay_time = config_get(name("decaytime"));
-  uint64_t decay_sec = config_get(name("propdecaysec"));
-
-  if ((c.t_onperiod < now)
-      && (now - c.t_onperiod >= decay_time)
-      && (now - c.t_voicedecay >= decay_sec)
-  ) {
-    c.t_voicedecay = now;
-    cycle_t.set(c, get_self());
-    uint64_t batch_size = config_get(name("batchsize"));
-    decayvoice(0, batch_size);
-  }
-}
-
-ACTION referendums::decayvoice (const uint64_t & start, const uint64_t & chunksize) {
-  require_auth(get_self());
-
-  voice_tables voices(get_self(), campaign_scope.value);
-
-  uint64_t percentage_decay = config_get(name("vdecayprntge"));
-  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
-  
-  auto vitr = voices.lower_bound(start);
   uint64_t count = 0;
-
-  double multiplier = (100.0 - (double)percentage_decay) / 100.0;
-
-  while (vitr != voices.end() && count < chunksize) {
-
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto voice_itr = voice_t.find(vitr->account.value);
-
-      if (voice_itr != voice_t.end()) {
-        voice_t.modify(vitr, _self, [&](auto & v){
-          v.balance *= multiplier;
-        });
-      }
+  
+  while (vitr != voice.end() && count < batchsize) {
+    auto bitr = balances.find(vitr->account.value);
+    if (bitr == balances.end()) {
+      balances.emplace(get_self(), [&](auto& item) {
+        item.account = vitr->account;
+        item.voice = vitr->balance;
+        item.stake = asset(0, seeds_symbol);
+      });
+      count++;// double weight for emplace
+    } else {
+      balances.modify(bitr, get_self(), [&](auto& item) {
+        item.voice = vitr->balance;
+      });
     }
 
     vitr++;
-    count += 2;
+    count++;
   }
-
-  if (vitr != voices.end()) {
-    send_deferred_transaction(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "decayvoice"_n,
-      std::make_tuple(vitr->account.value, chunksize)
-    );
-  }
-}
-
-ACTION referendums::favour (const name & voter, const uint64_t & proposal_id, const uint64_t & amount) {
-  require_auth(voter);
-  vote_aux(voter, proposal_id, amount, ProposalsCommon::trust, false);
-}
-
-ACTION referendums::against (const name & voter, const uint64_t & proposal_id, const uint64_t & amount) {
-  require_auth(voter);
-  vote_aux(voter, proposal_id, amount, ProposalsCommon::distrust, false);
-}
-
-ACTION referendums::neutral (const name & voter, const uint64_t & proposal_id) {
-  require_auth(voter);
-  vote_aux(voter, proposal_id, uint64_t(0), ProposalsCommon::neutral, false);
-}
-
-ACTION referendums::revertvote (const name & voter, const uint64_t & proposal_id) {
-  require_auth(voter);
   
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  votes_tables votes_t(get_self(), proposal_id);
-  auto vitr = votes_t.require_find(voter.value, "voter has not voted on this proposal, can't revert");
-
-  uint64_t amount = vitr->amount;
-
-  check(pitr->stage == ProposalsCommon::stage_active, "proposal is not in stage active");
-  check(vitr->favour == true && amount > 0, "only trust votes can be changed");
-  
-  votes_t.modify(vitr, _self, [&](auto& item) {
-    item.favour = false;
-  });
-
-  proposals_t.modify(pitr, _self, [&](auto& item) {
-    item.against += amount;
-    item.favour -= amount;
-  });
-
-  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
-  name scope = prop->get_scope();
-
-  if (has_delegates(voter, scope)) {
-    send_inline_action(
-      permission_level(get_self(), "active"_n),
-      get_self(), 
-      "mimicrevert"_n,
-      std::make_tuple(voter, (uint64_t)0, scope, proposal_id, (uint64_t)30)
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updatevoice"_n,
+        std::make_tuple(next_value, batchsize)
     );
-  }
 
-}
-
-ACTION referendums::voteonbehalf (const name & voter, const uint64_t & proposal_id, const uint64_t & amount, const name & option) {
-  require_auth(get_self());
-  vote_aux(voter, proposal_id, amount, option, true);
-}
-
-ACTION referendums::changetrust (const name & user, const bool & trust) {
-  require_auth(get_self());
-
-  voice_tables voice_t(get_self(), campaign_scope.value);
-  auto vitr = voice_t.find(user.value);
-
-  if (vitr == voice_t.end() && trust) {
-    recover_voice(user);
-  } else if (vitr != voice_t.end() && !trust) {
-    erase_voice(user);
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
   }
 }
 
-ACTION referendums::delegate (const name & delegator, const name & delegatee, const name & scope) {
+void referendums::stake(name from, name to, asset quantity, string memo) {
+  if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
+        to  ==  get_self() &&                     // to here
+        quantity.symbol == seeds_symbol) {        // SEEDS symbol
 
-  require_auth(delegator);
+    utils::check_asset(quantity);
 
-  voice_tables voice(get_self(), scope.value);
-  voice.get(delegator.value, "delegator does not have voice");
-  voice.get(delegatee.value, "delegatee does not have voice");
+    auto bitr = balances.find(from.value);
 
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto ditr = deltrust_t.find(delegator.value);
-
-  name current = delegatee;
-  bool no_cycles = false;
-  uint64_t max_depth = config_get("dlegate.dpth"_n);
-
-  for (int i = 0; i < max_depth; i++) {
-    auto dditr = deltrust_t.find(current.value);
-    if (dditr != deltrust_t.end()) {
-      current = dditr -> delegatee;
-      if (current == delegator) {
-        break;
-      }
+    if (bitr == balances.end()) {
+      balances.emplace(get_self(), [&](auto& balance) {
+        balance.account = from;
+        balance.voice = 0;
+        balance.stake = quantity;
+      });
     } else {
-      no_cycles = true;
+      balances.modify(bitr, get_self(), [&](auto& balance) {
+        balance.stake += quantity;
+      });
+    }
+  }
+}
+
+void referendums::create(
+  name creator,
+  name setting_name,
+  uint64_t setting_value,
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  require_auth(creator);
+
+  check_citizen(creator);
+
+  check_values(title, summary, description, image, url);
+
+  uint64_t price_amount = config.find(name("refsnewprice").value)->value;
+  asset stake_price = asset(price_amount, seeds_symbol);
+
+  auto bitr = balances.find(creator.value);
+  check(bitr != balances.end(), "user has not balance");
+  check(bitr->stake >= stake_price, "user has not sufficient stake");
+
+  referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  uint64_t key = std::max(staged.available_primary_key(), active.available_primary_key());
+  key = std::max(key, testing.available_primary_key());
+  key = std::max(key, passed.available_primary_key());
+  key = std::max(key, failed.available_primary_key());
+
+  staged.emplace(get_self(), [&](auto& item) {
+    item.referendum_id = key;
+    item.favour = 0;
+    item.against = 0;
+    item.staked = asset(price_amount, seeds_symbol);
+    item.creator = creator;
+    item.setting_name = setting_name;
+    item.setting_value = setting_value;
+    item.title = title;
+    item.summary = summary;
+    item.description = description;
+    item.image = image;
+    item.url = url;
+    item.created_at = current_time_point().sec_since_epoch();
+  });
+
+  balances.modify(bitr, get_self(), [&](auto& balance) {
+    balance.stake -= stake_price;
+  });
+}
+
+void referendums::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
+
+void referendums::update(
+  name creator,
+  name setting_name,
+  uint64_t setting_value,
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  referendum_tables staged(get_self(), name("staged").value);
+  auto refs = staged.get_index<"byname"_n>();
+  auto sitr = refs.find(setting_name.value);
+  
+  check (sitr != refs.end(), "referendum setting not found " + setting_name.to_string());
+
+  while (sitr != refs.end()) {
+    if (sitr->creator == creator) {
       break;
     }
+    sitr++;
   }
 
-  check(no_cycles, "can not add delegatee, cycles are not allowed");
+  check (sitr != refs.end(), "referendum creator not found " + creator.to_string());
 
-  if (ditr != deltrust_t.end()) {
-    deltrust_t.modify(ditr, _self, [&](auto & item){
-      item.delegatee = delegatee;
-      item.weight = 1.0;
-      item.timestamp = eosio::current_time_point().sec_since_epoch();
-    });
-  } else {
-    deltrust_t.emplace(_self, [&](auto & item){
-      item.delegator = delegator;
-      item.delegatee = delegatee;
-      item.weight = 1.0;
-      item.timestamp = eosio::current_time_point().sec_since_epoch();
-    });
-  }
+  check_values(title, summary, description, image, url);
 
+  require_auth(sitr->creator);
+
+  refs.modify(sitr, get_self(), [&](auto& item) {
+    item.setting_name = setting_name;
+    item.setting_value = setting_value;
+    item.title = title;
+    item.summary = summary;
+    item.description = description;
+    item.image = image;
+    item.url = url;
+  });
 }
 
-ACTION referendums::undelegate (const name & delegator, const name & scope) {
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto ditr = deltrust_t.find(delegator.value);
-
-  check(ditr != deltrust_t.end(), "delegator not found");
-
-  if (!has_auth(ditr->delegatee)) {
-    require_auth(delegator);
-  } else {
-    require_auth(ditr->delegatee);
-  }
-
-  deltrust_t.erase(ditr);
-}
-
-ACTION referendums::mimicvote (
-  const name & delegatee, 
-  const name & delegator, 
-  const name & scope, 
-  const uint64_t & proposal_id, 
-  const double & percentage_used, 
-  const name & option, 
-  const uint64_t chunksize) {
-
-  require_auth(get_self());
-
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
-
-  voice_tables voices(get_self(), scope.value);
-
-  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator.value;
-
-  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(id);
-  uint64_t count = 0;
-
-  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee && count < chunksize) {
-
-    name voter = ditr->delegator;
-
-    auto vitr = voices.find(voter.value);
-    if (vitr != voices.end()) {
-      send_deferred_transaction(
-        permission_level(get_self(), "active"_n),
-        get_self(),
-        "voteonbehalf"_n,
-        std::make_tuple(voter, proposal_id, vitr->balance * percentage_used, option)
-      );
-    }
-
-    ditr++;
-    count++;
-  }
-
-  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
-    send_deferred_transaction(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "mimicvote"_n,
-      std::make_tuple(delegatee, ditr->delegator, scope, proposal_id, percentage_used, option, chunksize)
-    );
-  }
-
-}
-
-ACTION referendums::mimicrevert (const name & delegatee, const uint64_t & delegator, const name & scope, const uint64_t & proposal_id, const uint64_t & chunksize) {
-
-  require_auth(get_self());
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-  check(pitr->stage == ProposalsCommon::stage_active, "proposal stage is not active");
-
-  votes_tables votes_t(get_self(), proposal_id);
-
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
-
-  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
-
-  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
-
-  uint64_t count = 0;
-
-  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee && count < chunksize) {
-
-    auto vitr = votes_t.find(ditr->delegator.value);
-
-    if (vitr != votes_t.end()) {
-      uint64_t amount = vitr->amount;
-
-      if (vitr->favour == true && amount > 0) {
-        votes_t.modify(vitr, _self, [&](auto& item) {
-          item.favour = false;
-        });
-
-        proposals_t.modify(pitr, _self, [&](auto& proposal) {
-          proposal.against += amount;
-          proposal.favour -= amount;
-        });
-      }
-    }
-
-    ditr++;
-    count++;
-  }
-
-  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
-    send_deferred_transaction(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "mimicrevert"_n,
-      std::make_tuple(delegatee, ditr->delegator.value, scope, proposal_id, chunksize)
-    );
-  }
-
-}
-
-ACTION referendums::testsetvoice (const name & account, const uint64_t & amount) {
-  require_auth(get_self());
-  set_voice(account, amount, "all"_n);
-}
-
-
-void referendums::set_voice (const name & user, const uint64_t & amount, const name & scope) {
-  if (scope == "all"_n) {
-
-    bool increase_size = true;
-
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto vitr = voice_t.find(user.value);
-
-      if (vitr == voice_t.end()) {
-        voice_t.emplace(_self, [&](auto & voice){
-          voice.account = user;
-          voice.balance = amount;
-        });
-      }
-      else {
-        increase_size = false;
-        voice_t.modify(vitr, _self, [&](auto & voice){
-          voice.balance = amount;
-        });
-      }
-    }
-
-    if (increase_size) {
-      size_change("voice.sz"_n, 1);
-    }
-
-  } else {
-    voice_tables voice_t(get_self(), scope.value);
-    auto vitr = voice_t.find(user.value);
-
-    if (vitr == voice_t.end()) {
-      voice_t.emplace(_self, [&](auto & voice){
-        voice.account = user;
-        voice.balance = amount;
-      });
-    } else {
-      voice_t.modify(vitr, _self, [&](auto & voice){
-        voice.balance = amount;
-      });
-    }
-  }
-}
-
-double referendums::voice_change (const name & user, const uint64_t & amount, const bool & reduce, const name & scope) {
-  double percentage_used = 0.0;
-
-  if (scope == "all"_n) {
-
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto vitr = voice_t.find(user.value);
-
-      if (vitr != voice_t.end()) {
-        if (reduce) {
-          check(amount <= vitr->balance, s.to_string() + " voice balance exceeded");
-        }
-        voice_t.modify(vitr, _self, [&](auto & voice){
-          if (reduce) {
-            voice.balance -= amount;
-          } else {
-            voice.balance += amount;
-          }
-        });
-      }
-    }
-
-  } else {    
-    voice_tables voice_t(get_self(), scope.value);
-    auto vitr = voice_t.require_find(user.value, "user does not have voice");
-
-    if (reduce) {
-      check(amount <= vitr->balance, "voice balance exceeded");
-      percentage_used = amount / double(vitr -> balance);
-    }
-    voice_t.modify(vitr, _self, [&](auto & voice){
-      if (reduce) {
-        voice.balance -= amount;
-      } else {
-        voice.balance += amount;
-      }
-    });
-  }
-
-  return percentage_used;
-}
-
-void referendums::erase_voice (const name & user) {
-  require_auth(get_self());
-
-  for (auto & s : scopes) {
-    voice_tables voice_t(get_self(), s.value);
-    auto vitr = voice_t.find(user.value);
-    voice_t.erase(vitr);
-  }
-  
-  size_change("voice.sz"_n, -1);
-
-  active_tables actives_t(get_self(), get_self().value); 
-  auto aitr = actives_t.find(user.value);
-
-  if (aitr != actives_t.end()) {
-    actives_t.erase(aitr);
-    size_change(user_active_size, -1);
-  }
-}
-
-void referendums::recover_voice (const name & account) {
-
-  DEFINE_CS_POINTS_TABLE
-  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
-  
-  cs_points_tables cspoints_t(contracts::harvest, contracts::harvest.value);
-
-  auto csitr = cspoints_t.find(account.value);
-  uint64_t voice_amount = 0;
-
-  if (csitr != cspoints_t.end()) {
-    voice_amount = calculate_decay(csitr->rank);
-  }
-
-  set_voice(account, voice_amount, "all"_n);
-  size_change(cycle_vote_power_size, voice_amount);
-
-}
-
-uint64_t referendums::calculate_decay (const uint64_t & voice_amount) {
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-  
-  uint64_t decay_percentage = config_get(name("vdecayprntge"));
-  uint64_t decay_time = config_get(name("decaytime"));
-  uint64_t decay_sec = config_get(name("propdecaysec"));
-  uint64_t temp = c.t_onperiod + decay_time;
-
-  check(decay_percentage <= 100, "The decay percentage could not be grater than 100%");
-
-  if (temp >= c.t_voicedecay) { return voice_amount; }
-  uint64_t n = ((c.t_voicedecay - temp) / decay_sec) + 1;
-  
-  double multiplier = 1.0 - (decay_percentage / 100.0);
-  return voice_amount * pow(multiplier, n);
-
-}
-
-void referendums::vote_aux (const name & voter, const uint64_t & proposal_id, const uint64_t & amount, const name & option, const bool & is_delegated) {
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  votes_tables votes_t(get_self(), proposal_id);
-  auto vitr = votes_t.find(voter.value);
-  check(vitr == votes_t.end(), "only one vote");
-
-  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
-  prop->check_can_vote(pitr->status, pitr->stage);
-
-  proposals_t.modify(pitr, _self, [&](auto & item){
-    if (option == ProposalsCommon::trust) {
-      item.favour += amount;  
-    } else if (option == ProposalsCommon::distrust) {
-      item.against += amount;
-    }
+void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
+  auto bitr = balances.find(voter.value);
+  check(bitr != balances.end(), "user has no voice");
+  check(bitr->voice >= amount, "not enough voice");
+
+  voter_tables voters(get_self(), referendum_id);
+  auto vitr = voters.find(voter.value);
+  check(vitr == voters.end(), "user can only vote one time");
+
+  referendum_tables active(get_self(), name("active").value);
+  auto aitr = active.find(referendum_id);
+  check (aitr != active.end(), "referendum does not exist");
+
+  balances.modify(bitr, get_self(), [&](auto& balance) {
+    balance.voice -= amount;
   });
 
-  votes_t.emplace(_self, [&](auto & item){
-    item.proposal_id = proposal_id;
+  active.modify(aitr, get_self(), [&](auto& referendum) {
+    referendum.favour += amount;
+  });
+
+  voters.emplace(get_self(), [&](auto& item) {
     item.account = voter;
+    item.referendum_id = referendum_id;
     item.amount = amount;
-    item.favour = option == ProposalsCommon::trust;
+    item.favoured = true;
+    item.canceled = false;
+  });
+}
+
+void referendums::against(name voter, uint64_t referendum_id, uint64_t amount) {
+  require_auth(voter);
+
+  auto bitr = balances.find(voter.value);
+  check(bitr != balances.end(), "user has no voice");
+  check(bitr->voice >= amount, "not enough voice");
+
+  referendum_tables active(get_self(), name("active").value);
+  auto aitr = active.find(referendum_id);
+  check(aitr != active.end(), "referendum not found");
+
+  voter_tables voters(get_self(), referendum_id);
+  auto vitr = voters.find(voter.value);
+  check(vitr == voters.end(), "user can only vote one time");
+
+  balances.modify(bitr, get_self(), [&](auto& balance) {
+    balance.voice -= amount;
   });
 
-  // storing the number of voters per proposal in a separate scope
-  size_tables sizes_t(get_self(), ProposalsCommon::vote_scope.value);
-  auto sitr = sizes_t.find(proposal_id);
-
-  if (sitr == sizes_t.end()) {
-    sizes_t.emplace(_self, [&](auto & item){
-      item.id = name(proposal_id);
-      item.size = 1;
-    });
-  } else {
-    sizes_t.modify(sitr, _self, [&](auto & item){
-      item.size += 1;
-    });
-  }
-
-  // reduce voice
-  name scope = prop->get_scope();
-  double percenetage_used = voice_change(voter, amount, true, scope);
-
-  if (!is_delegated) {
-    check(!is_trust_delegated(voter, scope), "voice is delegated, user can not vote by itself");
-  }
-
-  send_mimic_delegatee_vote(voter, scope, proposal_id, percenetage_used, option);
-
-  auto rep = config_get(name("voterep2.ind"));
-  double rep_multiplier = is_delegated ? config_get(name("votedel.mul")) / 100.0 : 1.0;
-
-  participant_tables participants_t(get_self(), get_self().value);
-  auto paitr = participants_t.find(voter.value);
-
-  if (paitr == participants_t.end()) {
-    // add reputation for entering in the table
-    send_inline_action(
-      permission_level{contracts::accounts, "active"_n},
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(voter, uint64_t(rep * rep_multiplier))
-    );
-    // add the voter to the table
-    participants_t.emplace(_self, [&](auto & participant){
-      participant.account = voter;
-      participant.nonneutral = option != ProposalsCommon::neutral;
-      participant.count = 1;
-    });
-  } else {
-    participants_t.modify(paitr, _self, [&](auto & participant){
-      participant.count += 1;
-      if (option != ProposalsCommon::neutral) { // here, I think this is a bug
-        participant.nonneutral = true;
-      }
-    });
-  }
-
-  active_tables actives_t(get_self(), get_self().value);
-  auto aitr = actives_t.find(voter.value);
-  if (aitr == actives_t.end()) {
-    actives_t.emplace(_self, [&](auto& item) {
-      item.account = voter;
-      item.timestamp = current_time_point().sec_since_epoch();
-    });
-    size_change(user_active_size, 1);
-  } else {
-    actives_t.modify(aitr, _self, [&](auto & item){
-      item.timestamp = current_time_point().sec_since_epoch();
-    });
-  }
-
-  add_voted_proposal(proposal_id);
-
-  // this one, maybe it should be called as a callback in the proposal's implementation?
-  // because not all proposals increase the voice cast, currently only the ones that are funded
-  // have an entry in the support table
-  increase_voice_cast(amount, option, prop->get_fund_type());
-
-}
-
-bool referendums::has_delegates (const name & voter, const name & scope) {
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee = deltrust_t.get_index<"bydelegatee"_n>();
-  auto ditr = deltrusts_by_delegatee.find(voter.value);
-  return ditr != deltrusts_by_delegatee.end();
-}
-
-void referendums::add_voted_proposal (const uint64_t & proposal_id) {
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-
-  voted_proposals_tables votedprops_t(get_self(), c.propcycle);
-  auto vpitr = votedprops_t.find(proposal_id);
-
-  if (vpitr == votedprops_t.end()) {
-    votedprops_t.emplace(_self, [&](auto & prop){
-      prop.proposal_id = proposal_id;
-    });
-  }
-
-}
-
-void referendums::increase_voice_cast (const uint64_t & amount, const name & option, const name & prop_type) {
-
-  if (prop_type == ProposalsCommon::fund_type_none) { return; }
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-
-  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
-  auto citr = cyclestats_t.find(c.propcycle);
-
-  if (citr != cyclestats_t.end()) {
-    cyclestats_t.modify(citr, _self, [&](auto & item){
-      item.total_voice_cast += amount;
-      if (option == ProposalsCommon::trust) {
-        item.total_favour += amount;
-      } else if (option == ProposalsCommon::distrust) {
-        item.total_against += amount;
-      }
-      item.num_votes += 1;
-    });
-  }
-
-  add_voice_cast(c.propcycle, amount, prop_type);
-
-}
-
-void referendums::add_voice_cast (const uint64_t & cycle, const uint64_t & voice_cast, const name & type) {
-
-  support_level_tables support_t(get_self(), type.value);
-  auto sitr = support_t.find(cycle);
-  check(sitr != support_t.end(), "cycle not found "+std::to_string(cycle));
-
-  support_t.modify(sitr, _self, [&](auto & item){
-    uint64_t total_voice = item.total_voice_cast + voice_cast;
-    item.total_voice_cast = total_voice;
-    item.voice_needed = calc_voice_needed(total_voice, item.num_proposals);
+  active.modify(aitr, get_self(), [&](auto& item) {
+    item.against += amount;
   });
 
+  voters.emplace(get_self(), [&](auto& item) {
+    item.account = voter;
+    item.referendum_id = referendum_id;
+    item.amount = amount;
+    item.favoured = false;
+    item.canceled = false;
+  });
 }
 
-uint64_t referendums::calc_voice_needed (const uint64_t & total_voice, const uint64_t & num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
-}
+void referendums::cancelvote(name voter, uint64_t referendum_id) {
+  require_auth(voter);
 
-uint64_t referendums::get_quorum (const uint64_t & total_proposals) {
+  voter_tables voters(get_self(), referendum_id);
+  auto vitr = voters.find(voter.value);
+  check(vitr != voters.end(), "vote not found");
+  check(vitr->canceled == false, "vote already canceled");
 
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
+  referendum_tables testing(get_self(), name("testing").value);
+  auto titr = testing.find(referendum_id);
+  check(titr != testing.end(), "testing referendum not found");
 
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
-  quorum = std::max(quorum_min, quorum);
-  return std::min(quorum_max, quorum);
+  voters.modify(vitr, get_self(), [&](auto& voter) {
+    voter.canceled = true;
+  });
 
-}
-
-
-bool referendums::revert_vote (const name & voter, const uint64_t & proposal_id) {
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
-
-  votes_tables votes_t(get_self(), proposal_id);
-  auto vitr = votes_t.find(voter.value);
-
-  if (vitr != votes_t.end()) {
-    check(ritr->stage == ProposalsCommon::stage_active, "referendum is not active");
-    check(vitr->favour == true && vitr->amount > 0, "only trust votes can be changed");
-
-    proposals_t.modify(ritr, _self, [&](auto & item){
+  if (vitr->favoured == true) {
+    testing.modify(titr, get_self(), [&](auto& item) {
       item.favour -= vitr->amount;
     });
-
-    votes_t.erase(vitr);
-
-    return true;
+  } else {
+    testing.modify(titr, get_self(), [&](auto& item) {
+      item.against -= vitr->amount;
+    });
   }
-
-  return false;
-
 }
-
-bool referendums::is_trust_delegated (const name & account, const name & scope) {
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto ditr = deltrust_t.find(account.value);
-  return ditr != deltrust_t.end();
-}
-
-void referendums::send_mimic_delegatee_vote (const name & delegatee, const name & scope, const uint64_t & proposal_id, const double & percentage_used, const name & option) {
-
-  uint64_t batch_size = config_get("batchsize"_n);
-
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrust_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
-
-  uint128_t id = uint128_t(delegatee.value) << 64;
-  auto ditr = deltrust_by_delegatee_delegator.lower_bound(id);
-
-  if (ditr != deltrust_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
-    send_deferred_transaction(
-      permission_level(get_self(), "active"_n),
-      get_self(),
-      "mimicvote"_n,
-      std::make_tuple(delegatee, ditr->delegator, scope, proposal_id, percentage_used, option, batch_size)
-    );
-  }
-
-}
-
-
-// ==================================================================== //
-
-uint64_t referendums::active_cutoff_date () {
-  uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
-  uint64_t inact_cycles = config_get(name("inact.cyc"));
-  return now - (inact_cycles * prop_cycle_sec);
-}
-
-void referendums::check_citizen (const name & account) {
+void referendums::check_citizen(name account)
+{
   DEFINE_USER_TABLE;
   DEFINE_USER_TABLE_MULTI_INDEX;
   user_tables users(contracts::accounts, contracts::accounts.value);
 
   auto uitr = users.find(account.value);
-  check(uitr != users.end(), "user not found");
+  check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
-void referendums::check_attributes (const std::map<std::string, VariantValue> & args) {
+void referendums::fixtitle(uint64_t id, string title) 
+{
+  require_auth(get_self());
+  referendum_tables refs(get_self(), name("active").value);
 
-  string title = std::get<string>(args.at("title"));
-  string summary = std::get<string>(args.at("summary"));
-  string description = std::get<string>(args.at("description"));
-  string image = std::get<string>(args.at("image"));
-  string url = std::get<string>(args.at("url"));
-
-  check(title.size() <= 128, "title must be less or equal to 128 characters long");
-  check(title.size() > 0, "must have a title");
-
-  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
-
-  check(description.size() > 0, "must have description");
-
-  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
-  check(image.size() > 0, "must have image");
-
-  check(url.size() <= 512, "url must be less or equal to 512 characters long");
-  
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum id not found");
+  refs.modify(ritr, _self, [&](auto& item) {
+    item.title = title;
+  });
 }
 
-template <typename... T>
-void referendums::send_inline_action (
-  const permission_level & permission, 
-  const name & contract, 
-  const name & action, 
-  const std::tuple<T...> & data) {
+void referendums::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+  referendum_tables staged(get_self(), name("staged").value);
 
-  eosio::action(permission, contract, action, data).send();
+  referendum_tables refs(get_self(), name("active").value);
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum not found");
 
-}
+  // make backup - only the first time
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.find(id);
+  if (bitr == backrefs.end()) {
+    backrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = ritr->description;
+    });
+  } 
 
-template <typename... T>
-void referendums::send_deferred_transaction (
-  const permission_level & permission,
-  const name & contract, 
-  const name & action,  
-  const std::tuple<T...> & data) {
+  fix_refs_tables fixrefs(get_self(), get_self().value);
 
-  deferred_id_tables deferredids(get_self(), get_self().value);
-  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+  auto fix_itr = fixrefs.find(id);
 
-  d_s.id += 1;
-
-  deferredids.set(d_s, get_self());
-
-  transaction trx{};
-
-  trx.actions.emplace_back(
-    permission,
-    contract,
-    action,
-    data
-  );
-
-  trx.delay_sec = 1;
-  trx.send(d_s.id, _self);
+  if (fix_itr == fixrefs.end()) {
+    fixrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = description;
+    });
+  } else {
+    fixrefs.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
 
 }
 
+void referendums::fixid() 
+{
+  require_auth(get_self());
+  referendum_tables active(get_self(), name("active").value);
+
+  auto ritr = active.find(0);
+  check(ritr != active.end(), "referendum 0 not found");
+
+  auto ritr_1 = active.find(1);
+  check(ritr_1 == active.end(), "referendum 1 already exists");
+
+  active.emplace(get_self(), [&](auto& item) {
+    item.referendum_id = 1;
+    item.favour = ritr->favour;
+    item.against = ritr->against;
+    item.staked = ritr->staked;
+    item.creator = ritr->creator;
+    item.setting_name = ritr->setting_name;
+    item.setting_value = ritr->setting_value;
+    item.title = ritr->title;
+    item.summary = ritr->summary;
+    item.description = ritr->description;
+    item.image = ritr->image;
+    item.url = ritr->url;
+    item.created_at = ritr->created_at;
+  });
+
+  active.erase(ritr);
+
+}
+
+void referendums::applyfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  fix_refs_tables fixrefs(get_self(), get_self().value);
+  auto fitr = fixrefs.begin();
+  while(fitr != fixrefs.end()) {
+    print(" processing "+std::to_string(fitr->ref_id));
+    auto ritr = refs.find(fitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" replace id "+std::to_string(fitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void referendums::backfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.begin();
+  while(bitr != backrefs.end()) {
+    print(" b processing "+std::to_string(bitr->ref_id));
+    auto ritr = refs.find(bitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" restore id "+std::to_string(bitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}

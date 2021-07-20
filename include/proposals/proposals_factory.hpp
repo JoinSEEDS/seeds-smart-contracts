@@ -7,7 +7,7 @@ class ProposalsFactory {
 
   public:
 
-    static Proposal * Factory(referendums & _contract, const name & type) {
+    static Proposal * Factory(dao & _contract, const name & type) {
       switch (type.value)
       {
       case ProposalsCommon::type_ref_setting.value:

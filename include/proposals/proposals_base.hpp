@@ -1,6 +1,6 @@
 #pragma once
 
-#include <seeds.referendums.hpp>
+#include <seeds.dao.hpp>
 
 namespace ProposalsCommon {
   constexpr name type_ref_setting = name("r.setting");
@@ -30,7 +30,7 @@ class Proposal {
 
   public:
 
-    Proposal(referendums & _contract) : m_contract(_contract) {};
+    Proposal(dao & _contract) : m_contract(_contract) {};
     virtual ~Proposal(){};
 
     virtual void create(std::map<std::string, VariantValue> & args) = 0;
@@ -47,6 +47,6 @@ class Proposal {
 
     virtual void check_can_vote(const name & status, const name & stage) = 0;
 
-    referendums & m_contract;
+    dao & m_contract;
 
 };

@@ -7,8 +7,8 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
-  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
+  dao::proposal_tables proposals_t(contract_name, contract_name.value);
+  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   uint64_t proposal_id = proposals_t.available_primary_key();
 
@@ -63,8 +63,8 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
-  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
+  dao::proposal_tables proposals_t(contract_name, contract_name.value);
+  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
   auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
@@ -108,8 +108,8 @@ void ReferendumSettings::cancel (std::map<std::string, VariantValue> & args) {
   name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
-  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
-  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
+  dao::proposal_tables proposals_t(contract_name, contract_name.value);
+  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
   auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
@@ -127,11 +127,11 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
   name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
-  referendums::cycle_tables cycle_t(contract_name, contract_name.value);
-  referendums::cycle_table c_t = cycle_t.get();
+  dao::cycle_tables cycle_t(contract_name, contract_name.value);
+  dao::cycle_table c_t = cycle_t.get();
 
-  referendums::proposal_tables proposals_t(contract_name, contract_name.value);
-  referendums::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
+  dao::proposal_tables proposals_t(contract_name, contract_name.value);
+  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
   auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
@@ -149,11 +149,11 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
     bool quorum_passed = true;
     if (current_status == ProposalsCommon::status_voting) {
-      referendums::size_tables sizes_votes_t(contract_name, ProposalsCommon::vote_scope.value);
+      dao::size_tables sizes_votes_t(contract_name, ProposalsCommon::vote_scope.value);
       auto total_voters_itr = sizes_votes_t.find(proposal_id);
 
-      // referendums::size_tables sizes_t(contracts::voice, contracts::voice.value);
-      referendums::size_tables sizes_t(contracts::proposals, contracts::proposals.value);
+      // dao::size_tables sizes_t(contracts::voice, contracts::voice.value);
+      dao::size_tables sizes_t(contracts::proposals, contracts::proposals.value);
       auto total_citizens_itr = sizes_t.require_find(name("voice.sz").value, "voice size not found");
 
       uint64_t required_quorum = get_required_quorum(setting_name, is_float);
@@ -248,10 +248,10 @@ void ReferendumSettings::check_can_vote (const name & status, const name & stage
 uint64_t ReferendumSettings::get_required_unity (const name & setting, const bool & is_float) {
   name impact;
 
-  referendums::config_tables config_t(contracts::settings, contracts::settings.value);
+  dao::config_tables config_t(contracts::settings, contracts::settings.value);
 
   if (is_float) {
-    referendums::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
+    dao::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
     auto fitr = fconfig_t.find(setting.value);
     impact = fitr->impact;
   } else {
@@ -275,10 +275,10 @@ uint64_t ReferendumSettings::get_required_unity (const name & setting, const boo
 uint64_t ReferendumSettings::get_required_quorum (const name & setting, const bool & is_float) {
   name impact;
 
-  referendums::config_tables config_t(contracts::settings, contracts::settings.value);
+  dao::config_tables config_t(contracts::settings, contracts::settings.value);
 
   if (is_float) {
-    referendums::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
+    dao::config_float_tables fconfig_t(contracts::settings, contracts::settings.value);
     auto fitr = fconfig_t.find(setting.value);
     impact = fitr->impact;
   } else {
@@ -340,7 +340,7 @@ name ReferendumSettings::get_next_status (const string & cycles_per_status_strin
 
 ReferendumSettings::SettingInfo * ReferendumSettings::get_setting_info (const name & setting_name) {
 
-  referendums::config_tables config(contracts::settings, contracts::settings.value);
+  dao::config_tables config(contracts::settings, contracts::settings.value);
 
   SettingInfo * s_info = new SettingInfo();
   s_info->is_float = false;
@@ -353,7 +353,7 @@ ReferendumSettings::SettingInfo * ReferendumSettings::get_setting_info (const na
   if (citr != config.end()) {
     s_info->previous_value_uint = citr->value;
   } else {
-    referendums::config_float_tables config_f(contracts::settings, contracts::settings.value);
+    dao::config_float_tables config_f(contracts::settings, contracts::settings.value);
 
     auto cfitr = config_f.require_find(setting_name.value, "setting not found");
     s_info->previous_value_double = cfitr->value;
@@ -370,7 +370,7 @@ void ReferendumSettings::change_setting (const name & setting_name, const T & se
   name action = is_float ? "conffloat"_n : "configure"_n;
 
   this->m_contract.send_inline_action(
-    permission_level(contracts::settings, "active"_n),
+    permission_level(contracts::settings, "referendum"_n),
     contracts::settings,
     action,
     std::make_tuple(setting_name, setting_value)

@@ -1,591 +1,528 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
-const { should } = require('chai')
 
-const { referendums, token, settings, accounts, firstuser, seconduser, thirduser, fourthuser } = names
+const { referendums, token, settings, accounts, firstuser, seconduser } = names
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-function formatSpecialAttributes (referendums) {
-  const refs = []
-
-  for (const referendum of referendums) {
-    const r = { ...referendum }
-    delete r.special_attributes
-
-    for (const attr of referendum.special_attributes) {
-      r[attr.key] = attr.value[1]
-    }
-
-    refs.push(r)
-  }
-
-  return refs
-}
-
-describe('Referendums Settings', async assert => {
+describe('Referendums', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const testSetting = 'testsetting'
-  const testSettingFloat = 'ftestsetting'
+  const contracts = await initContracts({ referendums, token, settings, accounts })
 
-  const uintSettingTable = 'config'
-  const floatSettingTable = 'configfloat'
+  const stake_price = '1111.0000 SEEDS'
+  const favour = 4
+  const against = 1
+  const referendumId = 0
+  const failedReferendumId = 1
 
-  const testSettingPrevVal = 1
-  const testSettingFloatPrevVal = 1.2
+  const settingName = 'tempsetting'
+  const settingDescription = 'test setting for referendums'
+  const settingImpact = 'high'
+  const settingValue = 21
+  const settingInitialValue = 0
 
-  const testSettingNewValue = 10
-  const testSettingFloatNewValue = 2.2
+  const addVoice = () => async () => {
+    console.log(`add ${favour} voice to ${firstuser}`)
+    await contracts.referendums.addvoice(firstuser, favour, { authorization: `${referendums}@active` })
 
-  const minStake = 1111
+    console.log(`add ${against} voice to ${seconduser}`)
+    await contracts.referendums.addvoice(seconduser, against, { authorization: `${referendums}@active` })
+  }
 
-  const highImpact = 'high'
-  const medImpact = 'med'
-  const lowImpact = 'low'
+  const sendVotes = () => async () => {
+    console.log('set quorum to 80 for high impact')
+    await contracts.settings.configure('quorum.high', 20, { authorization: `${settings}@active` })
 
-  const users = [firstuser, seconduser, thirduser, fourthuser]
+    console.log(`send favour vote from ${firstuser} with value of ${favour} for #${referendumId}`)
+    await contracts.referendums.favour(firstuser, referendumId, favour, { authorization: `${firstuser}@active` })
+
+    console.log(`send against vote from ${seconduser} with value of ${against} for #${referendumId}`)
+    await contracts.referendums.against(seconduser, referendumId, against, { authorization: `${seconduser}@active` })
+    
+    console.log(`send favour vote from ${firstuser} with value of ${favour} for #${failedReferendumId}`)
+    await contracts.referendums.favour(firstuser, failedReferendumId, favour, { authorization: `${firstuser}@active` })
+    
+    console.log(`send against vote from 2 with value of ${favour} for #${failedReferendumId}`)
+    await contracts.referendums.addvoice(seconduser, favour, { authorization: `${referendums}@active` })
+    await contracts.referendums.against(seconduser, failedReferendumId, favour, { authorization: `${seconduser}@active` })
+  }
+
+  const executeReferendums = () => async () => {
+    console.log(`execute referendums`)
+    await sleep(1000)
+    await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+  }
+
+  const stateHistory = (() => {
+    const history = {}
+
+    const getReferendums = async (status) => {
+      const referendumsTable = await getTableRows({
+        code: referendums,
+        scope: status,
+        table: 'referendums',
+        json: true
+      })
+
+      referendumsTable.rows.forEach(row => {
+        delete row.created_at
+      })
+
+      return referendumsTable
+    }
+
+    const save = async (key) => {
+      const stagedTable = await getReferendums('staged')
+      const activeTable = await getReferendums('active')
+      const testingTable = await getReferendums('testing')
+      const passedTable = await getReferendums('passed')
+      const failedTable = await getReferendums('failed')
+
+      const settingsTable = await getTableRows({
+        code: settings,
+        scope: settings,
+        table: 'config',
+        lower_bound: settingName,
+        upper_bound: settingName,  
+        json: true
+      })
+
+      const balancesTable = await getTableRows({
+        code: referendums,
+        scope: referendums,
+        table: 'balances',
+        json: true
+      })
+
+      const tables = {
+        balances: balancesTable,
+        settings: settingsTable,
+        staged: stagedTable,
+        active: activeTable,
+        testing: testingTable,
+        passed: passedTable,
+        failed: failedTable
+      }
+
+      history[key] = tables
+    }
+
+    const find = (query) => {
+      const [table, key] = query.split(':')
+
+      let rows = []
+
+      try {
+        rows = history[key][table].rows
+      } catch (err) {
+        console.log(`cannot find ${query}`)
+      }
+
+      return rows
+    }
+
+    return {
+      save, find
+    }
+  })()
+
+  const saveState = stateHistory.save
+  const table = stateHistory.find
+
+  const metadata = ['title', 'summary', 'description', 'image', 'url']
+
+  const createReferendums = () => async () => {
+    console.log(`create referendum from ${firstuser} to change ${settingName} to ${settingValue}`)
+    await contracts.referendums.create(firstuser, settingName, settingValue, ...metadata, { authorization: `${firstuser}@active` })
+
+    console.log(`create referendum from ${seconduser} to change ${settingName} to ${settingValue}`)
+    await contracts.referendums.create(seconduser, settingName, settingValue, ...metadata, { authorization: `${seconduser}@active` })
+  }
+  
+  const updateReferendum = () => async () => {
+    const updatedMetadata = metadata.map(item => item === 'title' ? 'title2' : item)
+    
+    console.log(`update title of referendum ${settingName}`)
+    await contracts.referendums.update(firstuser, settingName, settingValue, ...updatedMetadata, { authorization: `${firstuser}@active` })
+  }
+
+  const stake = () => async () => {
+    console.log(`increase stake of ${firstuser} to ${stake_price}`)
+    await contracts.token.transfer(firstuser, referendums, stake_price, '', { authorization: `${firstuser}@active` })
+    
+    console.log(`increase stake of ${seconduser} to ${stake_price}`)
+    await contracts.token.transfer(seconduser, referendums, stake_price, '', { authorization: `${seconduser}@active` })
+  }
+
+  const reset = () => async () => {
+    console.log('referendums reset')
+    await contracts.referendums.reset({ authorization: `${referendums}@active` })
+
+    console.log('accounts reset')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log('settings reset')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
+
+    console.log('settings configure')
+    await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
+    console.log('set stake price to 1')
+    //await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
+
+  }
+  const addUsers = () => async () => {
+    console.log('add users')
+    await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+    await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  }
+
+  const fail = (fn) => async () => {
+    try {
+      await fn()
+    } catch (err) {
+      console.log('transaction failed as expected')
+    }
+  }
+
+  const cancelVote = () => async () => {
+    console.log(`cancel vote of ${seconduser} for #${referendumId}`)
+    await contracts.referendums.cancelvote(seconduser, referendumId, { authorization: `${seconduser}@active` })
+  }
+
+  const runTransactions = async (fns) => {
+    const keys = Object.keys(fns)
+
+    for (let i = 0; i < keys.length; i++) {
+      const fn = fns[keys[i]]
+
+      console.log("running "+keys[i])
+
+      await fn()
+      await saveState(keys[i])
+    }
+  }
+
+  const referendumRow = (referendumId, creatorName) => ({
+    referendum_id: referendumId,
+    setting_name: settingName,
+    setting_value: settingValue,
+    creator: creatorName,
+    staked: stake_price,
+    favour: 0,
+    against: 0,
+    title: 'title',
+    summary: 'summary',
+    description: 'description',
+    image: 'image',
+    url: 'url',
+  })
+
+  await runTransactions({
+    'reset': reset(),
+    'addUsers': addUsers(),
+    'addVoice': addVoice("addvoice1"),
+    'failedReferendum': fail(createReferendums()),
+    'stake': stake(),
+    'createReferendums': createReferendums(),
+    'updateReferendum': updateReferendum(),
+    'failedSendVotes': fail(sendVotes("send1")),
+    'executeReferendumsActive': executeReferendums("A"),
+    'addVoice-2': addVoice("addvoice2"),
+    'addVoice-3': addVoice("addvoice3"),
+    'sendVotes': sendVotes(),
+    'executeReferendumsTesting': executeReferendums("B"),
+    'cancelVote': cancelVote(),
+    'executeReferendumsFinal': executeReferendums("C"),
+  })
+
+console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting')))
+
+  assert({
+    given: 'initial referendums table',
+    should: 'have no rows',
+    actual: table('referendums:reset'),
+    expected: []
+  })
+
+  assert({
+    given: 'initial balances table',
+    should: 'have no rows',
+    actual: table('balances:reset'),
+    expected: []
+  })
+
+  assert({
+    given: 'initial settings table',
+    should: 'have initial value',
+    actual: table('settings:reset').find(row => row.param === settingName),
+    expected: {
+      param: settingName,
+      value: settingInitialValue,
+      description: settingDescription,
+      impact: settingImpact
+    }
+  })
+
+  assert({
+    given: 'balances table after staked seeds',
+    should: 'have positive user balance',
+    actual: table('balances:stake').find(row => row.account === firstuser),
+    expected: {
+      account: firstuser,
+      stake: stake_price,
+      voice: favour
+    }
+  })
+
+  assert({
+    given: 'referendums table after created referendums',
+    should: 'have referendums with staged status',
+    actual: table('staged:createReferendums'),
+    expected: [
+      referendumRow(referendumId, firstuser),
+      referendumRow(failedReferendumId, seconduser)
+    ]
+  })
+  
+  assert({
+    given: 'referendums table after updated referendum',
+    should: 'have referendum with updated title',
+    actual: table('staged:updateReferendum'),
+    expected: [
+      { ...referendumRow(referendumId, firstuser), title: 'title2' },
+      referendumRow(failedReferendumId, seconduser)
+    ]
+  })
+
+  assert({
+    given: 'referendums table after first execution',
+    should: 'have referendums with active status',
+    actual: table('active:executeReferendumsActive'),
+    expected: [
+      { ...referendumRow(referendumId, firstuser), title: 'title2' },
+      referendumRow(failedReferendumId, seconduser)
+    ]
+  })
+
+  assert({
+    given: 'referendums table after second execution',
+    should: 'have referendums with testing status',
+    actual: table('testing:executeReferendumsTesting')[0],
+    expected: {
+      ...referendumRow(referendumId, firstuser),
+      against,
+      favour,
+      title: 'title2'
+    }
+  })
+
+  assert({
+    given: 'referendums table after third execution',
+    should: 'have referendums with passed status',
+    actual: table('passed:executeReferendumsFinal')[0],
+    expected: {
+      ...referendumRow(referendumId, firstuser),
+      favour,
+      against: 0,
+      title: 'title2'
+    }
+  })
+
+  assert({
+    given: 'referendums table after third execution',
+    should: 'have referendum with failed status',
+    actual: table('failed:executeReferendumsFinal'),
+    expected: [{
+      ...referendumRow(failedReferendumId, seconduser),
+      favour,
+      against: favour,
+    }]
+  })
+
+  assert({
+    given: 'settings table after second execution',
+    should: 'have initial value',
+    actual: table('settings:executeReferendumsTesting').find(row => row.param === settingName),
+    expected: {
+      param: settingName,
+      value: settingInitialValue,
+      description: settingDescription,
+      impact: settingImpact
+    }
+  })
+
+  assert({
+    given: 'settings table after third execution',
+    should: 'have value changed to proposed value',
+    actual: table('settings:executeReferendumsFinal').find(row => row.param === settingName),
+    expected: {
+      param: settingName,
+      value: settingValue,
+      description: settingDescription,
+      impact: settingImpact
+    }
+  })
+
+  assert({
+    given: 'balances table after third execution',
+    should: 'have updated user balance',
+    actual: table('balances:executeReferendumsFinal').find(row => row.account === firstuser),
+    expected: {
+      account: firstuser,
+      stake: '0.0000 SEEDS',
+      voice: 0
+    }
+  })
+})
+
+
+describe('Referendums Keys', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
 
   const contracts = await initContracts({ referendums, token, settings, accounts })
 
-  console.log('reset referendums')
-  await contracts.referendums.reset({ authorization: `${referendums}@active` })
+  const stake_price = '1111.0000 SEEDS'
+  const referendumId = 0
+  const failedReferendumId = 1
 
-  console.log('reset settings')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
+  const settingName = 'tempsetting'
+  const settingDescription = 'test setting for referendums'
+  const settingImpact = 'high'
+  const settingValue = 21
+  const settingInitialValue = 0
+  const metadata = ['title', 'summary', 'description', 'image', 'url']
 
-  console.log('reset accounts')
-  await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
-  const createReferendum = async (creator, settingName, newValue, title, summary, description, image, url) => {
-    await contracts.referendums.create([
-      { key: 'type', value: ['name', 'r.setting'] },
-      { key: 'creator', value: ['name', creator] },
-      { key: 'setting_name', value: ['name', settingName] },
-      { key: 'title', value: ['string', title] },
-      { key: 'summary', value: ['string', summary] },
-      { key: 'description', value: ['string', description] },
-      { key: 'image', value: ['string', image] },
-      { key: 'url', value: ['string', url] },
-      { key: 'new_value', value: newValue },
-      { key: 'test_cycles', value: ['uint64', 1] },
-      { key: 'eval_cycles', value: ['uint64', 3] }
-    ], { authorization: `${creator}@active` })
-  }
-
-  const checkReferendums = async (
-    expectedRefs,
-    expectedAuxs,
-    given='on period ran',
-    should='have the correct entries'
-  ) => {
-
+  const getReferendums = async (status) => {
     const referendumsTable = await getTableRows({
       code: referendums,
-      scope: referendums,
-      table: 'proposals',
+      scope: status,
+      table: 'referendums',
       json: true
     })
-    console.log(referendumsTable.rows)
+
+    referendumsTable.rows.forEach(row => {
+      delete row.created_at
+    })
+
+    return referendumsTable
+  }
+
+  const getRefs = async() => {
+    const staged = await getReferendums("staged")
+    const active = await getReferendums("active")
+    const testing = await getReferendums('testing')
+    const passed = await getReferendums("passed")
+    const failed = await getReferendums("failed")
+  
+    return [staged, active, testing, passed, failed]
+  }
+
+  const checkRefs = async (numbers) => {
+    
+    let nums = await getRefs()
+    nums = nums.map(e => e.rows.length)
+
+    console.log("refs: ", nums)
 
     assert({
-      given,
-      should,
-      actual: referendumsTable.rows.map(r => {
-        return {
-          proposal_id: r.proposal_id,
-          favour: r.favour,
-          against: r.against,
-          staked: r.staked,
-          status: r.status,
-          stage: r.stage,
-          age: r.age,
-        }
-      }),
-      expected: expectedRefs
+      given: 'refs',
+      should: 'have the correct statuses',
+      actual: nums,
+      expected: numbers
     })
-
-    const refauxTable = await getTableRows({
-      code: referendums,
-      scope: referendums,
-      table: 'propaux',
-      json: true
-    })
-    console.log(formatSpecialAttributes(refauxTable.rows))
-
-    assert({
-      given,
-      should,
-      actual: formatSpecialAttributes(refauxTable.rows).map(r => {
-        return {
-          proposal_id: r.proposal_id,
-          is_float: r.is_float,
-          new_value: r.is_float ? parseFloat(r.new_value) : parseInt(r.new_value),
-          previous_value: r.is_float ? parseFloat(r.previous_value) : parseInt(r.previous_value),
-          setting_name: r.setting_name,
-          cycles_per_status: r.cycles_per_status
-        }
-      }),
-      expected: expectedAuxs
-    })
-
+  
   }
 
-  const voteReferendum = async (referendumId, number=null, favour=true) => {
+  console.log('referendums reset')
+  await contracts.referendums.reset({ authorization: `${referendums}@active` })
 
-    const vote = favour ? contracts.referendums.favour : contracts.referendums.against
-    number = number == null ? users.length : number
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-    for (let i = 0; i < number; i++) {
-      await vote(users[i], referendumId, 2, { authorization: `${users[i]}@active` })
-    }
+  console.log('settings configure')
+  await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
 
+  console.log('add users, make citizens')
+  await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+
+  const addVoice2 = async (voice) => {
+    console.log(`add voice `+voice)
+    await contracts.referendums.addvoice(firstuser, voice, { authorization: `${referendums}@active` })
+    await contracts.referendums.addvoice(seconduser, voice, { authorization: `${referendums}@active` })
   }
+  
+  console.log(`add voice`)
+  await addVoice2(20)
 
-  const revertVote = async (referendumId, number=null) => {
+  console.log('set quorum to 80 for high impact')
+  await contracts.settings.configure('quorum.high', 80, { authorization: `${settings}@active` })
+  console.log('set stake price to 1')
+  await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
 
-    number = number == null ? users.length : number
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "1.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  console.log(`create referendum`)
+  await contracts.referendums.create(firstuser, settingName, settingValue, 'R 1', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
 
-    for (let i = 0; i < number; i++) {
-      await contracts.referendums.revertvote(users[i], referendumId, { authorization: `${users[i]}@active` })
-    }
+  await checkRefs([1, 0, 0, 0, 0])
 
-  }
-
-  const checkSettingValue = async ({ settingName, expectedValue, tableName, given, should }) => {
-    const settingsTable = await getTableRows({
-      code: settings,
-      scope: settings,
-      table: tableName,
-      json: true,
-      limit: 200
-    })
-
-    const settingRow = settingsTable.rows.filter(r => r.param === settingName)[0]
-
-    assert({
-      given,
-      should,
-      actual: Math.abs(settingRow.value - expectedValue) <= 0.001,
-      expected: true
-    })
-  }
-
-  console.log('init propcycle')
-  await contracts.referendums.initcycle(1, { authorization: `${referendums}@active` })
-
-  console.log('insert test settings')
-  await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', highImpact, { authorization: `${settings}@active` })
-  await contracts.settings.conffloatdsc(testSettingFloat, 1.2, 'test description 2', medImpact, { authorization: `${settings}@active` })
-
-  console.log('join users')
-  await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
-  await Promise.all(users.map(user => contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })))
-  await Promise.all(users.map(user => contracts.referendums.testsetvoice(user, 99, { authorization: `${referendums}@active` })))
-
-  console.log('create referendum')
-  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(seconduser, testSettingFloat, ['float64', testSettingFloatNewValue], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
-
-  console.log('update referendum')
-  await contracts.referendums.update([
-    { key: 'proposal_id', value: ['uint64', 0] },
-    { key: 'setting_name', value: ['name', testSetting] },
-    { key: 'title', value: ['string', 'title updated'] },
-    { key: 'summary', value: ['string', 'summary updated'] },
-    { key: 'description', value: ['string', 'description updated'] },
-    { key: 'image', value: ['string', 'image updated'] },
-    { key: 'url', value: ['string', 'url updated'] },
-    { key: 'new_value', value: ['uint64', testSettingNewValue] },
-    { key: 'test_cycles', value: ['uint64', 1] },
-    { key: 'eval_cycles', value: ['uint64', 4] }
-  ], { authorization: `${firstuser}@active` })
-
-  console.log('delete referendum')
-  await contracts.referendums.cancel([{ key: 'proposal_id', value: ['uint64', 1] }], { authorization: `${firstuser}@active` })
-
-  const refTables = await getTableRows({
-    code: referendums,
-    scope: referendums,
-    table: 'proposals',
-    json: true,
-    limit: 200
-  })
-
-  assert({
-    given: 'referendums crated',
-    should: 'have the correct entries',
-    actual: refTables.rows.map(r => {
-      delete r.created_at
-      return r
-    }),
-    expected: [
-      {
-        proposal_id: 0,
-        favour: 0,
-        against: 0,
-        staked: '0.0000 SEEDS',
-        creator: firstuser,
-        title: 'title updated',
-        summary: 'summary updated',
-        description: 'description updated',
-        image: 'image updated',
-        url: 'url updated',
-        status: 'open',
-        stage: 'staged',
-        type: 'r.setting',
-        last_ran_cycle: 0,
-        age: 0
-      },
-      {
-        proposal_id: 2,
-        favour: 0,
-        against: 0,
-        staked: '0.0000 SEEDS',
-        creator: seconduser,
-        title: 'title 2',
-        summary: 'summary 2',
-        description: 'description 2',
-        image: 'image 2',
-        url: 'url 2',
-        status: 'open',
-        stage: 'staged',
-        type: 'r.setting',
-        last_ran_cycle: 0,
-        age: 0
-      }
-    ]
-  })
-
-  console.log('changing minimum amount to stake')
-  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
-
-  console.log('staking')
-  await contracts.token.transfer(firstuser, referendums, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
-
-  console.log('running onperiod')
+  console.log(`move to active`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
 
-  console.log('vote favour for first referendum')
-  await voteReferendum(0)
+  await checkRefs([0, 1, 0, 0, 0])
 
-  console.log('staking for second referendum')
-  await contracts.token.transfer(seconduser, referendums, `${minStake}.0000 SEEDS`, '2', { authorization: `${seconduser}@active` })
+  console.log(`add voice 2`)
+  await addVoice2(21)
 
-  console.log('running onperiod')
+  console.log(`vote 2`)
+  await contracts.referendums.favour(firstuser, 0, 8, { authorization: `${firstuser}@active` })
+  await contracts.referendums.favour(seconduser, 0, 8, { authorization: `${seconduser}@active` })
+
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "1.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  console.log(`create referendum`)
+  await contracts.referendums.create(firstuser, settingName, 2, 'REF 2', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+
+  await checkRefs([1, 1, 0, 0, 0])
+
+  console.log(`execute referendum - move to passed, active`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
+  
+  // const r1 = await getRefs()
 
-  await checkReferendums(
-    [
-      {
-        proposal_id: 0,
-        favour: 8,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'test',
-        stage: 'active',
-        age: 1,
-      },
-      {
-        proposal_id: 2,
-        favour: 0,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'voting',
-        stage: 'active',
-        age: 0
-      }
-    ], [
-      {
-        proposal_id: 0,
-        is_float: 0,
-        new_value: testSettingNewValue,
-        previous_value: testSettingPrevVal,
-        setting_name: testSetting,
-        cycles_per_status: '1,1,4'
-      },
-      {
-        proposal_id: 2,
-        is_float: 1,
-        new_value: testSettingFloatNewValue,
-        previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat,
-        cycles_per_status: '1,1,3'
-      }
-    ]
-  )
+  // console.log("refs "+JSON.stringify(r1, null, 2))
 
-  await checkSettingValue({ 
-    settingName: testSetting, 
-    expectedValue: testSettingPrevVal, 
-    tableName: uintSettingTable, 
-    given: 'referendum in test stage', 
-    should: 'not modify the value of the setting' 
-  })
+  await checkRefs([0, 1, 1, 0, 0])
 
-  console.log('vote favour for second referendum')
-  await voteReferendum(2, 3)
+  console.log(`add voice 3`)
+  await addVoice2(21)
 
-  console.log('running onperiod')
+  console.log(`vote 3`)
+  await contracts.referendums.favour(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+  await contracts.referendums.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+
+  console.log(`execute referendum 4`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
 
-  await checkReferendums(
-    [
-      {
-        proposal_id: 0,
-        favour: 8,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'evaluate',
-        stage: 'active',
-        age: 2,
-      },
-      {
-        proposal_id: 2,
-        favour: 6,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'test',
-        stage: 'active',
-        age: 1
-      }
-    ], [
-      {
-        proposal_id: 0,
-        is_float: 0,
-        new_value: testSettingNewValue,
-        previous_value: testSettingPrevVal,
-        setting_name: testSetting,
-        cycles_per_status: '1,1,4'
-      },
-      {
-        proposal_id: 2,
-        is_float: 1,
-        new_value: testSettingFloatNewValue,
-        previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat,
-        cycles_per_status: '1,1,3'
-      }
-    ]
-  )
+  await checkRefs([0, 0, 1, 1, 0])
 
-  await checkSettingValue({ 
-    settingName: testSetting, 
-    expectedValue: testSettingNewValue, 
-    tableName: uintSettingTable, 
-    given: 'referendum in eval stage', 
-    should: 'modify the value of the setting' 
-  })
-
-  for (let i = 0; i < 3; i++) {
-    console.log('running onperiod')
-    await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-    await sleep(2000)
-  }
-
-  await checkReferendums(
-    [
-      {
-        proposal_id: 0,
-        favour: 8,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'evaluate',
-        stage: 'active',
-        age: 5,
-      },
-      {
-        proposal_id: 2,
-        favour: 6,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'evaluate',
-        stage: 'active',
-        age: 4
-      }
-    ], [
-      {
-        proposal_id: 0,
-        is_float: 0,
-        new_value: testSettingNewValue,
-        previous_value: testSettingPrevVal,
-        setting_name: testSetting,
-        cycles_per_status: '1,1,4'
-      },
-      {
-        proposal_id: 2,
-        is_float: 1,
-        new_value: testSettingFloatNewValue,
-        previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat,
-        cycles_per_status: '1,1,3'
-      }
-    ]
-  )
-
-  await checkSettingValue({ 
-    settingName: testSettingFloat, 
-    expectedValue: testSettingFloatNewValue, 
-    tableName: floatSettingTable, 
-    given: 'referendum in eval stage', 
-    should: 'modify the value of the setting' 
-  })
-
-  console.log('running onperiod')
+  console.log(`execute referendum 5`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
 
-  await checkReferendums(
-    [
-      {
-        proposal_id: 0,
-        favour: 8,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'passed',
-        stage: 'done',
-        age: 6,
-      },
-      {
-        proposal_id: 2,
-        favour: 6,
-        against: 0,
-        staked: `${minStake}.0000 SEEDS`,
-        status: 'passed',
-        stage: 'done',
-        age: 5
-      }
-    ], [
-      {
-        proposal_id: 0,
-        is_float: 0,
-        new_value: testSettingNewValue,
-        previous_value: testSettingPrevVal,
-        setting_name: testSetting,
-        cycles_per_status: '1,1,4'
-      },
-      {
-        proposal_id: 2,
-        is_float: 1,
-        new_value: testSettingFloatNewValue,
-        previous_value: testSettingFloatPrevVal,
-        setting_name: testSettingFloat,
-        cycles_per_status: '1,1,3'
-      }
-    ]
-  )
-
-  console.log('failing referendums')
-
-  console.log('create referendum')
-  await createReferendum(firstuser, testSetting, ['uint64', 5], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(seconduser, testSettingFloat, ['float64', 0.2], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
-  await createReferendum(thirduser, testSettingFloat, ['float64', 22.2], 'title 3', 'summary 3', 'description 3', 'image 3', 'url 3')
-  await createReferendum(thirduser, testSettingFloat, ['float64', 3.2], 'title 4', 'summary 4', 'description 4', 'image 4', 'url 4')
-
-  console.log('staking for referendums')
-  await contracts.token.transfer(firstuser, referendums, `${minStake}.0000 SEEDS`, '3', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(seconduser, referendums, `${minStake}.0000 SEEDS`, '4', { authorization: `${seconduser}@active` })
-  await contracts.token.transfer(thirduser, referendums, `${minStake}.0000 SEEDS`, '5', { authorization: `${thirduser}@active` })
-  await contracts.token.transfer(thirduser, referendums, `${minStake}.0000 SEEDS`, '6', { authorization: `${thirduser}@active` })
-
-  console.log('running onperiod')
-  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
-
-  await voteReferendum(3)
-  await voteReferendum(4)
-  await voteReferendum(5, 4, false)
-  await voteReferendum(6)
-
-  console.log('running onperiod')
-  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
-
-  console.log('change trust for referendum 1')
-  await revertVote(4, 3)
-
-  console.log('running onperiod')
-  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
-
-  console.log('running onperiod')
-  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
-
-  await checkSettingValue({ 
-    settingName: testSetting, 
-    expectedValue: 5, 
-    tableName: uintSettingTable, 
-    given: 'referendum in eval stage', 
-    should: 'modify the value of the setting' 
-  })
-
-  await checkSettingValue({ 
-    settingName: testSettingFloat, 
-    expectedValue: 3.2, 
-    tableName: floatSettingTable, 
-    given: 'referendum in eval stage', 
-    should: 'modify the value of the setting' 
-  })
-
-  console.log('change trust for referendum 3 and 6')
-  await revertVote(3, 3)
-  await revertVote(6, 3)
-
-  console.log('running onperiod')
-  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
-  await sleep(2000)
-
-  const refTables2 = await getTableRows({
-    code: referendums,
-    scope: referendums,
-    table: 'proposals',
-    json: true,
-    limit: 200
-  })
-
-  assert({
-    given: 'referendums failing',
-    should: 'have the correct status',
-    actual: refTables2.rows.filter(r => r.proposal_id > 2).map(r => {
-      return {
-        proposal_id: r.proposal_id,
-        status: r.status,
-        stage: r.stage
-      }
-    }),
-    expected: Array.from(Array(4).keys()).map(key => {
-      return {
-        proposal_id: key + 3,
-        status: 'rejected',
-        stage: 'done'
-      }
-    })
-  })
-
-  await checkSettingValue({ 
-    settingName: testSetting, 
-    expectedValue: testSettingNewValue, 
-    tableName: uintSettingTable, 
-    given: 'referendum has failed', 
-    should: 'return the setting to its old value' 
-  })
-
-  await checkSettingValue({ 
-    settingName: testSettingFloat, 
-    expectedValue: testSettingFloatNewValue, 
-    tableName: floatSettingTable, 
-    given: 'referendum has failed', 
-    should: 'return the setting to its old value'
-  })
+  await checkRefs([0, 0, 0, 2, 0])
 
 })
