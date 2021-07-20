@@ -293,15 +293,6 @@ ACTION harvest::updatecs(name account) {
   calc_contribution_score(account, uitr.type);
 }
 
-ACTION harvest::updtotal() { // remove when balances are retired
-  require_auth(get_self());
-
-  auto bitr = balances.find(_self.value);
-  total_table tt = total.get_or_create(get_self(), total_table());
-  tt.total_planted = bitr->planted;
-  total.set(tt, get_self());
-}
-
 ACTION harvest::calctotal(uint64_t startval) {
   require_auth(get_self());
 
@@ -337,48 +328,6 @@ ACTION harvest::calctotal(uint64_t startval) {
 
   } 
 }
-
-// copy everything to harvest table
-// ACTION harvest::updharvest(uint64_t startval) {
-
-//   total_table tt = total.get_or_create(get_self(), total_table());
-//   tt.total_planted = asset(0, seeds_symbol);
-//   total.set(tt, get_self());
-
-//   uint64_t limit = 50;
-
-//   auto bitr = startval == 0 ? balances.begin() : balances.find(startval);
-
-//   while (bitr != balances.end() && limit > 0) {
-//     if (bitr->planted.amount > 0 && bitr->account != _self) {
-//       planted.emplace(_self, [&](auto& entry) {
-//         entry.account = bitr->account;
-//         entry.planted = bitr->planted;
-//       });
-//       size_change(planted_size, 1);
-//       change_total(true, bitr->planted);
-//     }
-//     bitr++;
-//     limit--;
-//   }
-
-//   if (bitr != balances.end()) {
-
-//     uint64_t next_value = bitr->account.value;
-//     action next_execution(
-//         permission_level{get_self(), "active"_n},
-//         get_self(),
-//         "updharvest"_n,
-//         std::make_tuple(next_value)
-//     );
-
-//     transaction tx;
-//     tx.actions.emplace_back(next_execution);
-//     tx.delay_sec = 1;
-//     tx.send(next_value, _self);
-
-//   } 
-// }
 
 // Calculate Transaction Points for a single account
 // Returns count of iterations
@@ -1427,111 +1376,4 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
     tx.send(sum_rank_orgs.value, _self);
   }
 }
-
-
-ACTION harvest::testmigscope (name account, uint64_t amount) {
-  require_auth(get_self());
-
-  auto citr = cspoints.find(account.value);
-  if (citr != cspoints.end()) {
-    cspoints.modify(citr, _self, [&](auto & item){
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  } else {
-    cspoints.emplace(_self, [&](auto & item){
-      item.account = account;
-      item.contribution_points = amount;
-      item.rank = amount;
-    });
-  }
-
-}
-
-ACTION harvest::migorgs (uint64_t start) {
-  require_auth(get_self());
-
-  cs_points_tables cspoints_org(get_self(), organization_scope.value);
-
-  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
-
-  uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t count = 0;
-
-  while (csitr != cspoints.end() && count < batch_size) {
-
-    auto uitr = users.find(csitr->account.value);
-    if (uitr->type == name("organisation")) {
-
-      auto org_itr = cspoints_org.find(uitr->account.value);
-
-      if (org_itr != cspoints_org.end()) {
-        cspoints_org.modify(org_itr, _self, [&](auto & item){
-          item.contribution_points = csitr->contribution_points;
-          item.rank = csitr->rank;
-        });
-      } else {
-        cspoints_org.emplace(_self, [&](auto & item){
-          item.account = uitr->account;
-          item.contribution_points = csitr->contribution_points;
-          item.rank = csitr->rank;
-        });
-      }
-
-    }
-
-    csitr++;
-    count++;
-  }
-
-  if (csitr != cspoints.end()) {
-    action next_execution(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "migorgs"_n,
-      std::make_tuple(csitr->account.value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(csitr->account.value, _self);
-  }
-
-}
-
-ACTION harvest::delcsorg (uint64_t start) {
-  require_auth(get_self());
-
-  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
-
-  uint64_t batch_size = config_get(name("batchsize"));
-  uint64_t count = 0;
-
-  while (csitr != cspoints.end() && count < batch_size) {
-    auto uitr = users.find(csitr->account.value);
-    if (uitr->type == name("organisation")) {
-      csitr = cspoints.erase(csitr);
-    } else {
-      csitr++;
-    }
-    count++;
-  }
-
-  if (csitr != cspoints.end()) {
-    action next_execution(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "delcsorg"_n,
-      std::make_tuple(csitr->account.value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(csitr->account.value, _self);
-  }
-
-}
-
 

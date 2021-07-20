@@ -7,26 +7,26 @@ const { onboarding, token, accounts, harvest, firstuser, seconduser, thirduser, 
 
 const randomAccountName = () => {
     let length = 12
-    var result           = '';
-    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+    var result = '';
+    var characters = 'abcdefghijklmnopqrstuvwxyz1234';
     var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
-       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    for (var i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
- }
- 
- const randomAccountNamergn = () => {
+}
+
+const randomAccountNamergn = () => {
     let length = 8
-    var result           = '';
-    var characters       = 'abcdefghijklmnopqrstuvwxyz1234';
+    var result = '';
+    var characters = 'abcdefghijklmnopqrstuvwxyz1234';
     var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
-       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    for (var i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result + ".rgn";
-  }
-  
+}
+
 const getNumInvites = async () => {
     invites = await getTableRows({
         code: onboarding,
@@ -43,7 +43,7 @@ describe('Onboarding', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-    
+
     const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
 
     console.log(`reset ${settings}`)
@@ -52,15 +52,15 @@ describe('Onboarding', async assert => {
     const transferQuantity = `10.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
     const totalQuantity = '15.0000 SEEDS'
-    
+
     const newAccount = randomAccountName()
     const newAccount2 = randomAccountName()
-    console.log("New account "+newAccount)
+    console.log("New account " + newAccount)
 
     const keyPair = await createKeypair()
     const keyPair2 = await createKeypair()
 
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
 
     const newAccountPublicKey = keyPair.public
     const newAccountPublicKey2 = keyPair2.public
@@ -82,23 +82,23 @@ describe('Onboarding', async assert => {
             console.log("Don't reset contracts on mainnet or testnet")
             return
         }
-    
+
         console.log(`reset ${accounts}`)
         await contracts.accounts.reset({ authorization: `${accounts}@active` })
-    
+
         console.log(`reset ${token}`)
         await contracts.token.resetweekly({ authorization: `${token}@active` })
 
         console.log(`reset ${onboarding}`)
         await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
-    
+
         console.log(`reset ${harvest}`)
         await contracts.harvest.reset({ authorization: `${harvest}@active` })
     }
 
     const deposit = async (user, memo = '') => {
         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })    
+        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })
     }
 
     const invite = async (user, inviteHash) => {
@@ -108,14 +108,14 @@ describe('Onboarding', async assert => {
 
     const accept = async () => {
         console.log(`onboarding accept - ${onboarding}.accept from ${newAccount}`)
-        await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })    
+        await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
     }
 
     await reset()
 
     console.log(`adding users ${accounts}.adduser ${firstuser}`)
-    await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })        
-    await contracts.accounts.adduser(fourthuser, '', 'individual', { authorization: `${accounts}@active` })        
+    await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+    await contracts.accounts.adduser(fourthuser, '', 'individual', { authorization: `${accounts}@active` })
 
     await deposit(firstuser)
 
@@ -162,16 +162,16 @@ describe('Onboarding', async assert => {
     }
 
     console.log("first user makes deposit on behalf of third user")
-    await contracts.token.transfer(firstuser, onboarding, '22.0000 SEEDS', "sponsor "+thirduser, { authorization: `${firstuser}@active` })    
+    await contracts.token.transfer(firstuser, onboarding, '22.0000 SEEDS', "sponsor " + thirduser, { authorization: `${firstuser}@active` })
 
     let sponsorsAfter = await getSponsors()
 
     console.log("first user invites on behalf of fourth user")
-    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })
     await contracts.onboarding.invitefor(firstuser, fourthuser, "11.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
 
     console.log(`${onboarding}.accept from ${newAccount2}`)
-    await contracts.onboarding.accept(newAccount2, inviteSecret3, newAccountPublicKey2, { authorization: `${onboarding}@active` })    
+    await contracts.onboarding.accept(newAccount2, inviteSecret3, newAccountPublicKey2, { authorization: `${onboarding}@active` })
 
     let invitesAfter = await getTableRows({
         code: onboarding,
@@ -201,10 +201,10 @@ describe('Onboarding', async assert => {
     //console.log("invitefor - after "+ JSON.stringify(invitesAfter, null, 2))
 
     //console.log("REFS - after "+ JSON.stringify(refs, null, 2))
-    
+
     //console.log("invitefor - after referrersA "+ JSON.stringify(referrersA, null, 2))
 
-    let refererOfNewAccount = refs.rows.filter( (item) => item.invited == newAccount2)
+    let refererOfNewAccount = refs.rows.filter((item) => item.invited == newAccount2)
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
 
@@ -221,7 +221,7 @@ describe('Onboarding', async assert => {
 
     console.log("testing cancel")
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
-    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.token.transfer(firstuser, onboarding, '16.0000 SEEDS', "", { authorization: `${firstuser}@active` })
     let sponsors2 = await getSponsors()
 
     //console.log("sponsors2 "+JSON.stringify(sponsors2, null, 2))
@@ -236,8 +236,8 @@ describe('Onboarding', async assert => {
         await contracts.onboarding.cancel(seconduser, inviteHash2, { authorization: `${seconduser}@active` })
         otherCancel = true
     } catch (err) {
-        if ((""+err).indexOf("not sponsor") == -1) {
-            console.log("unexpected error cancel "+err)
+        if (("" + err).indexOf("not sponsor") == -1) {
+            console.log("unexpected error cancel " + err)
         }
     }
 
@@ -251,7 +251,7 @@ describe('Onboarding', async assert => {
     let referrers1_after = await getNumReferrers()
 
     console.log("testing cancel after invitefor")
-    await contracts.token.transfer(firstuser, onboarding, '17.0000 SEEDS', "", { authorization: `${firstuser}@active` })    
+    await contracts.token.transfer(firstuser, onboarding, '17.0000 SEEDS', "", { authorization: `${firstuser}@active` })
     await contracts.onboarding.invitefor(firstuser, fourthuser, "12.0000 SEEDS", "5.0000 SEEDS", inviteHash2, { authorization: `${firstuser}@active` })
 
     let invites2 = await getNumInvites()
@@ -355,7 +355,7 @@ describe('Onboarding', async assert => {
         expected: {
             "account": thirduser,
             "balance": "22.0000 SEEDS"
-          }
+        }
     })
 
 })
@@ -366,17 +366,17 @@ describe('Use application permission to accept', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-    
+
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
     const transferQuantity = `0.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
     const totalQuantity = '5.0000 SEEDS'
-    
+
     const newAccount = randomAccountName()
-    console.log("New account "+newAccount)
+    console.log("New account " + newAccount)
     const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
@@ -388,13 +388,13 @@ describe('Use application permission to accept', async assert => {
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
     console.log(`adduser (${firstuser})`)
-    await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })     
-    
+    await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+
     await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
     await contracts.accounts.testsetrs(firstuser, 22, { authorization: `${accounts}@active` })
 
     console.log(`transfer from ${firstuser} to ${onboarding} (${totalQuantity})`)
-    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })    
+    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })
 
     console.log(`invite from ${firstuser}`)
     await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
@@ -404,10 +404,10 @@ describe('Use application permission to accept', async assert => {
         scope: newAccount,
         table: 'vouch',
         json: true
-      })
+    })
 
     console.log(`accept from Application`)
-    await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
+    await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })
 
     const acceptUsers = await eos.getTableRows({
         code: accounts,
@@ -430,7 +430,7 @@ describe('Use application permission to accept', async assert => {
         table: 'vouches',
         json: true
     })
-    
+
     //console.log("vouch after accept "+JSON.stringify(vouchAfterInvite, null, 2))
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
@@ -460,17 +460,17 @@ describe('Invite from non-seeds user - sp', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-    
+
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
     const transferQuantity = `0.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
     const totalQuantity = '5.0000 SEEDS'
-    
+
     const newAccount = randomAccountName()
-    console.log("New account "+newAccount)
+    console.log("New account " + newAccount)
     const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
@@ -480,21 +480,21 @@ describe('Invite from non-seeds user - sp', async assert => {
             console.log("Don't reset contracts on mainnet or testnet")
             return
         }
-    
+
         console.log(`reset ${accounts}`)
         await contracts.accounts.reset({ authorization: `${accounts}@active` })
-    
+
         console.log(`reset ${onboarding}`)
         await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
-    
+
         console.log(`reset ${harvest}`)
-        await contracts.harvest.reset({ authorization: `${harvest}@active` })    
+        await contracts.harvest.reset({ authorization: `${harvest}@active` })
     }
-      
+
     const adduser = async () => {
         try {
             console.log(`${accounts}.adduser (${firstuser})`)
-            await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })
         } catch (error) {
             console.log("user exists")
         }
@@ -502,7 +502,7 @@ describe('Invite from non-seeds user - sp', async assert => {
 
     const deposit = async (user) => {
         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
+        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })
     }
 
     const invite = async () => {
@@ -516,8 +516,8 @@ describe('Invite from non-seeds user - sp', async assert => {
 
     await invite()
 
-    console.log(`onboarding accept from Application for `+newAccount)
-    await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })    
+    console.log(`onboarding accept from Application for ` + newAccount)
+    await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -546,23 +546,26 @@ describe('Campaign reward for existing user', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-    
+
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
 
     const transferQuantity = `22.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
     const totalQuantity = '27.0000 SEEDS'
-    
+
     const newAccount = seconduser;// randomAccountName()
-    console.log("New account "+newAccount)
+    console.log("New account " + newAccount)
     const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
     const inviteSecret2 = await ramdom64ByteHexString()
     const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
+    const inviteSecret3 = await ramdom64ByteHexString()
+    const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
 
     console.log(`reset ${accounts}`)
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -574,12 +577,12 @@ describe('Campaign reward for existing user', async assert => {
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
     console.log(`reset ${harvest}`)
-    await contracts.harvest.reset({ authorization: `${harvest}@active` })    
-  
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
     const adduser = async (user) => {
         try {
             console.log(`${accounts}.adduser (${user})`)
-            await contracts.accounts.adduser(user, '', 'individual',{ authorization: `${accounts}@active` })        
+            await contracts.accounts.adduser(user, '', 'individual', { authorization: `${accounts}@active` })
         } catch (error) {
             console.log("user exists")
         }
@@ -587,7 +590,7 @@ describe('Campaign reward for existing user', async assert => {
 
     const deposit = async (user) => {
         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })    
+        await contracts.token.transfer(user, onboarding, totalQuantity, '', { authorization: `${user}@active` })
     }
 
     const invite = async () => {
@@ -595,19 +598,13 @@ describe('Campaign reward for existing user', async assert => {
         await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
     }
 
-    const acceptExisting = async () => {
-        console.log(`Existing user accept from Application`)
-        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@application` })    
+    const reward = async () => {
+        console.log(`Existing user reward from Application`)
+        await contracts.onboarding.reward(newAccount, inviteSecret3, { authorization: `${newAccount}@active` })
     }
 
     await adduser(firstuser)
 
-    await adduser(newAccount)
-
-    console.log('plant seeds')
-    await contracts.token.transfer(firstuser, newAccount, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(newAccount, harvest, '500.0000 SEEDS', '', { authorization: `${newAccount}@active` })
-  
     const before = await getTableRows({
         code: harvest,
         scope: harvest,
@@ -621,7 +618,8 @@ describe('Campaign reward for existing user', async assert => {
 
     await invite()
 
-    await acceptExisting()
+    console.log(`Existing user accept from Application`)
+    await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@active` })
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -634,19 +632,34 @@ describe('Campaign reward for existing user', async assert => {
 
     console.log("cleanup")
     await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
-    
+
     let invites3_after = await getNumInvites()
 
     console.log(`${onboarding}.invite from ${firstuser}`)
     await deposit(firstuser)
     await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
 
+    console.log(`invite from for 7 from ${firstuser}`)
+    await contracts.token.transfer(firstuser, onboarding, "7.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+    await contracts.onboarding.invite(firstuser, "2.0000 SEEDS", "5.0000 SEEDS", inviteHash3, { authorization: `${firstuser}@active` })
+
+    const beforeRewardBalance = await getBalance(newAccount)
+    await reward()
+    const afterRewardBalance = await getBalance(newAccount)
+
+    const balances3 = await getTableRows({
+        code: harvest,
+        scope: harvest,
+        table: 'balances',
+        json: true
+    })
+
     console.log("cleanup 2")
     await contracts.onboarding.cleanup(0, 100, 100, { authorization: `${onboarding}@active` })
-
     let invites4_after = await getNumInvites()
 
     const newUserHarvest = rows.find(row => row.account === newAccount)
+    const newUserHarvest3 = balances3.rows.find(row => row.account === newAccount)
 
     assert({
         given: 'invited new user',
@@ -654,9 +667,27 @@ describe('Campaign reward for existing user', async assert => {
         actual: newUserHarvest,
         expected: {
             account: newAccount,
-            planted: "505.0000 SEEDS",
+            planted: "5.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
+    })
+
+    assert({
+        given: 'accept reward planted',
+        should: 'have planted seeds (no change)',
+        actual: newUserHarvest3,
+        expected: {
+            account: newAccount,
+            planted: "5.0000 SEEDS",
+            reward: '0.0000 SEEDS'
+        }
+    })
+
+    assert({
+        given: 'accept reward cash',
+        should: 'have 2 seeds more',
+        actual: afterRewardBalance - beforeRewardBalance,
+        expected: 7
     })
 
     assert({
@@ -669,7 +700,7 @@ describe('Campaign reward for existing user', async assert => {
         given: 'called cleanup',
         should: 'one less number of invites',
         actual: invites4_after,
-        expected: invites3_after
+        expected: 2
     })
 })
 
@@ -680,23 +711,23 @@ describe('Create region', async assert => {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
-    
+
     const contracts = await initContracts({ onboarding, region })
-    
+
     const newAccount = randomAccountNamergn()
-    console.log("New account "+newAccount)
+    console.log("New account " + newAccount)
     const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
     const newAccountPublicKey = keyPair.public
-  
-    await contracts.onboarding.createregion(firstuser, newAccount, newAccountPublicKey,{ authorization: `${onboarding}@active` })        
+
+    await contracts.onboarding.createregion(firstuser, newAccount, newAccountPublicKey, { authorization: `${onboarding}@active` })
 
     var hasNewDomain = false
     try {
-      const accountInfo = await eos.getAccount(newAccount)
-      hasNewDomain = true;
+        const accountInfo = await eos.getAccount(newAccount)
+        hasNewDomain = true;
     } catch {
-  
+
     }
 
     assert({
@@ -721,7 +752,7 @@ describe('Private campaign', async assert => {
     await contracts.settings.reset({ authorization: `${settings}@active` })
 
     const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
-    
+
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
@@ -816,7 +847,7 @@ describe('Private campaign', async assert => {
 
     const deposit = async (from, to, quantity, memo = '') => {
         console.log(`${token}.transfer from ${from} to ${to} (${quantity})`)
-        await contracts.token.transfer(from, to, quantity, memo, { authorization: `${from}@active` })    
+        await contracts.token.transfer(from, to, quantity, memo, { authorization: `${from}@active` })
     }
 
     console.log('create campaign')
@@ -850,7 +881,7 @@ describe('Private campaign', async assert => {
     await checkCampaignInvites(1, 1, 0)
     await checkUsers(user2, 2)
     await checkVouches(user2, 1)
-    
+
     console.log(`addauthorized ${user2}`)
     await contracts.onboarding.addauthorized(1, user2, { authorization: `${firstuser}@active` })
 
@@ -956,7 +987,7 @@ describe('Private campaign', async assert => {
         actual: cantInviteWithoutPermission,
         expected: true
     })
-    
+
     assert({
         given: 'user invites using more than the max amount allowed',
         should: 'fail',
@@ -998,7 +1029,7 @@ describe('Private campaign', async assert => {
         actual: [camps.rows.length, campinvites.rows.length, invites.rows.length],
         expected: [0, 0, 2]
     })
-    
+
 })
 
 
@@ -1019,7 +1050,7 @@ describe("clean up unused invites", async assert => {
     const keyPair = await createKeypair()
     const keyPair2 = await createKeypair()
 
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
 
     const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
 
@@ -1040,7 +1071,7 @@ describe("clean up unused invites", async assert => {
     await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
 
     const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
-    
+
     const inviteSecret = await ramdom64ByteHexString()
     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
@@ -1052,7 +1083,7 @@ describe("clean up unused invites", async assert => {
 
     const deposit = async (user, memo = '') => {
         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })    
+        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })
     }
 
     const invite = async (user, inviteHash) => {
