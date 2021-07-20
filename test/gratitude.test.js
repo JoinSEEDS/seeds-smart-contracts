@@ -134,7 +134,7 @@ describe('gratitude general', async assert => {
 
   console.log('reset contract balance')
   const stale_balance = await getBalance(gratitude)
-  await contracts.token.transfer(gratitude, firstuser, `${stale_balance}.0000 SEEDS`, 'test', { authorization: `${gratitude}@active` })
+  if (stale_balance) await contracts.token.transfer(gratitude, firstuser, `${stale_balance}.0000 SEEDS`, 'test', { authorization: `${gratitude}@active` })
 
   await contracts.settings.configure("batchsize", 1, { authorization: `${settings}@active` })
 
