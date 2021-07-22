@@ -111,7 +111,7 @@ class Eos {
           }
         } else {
           if ((action.fields.length + 1) != arguments.length) {
-            throw new Exception(`Not enough arguments to call ${action.name} action in ${accountName} contract`)
+            throw new Exception(`Wrong number of arguments to call ${action.name} action in ${accountName} contract`)
           }
           for (let i = 0; i < action.fields.length; i++) {
             const { name } = action.fields[i]
