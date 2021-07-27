@@ -17,11 +17,14 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
-#include <cmath> 
+#include <cmath>
+#include <variant>
 
 using namespace eosio;
 using namespace utils;
 using std::string;
+using std::vector;
+typedef std::map<name, std::variant<asset, uint64_t, double, int64_t>> logmap;
 
 CONTRACT harvest : public contract {
   public:
@@ -109,6 +112,11 @@ CONTRACT harvest : public contract {
     ACTION migorgs(uint64_t start);
     ACTION delcsorg(uint64_t start);
     ACTION testmigscope(name account, uint64_t amount);
+
+    ACTION logaction(uint64_t log_group, name action, string log);
+    ACTION lgcalcmqevs(logmap log_map);
+    ACTION lgrunhrvst(logmap log_map);
+    ACTION lgcalmntrte(logmap log_map);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -209,6 +217,41 @@ CONTRACT harvest : public contract {
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
       indexed_by<"byrank"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_rank>>
     > tx_points_tables;
+
+    TABLE logs_table {
+      uint64_t id;
+      uint64_t log_group;
+      name action;
+      string log;
+      
+      uint64_t primary_key() const { return id; }
+      uint64_t by_log_group() const { return log_group; }
+    };
+
+    typedef eosio::multi_index<"logs"_n, logs_table,
+      indexed_by<"byloggroup"_n,const_mem_fun<logs_table, uint64_t, &logs_table::by_log_group>>
+    > logs_tables;
+
+    TABLE log_rewards_table {
+      uint64_t id;
+      name account;
+      name account_type;
+      asset reward;
+
+      uint64_t primary_key() const { return id; }
+    };
+
+    typedef eosio::multi_index<"logsrewards"_n, log_rewards_table> lrewards_tables;
+
+    TABLE log_group_table {
+      uint64_t log_group;
+      name action;
+      uint64_t creation_date;
+
+      uint64_t primary_key() const { return log_group; }
+    };
+
+    typedef eosio::multi_index<"lgroups"_n, log_group_table> lgroup_tables;
 
     DEFINE_CS_POINTS_TABLE
 
@@ -421,6 +464,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
           (delcsorg)(migorgs)(testmigscope)
+          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)
         )
       }
   }
