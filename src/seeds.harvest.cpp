@@ -1741,19 +1741,19 @@ void harvest::lgrunhrvst(logmap log_map) {
   });
   rewards_t.emplace(_self, [&](auto & item) {
     item.id = rewards_t.available_primary_key();
-    item.account = "disthvstusrs"_n;
+    item.account = "disthvstrgns"_n;
     item.account_type = "rgn"_n;
     item.reward = asset(quantity.amount * rgns_percentage, test_symbol);
   });
   rewards_t.emplace(_self, [&](auto & item) {
     item.id = rewards_t.available_primary_key();
-    item.account = "disthvstusrs"_n;
+    item.account = "disthvstorgs"_n;
     item.account_type = "org"_n;
     item.reward = asset(quantity.amount * orgs_percentage, test_symbol);
   });
   rewards_t.emplace(_self, [&](auto & item) {
     item.id = rewards_t.available_primary_key();
-    item.account = "disthvstusrs"_n;
+    item.account = "disthvstglob"_n;
     item.account_type = "global"_n;
     item.reward = asset(quantity.amount * global_percentage, test_symbol);
   });
