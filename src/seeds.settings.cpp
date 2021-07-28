@@ -236,10 +236,10 @@ void settings::reset() {
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);
 
   // vouch base reward resident
-  confwithdesc(name("res.vouch"), 10, "Vouch base reward resident", high_impact);
+  confwithdesc(name("res.vouch"), 4, "Vouch base reward resident", high_impact);
   
   // vouch base reward citizen
-  confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
+  confwithdesc(name("cit.vouch"), 8, "Vouch base reward citizen", high_impact);
 
   // Reputation point reward for vouchers when user becomes resident
   confwithdesc(name("vouchrep.1"), 1, "Reputation point reward for vouchers when user becomes resident", medium_impact);
