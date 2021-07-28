@@ -2582,8 +2582,8 @@ describe("invite campaigns", async assert => {
   await sleep(1000)
 
   console.log('downvoting the first proposal')
-  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
-  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
 
   console.log('running on period 4')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2698,6 +2698,12 @@ describe('Alliance campaigns', async assert => {
     await vote(thirduser, propId, 8, { authorization: `${thirduser}@active` })
   }
 
+  const revertVote = async (propId) => {
+    await contracts.proposals.revertvote(firstuser, propId, { authorization: `${firstuser}@active` })
+    await contracts.proposals.revertvote(seconduser, propId, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(thirduser, propId, { authorization: `${thirduser}@active` })
+  }
+
   const checkEscrowLocks = async (expectedLocks) => {
     const lockTable = await eos.getTableRows({
       code: escrow,
@@ -2783,7 +2789,7 @@ describe('Alliance campaigns', async assert => {
   await sleep(2000)
 
   console.log('downvote prop 3')
-  await voteProp(3, false)
+  await revertVote(3)
 
   console.log('running onperiod 3')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2793,7 +2799,7 @@ describe('Alliance campaigns', async assert => {
   await checkEscrowLocks(expectedLocks)
 
   console.log('downvote prop 4')
-  await voteProp(4, false)
+  await revertVote(4)
 
   console.log('going live')
   await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
