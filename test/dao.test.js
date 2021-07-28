@@ -1,8 +1,11 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
-const { should } = require('chai')
+const { should, assert } = require('chai')
 
-const { dao, token, settings, accounts, firstuser, seconduser, thirduser, fourthuser } = names
+const { dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser } = names
+
+const scopes = ['alliance', proposals, 'milestone', referendums]
+
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -21,6 +24,22 @@ function formatSpecialAttributes (proposals) {
   }
 
   return props
+}
+
+const createReferendum = async (contract, creator, settingName, newValue, title, summary, description, image, url) => {
+  await contract.create([
+    { key: 'type', value: ['name', 'r.setting'] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'setting_name', value: ['name', settingName] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'new_value', value: newValue },
+    { key: 'test_cycles', value: ['uint64', 1] },
+    { key: 'eval_cycles', value: ['uint64', 3] }
+  ], { authorization: `${creator}@active` })
 }
 
 describe('Referendums Settings', async assert => {
@@ -589,3 +608,480 @@ describe('Referendums Settings', async assert => {
   })
 
 })
+
+
+async function resetContracts () {
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  console.log('reset dao')
+  await contracts.dao.reset({ authorization: `${dao}@active` })
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  
+  console.log('join users')
+  await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
+  await Promise.all(users.map(user => contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })))
+}
+
+async function getVoice (account) {
+  const voice = []
+  for (const s of scopes) {
+    const voiceTable = await getTableRows({
+      code: dao,
+      scope: s,
+      table: 'voice',
+      json: true,
+      lower_bound: account,
+      limit: 1
+    })
+    if (voiceTable.rows.length > 0) {
+      voice.push({
+        scope: s,
+        ...voiceTable.rows[0]
+      })
+    }
+  }
+  return voice
+}
+
+describe('Participants and Actives', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  const testSetting = 'testsetting'
+  const minStake = 1111
+
+  const checkParticipants = async (expected) => {
+    const participantsTable = await getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'participants',
+      json: true
+    })
+  
+    assert({
+      given: 'users voted',
+      should: 'be in the participants table',
+      actual: participantsTable.rows,
+      expected
+    })
+  }
+
+  await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', 'high', { authorization: `${settings}@active` })
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create referendum')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+
+  console.log('changing minimum amount to stake')
+  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.against(seconduser, 0, 5, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 0, { authorization: `${thirduser}@active` })
+
+  await checkParticipants([
+    { account: firstuser, nonneutral: 1, count: 1 },
+    { account: seconduser, nonneutral: 1, count: 1 },
+    { account: thirduser, nonneutral: 0, count: 1 }
+  ])
+
+  const activesTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'actives',
+    json: true
+  })
+
+  const now = parseInt(Date.now() / 1000)
+  const actualActives = activesTable.rows.map(a => {
+    return {
+      account: a.account,
+      timestamp: Math.abs(now - a.timestamp) <= 2
+    }
+  })
+
+  assert({
+    given: 'users voted',
+    should: 'be in the actives table',
+    actual: actualActives,
+    expected: [
+      { account: firstuser, timestamp: true },
+      { account: seconduser, timestamp: true },
+      { account: thirduser, timestamp: true }
+    ]
+  })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(3000)
+
+  await checkParticipants([])
+
+})
+
+describe.only('Voting', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  const testSetting = 'testsetting'
+  const minStake = 1111
+
+  await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', 'high', { authorization: `${settings}@active` })
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create referendum')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+
+  console.log('changing minimum amount to stake')
+  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  console.log('voting for proposal with scope referendums')
+  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.against(seconduser, 0, 5, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 0, { authorization: `${thirduser}@active` })
+
+  const actualVoices = []
+  
+  for (const user of users) {
+    const voices = await getVoice(user)
+    actualVoices.push(voices)
+  }
+  
+  assert({
+    given: 'vote done for a referendum',
+    should: 'have the correct scope',
+    actual: actualVoices.map(av => av.filter(a => a.scope === referendums)),
+    expected: [
+      [{ scope: 'rules.seeds', account: 'seedsuseraaa', balance: 89 }],
+      [{ scope: 'rules.seeds', account: 'seedsuserbbb', balance: 94 }],
+      [{ scope: 'rules.seeds', account: 'seedsuserccc', balance: 99 }],
+      [{ scope: 'rules.seeds', account: 'seedsuserxxx', balance: 99 }]
+    ]
+  })
+
+  const voiceTable = await getTableRows({
+    code: dao,
+    scope: 0,
+    table: 'votes',
+    json: true
+  })
+
+  assert({
+    given: 'vote done for a referendum',
+    should: 'have the votes',
+    actual: voiceTable.rows,
+    expected: [
+      { proposal_id: 0, account: firstuser, amount: 10, favour: 1 },
+      { proposal_id: 0, account: seconduser, amount: 5, favour: 0 },
+      { proposal_id: 0, account: thirduser, amount: 0, favour: 0 }
+    ]
+  })
+
+  const votedProp = await getTableRows({
+    code: dao,
+    scope: 2,
+    table: 'cycvotedprps',
+    json: true
+  })
+
+  assert({
+    given: 'vote done for a referendum',
+    should: 'have an entry in the voted proposal table',
+    actual: votedProp.rows.map(v => v.proposal_id),
+    expected: [0]
+  })
+
+})
+
+describe('Voice Update', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  
+  await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, (index + 1) * 20, { authorization: `${harvest}@active` })))
+  await Promise.all(users.map(user => contracts.dao.changetrust(user, true, { authorization: `${dao}@active` })))
+  await contracts.dao.updatevoices({ authorization: `${dao}@active` })
+  await sleep(2000)
+  
+  const actualVoices = []
+  
+  for (const user of users) {
+    const voices = await getVoice(user)
+    actualVoices.push(voices)
+  }
+  
+  const expectedVoices = []
+  let index = 0
+  
+  for (const user of users) {
+    index += 1
+    expectedVoices.push(scopes.map(scope => {
+      return {
+        scope,
+        account: user,
+        balance: index * 20
+      }
+    }))
+  }
+  
+  assert({
+    given: 'updatevoices called',
+    should: 'have the correct voice balances',
+    actual: actualVoices,
+    expected: expectedVoices
+  })
+})
+
+describe('Voice Decay', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  
+  await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, (index + 1) * 20, { authorization: `${harvest}@active` })))
+  await Promise.all(users.map(user => contracts.dao.changetrust(user, true, { authorization: `${dao}@active` })))
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 3, { authorization: `${settings}@active` })
+
+  console.log('change decaytime')
+  await contracts.settings.configure('decaytime', 30, { authorization: `${settings}@active` })
+
+  console.log('propdecaysec')
+  await contracts.settings.configure('propdecaysec', 5, { authorization: `${settings}@active` })
+
+  console.log('vdecayprntge = 15%')
+  await contracts.settings.configure('vdecayprntge', 15, { authorization: `${settings}@active` })
+
+  const testVoiceDecay = async (expectedVoices) => {
+
+    await contracts.dao.decayvoices({ authorization: `${dao}@active` })
+    await sleep(2000)
+
+    const actualVoices = []
+  
+    for (const user of users) {
+      const voices = await getVoice(user)
+      actualVoices.push(voices)
+    }
+
+    assert({
+      given: 'voice decay ran',
+      should: 'decay voices properly',
+      actual: actualVoices.map(av => av.map(a => a.balance)),
+      expected: expectedVoices.map(v => Array.from(Array(scopes.length).keys()).map(a => v)  )
+    })
+
+  }
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  await sleep(4000)
+
+  await testVoiceDecay([20, 40, 60, 80])
+  await sleep(10000)
+  await testVoiceDecay([20, 40, 60, 80])
+  await sleep(15000)
+  await testVoiceDecay([17, 34, 51, 68])
+  await sleep(1000)
+  await testVoiceDecay([17, 34, 51, 68])
+  await sleep(4000)
+  await testVoiceDecay([14, 28, 43, 57])
+  await sleep(2000)
+
+})
+
+describe('Voice Delegation', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+
+  await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, (index + 1) * 20, { authorization: `${harvest}@active` })))
+  await Promise.all(users.map(user => contracts.dao.changetrust(user, true, { authorization: `${dao}@active` })))
+
+  const checkVoices = async (expectedVoices) => {
+
+    const actualVoices = []
+  
+    for (const user of users) {
+      const voices = await getVoice(user)
+      actualVoices.push(voices)
+    }
+
+    assert({
+      given: 'voice delegated',
+      should: 'have the correct balances after voting',
+      actual: actualVoices.map(av => av.filter(a => a.scope === referendums)[0]),
+      expected: expectedVoices
+    })
+
+  }
+
+  const testSetting = 'testsetting'
+  const minStake = 1111
+
+  await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', 'high', { authorization: `${settings}@active` })
+
+  const createReferendum = async (creator, settingName, newValue, title, summary, description, image, url) => {
+    await contracts.dao.create([
+      { key: 'type', value: ['name', 'r.setting'] },
+      { key: 'creator', value: ['name', creator] },
+      { key: 'setting_name', value: ['name', settingName] },
+      { key: 'title', value: ['string', title] },
+      { key: 'summary', value: ['string', summary] },
+      { key: 'description', value: ['string', description] },
+      { key: 'image', value: ['string', image] },
+      { key: 'url', value: ['string', url] },
+      { key: 'new_value', value: newValue },
+      { key: 'test_cycles', value: ['uint64', 1] },
+      { key: 'eval_cycles', value: ['uint64', 3] }
+    ], { authorization: `${creator}@active` })
+  }
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create referendum')
+  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+
+  console.log('changing minimum amount to stake')
+  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  console.log('delegate voice')
+  await contracts.dao.delegate(seconduser, firstuser, referendums, { authorization: `${seconduser}@active` })
+  await contracts.dao.delegate(thirduser, firstuser, referendums, { authorization: `${thirduser}@active` })
+  await contracts.dao.delegate(fourthuser, thirduser, referendums, { authorization: `${fourthuser}@active` })
+
+  console.log('voting')
+  await contracts.dao.favour(firstuser, 0, 5, { authorization: `${firstuser}@active` })
+  await sleep(5000)
+
+  await checkVoices([
+    { scope: referendums, account: firstuser, balance: 15 },
+    { scope: referendums, account: seconduser, balance: 30 },
+    { scope: referendums, account: thirduser, balance: 45 },
+    { scope: referendums, account: fourthuser, balance: 60 }
+  ])
+
+  console.log('Undelegate voice')
+  await contracts.dao.undelegate(seconduser, referendums, { authorization: `${seconduser}@active` })
+
+  console.log('change opinion, revert vote')
+
+  const proposalsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true,
+    limit: 200
+  })
+
+  console.log(proposalsTable)
+
+  assert({
+    given: 'delegated vote',
+    should: 'have the correct favour and against',
+    actual: [proposalsTable.rows[0].favour, proposalsTable.rows[0].against],
+    expected: [50, 0]
+  })
+
+  await contracts.dao.revertvote(firstuser, 0, { authorization: `${firstuser}@active` })
+  await sleep(5000)
+
+  await checkVoices([
+    { scope: referendums, account: firstuser, balance: 15 },
+    { scope: referendums, account: seconduser, balance: 30 },
+    { scope: referendums, account: thirduser, balance: 45 },
+    { scope: referendums, account: fourthuser, balance: 60 }
+  ])
+
+  const proposalsTable2 = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true,
+    limit: 200
+  })
+
+  console.log('\n')
+  console.log(proposalsTable2)
+
+  assert({
+    given: 'delegated vote',
+    should: 'have the correct favour and against',
+    actual: [proposalsTable2.rows[0].favour, proposalsTable2.rows[0].against],
+    expected: [10, 40]
+  })
+
+})
+
+
+

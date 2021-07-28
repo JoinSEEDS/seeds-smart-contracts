@@ -6,7 +6,7 @@
 #include <math.h>
 
 void accounts::reset() {
-  require_auth(_self);
+  require_auth(_self);print("hi!");
 
   auto uitr = users.begin();
   while (uitr != users.end()) {

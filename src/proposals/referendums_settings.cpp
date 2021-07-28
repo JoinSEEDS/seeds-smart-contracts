@@ -126,9 +126,7 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
   name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  dao::cycle_tables cycle_t(contract_name, contract_name.value);
-  dao::cycle_table c_t = cycle_t.get();
+  uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);
 
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
@@ -185,7 +183,7 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
       proposals_t.modify(ritr, contract_name, [&](auto & item){
         item.age = new_age;
-        item.last_ran_cycle = c_t.propcycle;
+        item.last_ran_cycle = propcycle;
         item.status = next_status;
         if (next_status == ProposalsCommon::status_passed) {
           item.stage = ProposalsCommon::stage_done;
@@ -214,9 +212,11 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
       proposals_t.modify(ritr, contract_name, [&](auto & item){
         item.stage = ProposalsCommon::stage_done;
         item.status = ProposalsCommon::status_rejected;
-        item.last_ran_cycle = c_t.propcycle;
+        item.last_ran_cycle = propcycle;
       });
     }
+
+    this->m_contract.size_change(this->m_contract.prop_active_size, -1);
 
   } else if (ritr->stage == ProposalsCommon::stage_staged) {
 
@@ -226,8 +226,10 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
     proposals_t.modify(ritr, contract_name, [&](auto & item){
       item.stage = ProposalsCommon::stage_active;
       item.status = ProposalsCommon::status_voting;
-      item.last_ran_cycle = c_t.propcycle;
+      item.last_ran_cycle = propcycle;
     });
+
+    this->m_contract.size_change(this->m_contract.prop_active_size, 1);
 
   }
 
@@ -259,16 +261,16 @@ uint64_t ReferendumSettings::get_required_unity (const name & setting, const boo
     impact = citr->impact;
   }
 
-  switch (impact) {
-    case high_impact:
+  switch (impact.value) {
+    case high_impact.value:
       return config_t.find(name("unity.high").value) -> value;
-    case medium_impact:
+    case medium_impact.value:
       return config_t.find(name("unity.medium").value) -> value;
-    case low_impact:
+    case low_impact.value:
       return config_t.find(name("unity.low").value) -> value;
     default:
       check(false, "unknown impact for setting " + setting.to_string());
-      break;
+      return 0;
   }
 }
 
@@ -286,16 +288,16 @@ uint64_t ReferendumSettings::get_required_quorum (const name & setting, const bo
     impact = citr->impact;
   }
 
-  switch (impact) {
-    case high_impact:
+  switch (impact.value) {
+    case high_impact.value:
       return config_t.find(name("quorum.high").value) -> value;
-    case medium_impact:
+    case medium_impact.value:
       return config_t.find(name("quorum.med").value) -> value;
-    case low_impact:
+    case low_impact.value:
       return config_t.find(name("quorum.low").value) -> value;
     default:
       check(false, "unknown impact for setting " + setting.to_string());
-      break;
+      return 0;
   }
 }
 

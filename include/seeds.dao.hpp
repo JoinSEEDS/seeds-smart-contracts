@@ -42,6 +42,22 @@ CONTRACT dao : public contract {
         referendums_scope
       };
 
+      name alliance_fund = "alliance"_n;
+      name campaign_fund = "campaign"_n;
+      name milestone_fund = "milestone"_n;
+
+      std::vector<name> fund_types = {
+        alliance_fund,
+        campaign_fund,
+        milestone_fund
+      };
+
+      const name prop_active_size = "prop.act.sz"_n;
+      const name user_active_size = "user.act.sz"_n; 
+      const name cycle_vote_power_size = "votepow.sz"_n; 
+      const name linear_payout = "linear"_n;
+      const name stepped_payout = "step"_n;
+
       ACTION reset();
 
       ACTION initcycle(const uint64_t & cycle_id);
@@ -58,7 +74,7 @@ CONTRACT dao : public contract {
 
       ACTION onperiod();
 
-      ACTION evaluate(const uint64_t & proposal_id);
+      ACTION evaluate(const uint64_t & proposal_id, const uint64_t & propcycle);
 
       ACTION favour(const name & voter, const uint64_t & proposal_id, const uint64_t & amount);
 
@@ -85,6 +101,12 @@ CONTRACT dao : public contract {
       ACTION decayvoice(const uint64_t & start, const uint64_t & chunksize);
 
       ACTION mimicrevert(const name & delegatee, const uint64_t & delegator, const name & scope, const uint64_t & proposal_id, const uint64_t & chunksize);
+
+      ACTION updatevoices();
+
+      ACTION updatevoice(const uint64_t & start);
+
+      ACTION erasepartpts(const uint64_t & active_proposals);
 
 
       ACTION testsetvoice(const name & account, const uint64_t & amount);
@@ -230,13 +252,6 @@ CONTRACT dao : public contract {
 
   private:
 
-    const name prop_active_size = "prop.act.sz"_n;
-    const name user_active_size = "user.act.sz"_n; 
-    const name cycle_vote_power_size = "votepow.sz"_n; 
-    const name linear_payout = "linear"_n;
-    const name stepped_payout = "step"_n;
-
-
     void set_voice(const name & user, const uint64_t & amount, const name & scope);
     double voice_change(const name & user, const uint64_t & amount, const bool & reduce, const name & scope);
     void erase_voice(const name & user);
@@ -247,8 +262,6 @@ CONTRACT dao : public contract {
     void add_voted_proposal(const uint64_t & proposal_id);
     void increase_voice_cast(const uint64_t & amount, const name & option, const name & prop_type);
     void add_voice_cast(const uint64_t & cycle, const uint64_t & voice_cast, const name & type);
-    uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
-    uint64_t get_quorum(const uint64_t & total_proposals);
 
     void check_citizen(const name & account);
     void vote_aux(const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_delegated);
@@ -256,6 +269,11 @@ CONTRACT dao : public contract {
     void check_attributes(const std::map<std::string, VariantValue> & args);
     uint64_t active_cutoff_date();
     bool has_delegates(const name & voter, const name & scope);
+    bool is_active(const name & account, const uint64_t & cutoff_date);
+    
+    void init_cycle_new_stats();
+    uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
+    uint64_t get_quorum(const uint64_t & total_proposals);
 
 };
 
@@ -272,6 +290,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (favour)(against)(neutral)(revertvote)(voteonbehalf)
           (delegate)(undelegate)(mimicvote)(mimicrevert)
           (decayvoices)(decayvoice)
+          (updatevoices)(updatevoice)
+          (erasepartpts)
           (testsetvoice)
         )
       }
