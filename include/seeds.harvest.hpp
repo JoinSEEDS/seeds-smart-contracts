@@ -117,6 +117,11 @@ CONTRACT harvest : public contract {
     ACTION lgcalcmqevs(logmap log_map);
     ACTION lgrunhrvst(logmap log_map);
     ACTION lgcalmntrte(logmap log_map);
+    ACTION resetlogs();
+
+    ACTION ldsthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
+    ACTION ldsthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
+    ACTION ldsthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -162,6 +167,8 @@ CONTRACT harvest : public contract {
     void send_distribute_harvest (name key, asset amount);
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
     void send_pool_payout(asset quantity);
+    void log_send_distribute_harvest (name key, asset amount, uint64_t log_group, uint64_t batch_size);
+    void log_withdraw_aux(name sender, name beneficiary, asset quantity, string memo, uint64_t log_group);
 
     // Contract Tables
 
@@ -464,7 +471,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
           (delcsorg)(migorgs)(testmigscope)
-          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)
+          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)
+          (ldsthvstusrs)(ldsthvstorgs)(ldsthvstrgns)
         )
       }
   }

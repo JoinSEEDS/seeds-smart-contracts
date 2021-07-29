@@ -68,30 +68,6 @@ void harvest::reset() {
     bcsitr = regioncstemp.erase(bcsitr);
   }
 
-  logs_tables logs_t(get_self(), 1);
-  auto litr = logs_t.begin();
-  while (litr != logs_t.end()) {
-    litr = logs_t.erase(litr);
-  }
-
-  logs_tables logs_t2(get_self(), get_self().value);
-  auto litr2 = logs_t2.begin();
-  while (litr2 != logs_t2.end()) {
-    litr2 = logs_t2.erase(litr2);
-  }
-
-  lrewards_tables rewards_t(get_self(), 1);
-  auto lritr = rewards_t.begin();
-  while (lritr != rewards_t.end()) {
-    lritr = rewards_t.erase(lritr);
-  }
-
-  lgroup_tables log_groups_t(get_self(), get_self().value);
-  auto lgitr = log_groups_t.begin();
-  while (lgitr != log_groups_t.end()) {
-    lgitr = log_groups_t.erase(lgitr);
-  }
-
   total.remove();
 
   init_balance(_self);
@@ -1579,21 +1555,23 @@ void harvest::lgcalcmqevs (logmap log_map) {
 
   log_group_t.emplace(get_self(), [&](auto & newlog) {
    newlog.log_group = log_group;
-   newlog.action = "runharvest"_n;
+   newlog.action = "calcmqev"_n;
    newlog.creation_date = eosio::current_time_point().sec_since_epoch();
   });
 
+  auto ditr = log_map.find("day"_n);
   auto mcitr = log_map.find("moonclicle"_n);
   
-  uint64_t day = utils::get_beginning_of_day_in_seconds();
+  uint64_t day = ditr != log_map.end() ? std::get<1>(ditr->second) : utils::get_beginning_of_day_in_seconds();
   uint64_t moon_cycle = mcitr != log_map.end() ? std::get<1>(mcitr->second) : utils::moon_cycle;
   uint64_t cutoff = day - moon_cycle;
 
-  logaction(1, name("calcmqevs"), "Moon cicle: " + std::to_string(moon_cycle));
+  logaction(log_group, name("calcmqevs"), "Moon cicle: " + std::to_string(moon_cycle));
+  logaction(log_group, name("calcmqevs"), "Cut off: " + std::to_string(cutoff));
   
   qev_tables qevs(contracts::history, contracts::history.value);
   if (qevs.begin() == qevs.end()) {
-    print("QEVs table is empty, no op. ");
+    logaction(log_group, name("calcmqevs"), "QEVs table is empty, no op.");
     return;
   }
 
@@ -1602,14 +1580,15 @@ void harvest::lgcalcmqevs (logmap log_map) {
 
   while (qitr != qevs.rend() && qitr -> timestamp >= cutoff) {
     total_volume += qitr -> qualifying_volume;
+    logaction(log_group, name("calcmqevs"), "Total volume partial: " + std::to_string(total_volume));
     qitr++;
   }
 
-  logaction(1, name("calcmqevs"), "Total volume: " + std::to_string(total_volume));
+  logaction(log_group, name("calcmqevs"), "Total volume: " + std::to_string(total_volume));
 
   circulating_supply_table c = circulating.get();
 
-  logaction(1, name("calcmqevs"), "Circulating supply: " + std::to_string(c.circulating));
+  logaction(log_group, name("calcmqevs"), "Circulating supply: " + std::to_string(c.circulating));
 
 }
 
@@ -1621,7 +1600,7 @@ void harvest::lgcalmntrte (logmap log_map) {
 
   log_group_t.emplace(get_self(), [&](auto & newlog) {
    newlog.log_group = log_group;
-   newlog.action = "runharvest"_n;
+   newlog.action = "lgcalmntrte"_n;
    newlog.creation_date = eosio::current_time_point().sec_since_epoch();
   });
 
@@ -1629,6 +1608,7 @@ void harvest::lgcalmntrte (logmap log_map) {
   auto cqitr = log_map.find("cqevqvol"_n);
   auto pcitr = log_map.find("pcsuply"_n);
   auto ccitr = log_map.find("ccsuply"_n);
+  auto iritr = log_map.find("inflrate"_n);
 
   uint64_t day = utils::get_beginning_of_day_in_seconds();
   auto previous_day_temp = eosio::time_point_sec((day - (3 * utils::moon_cycle)) / 86400 * 86400);
@@ -1646,27 +1626,27 @@ void harvest::lgcalmntrte (logmap log_map) {
   
   double volume_growth = double(current_qv - previous_qv) / previous_qv;
 
-  logaction(log_group, name("calcmintrate"), "Volume growth: " + std::to_string(volume_growth));
+  logaction(log_group, name("calcmintrate"), "Volume growth = " + std::to_string(volume_growth) + ", volume_growth = (current_qv - previous_qv) / previous_qv ");
 
   int64_t target_supply_raw = (1.0 + volume_growth) * prev_circulating_supply;
 
-  logaction(log_group, name("calcmintrate"), "Target suply raw: " + std::to_string(target_supply_raw));
+  logaction(log_group, name("calcmintrate"), "Target suply raw = " + std::to_string(target_supply_raw) + ", target_suply_raw = (1.0 + volume_growth) * prev_circulating_supply");
 
-  double inflation_rate = config_float_get("infation.per"_n);
+  double inflation_rate = (iritr  != log_map.end()) ? std::get<2>(iritr->second) : config_float_get("infation.per"_n);
 
-  logaction(log_group, name("calcmintrate"), "Inflation rate: " + std::to_string(inflation_rate));
+  logaction(log_group, name("calcmintrate"), "Inflation rate = " + std::to_string(inflation_rate));
 
   int64_t target_supply = (1.0 + inflation_rate) * target_supply_raw;
 
-  logaction(log_group, name("calcmintrate"), "Target supply: " + std::to_string(target_supply));
+  logaction(log_group, name("calcmintrate"), "Target supply = " + std::to_string(target_supply) + ", target_suply = (1.0 + inflation_rate) * target_supply_raw");
 
   int64_t delta = target_supply - curr_circulating_supply;
   
-  logaction(log_group, name("calcmintrate"), "Delta: " + std::to_string(delta));
+  logaction(log_group, name("calcmintrate"), "Delta = " + std::to_string(delta) + ", delta = target_supply - curr_circulating_supply");
 
   double mint_rate = delta / 708.0;
 
-  logaction(log_group, name("calcmintrate"), "Mint rate: " + std::to_string(mint_rate));
+  logaction(log_group, name("calcmintrate"), "Mint rate = " + std::to_string(mint_rate) + ", mint_rate = delta / 708.0");
 }
 
 void harvest::lgrunhrvst(logmap log_map) {
@@ -1689,9 +1669,11 @@ void harvest::lgrunhrvst(logmap log_map) {
   auto opitr = log_map.find("orgsperc"_n);
   auto gpitr = log_map.find("globperc"_n);
 
+  auto bzitr = log_map.find("batchsize"_n);
+
   auto mitr = mintrate.begin();
-  if (mitr == mintrate.end() && mritr != log_map.end()) {
-    print("mint rate is empty");
+  if (mitr == mintrate.end() && mritr == log_map.end()) {
+    logaction(log_group, name("runharvest"), "Mint rate is empty");
     return;
   }
 
@@ -1731,30 +1713,163 @@ void harvest::lgrunhrvst(logmap log_map) {
   logaction(log_group, name("runharvest"), "Orgs percentage: " + std::to_string(orgs_percentage));
   logaction(log_group, name("runharvest"), "Global percentage: " + std::to_string(global_percentage));
 
+  uint64_t batch_size = (bzitr != log_map.end()) ? std::get<1>(bzitr->second) : 20;
+
+  log_send_distribute_harvest("ldsthvstusrs"_n, asset(quantity.amount * users_percentage, test_symbol), log_group, batch_size);
+  log_send_distribute_harvest("ldsthvstrgns"_n, asset(quantity.amount * rgns_percentage, test_symbol), log_group, batch_size);
+  log_send_distribute_harvest("ldsthvstorgs"_n, asset(quantity.amount * orgs_percentage, test_symbol), log_group, batch_size);
+
+  log_withdraw_aux(get_self(), bankaccts::globaldho, asset(quantity.amount * global_percentage, test_symbol), "harvest", log_group);
+}
+
+void harvest::resetlogs () {
+  require_auth(get_self());
+
+  lgroup_tables log_groups_t(get_self(), get_self().value);
+  auto lgitr = log_groups_t.begin();
+
+  while (lgitr != log_groups_t.end()) {
+    uint64_t log_group = lgitr->log_group;
+
+    logs_tables logs_t(get_self(), log_group);
+    auto litr = logs_t.begin();
+    while (litr != logs_t.end()) {
+      litr = logs_t.erase(litr);
+    }
+
+    lrewards_tables rewards_t(get_self(), log_group);
+    auto lritr = rewards_t.begin();
+    while (lritr != rewards_t.end()) {
+      lritr = rewards_t.erase(lritr);
+    }
+
+    lgitr = log_groups_t.erase(lgitr);
+  }
+}
+
+void harvest::ldsthvstusrs (uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group) {
+  require_auth(get_self());
+
+  auto csitr = start == 0 ? cspoints.begin() : cspoints.find(start);
+  uint64_t count = 0;
+
+  uint64_t sum_rank = get_size(sum_rank_users);
+  check(sum_rank > 0, "the sum rank for users must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(sum_rank);
+  
+  while (csitr != cspoints.end() && count < chunksize) {
+
+    if (csitr->rank > 0) {
+      logaction(log_group, name("disthvstusrs"), "User: " + csitr->account.to_string() + ", Rank:" + std::to_string(csitr->rank) + ", Amount: " + asset(csitr -> rank * fragment_seeds, test_symbol).to_string());
+      lrewards_tables rewards_t(get_self(), log_group);
+      
+      rewards_t.emplace(_self, [&](auto & item) {
+        item.id = rewards_t.available_primary_key();
+        item.account = csitr->account;
+        item.account_type = "user"_n;
+        item.reward = asset(csitr -> rank * fragment_seeds, test_symbol);
+      });
+    }
+    csitr++;
+    count++;
+  }
+}
+
+void harvest::ldsthvstrgns (uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group) {
+  require_auth(get_self());
+  
+  auto regions_by_status_id = regions.get_index<"bystatusid"_n>();
+  uint128_t rid = (uint128_t(rgn_status_active.value) << 64) + start;
+
+  auto ritr = regions_by_status_id.lower_bound(rid);
+
+  size_tables rgn_sizes(contracts::region, contracts::region.value);
+  auto sitr = rgn_sizes.get(name("active.sz").value, "active.sz not found in region's sizes");
+
+  uint64_t number_regions = sitr.size;
+  uint64_t count = 0;
+
+  check(number_regions > 0, "number of regions must be greater than zero");
+  double fragment_seeds = total_amount.amount / double(number_regions);
+
+  while (ritr != regions_by_status_id.end() && ritr->status == rgn_status_active && count < chunksize) {
+    logaction(log_group, name("disthvstrgns"), "Rgn: " + ritr->id.to_string() + ", Rank: 1" + ", Amount: " + asset(fragment_seeds, test_symbol).to_string());
+    lrewards_tables rewards_t(get_self(), log_group);
+    
+    rewards_t.emplace(_self, [&](auto & item) {
+      item.id = rewards_t.available_primary_key();
+      item.account = ritr->id;
+      item.account_type = "rgn"_n;
+      item.reward = asset(fragment_seeds, test_symbol);
+    });
+    ritr++;
+    count++;
+  }
+}
+
+void harvest::ldsthvstorgs (uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group) {
+  require_auth(get_self());
+
+  cs_points_tables cspoints_t(get_self(), organization_scope.value);
+
+  auto csitr = start == 0 ? cspoints_t.begin() : cspoints_t.find(start);
+  uint64_t count = 0;
+
+  uint64_t sum_rank = get_size(sum_rank_orgs);
+  check(sum_rank > 0, "the sum rank for organizations must be greater than zero");
+
+  double fragment_seeds = total_amount.amount / double(sum_rank);
+
+  uint64_t min_eligible = config_get(name("org.minharv"));
+  
+  while (csitr != cspoints_t.end() && count < chunksize) {
+
+    if (csitr->rank > 0) {
+      auto uitr = organizations.find(csitr -> account.value);
+      if (uitr -> status >= min_eligible) {
+
+        logaction(log_group, name("disthvstorgs"), "Org: " + csitr->account.to_string() + ", Rank: " + std::to_string(csitr->rank) + ", Amount: " + asset(csitr -> rank * fragment_seeds, test_symbol).to_string());
+        lrewards_tables rewards_t(get_self(), log_group);
+
+        rewards_t.emplace(_self, [&](auto & item) {
+          item.id = rewards_t.available_primary_key();
+          item.account = csitr->account;
+          item.account_type = "org"_n;
+          item.reward = asset(csitr -> rank * fragment_seeds, test_symbol);
+        });
+      
+      }
+    }
+    csitr++;
+    count++;
+  }
+}
+
+void harvest::log_send_distribute_harvest (name key, asset amount, uint64_t log_group, uint64_t batch_size) {
+  cancel_deferred(key.value);
+
+  action next_execution(
+    permission_level{get_self(), "active"_n},
+    get_self(),
+    key,
+    std::make_tuple(uint64_t(0), batch_size, amount, log_group)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(key.value, _self);
+}
+
+void harvest::log_withdraw_aux (name sender, name beneficiary, asset quantity, string memo, uint64_t log_group) {
+  logaction(log_group, name("withdrawaux"), "Sender: " + sender.to_string() + ", Beneficiary: " + beneficiary.to_string() + ", Amount: " + quantity.to_string() + ", Memo: " + memo);
   lrewards_tables rewards_t(get_self(), log_group);
 
   rewards_t.emplace(_self, [&](auto & item) {
     item.id = rewards_t.available_primary_key();
-    item.account = "disthvstusrs"_n;
-    item.account_type = "user"_n;
-    item.reward = asset(quantity.amount * users_percentage, test_symbol);
-  });
-  rewards_t.emplace(_self, [&](auto & item) {
-    item.id = rewards_t.available_primary_key();
-    item.account = "disthvstrgns"_n;
-    item.account_type = "rgn"_n;
-    item.reward = asset(quantity.amount * rgns_percentage, test_symbol);
-  });
-  rewards_t.emplace(_self, [&](auto & item) {
-    item.id = rewards_t.available_primary_key();
-    item.account = "disthvstorgs"_n;
-    item.account_type = "org"_n;
-    item.reward = asset(quantity.amount * orgs_percentage, test_symbol);
-  });
-  rewards_t.emplace(_self, [&](auto & item) {
-    item.id = rewards_t.available_primary_key();
-    item.account = "disthvstglob"_n;
+    item.account = beneficiary;
     item.account_type = "global"_n;
-    item.reward = asset(quantity.amount * global_percentage, test_symbol);
+    item.reward = quantity;
   });
 }
