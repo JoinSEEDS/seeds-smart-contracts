@@ -24,7 +24,7 @@ using namespace eosio;
 using namespace utils;
 using std::string;
 using std::vector;
-typedef std::map<name, std::variant<asset, uint64_t, double, int64_t>> logmap;
+typedef std::map<name, std::variant<asset, uint64_t, double, int64_t, string>> logmap;
 
 CONTRACT harvest : public contract {
   public:
@@ -113,12 +113,12 @@ CONTRACT harvest : public contract {
     ACTION delcsorg(uint64_t start);
     ACTION testmigscope(name account, uint64_t amount);
 
+    ACTION resetlgroups(uint64_t chunksize);
+    ACTION resetlogs(uint64_t log_group, uint64_t chunksize);
     ACTION logaction(uint64_t log_group, name action, string log);
     ACTION lgcalcmqevs(logmap log_map);
     ACTION lgrunhrvst(logmap log_map);
     ACTION lgcalmntrte(logmap log_map);
-    ACTION resetlogs();
-
     ACTION ldsthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
     ACTION ldsthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
     ACTION ldsthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
@@ -168,7 +168,6 @@ CONTRACT harvest : public contract {
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
     void send_pool_payout(asset quantity);
     void log_send_distribute_harvest (name key, asset amount, uint64_t log_group, uint64_t batch_size);
-    void log_withdraw_aux(name sender, name beneficiary, asset quantity, string memo, uint64_t log_group);
 
     // Contract Tables
 
@@ -232,23 +231,26 @@ CONTRACT harvest : public contract {
       string log;
       
       uint64_t primary_key() const { return id; }
-      uint64_t by_log_group() const { return log_group; }
+      uint128_t by_action_id() const { return (uint128_t(action.value) << 64) + id; }
     };
 
     typedef eosio::multi_index<"logs"_n, logs_table,
-      indexed_by<"byloggroup"_n,const_mem_fun<logs_table, uint64_t, &logs_table::by_log_group>>
+      indexed_by<"byactionid"_n,const_mem_fun<logs_table, uint128_t, &logs_table::by_action_id>>
     > logs_tables;
 
     TABLE log_rewards_table {
-      uint64_t id;
       name account;
       name account_type;
       asset reward;
+      string notes;
 
-      uint64_t primary_key() const { return id; }
+      uint64_t primary_key() const { return account.value; }
+      uint128_t by_type_account() const { return (uint128_t(account_type.value) << 64) + account.value; }
     };
 
-    typedef eosio::multi_index<"logsrewards"_n, log_rewards_table> lrewards_tables;
+    typedef eosio::multi_index<"logsrewards"_n, log_rewards_table,
+      indexed_by<"bytypeacct"_n,const_mem_fun<log_rewards_table, uint128_t, &log_rewards_table::by_type_account>>
+    > lrewards_tables;
 
     TABLE log_group_table {
       uint64_t log_group;
@@ -471,7 +473,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
           (delcsorg)(migorgs)(testmigscope)
-          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)
+          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)(resetlgroups)
           (ldsthvstusrs)(ldsthvstorgs)(ldsthvstrgns)
         )
       }
