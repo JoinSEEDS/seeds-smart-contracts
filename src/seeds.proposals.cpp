@@ -1036,7 +1036,7 @@ void proposals::createinvite (
   uint64_t max_reward = config_get("inv.max.rwrd"_n);
   check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
   
-  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
+  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0, 0};
   create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
 
 }
@@ -1053,7 +1053,16 @@ void proposals::create(
   name fund
 ) {
   require_auth(creator);
+
   std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  if (fund == bankaccts::alliances) {
+    perc = { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  } else if (fund == bankaccts::milestone) {
+    perc = { 100 };
+  } else {
+    perc = { 25, 25, 25, 25 };
+  }
 
   createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
 }

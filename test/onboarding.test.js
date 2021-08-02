@@ -598,23 +598,12 @@ describe('Campaign reward for existing user', async assert => {
         await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
     }
 
-    const acceptExisting = async () => {
-        console.log(`Existing user accept from Application`)
-        await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@active` })
-    }
-
     const reward = async () => {
-        console.log(`Existing user accept from Application`)
+        console.log(`Existing user reward from Application`)
         await contracts.onboarding.reward(newAccount, inviteSecret3, { authorization: `${newAccount}@active` })
     }
 
     await adduser(firstuser)
-
-    await adduser(newAccount)
-
-    console.log('plant seeds')
-    await contracts.token.transfer(firstuser, newAccount, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
-    await contracts.token.transfer(newAccount, harvest, '500.0000 SEEDS', '', { authorization: `${newAccount}@active` })
 
     const before = await getTableRows({
         code: harvest,
@@ -629,7 +618,8 @@ describe('Campaign reward for existing user', async assert => {
 
     await invite()
 
-    await acceptExisting()
+    console.log(`Existing user accept from Application`)
+    await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@active` })
 
     const { rows } = await getTableRows({
         code: harvest,
@@ -677,18 +667,18 @@ describe('Campaign reward for existing user', async assert => {
         actual: newUserHarvest,
         expected: {
             account: newAccount,
-            planted: "505.0000 SEEDS",
+            planted: "5.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
     })
 
     assert({
         given: 'accept reward planted',
-        should: 'have planted seeds',
+        should: 'have planted seeds (no change)',
         actual: newUserHarvest3,
         expected: {
             account: newAccount,
-            planted: "510.0000 SEEDS",
+            planted: "5.0000 SEEDS",
             reward: '0.0000 SEEDS'
         }
     })
@@ -697,7 +687,7 @@ describe('Campaign reward for existing user', async assert => {
         given: 'accept reward cash',
         should: 'have 2 seeds more',
         actual: afterRewardBalance - beforeRewardBalance,
-        expected: 2
+        expected: 7
     })
 
     assert({
