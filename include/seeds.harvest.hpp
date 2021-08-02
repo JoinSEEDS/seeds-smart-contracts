@@ -470,12 +470,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
-<<<<<<< HEAD
           (delcsorg)(migorgs)(testmigscope)
           (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)(resetlgroups)
           (ldsthvstusrs)(ldsthvstorgs)(ldsthvstrgns)
-=======
->>>>>>> 7dc12fe199a2df8de8c65fbfd05317a970f7d989
         )
       }
   }
