@@ -1,7 +1,10 @@
 #include <seeds.dao.hpp>
 
 #include <proposals/proposals_factory.hpp>
+
+#include "proposals/proposals_base.cpp"
 #include "proposals/referendums_settings.cpp"
+#include "proposals/proposal_alliance.cpp"
 
 #include "proposals/voice_management.cpp"
 
@@ -112,9 +115,9 @@ ACTION dao::create (std::map<std::string, VariantValue> & args) {
   check_citizen(creator);
   check_attributes(args);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
 
-  ref->create(args);
+  prop->create(args);
 
 }
 
@@ -128,9 +131,9 @@ ACTION dao::update (std::map<std::string, VariantValue> & args) {
   require_auth(ritr->creator);
   check_attributes(args);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
 
-  ref->update(args);
+  prop->update(args);
 
 }
 
@@ -139,13 +142,28 @@ ACTION dao::cancel (std::map<std::string, VariantValue> & args) {
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
+  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
 
-  require_auth(ritr->creator);
+  require_auth(pitr->creator);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
 
-  ref->cancel(args);
+  prop->cancel(args);
+
+}
+
+ACTION dao::callback (std::map<std::string, VariantValue> & args) {
+
+  require_auth(get_self());
+
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
+
+  proposal_tables proposals_t(get_self(), get_self().value);
+  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
+
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
+
+  prop->callback(args);
 
 }
 
@@ -634,8 +652,6 @@ uint64_t dao::active_cutoff_date () {
 }
 
 void dao::check_citizen (const name & account) {
-  DEFINE_USER_TABLE;
-  DEFINE_USER_TABLE_MULTI_INDEX;
   user_tables users(contracts::accounts, contracts::accounts.value);
 
   auto uitr = users.find(account.value);
@@ -663,6 +679,111 @@ void dao::check_attributes (const std::map<std::string, VariantValue> & args) {
 
   check(url.size() <= 512, "url must be less or equal to 512 characters long");
   
+}
+
+name dao::get_fund_type (const name & fund) {
+  if (fund == bankaccts::alliances) {
+    return alliance_fund;
+  } 
+  else if (fund == bankaccts::campaigns) {
+    return campaign_fund;
+  } 
+  else if (fund == bankaccts::milestone) {
+    return milestone_fund;
+  }
+  return "none"_n;
+}
+
+uint64_t dao::min_stake (const asset & quantity, const name & fund) {
+
+  double prop_percentage;
+  uint64_t prop_min;
+  uint64_t prop_max;
+
+  name fund_type = get_fund_type(fund);
+  
+  if (fund_type == campaign_fund) {
+    prop_percentage = (double)config_get(name("prop.cmp.pct")) / 10000.0;
+    prop_max = config_get(name("prop.cmp.cap"));
+    prop_min = config_get(name("prop.cmp.min"));
+  } else if (fund == alliance_fund) {
+    prop_percentage = (double)config_get(name("prop.al.pct")) / 10000.0;
+    prop_max = config_get(name("prop.al.cap"));
+    prop_min = config_get(name("prop.al.min"));
+  } else if (fund == milestone_fund) {
+    prop_percentage = (double)config_get(name("propstakeper"));
+    prop_max = config_get(name("propminstake"));
+    prop_min = config_get(name("propminstake"));
+  } else {
+    check(false, "unknown proposal type, invalid fund");
+  }
+
+  asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), utils::seeds_symbol);
+
+  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max, min_stake);
+  return min_stake;
+}
+
+uint64_t dao::calc_quorum_base (const uint64_t & propcycle) {
+
+  uint64_t num_cycles = config_get("prop.cyc.qb"_n);
+  uint64_t total = 0;
+  uint64_t count = 0;
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+  auto citr = cyclestats_t.find(propcycle);
+
+  if (citr == cyclestats_t.end()) {
+    // in case there is no information for this propcycle
+    return get_size(user_active_size) * 50 / 2;
+  }
+
+  while (count < num_cycles) {
+
+    total += citr->total_voice_cast;
+    // total += citr -> num_votes; // uncomment to make it count number of voters
+    count++;
+
+    if (citr == cyclestats_t.begin()) {
+      break;
+    } else {
+      citr--;
+    }
+
+  }
+
+  return count > 0 ? total / count : 0;
+}
+
+void dao::update_cycle_stats_from_proposal (const uint64_t & proposal_id, const name & type, const name & array) {
+  
+  cycle_tables cycle_t(get_self(), get_self().value);
+  cycle_table c_t = cycle_t.get_or_create(get_self(), cycle_table());
+
+  uint64_t quorum_vote_base = calc_quorum_base(c_t.propcycle - 1);
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+
+  auto citr = cyclestats_t.find(c_t.propcycle);
+
+  cyclestats_t.modify(citr, _self, [&](auto & item){
+    if (array == ProposalsCommon::stage_active) {
+      item.active_props.push_back(proposal_id);
+    } else if (array == ProposalsCommon::status_evaluate) {
+      item.eval_props.push_back(proposal_id);
+    }
+  });
+
+  if (array == ProposalsCommon::stage_active) {
+    support_level_tables support_t(get_self(), type.value);
+    auto sitr = support_t.find(c_t.propcycle);
+    check(sitr != support_t.end(), "cycle not found " + std::to_string(c_t.propcycle));
+    support_t.modify(sitr, _self, [&](auto & item){
+      item.num_proposals += 1;
+    });
+  }
+
 }
 
 template <typename... T>

@@ -5,6 +5,7 @@
 namespace ProposalsCommon {
   constexpr name type_ref_setting = name("r.setting");
   constexpr name type_ref_code = name("r.code");
+  constexpr name type_prop_alliance = name("p.alliance");
   
   constexpr name status_open = name("open");
   constexpr name status_voting = name("voting");
@@ -33,19 +34,28 @@ class Proposal {
     Proposal(dao & _contract) : m_contract(_contract) {};
     virtual ~Proposal(){};
 
-    virtual void create(std::map<std::string, VariantValue> & args) = 0;
+    virtual void create(std::map<std::string, VariantValue> & args);
+    virtual void update(std::map<std::string, VariantValue> & args);
+    virtual void cancel(std::map<std::string, VariantValue> & args);
+    virtual void evaluate(std::map<std::string, VariantValue> & args);
+    virtual void callback(std::map<std::string, VariantValue> & args);
 
-    virtual void update(std::map<std::string, VariantValue> & args) = 0;
-
-    virtual void cancel(std::map<std::string, VariantValue> & args) = 0;
-
-    virtual void evaluate(std::map<std::string, VariantValue> & args) = 0;
 
     virtual name get_scope() = 0;
-
     virtual name get_fund_type() = 0;
 
-    virtual void check_can_vote(const name & status, const name & stage) = 0;
+
+    virtual void check_can_vote(const name & status, const name & stage);
+    virtual bool check_prop_majority(std::map<std::string, VariantValue> & args);
+
+
+    virtual void create_impl(std::map<std::string, VariantValue> & args);
+    virtual void update_impl(std::map<std::string, VariantValue> & args);
+    virtual void cancel_impl(std::map<std::string, VariantValue> & args);
+    virtual void status_open_impl(std::map<std::string, VariantValue> & args);
+    virtual void status_eval_impl(std::map<std::string, VariantValue> & args);
+    virtual void status_rejected_impl(std::map<std::string, VariantValue> & args);
+
 
     dao & m_contract;
 

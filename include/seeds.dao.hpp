@@ -72,6 +72,8 @@ CONTRACT dao : public contract {
 
       ACTION cancel(std::map<std::string, VariantValue> & args);
 
+      ACTION callback(std::map<std::string, VariantValue> & args);
+
       ACTION onperiod();
 
       ACTION evaluate(const uint64_t & proposal_id, const uint64_t & propcycle);
@@ -113,6 +115,13 @@ CONTRACT dao : public contract {
 
 
 
+      name get_fund_type(const name & fund);
+      uint64_t min_stake(const asset & quantity, const name & fund);
+
+      uint64_t calc_quorum_base(const uint64_t & propcycle);
+      void update_cycle_stats_from_proposal(const uint64_t & proposal_id, const name & type, const name & array);
+
+
       template <typename... T>
       void send_deferred_transaction(const permission_level & permission, const name & contract, const name & action, const std::tuple<T...> & data);
 
@@ -138,6 +147,9 @@ CONTRACT dao : public contract {
       DEFINE_SIZE_CHANGE
       DEFINE_SIZE_SET
       DEFINE_SIZE_GET
+
+      DEFINE_USER_TABLE
+      DEFINE_USER_TABLE_MULTI_INDEX
 
       TABLE deferred_id_table {
         uint64_t id;
@@ -285,7 +297,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(dao, 
           (reset)(initcycle)
-          (create)(update)(cancel)(onperiod)(evaluate)
+          (create)(update)(cancel)(onperiod)(evaluate)(callback)
           (changetrust)(addactive)
           (favour)(against)(neutral)(revertvote)(voteonbehalf)
           (delegate)(undelegate)(mimicvote)(mimicrevert)

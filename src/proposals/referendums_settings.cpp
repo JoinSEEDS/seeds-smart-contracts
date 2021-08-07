@@ -37,6 +37,7 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
     item.type = ProposalsCommon::type_ref_setting;
     item.last_ran_cycle = 0;
     item.age = 0;
+    item.fund = std::get<name>(args["creator"]);
   });
 
   propaux_t.emplace(contract_name, [&](auto & item){

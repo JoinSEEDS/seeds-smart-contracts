@@ -2,7 +2,10 @@ const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 const { should, assert } = require('chai')
 
-const { dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser } = names
+const { 
+  dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
+  alliancesbank, campaignbank, escrow
+} = names
 
 const scopes = ['alliance', proposals, 'milestone', referendums]
 
@@ -744,7 +747,7 @@ describe('Participants and Actives', async assert => {
 
 })
 
-describe.only('Voting', async assert => {
+describe('Voting', async assert => {
   
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1083,5 +1086,61 @@ describe('Voice Delegation', async assert => {
 
 })
 
+
+const createProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
+  await contract.create([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    { key: 'quantity', value: ['asset', quantity] },
+    ...options
+  ], { authorization: `${creator}@active` })
+}
+
+describe.only('Alliances', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  const minStake = 1111
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create proposal')
+  await createProp(contracts.dao, firstuser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '10000.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+
+  const propsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true
+  })
+  console.log(propsTable.rows)
+
+  const escrowTable = await getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+  console.log(escrowTable.rows)
+
+})
 
 
