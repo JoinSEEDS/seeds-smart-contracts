@@ -1140,6 +1140,12 @@ describe('Alliances', async assert => {
     { key: 'recipient', value: ['name', firstuser] }
   ])
 
+  // console.log('changing minimum amount to stake')
+  // await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+
   const propsTable = await getTableRows({
     code: dao,
     scope: dao,
@@ -1147,6 +1153,18 @@ describe('Alliances', async assert => {
     json: true
   })
   console.log(propsTable.rows)
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 0, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 0, 10, { authorization: `${thirduser}@active` })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
 
   const escrowTable = await getTableRows({
     code: escrow,

@@ -3,8 +3,6 @@
 
 void ProposalAlliance::create_impl (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
-
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
   dao::user_tables users_t(contracts::accounts, contracts::accounts.value);
 
@@ -23,6 +21,7 @@ void ProposalAlliance::create_impl (std::map<std::string, VariantValue> & args) 
     item.proposal_id = std::get<uint64_t>(args["proposal_id"]);
     item.special_attributes.insert(std::make_pair("current_payout", asset(0, utils::seeds_symbol)));
     item.special_attributes.insert(std::make_pair("passed_cycle", uint64_t(0)));
+    item.special_attributes.insert(std::make_pair("recipient", std::get<name>(args["recipient"])));
     item.special_attributes.insert(std::make_pair("lock_id", uint64_t(0)));
   });
 
@@ -32,7 +31,6 @@ void ProposalAlliance::update_impl (std::map<std::string, VariantValue> & args) 
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
-  name contract_name = this->m_contract.get_self();
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
 
   auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
@@ -42,12 +40,11 @@ void ProposalAlliance::update_impl (std::map<std::string, VariantValue> & args) 
 
 void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-  uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);
+  uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);  
 
   auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
   auto paitr = propaux_t.require_find(proposal_id, "proposal aux entry not found");
@@ -64,6 +61,8 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
     std::make_tuple(pitr->fund, contracts::escrow, payout_amount, memo)
   );
 
+  name recipient = std::get<name>(paitr->special_attributes.at("recipient"));
+
   this->m_contract.send_inline_action(
     permission_level(pitr->fund, "active"_n),
     contracts::escrow,
@@ -71,7 +70,7 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
     std::make_tuple(
       "event"_n,
       pitr->fund,
-      std::get<name>(paitr->special_attributes.at("recipient")),
+      recipient,
       pitr->quantity,
       "golive"_n,
       "dao.hypha"_n,
@@ -101,7 +100,6 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
 
 void ProposalAlliance::status_eval_impl(std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
@@ -126,8 +124,6 @@ void ProposalAlliance::status_eval_impl(std::map<std::string, VariantValue> & ar
 void ProposalAlliance::status_rejected_impl(std::map<std::string, VariantValue> & args) {
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  name contract_name = this->m_contract.get_self();
   
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);

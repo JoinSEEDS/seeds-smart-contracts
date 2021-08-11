@@ -32,7 +32,7 @@ class Proposal {
 
   public:
 
-    Proposal(dao & _contract) : m_contract(_contract) {};
+    Proposal(dao & _contract) : m_contract(_contract), contract_name(_contract.get_self()) {};
     virtual ~Proposal(){};
 
     virtual void create(std::map<std::string, VariantValue> & args);
@@ -40,6 +40,7 @@ class Proposal {
     virtual void cancel(std::map<std::string, VariantValue> & args);
     virtual void evaluate(std::map<std::string, VariantValue> & args);
     virtual void callback(std::map<std::string, VariantValue> & args);
+    virtual void stake(std::map<std::string, VariantValue> & args);
 
 
     virtual name get_scope() = 0;
@@ -48,6 +49,8 @@ class Proposal {
 
     virtual void check_can_vote(const name & status, const name & stage);
     virtual bool check_prop_majority(std::map<std::string, VariantValue> & args);
+    uint64_t cap_stake(const name & fund);
+    uint64_t min_stake(const asset & quantity, const name & fund);
 
 
     virtual void create_impl(std::map<std::string, VariantValue> & args);
@@ -59,5 +62,6 @@ class Proposal {
 
 
     dao & m_contract;
+    name contract_name;
 
 };

@@ -116,7 +116,6 @@ CONTRACT dao : public contract {
 
 
       name get_fund_type(const name & fund);
-      uint64_t min_stake(const asset & quantity, const name & fund);
 
       uint64_t calc_quorum_base(const uint64_t & propcycle);
       void update_cycle_stats_from_proposal(const uint64_t & proposal_id, const name & type, const name & array);
@@ -257,6 +256,24 @@ CONTRACT dao : public contract {
         uint64_t primary_key()const { return propcycle; }
       };
       typedef eosio::multi_index<"support"_n, support_level_table> support_level_tables;
+
+      TABLE last_proposal_table {
+        name account;
+        uint64_t proposal_id;
+
+        uint64_t primary_key()const { return account.value; }
+      };
+      typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
+
+
+      TABLE min_stake_table {
+          uint64_t prop_id;
+          uint64_t min_stake;
+          
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
+
 
       config_tables config;
       size_tables sizes;

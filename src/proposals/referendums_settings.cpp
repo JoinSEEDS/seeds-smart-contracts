@@ -2,7 +2,6 @@
 
 void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   name setting_name = std::get<name>(args["setting_name"]);
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
@@ -58,7 +57,6 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
 
 void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   name setting_name = std::get<name>(args["setting_name"]);
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
@@ -106,7 +104,6 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
 
 void ReferendumSettings::cancel (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
@@ -125,7 +122,6 @@ void ReferendumSettings::cancel (std::map<std::string, VariantValue> & args) {
 
 void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
   uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);
 
