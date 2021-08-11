@@ -1196,18 +1196,10 @@ describe.only('Campaigns', async assert => {
 
   console.log('create proposal')
   await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '10000.0000 SEEDS', [
-    {
-      key: 'max_amount_per_invite',
-      value: ['asset', '10.0000 SEEDS']
-    },
-    {
-      key: 'planted',
-      value: ['asset', '1000.0000 SEEDS']
-    },
-    {
-      key: 'reward',
-      value: ['asset', '5.0000 SEEDS']
-    }
+    { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '1000.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '5.0000 SEEDS'] },
+    { key: 'recipient', value: ['name', firstuser] }
   ])
 
   const propsTable = await getTableRows({
@@ -1246,6 +1238,11 @@ describe.only('Campaigns', async assert => {
     { key: 'passed_cycle', value: ['uint64', 2] },
     { key: 'lock_id', value: ['uint64', 0] },
     { key: 'max_age', value: ['uint64', 7] },
+    { key: 'recipient', value: ['name', firstuser] }
+    // { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
+    // { key: 'planted', value: ['asset', '1000.0000 SEEDS'] },
+    // { key: 'reward', value: ['asset', '5.0000 SEEDS'] },
+    // { key: 'recipient', value: ['name', firstuser] }
   ])
 
   const propsTable2 = await getTableRows({
