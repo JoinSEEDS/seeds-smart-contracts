@@ -6,6 +6,7 @@ namespace ProposalsCommon {
   constexpr name type_ref_setting = name("r.setting");
   constexpr name type_ref_code = name("r.code");
   constexpr name type_prop_alliance = name("p.alliance");
+  constexpr name type_prop_campaign_invite = name("p.camp.inv");
   
   constexpr name status_open = name("open");
   constexpr name status_voting = name("voting");

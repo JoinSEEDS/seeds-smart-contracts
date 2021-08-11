@@ -27,7 +27,7 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
     item.created_at = current_time_point();
     item.status = ProposalsCommon::status_open;
     item.stage = ProposalsCommon::stage_staged;
-    item.type = ProposalsCommon::type_prop_alliance;
+    item.type = std::get<name>(args["type"]);
     item.last_ran_cycle = 0;
     item.age = 0;
     item.fund = fund;
@@ -40,7 +40,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
 }
 
 void Proposal::update (std::map<std::string, VariantValue> & args) {
-
   name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
@@ -49,7 +48,8 @@ void Proposal::update (std::map<std::string, VariantValue> & args) {
   auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
 
   check(pitr->stage == ProposalsCommon::stage_staged, "can not update proposal, it is not staged");
-  check(pitr->type == ProposalsCommon::type_prop_alliance, "proposal has to be of type alliance");
+
+  this->m_contract.check_attributes(args);
 
   proposals_t.modify(pitr, contract_name, [&](auto & item) {
     item.title = std::get<string>(args["title"]);
@@ -60,7 +60,6 @@ void Proposal::update (std::map<std::string, VariantValue> & args) {
   });
 
   update_impl(args);
-
 }
 
 void Proposal::cancel (std::map<std::string, VariantValue> & args) {

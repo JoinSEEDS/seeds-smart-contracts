@@ -1102,7 +1102,22 @@ const createProp = async (contract, creator, type, title, summary, description, 
   ], { authorization: `${creator}@active` })
 }
 
-describe.only('Alliances', async assert => {
+const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
+  await contract.update([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    { key: 'quantity', value: ['asset', quantity] },
+    ...options
+  ], { authorization: `${creator}@active` })
+}
+
+describe('Alliances', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1115,7 +1130,7 @@ describe.only('Alliances', async assert => {
   const contracts = await initContracts({ dao, token, settings, accounts, harvest })
   await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
 
-  const minStake = 1111
+  // const minStake = 1111
 
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
@@ -1140,6 +1155,97 @@ describe.only('Alliances', async assert => {
     json: true
   })
   console.log(escrowTable.rows)
+
+})
+
+describe.only('Campaigns', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  const minStake = 1111
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create proposal')
+  await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '10000.0000 SEEDS', [
+    {
+      key: 'max_amount_per_invite',
+      value: ['asset', '10.0000 SEEDS']
+    },
+    {
+      key: 'planted',
+      value: ['asset', '1000.0000 SEEDS']
+    },
+    {
+      key: 'reward',
+      value: ['asset', '5.0000 SEEDS']
+    }
+  ])
+
+  const propsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true
+  })
+  // console.log("\n", propsTable.rows)
+
+  const propsAuxTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'propaux',
+    json: true
+  })
+  // console.log("\n", JSON.stringify(propsAuxTable.rows, null, 2))
+
+  const escrowTable = await getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+
+  console.log("\n", propsTable.rows)
+  console.log("\n", JSON.stringify(propsAuxTable.rows, null, 2))
+  console.log('=========================')
+
+  await updateProp(contracts.dao, firstuser, 'p.camp.inv', 'titleU', 'summaryU', 'descriptionU', 'imageU', 'urlU', campaignbank, '2000.0000 SEEDS', [
+    { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '2000.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '52.0000 SEEDS'] },
+    { key: 'proposal_id', value: ['uint64', 0] },
+    { key: 'current_payout', value: ["asset", "20.0000 SEEDS"] },
+    { key: 'passed_cycle', value: ['uint64', 2] },
+    { key: 'lock_id', value: ['uint64', 0] },
+    { key: 'max_age', value: ['uint64', 7] },
+  ])
+
+  const propsTable2 = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true
+  })
+
+  const propsAuxTable2 = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'propaux',
+    json: true
+  })
+
+  console.log("\n", propsTable2.rows)
+  console.log("\n", JSON.stringify(propsAuxTable2.rows, null, 2))
 
 })
 

@@ -260,7 +260,9 @@ CONTRACT dao : public contract {
 
       config_tables config;
       size_tables sizes;
-
+    
+    void check_citizen(const name & account);
+    void check_attributes(const std::map<std::string, VariantValue> & args);
 
   private:
 
@@ -275,10 +277,10 @@ CONTRACT dao : public contract {
     void increase_voice_cast(const uint64_t & amount, const name & option, const name & prop_type);
     void add_voice_cast(const uint64_t & cycle, const uint64_t & voice_cast, const name & type);
 
-    void check_citizen(const name & account);
+    // void check_citizen(const name & account);
     void vote_aux(const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_delegated);
     bool revert_vote(const name & voter, const uint64_t & referendum_id);
-    void check_attributes(const std::map<std::string, VariantValue> & args);
+    // void check_attributes(const std::map<std::string, VariantValue> & args);
     uint64_t active_cutoff_date();
     bool has_delegates(const name & voter, const name & scope);
     bool is_active(const name & account, const uint64_t & cutoff_date);
