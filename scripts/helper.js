@@ -734,6 +734,18 @@ var permissions = [{
 },{
   target: `${accounts.settings.account}@referendum`,
   action: 'conffloat'
+},{
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.milestonebank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.alliancesbank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.bank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet

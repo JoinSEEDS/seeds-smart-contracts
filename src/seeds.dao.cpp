@@ -71,6 +71,18 @@ ACTION dao::reset () {
     citr = cyclestats_t.erase(citr);
   }
 
+  last_proposal_tables lastprop_t(get_self(), get_self().value);
+  auto litr = lastprop_t.begin();
+  while (litr != lastprop_t.end()) {
+    litr = lastprop_t.erase(litr);
+  }
+
+  min_stake_tables minstake_t(get_self(), get_self().value);
+  auto msitr = minstake_t.begin();
+  while (msitr != minstake_t.end()) {
+    msitr = minstake_t.erase(msitr);
+  }
+
   cycle_tables cycle_t(get_self(), get_self().value);
   cycle_t.remove();
 }
@@ -112,7 +124,6 @@ ACTION dao::create (std::map<std::string, VariantValue> & args) {
   name type = std::get<name>(args["type"]);
 
   require_auth(creator);
-  check_citizen(creator);
   check_attributes(args);
 
   std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
@@ -173,16 +184,35 @@ ACTION dao::stake (const name & from, const name & to, const asset & quantity, c
        to == get_self() && 
        quantity.symbol == utils::seeds_symbol ) {
       
+    // this ones should be overwriten
+    if (from == contracts::onboarding) { return; }
+    if (from == bankaccts::campaigns) { return; }
+
     utils::check_asset(quantity);
 
-    uint64_t proposal_id = std::stoi(memo);
+    uint64_t proposal_id = 0;
+
+    if (memo.empty()) {
+      last_proposal_tables lastprop_t(get_self(), get_self().value);
+
+      auto litr = lastprop_t.require_find(from.value, "no proposals");
+      proposal_id = litr->proposal_id;
+    } else {
+      proposal_id = std::stoi(memo);
+    }
 
     proposal_tables proposals_t(get_self(), get_self().value);
-    auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
+    auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
 
-    proposals_t.modify(ritr, _self, [&](auto & item){
-      item.staked += quantity;
-    });
+    std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
+
+    std::map<std::string, VariantValue> args = {
+      { "from", from },
+      { "quantity", quantity },
+      { "proposal_id", proposal_id }
+    };
+
+    prop->stake(args);
 
   }
 
@@ -694,37 +724,6 @@ name dao::get_fund_type (const name & fund) {
   return "none"_n;
 }
 
-uint64_t dao::min_stake (const asset & quantity, const name & fund) {
-
-  double prop_percentage;
-  uint64_t prop_min;
-  uint64_t prop_max;
-
-  name fund_type = get_fund_type(fund);
-  
-  if (fund_type == campaign_fund) {
-    prop_percentage = (double)config_get(name("prop.cmp.pct")) / 10000.0;
-    prop_max = config_get(name("prop.cmp.cap"));
-    prop_min = config_get(name("prop.cmp.min"));
-  } else if (fund == alliance_fund) {
-    prop_percentage = (double)config_get(name("prop.al.pct")) / 10000.0;
-    prop_max = config_get(name("prop.al.cap"));
-    prop_min = config_get(name("prop.al.min"));
-  } else if (fund == milestone_fund) {
-    prop_percentage = (double)config_get(name("propstakeper"));
-    prop_max = config_get(name("propminstake"));
-    prop_min = config_get(name("propminstake"));
-  } else {
-    check(false, "unknown proposal type, invalid fund");
-  }
-
-  asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), utils::seeds_symbol);
-
-  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
-  min_stake = std::min(prop_max, min_stake);
-  return min_stake;
-}
-
 uint64_t dao::calc_quorum_base (const uint64_t & propcycle) {
 
   uint64_t num_cycles = config_get("prop.cyc.qb"_n);
@@ -804,26 +803,26 @@ void dao::send_deferred_transaction (
   const name & action,  
   const std::tuple<T...> & data) {
 
-  // eosio::action(permission, contract, action, data).send();
+  eosio::action(permission, contract, action, data).send();
 
-  deferred_id_tables deferredids(get_self(), get_self().value);
-  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+  // deferred_id_tables deferredids(get_self(), get_self().value);
+  // deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
 
-  d_s.id += 1;
+  // d_s.id += 1;
 
-  deferredids.set(d_s, get_self());
+  // deferredids.set(d_s, get_self());
 
-  transaction trx{};
+  // transaction trx{};
 
-  trx.actions.emplace_back(
-    permission,
-    contract,
-    action,
-    data
-  );
+  // trx.actions.emplace_back(
+  //   permission,
+  //   contract,
+  //   action,
+  //   data
+  // );
 
-  trx.delay_sec = 1;
-  trx.send(d_s.id, _self);
+  // trx.delay_sec = 1;
+  // trx.send(d_s.id, _self);
 
 }
 

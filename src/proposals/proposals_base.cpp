@@ -3,8 +3,6 @@
 
 void Proposal::create (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
-
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
@@ -12,6 +10,7 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
 
   name creator = std::get<name>(args["creator"]);
   name fund = std::get<name>(args["fund"]);
+  asset quantity = std::get<asset>(args["quantity"]);
 
   proposals_t.emplace(contract_name, [&](auto & item) {
     item.proposal_id = proposal_id;
@@ -27,12 +26,41 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
     item.created_at = current_time_point();
     item.status = ProposalsCommon::status_open;
     item.stage = ProposalsCommon::stage_staged;
-    item.type = ProposalsCommon::type_prop_alliance;
+    item.type = std::get<name>(args["type"]);
     item.last_ran_cycle = 0;
     item.age = 0;
     item.fund = fund;
-    item.quantity = std::get<asset>(args["quantity"]);
+    item.quantity = quantity;
   });
+
+  dao::last_proposal_tables lastprop_t(contract_name, contract_name.value);
+  auto litr = lastprop_t.find(creator.value);
+
+  if (litr == lastprop_t.end()) {
+    lastprop_t.emplace(contract_name, [&](auto & item){
+      item.account = creator;
+      item.proposal_id = proposal_id;
+    });
+  } else {
+    lastprop_t.modify(litr, contract_name, [&](auto & item){
+      item.proposal_id = proposal_id;
+    });
+  }
+
+  dao::min_stake_tables minstake_t(contract_name, contract_name.value);
+  uint64_t min = min_stake(quantity, fund);
+
+  auto mitr = minstake_t.find(proposal_id);
+  if (mitr == minstake_t.end()) {
+    minstake_t.emplace(contract_name, [&](auto& item) {
+      item.prop_id = proposal_id;
+      item.min_stake = min;
+    });
+  } else {
+    minstake_t.modify(mitr, contract_name, [&](auto& item) {
+      item.min_stake = min;
+    });
+  }
 
   args.insert(std::make_tuple("proposal_id", proposal_id));
   create_impl(args);
@@ -41,7 +69,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
 
 void Proposal::update (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
@@ -65,7 +92,6 @@ void Proposal::update (std::map<std::string, VariantValue> & args) {
 
 void Proposal::cancel (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
@@ -88,7 +114,6 @@ void Proposal::cancel (std::map<std::string, VariantValue> & args) {
 
 void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
-  name contract_name = this->m_contract.get_self();
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
   uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);
 
@@ -117,7 +142,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
   }
 
   if (current_stage == ProposalsCommon::stage_active) {
-    
+
     std::map<std::string, VariantValue> propm = { { "favour", pitr->favour }, { "against", pitr->against } };
     bool passed = check_prop_majority(propm);
 
@@ -138,7 +163,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
           permission_level(contracts::bank, "active"_n),
           contracts::token,
           "transfer"_n,
-          std::make_tuple(contracts::bank, pitr->creator, pitr->quantity, string(""))
+          std::make_tuple(contracts::bank, pitr->creator, pitr->staked, string(""))
         );
 
         uint64_t reward_points = this->m_contract.config_get(name("proppass.rep"));
@@ -195,7 +220,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
 
   } else if (current_stage == ProposalsCommon::stage_staged) {
-    uint64_t m_stake = this->m_contract.min_stake(pitr->quantity, pitr->fund);
+    uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
 
     if (pitr->staked.amount >= m_stake) {
       proposals_t.modify(pitr, contract_name, [&](auto& proposal) {
@@ -205,6 +230,76 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
       this->m_contract.update_cycle_stats_from_proposal(pitr->proposal_id, prop_type, ProposalsCommon::stage_active);
     }
   }
+
+}
+
+void Proposal::stake (std::map<std::string, VariantValue> & args) {
+
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
+  asset quantity = std::get<asset>(args["quantity"]);
+
+  dao::proposal_tables proposals_t(contract_name, contract_name.value);
+  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
+
+  uint64_t prop_max = cap_stake(pitr->fund);
+  check((pitr->staked + quantity) <= asset(prop_max, utils::seeds_symbol), 
+    "The staked value can not be greater than " + std::to_string(prop_max / 10000) + " Seeds");
+
+  proposals_t.modify(pitr, contract_name, [&](auto & item){
+    item.staked += quantity;
+  });
+
+  this->m_contract.send_inline_action(
+    permission_level(contract_name, "active"_n),
+    contracts::token,
+    "transfer"_n,
+    std::make_tuple(contract_name, contracts::bank, quantity, string(""))
+  );
+
+}
+
+uint64_t Proposal::cap_stake (const name & fund) {
+  uint64_t prop_max;
+  if (fund == bankaccts::campaigns) {
+    prop_max = this->m_contract.config_get(name("prop.cmp.cap"));
+  } else if (fund == bankaccts::alliances) {
+    prop_max = this->m_contract.config_get(name("prop.al.cap"));
+  } else {
+    prop_max = this->m_contract.config_get(name("propmaxstake"));
+  }
+  return prop_max;
+}
+
+uint64_t Proposal::min_stake (const asset & quantity, const name & fund) {
+
+  double prop_percentage;
+  uint64_t prop_min;
+  uint64_t prop_max;
+
+  name fund_type = this->m_contract.get_fund_type(fund);
+
+  if (fund_type == this->m_contract.campaign_fund) {
+    prop_percentage = double(this->m_contract.config_get(name("prop.cmp.pct")) / 10000.0);
+    prop_max = this->m_contract.config_get(name("prop.cmp.cap"));
+    prop_min = this->m_contract.config_get(name("prop.cmp.min"));
+  } else if (fund_type == this->m_contract.alliance_fund) {
+    prop_percentage = double(this->m_contract.config_get(name("prop.al.pct")) / 10000.0);
+    prop_max = this->m_contract.config_get(name("prop.al.cap"));
+    prop_min = this->m_contract.config_get(name("prop.al.min"));
+  } else if (fund_type == this->m_contract.milestone_fund) {
+    prop_percentage = double(this->m_contract.config_get(name("propstakeper")));
+    prop_max = this->m_contract.config_get(name("propminstake"));
+    prop_min = this->m_contract.config_get(name("propminstake"));
+  } else {
+    check(false, "unknown proposal type, invalid fund");
+  }
+
+  asset quantity_prop_percentage = asset(uint64_t(prop_percentage * quantity.amount / 100), utils::seeds_symbol);
+
+  uint64_t min_stake = std::max(uint64_t(prop_min), uint64_t(quantity_prop_percentage.amount));
+  min_stake = std::min(prop_max, min_stake);
+
+  return min_stake;
 
 }
 
