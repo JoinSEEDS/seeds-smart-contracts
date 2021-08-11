@@ -1,6 +1,7 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 const { should, assert } = require('chai')
+const { prop } = require('ramda')
 
 const { 
   dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
@@ -27,6 +28,74 @@ function formatSpecialAttributes (proposals) {
   }
 
   return props
+}
+
+const createProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
+  await contract.create([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    { key: 'quantity', value: ['asset', quantity] },
+    ...options
+  ], { authorization: `${creator}@active` })
+}
+
+const checkProp = async (expectedProp, assert, given, should) => {
+
+  const propId = expectedProp.proposal_id
+
+  const propsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true,
+    lower_bound: propId,
+    upper_bound: propId
+  })
+
+  if (propsTable.rows.length === 0) {
+    throw new Error('No proposal found with id:' + propId)
+  }
+
+  const prop = propsTable.rows[0]
+  let actualProp = {}
+
+  const keys = Object.keys(expectedProp)
+  for (const key of keys) {
+    actualProp[key] = prop[key]
+  }
+
+  const propsAuxTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'propaux',
+    json: true,
+    lower_bound: propId,
+    upper_bound: propId
+  })
+
+  if (propsAuxTable.rows.length > 0) {
+    const aux = formatSpecialAttributes(propsAuxTable.rows)
+    actualProp = {
+      ...actualProp,
+      ...aux[0]
+    }
+  }
+
+  console.log(actualProp)
+
+  assert({
+    given,
+    should,
+    actual: actualProp,
+    expected: expectedProp
+  })
+
 }
 
 const createReferendum = async (contract, creator, settingName, newValue, title, summary, description, image, url) => {
@@ -1086,22 +1155,6 @@ describe('Voice Delegation', async assert => {
 
 })
 
-
-const createProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
-  await contract.create([
-    { key: 'type', value: ['name', type] },
-    { key: 'creator', value: ['name', creator] },
-    { key: 'title', value: ['string', title] },
-    { key: 'summary', value: ['string', summary] },
-    { key: 'description', value: ['string', description] },
-    { key: 'image', value: ['string', image] },
-    { key: 'url', value: ['string', url] },
-    { key: 'fund', value: ['name', fund] },
-    { key: 'quantity', value: ['asset', quantity] },
-    ...options
-  ], { authorization: `${creator}@active` })
-}
-
 describe.only('Alliances', async assert => {
 
   if (!isLocal()) {
@@ -1112,8 +1165,11 @@ describe.only('Alliances', async assert => {
   await resetContracts()
   
   const users = [firstuser, seconduser, thirduser, fourthuser]
-  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
   await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  console.log('reset escrow')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
 
   const minStake = 1111
 
@@ -1131,13 +1187,34 @@ describe.only('Alliances', async assert => {
   console.log('staking')
   await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
 
-  const propsTable = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'proposals',
-    json: true
-  })
-  console.log(propsTable.rows)
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.alliance',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: alliancesbank,
+      quantity: '10000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser
+    },
+    assert,
+    'prop alliance created',
+    'create an entry in props table'
+  )
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -1150,6 +1227,29 @@ describe.only('Alliances', async assert => {
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
+
+  // await checkProp(
+  //   {
+  //     proposal_id: 0,
+  //     favour: 0,
+  //     against: 0,
+  //     staked: '555.0000 SEEDS',
+  //     creator: 'seedsuseraaa',
+  //     title: 'title',
+  //     summary: 'summary',
+  //     description: 'description',
+  //     image: 'image',
+  //     url: 'url',
+  //     status: 'open',
+  //     stage: 'staged',
+  //     type: 'p.alliance',
+  //     last_ran_cycle: 0,
+  //     age: 0,
+  //     fund: 'allies.seeds',
+  //     quantity: '10000.0000 SEEDS'
+  //   },
+  //   assert
+  // )
 
   const escrowTable = await getTableRows({
     code: escrow,

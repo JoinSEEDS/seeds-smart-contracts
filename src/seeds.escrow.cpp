@@ -154,6 +154,26 @@ void escrow::lock (   const name&         lock_type,
                 std::make_tuple(prop_id, lock_id)
             ).send();
         }
+
+        // this section is for dao.seeds
+        std::size_t found = notes.find(string("proposal_id: "));
+        if (found != std::string::npos) {
+            string prop_id_string = notes.substr(13, string::npos);
+            uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+
+            std::map<string, VariantValue> args = {
+                { "proposal_id", prop_id },
+                { "lock_id", lock_id }
+            };
+
+            action(
+                permission_level(contracts::dao, "active"_n),
+                contracts::dao,
+                "callback"_n,
+                std::make_tuple(args)
+            ).send();
+        }
+        // =============================
     }
 }
 
