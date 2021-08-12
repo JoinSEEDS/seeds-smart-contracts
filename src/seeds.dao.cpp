@@ -180,7 +180,7 @@ ACTION dao::callback (std::map<std::string, VariantValue> & args) {
 }
 
 ACTION dao::stake (const name & from, const name & to, const asset & quantity, const string & memo) {
-
+  print("\n\nSTAKE DAO\n\n");
   if ( get_first_receiver() == contracts::token && 
        to == get_self() && 
        quantity.symbol == utils::seeds_symbol ) {
@@ -525,7 +525,6 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
   // because not all proposals increase the voice cast, currently only the ones that are funded
   // have an entry in the support table
   increase_voice_cast(amount, option, prop->get_fund_type());
-
 }
 
 void dao::increase_voice_cast (const uint64_t & amount, const name & option, const name & prop_type) {

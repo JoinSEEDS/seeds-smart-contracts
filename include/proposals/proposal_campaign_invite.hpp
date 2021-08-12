@@ -12,7 +12,7 @@ class ProposalCampaignInvite : public Proposal {
     name get_scope() override;
     name get_fund_type() override;
 
-    // void callback(std::map<std::string, VariantValue> & args) override;
+    void callback(std::map<std::string, VariantValue> & args) override;
 
     void create_impl(std::map<std::string, VariantValue> & args) override;
     void update_impl(std::map<std::string, VariantValue> & args) override;

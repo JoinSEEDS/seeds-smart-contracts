@@ -76,8 +76,6 @@ void Proposal::update (std::map<std::string, VariantValue> & args) {
 
   check(pitr->stage == ProposalsCommon::stage_staged, "can not update proposal, it is not staged");
 
-  this->m_contract.check_attributes(args);
-
   proposals_t.modify(pitr, contract_name, [&](auto & item) {
     item.title = std::get<string>(args["title"]);
     item.summary = std::get<string>(args["summary"]);
@@ -180,8 +178,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
         status_eval_impl(args);
       }
 
-    }
-    else {
+    } else {
 
       if (current_status != ProposalsCommon::status_evaluate) {
         this->m_contract.send_inline_action(
@@ -217,9 +214,9 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
     this->m_contract.size_change(this->m_contract.prop_active_size, -1);
 
-
   } else if (current_stage == ProposalsCommon::stage_staged) {
-    uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
+    // uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
+    uint64_t m_stake = 0;
 
     if (pitr->staked.amount >= m_stake) {
       proposals_t.modify(pitr, contract_name, [&](auto& proposal) {
@@ -233,6 +230,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 }
 
 void Proposal::stake (std::map<std::string, VariantValue> & args) {
+  print("\n\nSTAKE DAO BASE\n\n");
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
   asset quantity = std::get<asset>(args["quantity"]);
