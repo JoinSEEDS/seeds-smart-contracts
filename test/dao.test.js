@@ -1,10 +1,11 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 const { should, assert } = require('chai')
+const { prop } = require('ramda')
 
 const { 
   dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
-  alliancesbank, campaignbank, escrow
+  alliancesbank, campaignbank, escrow, onboarding
 } = names
 
 const scopes = ['alliance', proposals, 'milestone', referendums]
@@ -27,6 +28,74 @@ function formatSpecialAttributes (proposals) {
   }
 
   return props
+}
+
+const createProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
+  await contract.create([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    { key: 'quantity', value: ['asset', quantity] },
+    ...options
+  ], { authorization: `${creator}@active` })
+}
+
+const checkProp = async (expectedProp, assert, given, should) => {
+
+  const propId = expectedProp.proposal_id
+
+  const propsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true,
+    lower_bound: propId,
+    upper_bound: propId
+  })
+
+  if (propsTable.rows.length === 0) {
+    throw new Error('No proposal found with id:' + propId)
+  }
+
+  const prop = propsTable.rows[0]
+  let actualProp = {}
+
+  const keys = Object.keys(expectedProp)
+  for (const key of keys) {
+    actualProp[key] = prop[key]
+  }
+
+  const propsAuxTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'propaux',
+    json: true,
+    lower_bound: propId,
+    upper_bound: propId
+  })
+
+  if (propsAuxTable.rows.length > 0) {
+    const aux = formatSpecialAttributes(propsAuxTable.rows)
+    actualProp = {
+      ...actualProp,
+      ...aux[0]
+    }
+  }
+
+  console.log(actualProp)
+
+  assert({
+    given,
+    should,
+    actual: actualProp,
+    expected: expectedProp
+  })
+
 }
 
 const createReferendum = async (contract, creator, settingName, newValue, title, summary, description, image, url) => {
@@ -624,6 +693,10 @@ async function resetContracts () {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   console.log('reset harvest')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  // console.log('reset onboarding')
+  // await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+  // console.log('reset token')
+  // await contracts.token.reset({ authorization: `${token}@active` })
   
   console.log('join users')
   await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
@@ -1086,23 +1159,7 @@ describe('Voice Delegation', async assert => {
 
 })
 
-
-const createProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
-  await contract.create([
-    { key: 'type', value: ['name', type] },
-    { key: 'creator', value: ['name', creator] },
-    { key: 'title', value: ['string', title] },
-    { key: 'summary', value: ['string', summary] },
-    { key: 'description', value: ['string', description] },
-    { key: 'image', value: ['string', image] },
-    { key: 'url', value: ['string', url] },
-    { key: 'fund', value: ['name', fund] },
-    { key: 'quantity', value: ['asset', quantity] },
-    ...options
-  ], { authorization: `${creator}@active` })
-}
-
-const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, quantity, options) => {
+const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, options) => {
   await contract.update([
     { key: 'type', value: ['name', type] },
     { key: 'creator', value: ['name', creator] },
@@ -1112,7 +1169,6 @@ const updateProp = async (contract, creator, type, title, summary, description, 
     { key: 'image', value: ['string', image] },
     { key: 'url', value: ['string', url] },
     { key: 'fund', value: ['name', fund] },
-    { key: 'quantity', value: ['asset', quantity] },
     ...options
   ], { authorization: `${creator}@active` })
 }
@@ -1127,10 +1183,13 @@ describe('Alliances', async assert => {
   await resetContracts()
   
   const users = [firstuser, seconduser, thirduser, fourthuser]
-  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
   await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
 
-  // const minStake = 1111
+  console.log('reset escrow')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  const minStake = 1111
 
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
@@ -1146,13 +1205,34 @@ describe('Alliances', async assert => {
   console.log('staking')
   await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
 
-  const propsTable = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'proposals',
-    json: true
-  })
-  console.log(propsTable.rows)
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.alliance',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: alliancesbank,
+      quantity: '10000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser
+    },
+    assert,
+    'prop alliance created',
+    'create an entry in props table'
+  )
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -1165,6 +1245,29 @@ describe('Alliances', async assert => {
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: 'seedsuseraaa',
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.alliance',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: 'allies.seeds',
+      quantity: '10000.0000 SEEDS'
+    },
+    assert
+  )
 
   const escrowTable = await getTableRows({
     code: escrow,
@@ -1191,77 +1294,476 @@ describe.only('Campaigns', async assert => {
 
   const minStake = 1111
 
+  const checkCampaigns = async (number) => {
+    const campaigns = await eos.getTableRows({
+      code: onboarding,
+      scope: onboarding,
+      table: 'campaigns',
+      json: true,
+    })
+    assert({
+      given: 'proposals creating campaigns',
+      should: 'have the correct number of them',
+      actual: campaigns.rows.length,
+      expected: number
+    })
+  }
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+  console.log('change min stake')
+  // await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.cmp.min', 0, { authorization: `${settings}@active` })
+  // await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.al.min', 0, { authorization: `${settings}@active` })
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.base', 90, { authorization: `${settings}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
+
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
-  console.log('create proposal')
-  await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '10000.0000 SEEDS', [
-    { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
-    { key: 'planted', value: ['asset', '1000.0000 SEEDS'] },
-    { key: 'reward', value: ['asset', '5.0000 SEEDS'] },
+  await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '200.0000 SEEDS', [
+    { key: 'max_amount_per_invite', value: ['asset', '20.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '2.0000 SEEDS'] },
     { key: 'recipient', value: ['name', firstuser] }
   ])
 
-  const propsTable = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'proposals',
-    json: true
-  })
-  // console.log("\n", propsTable.rows)
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '200.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser,
+      max_age: 6,
+      max_amount_per_invite: "20.0000 SEEDS",
+      planted: "6.0000 SEEDS",
+      reward: '2.0000 SEEDS',
+      recipient: firstuser
+    },
+    assert,
+    'prop campaign invite created',
+    'create entry in props table'
+  )
 
-  const propsAuxTable = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'propaux',
-    json: true
-  })
-  // console.log("\n", JSON.stringify(propsAuxTable.rows, null, 2))
-
-  const escrowTable = await getTableRows({
-    code: escrow,
-    scope: escrow,
-    table: 'locks',
-    json: true
-  })
-
-  console.log("\n", propsTable.rows)
-  console.log("\n", JSON.stringify(propsAuxTable.rows, null, 2))
-  console.log('=========================')
-
-  await updateProp(contracts.dao, firstuser, 'p.camp.inv', 'titleU', 'summaryU', 'descriptionU', 'imageU', 'urlU', campaignbank, '2000.0000 SEEDS', [
-    { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
-    { key: 'planted', value: ['asset', '2000.0000 SEEDS'] },
-    { key: 'reward', value: ['asset', '52.0000 SEEDS'] },
-    { key: 'proposal_id', value: ['uint64', 0] },
-    { key: 'current_payout', value: ["asset", "20.0000 SEEDS"] },
-    { key: 'passed_cycle', value: ['uint64', 2] },
-    { key: 'lock_id', value: ['uint64', 0] },
-    { key: 'max_age', value: ['uint64', 7] },
-    { key: 'recipient', value: ['name', firstuser] }
-    // { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
-    // { key: 'planted', value: ['asset', '1000.0000 SEEDS'] },
-    // { key: 'reward', value: ['asset', '5.0000 SEEDS'] },
-    // { key: 'recipient', value: ['name', firstuser] }
+  await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '300.0000 SEEDS', [
+    { key: 'max_amount_per_invite', value: ['asset', '40.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '50.0000 SEEDS'] },
+    { key: 'recipient', value: ['name', seconduser] }
   ])
 
-  const propsTable2 = await getTableRows({
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '300.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser,
+      max_age: 6,
+      max_amount_per_invite: "40.0000 SEEDS",
+      planted: "6.0000 SEEDS",
+      reward: '50.0000 SEEDS',
+      recipient: seconduser
+    },
+    assert,
+    'prop campaign invite created',
+    'create entry in props table'
+  )
+
+  await createProp(contracts.dao, seconduser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '300.0000 SEEDS', [
+    { key: 'max_amount_per_invite', value: ['asset', '40.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '50.0000 SEEDS'] },
+    { key: 'recipient', value: ['name', seconduser] }
+  ])
+
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: seconduser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '300.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser,
+      max_age: 6,
+      max_amount_per_invite: "40.0000 SEEDS",
+      planted: "6.0000 SEEDS",
+      reward: '50.0000 SEEDS',
+      recipient: seconduser
+    },
+    assert,
+    'prop campaign invite created',
+    'create entry in props table'
+  )
+
+  // await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  // await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+  // await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  
+  console.log('move proposal to active')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+
+  // console.log('BEFORE')
+  await sleep(3000)
+  // console.log('after')
+
+  const props = await getTableRows({
     code: dao,
     scope: dao,
     table: 'proposals',
-    json: true
+    json: true,
+    limit: 200
   })
 
-  const propsAuxTable2 = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'propaux',
-    json: true
-  })
+  console.log('=================================')
+  console.log(JSON.stringify(props.rows, null, 2))
+  console.log('=================================')
+  
+  console.log('stake to proposal')
+  // await contracts.dao.stake(from, to, quantity, memo)
+  await contracts.dao.stake(campaignbank, dao, "200.0000 SEEDS", "0", { authorization: `${dao}@active` })
 
-  console.log("\n", propsTable2.rows)
-  console.log("\n", JSON.stringify(propsAuxTable2.rows, null, 2))
+  console.log('vote on proposal')
+  await contracts.dao.favour(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 8, { authorization: `${thirduser}@active` })
 
+  await contracts.dao.favour(firstuser, 2, 8, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+
+
+  // ====
+
+//   console.log('init propcycle')
+//   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+//   console.log('create proposal')
+//   await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '15000.0000 SEEDS', [
+//     { key: 'max_amount_per_invite', value: ['asset', '12.0000 SEEDS'] },
+//     { key: 'planted', value: ['asset', '1000.0000 SEEDS'] },
+//     { key: 'reward', value: ['asset', '5.0000 SEEDS'] },
+//     { key: 'recipient', value: ['name', firstuser] }
+//   ])
+
+// await checkProp(
+//   {
+//     proposal_id: 0,
+//     favour: 0,
+//     against: 0,
+//     staked: '0.0000 SEEDS',
+//     creator: firstuser,
+//     title: 'title',
+//     summary: 'summary',
+//     description: 'description',
+//     image: 'image',
+//     url: 'url',
+//     status: 'open',
+//     stage: 'staged',
+//     type: 'p.camp.inv',
+//     last_ran_cycle: 0,
+//     age: 0,
+//     fund: campaignbank,
+//     quantity: '15000.0000 SEEDS',
+//     current_payout: '0.0000 SEEDS',
+//     lock_id: 0,
+//     passed_cycle: 0,
+//     recipient: firstuser,
+//     max_age: 6,
+//     max_amount_per_invite: "12.0000 SEEDS",
+//     planted: "1000.0000 SEEDS",
+//     reward: '5.0000 SEEDS',
+//     recipient: firstuser
+//   },
+//   assert,
+//   'prop campaign invite created',
+//   'update entry in props table'
+// )
+
+//   await updateProp(contracts.dao, firstuser, 'p.camp.inv', 'titleU', 'summaryU', 'descriptionU', 'imageU', 'urlU', campaignbank, [
+//     { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
+//     { key: 'planted', value: ['asset', '2000.0000 SEEDS'] },
+//     { key: 'reward', value: ['asset', '52.0000 SEEDS'] },
+//     { key: 'proposal_id', value: ['uint64', 0] },
+//     { key: 'current_payout', value: ["asset", "20.0000 SEEDS"] },
+//     { key: 'passed_cycle', value: ['uint64', 2] },
+//     { key: 'lock_id', value: ['uint64', 0] },
+//     { key: 'max_age', value: ['uint64', 7] },
+//     { key: 'recipient', value: ['name', firstuser] }
+//   ])
+
+//   await checkProp(
+//     {
+//       proposal_id: 0,
+//       favour: 0,
+//       against: 0,
+//       staked: '0.0000 SEEDS',
+//       creator: firstuser,
+//       title: 'titleU',
+//       summary: 'summaryU',
+//       description: 'descriptionU',
+//       image: 'imageU',
+//       url: 'urlU',
+//       status: 'open',
+//       stage: 'staged',
+//       type: 'p.camp.inv',
+//       last_ran_cycle: 0,
+//       age: 0,
+//       fund: campaignbank,
+//       quantity: '15000.0000 SEEDS',
+//       current_payout: '20.0000 SEEDS',
+//       lock_id: 0,
+//       passed_cycle: 2,
+//       recipient: firstuser,
+//       max_age: 7,
+//       max_amount_per_invite: "10.0000 SEEDS",
+//       planted: "2000.0000 SEEDS",
+//       reward: '52.0000 SEEDS'
+//     },
+//     assert,
+//     'prop campaign invite updated',
+//     'create an entry in props table'
+//   )
 })
 
 
+// =============================================================================
+
+// describe("invite campaigns", async assert => {
+
+//   if (!isLocal()) {
+//     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//     return
+//   }
+
+//   const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding })
+
+//   const secondUserInitialBalance = await getBalance(seconduser)
+
+//   const checkCampaigns = async (number) => {
+//     const campaigns = await eos.getTableRows({
+//       code: onboarding,
+//       scope: onboarding,
+//       table: 'campaigns',
+//       json: true,
+//     })
+//     assert({
+//       given: 'proposals creating campaigns',
+//       should: 'have the correct number of them',
+//       actual: campaigns.rows.length,
+//       expected: number
+//     })
+//   }
+
+//   console.log('settings reset')
+//   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+//   console.log('change batch size')
+//   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+//   console.log('change min stake')
+//   await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+//   await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+//   await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+//   await contracts.settings.configure('quorum.base', 90, { authorization: `${settings}@active` })
+
+//   await resetContracts()
+
+//   // console.log('accounts reset')
+//   // await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+//   // console.log('harvest reset')
+//   // await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+//   // console.log('proposals reset')
+//   // await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+//   // console.log('escrow reset')
+//   // await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+//   // console.log('onboarding reset')
+//   // await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+//   // console.log('token reset')
+//   // await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+//   console.log('join users')
+//   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+//   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+//   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+//   console.log('force status')
+//   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+//   await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+//   await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+//   console.log('update contribution score of citizens')
+//   await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
+//   await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
+//   await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
+
+//   const cyclesTable = await getTableRows({
+//     code: proposals,
+//     scope: proposals,
+//     table: 'cycle',
+//     json: true
+//   })
+//   const initialCycle = cyclesTable.rows[0] ? cyclesTable.rows[0].propcycle : 0
+
+//   // await contracts.proposals.createinvite(
+//   //   firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+//   //   campaignbank, '20.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+
+//   // await contracts.proposals.createinvite(
+//   //   seconduser, firstuser, '300.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+//   //   campaignbank, '40.0000 SEEDS', '6.0000 SEEDS', '50.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+//   // await contracts.proposals.createinvite(
+//   //   seconduser, firstuser, '300.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+//   //   campaignbank, '40.0000 SEEDS', '6.0000 SEEDS', '50.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+//   // await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+//   // await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+//   // await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  
+//   // console.log('move proposal to active')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+//   // await sleep(3000)
+
+//   // console.log('vote on proposal')
+//   // await contracts.proposals.favour(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+//   // await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+//   // await contracts.proposals.favour(thirduser, 1, 8, { authorization: `${thirduser}@active` })
+
+//   // await contracts.proposals.favour(firstuser, 2, 8, { authorization: `${firstuser}@active` })
+//   // await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+//   // await contracts.proposals.favour(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+  
+//   // console.log('approve proposal')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(3000)
+
+//   // await checkCampaigns(2)
+
+//   // const proposalsBalanceBefore = await getBalance(proposals)
+
+//   // console.log('create invite')
+//   // const inviteSecret = await ramdom64ByteHexString()
+//   // const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+//   // await contracts.onboarding.campinvite(1, firstuser, '10.0000 SEEDS', '8.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+
+//   // console.log('running onperiod 2')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(1000)
+
+//   // console.log('running onperiod 3')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(1000)
+
+//   // console.log('downvoting the first proposal')
+//   // await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+//   // await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+
+//   // console.log('running on period 4')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(3000)
+
+//   // await checkCampaigns(1)
+
+//   // console.log('running on period 5')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(1000)
+
+//   // console.log('running on period 6')
+//   // await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+//   // await sleep(1000)
+
+//   // const proposalsBalanceAfter = await getBalance(proposals)
+
+//   // assert({
+//   //   given: 'a proposal rejected',
+//   //   should: 'have the correct balance',
+//   //   actual: proposalsBalanceAfter - proposalsBalanceBefore,
+//   //   expected: 200
+//   // })
+
+//   // const campaigns = await eos.getTableRows({
+//   //   code: onboarding,
+//   //   scope: onboarding,
+//   //   table: 'campaigns',
+//   //   json: true,
+//   // })
+//   // console.log(campaigns)
+
+//   // const props = await eos.getTableRows({
+//   //   code: proposals,
+//   //   scope: proposals,
+//   //   table: 'props',
+//   //   json: true,
+//   // })
+//   // console.log(props)
+
+// })

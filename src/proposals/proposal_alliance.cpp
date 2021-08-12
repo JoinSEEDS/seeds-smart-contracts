@@ -52,7 +52,7 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
   name prop_type = this->m_contract.get_fund_type(pitr->fund);
 
   asset payout_amount = pitr->quantity;
-  string memo = "proposal id: " + std::to_string(proposal_id);
+  string memo = "proposal_id: " + std::to_string(proposal_id);
 
   this->m_contract.send_inline_action(
     permission_level(pitr->fund, "active"_n),
@@ -111,9 +111,7 @@ void ProposalAlliance::status_eval_impl(std::map<std::string, VariantValue> & ar
 
   proposals_t.modify(pitr, contract_name, [&](auto & proposal){
     proposal.age += 1;
-    proposal.staked = asset(0, utils::seeds_symbol);
     proposal.last_ran_cycle = propcycle;
-    proposal.status = ProposalsCommon::status_evaluate;
   });
 
   this->m_contract.update_cycle_stats_from_proposal(proposal_id, prop_type, ProposalsCommon::status_evaluate);
@@ -147,6 +145,18 @@ void ProposalAlliance::status_rejected_impl(std::map<std::string, VariantValue> 
 
 }
 
+void ProposalAlliance::callback (std::map<std::string, VariantValue> & args) {
+  
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
+
+  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
+  auto paitr = propaux_t.require_find(proposal_id, "proposal not found");
+
+  propaux_t.modify(paitr, contract_name, [&](auto & propaux){
+    propaux.special_attributes.at("lock_id") = std::get<uint64_t>(args["lock_id"]);
+  });
+
+}
 
 name ProposalAlliance::get_scope () {
   return this->m_contract.alliance_scope;
@@ -155,4 +165,3 @@ name ProposalAlliance::get_scope () {
 name ProposalAlliance::get_fund_type () {
   return this->m_contract.alliance_fund;
 }
-

@@ -5,6 +5,7 @@
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
+#include <tables/proposals_table.hpp>
 
 using namespace eosio;
 using std::string;
