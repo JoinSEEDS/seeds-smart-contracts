@@ -54,6 +54,8 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
   asset payout_amount = pitr->quantity;
   string memo = "proposal_id: " + std::to_string(proposal_id);
 
+  print("loook:", memo, "\n");
+
   this->m_contract.send_inline_action(
     permission_level(pitr->fund, "active"_n),
     contracts::token,

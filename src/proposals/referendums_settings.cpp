@@ -1,15 +1,16 @@
 #include <proposals/referendum_settings.hpp>
 
-void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
+
+void ReferendumSettings::create_impl (std::map<std::string, VariantValue> & args) {
+
+  // check the fund?
 
   name setting_name = std::get<name>(args["setting_name"]);
-
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
-  uint64_t proposal_id = proposals_t.available_primary_key();
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   uint64_t min_test_cycles = this->m_contract.config_get("refmintest"_n);
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
@@ -18,26 +19,6 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
   uint64_t min_eval_cycles = this->m_contract.config_get("refmineval"_n);
   uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
   check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
-
-  proposals_t.emplace(contract_name, [&](auto & item) {
-    item.proposal_id = proposal_id;
-    item.favour = 0;
-    item.against = 0;
-    item.staked = asset(0, utils::seeds_symbol);
-    item.creator = std::get<name>(args["creator"]);
-    item.title = std::get<string>(args["title"]);
-    item.summary = std::get<string>(args["summary"]);
-    item.description = std::get<string>(args["description"]);
-    item.image = std::get<string>(args["image"]);
-    item.url = std::get<string>(args["url"]);
-    item.created_at = current_time_point();
-    item.status = ProposalsCommon::status_open;
-    item.stage = ProposalsCommon::stage_staged;
-    item.type = ProposalsCommon::type_ref_setting;
-    item.last_ran_cycle = 0;
-    item.age = 0;
-    item.fund = std::get<name>(args["creator"]);
-  });
 
   propaux_t.emplace(contract_name, [&](auto & item){
     item.proposal_id = proposal_id;
@@ -55,21 +36,15 @@ void ReferendumSettings::create (std::map<std::string, VariantValue> & args) {
 
 }
 
-void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
+void ReferendumSettings::update_impl (std::map<std::string, VariantValue> & args) {
 
   name setting_name = std::get<name>(args["setting_name"]);
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   std::unique_ptr<SettingInfo> s_info = std::unique_ptr<SettingInfo>(get_setting_info(setting_name));
 
-  dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
-
-  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
   auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
-
-  check(ritr->stage == ProposalsCommon::stage_staged, "can not update referendum, it is not staged");
-  check(ritr->type == ProposalsCommon::type_ref_setting, "referendum has to be of type settings");
 
   uint64_t min_test_cycles = this->m_contract.config_get("refmintest"_n);
   uint64_t test_cycles = std::get<uint64_t>(args["test_cycles"]);
@@ -78,14 +53,6 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
   uint64_t min_eval_cycles = this->m_contract.config_get("refmineval"_n);
   uint64_t eval_cycles = std::get<uint64_t>(args["eval_cycles"]);
   check(eval_cycles >= min_eval_cycles, "the number of eval cycles must be at least " + std::to_string(min_eval_cycles));
-
-  proposals_t.modify(ritr, contract_name, [&](auto & item) {
-    item.title = std::get<string>(args["title"]);
-    item.summary = std::get<string>(args["summary"]);
-    item.description = std::get<string>(args["description"]);
-    item.image = std::get<string>(args["image"]);
-    item.url = std::get<string>(args["url"]);
-  });
 
   propaux_t.modify(raitr, contract_name, [&](auto & item){
     item.special_attributes.at("setting_name") = setting_name;
@@ -99,24 +66,6 @@ void ReferendumSettings::update (std::map<std::string, VariantValue> & args) {
     }
     item.special_attributes.at("cycles_per_status") = "1," + std::to_string(test_cycles) + "," + std::to_string(eval_cycles);
   });
-
-}
-
-void ReferendumSettings::cancel (std::map<std::string, VariantValue> & args) {
-
-  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  dao::proposal_tables proposals_t(contract_name, contract_name.value);
-  dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
-
-  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
-  auto raitr = propaux_t.require_find(proposal_id, "refaux entry not found");
-
-  check(ritr->stage == ProposalsCommon::stage_staged, "can not cancel referendum, it is not staged");
-  check(ritr->type == ProposalsCommon::type_ref_setting, "referendum has to be of type settings");
-
-  proposals_t.erase(ritr);
-  propaux_t.erase(raitr);
 
 }
 
@@ -158,10 +107,10 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
     if (unity_passed && quorum_passed) {
       if (ritr->age == 0) {
         this->m_contract.send_inline_action(
-          permission_level(contract_name, "active"_n),
+          permission_level(contracts::bank, "active"_n),
           contracts::token,
           "transfer"_n,
-          std::make_tuple(contract_name, ritr->creator, ritr->staked, string("refund"))
+          std::make_tuple(contracts::bank, ritr->creator, ritr->staked, string("refund"))
         );
       }
 
@@ -190,10 +139,10 @@ void ReferendumSettings::evaluate (std::map<std::string, VariantValue> & args) {
     } else {
       if (current_status == ProposalsCommon::status_voting) {
         this->m_contract.send_inline_action(
-          permission_level(contract_name, "active"_n),
+          permission_level(contracts::bank, "active"_n),
           contracts::token,
           "burn"_n,
-          std::make_tuple(contract_name, ritr->staked)
+          std::make_tuple(contracts::bank, ritr->staked)
         );
       }
 
@@ -242,6 +191,10 @@ name ReferendumSettings::get_fund_type () {
 
 void ReferendumSettings::check_can_vote (const name & status, const name & stage) {
   check(status == ProposalsCommon::status_voting, "can not vote, proposal is not in voting status");
+}
+
+uint64_t ReferendumSettings::min_stake (const asset & quantity, const name & fund) {
+  return this->m_contract.config_get("refsnewprice"_n);
 }
 
 uint64_t ReferendumSettings::get_required_unity (const name & setting, const bool & is_float) {

@@ -185,7 +185,7 @@ ACTION dao::stake (const name & from, const name & to, const asset & quantity, c
        to == get_self() && 
        quantity.symbol == utils::seeds_symbol ) {
       
-    // this ones should be overwriten
+    // these ones should be overwriten
     if (from == contracts::onboarding) { return; }
     if (from == bankaccts::campaigns) { return; }
 
@@ -803,26 +803,26 @@ void dao::send_deferred_transaction (
   const name & action,  
   const std::tuple<T...> & data) {
 
-  eosio::action(permission, contract, action, data).send();
+  // eosio::action(permission, contract, action, data).send();
 
-  // deferred_id_tables deferredids(get_self(), get_self().value);
-  // deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
+  deferred_id_tables deferredids(get_self(), get_self().value);
+  deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());
 
-  // d_s.id += 1;
+  d_s.id += 1;
 
-  // deferredids.set(d_s, get_self());
+  deferredids.set(d_s, get_self());
 
-  // transaction trx{};
+  transaction trx{};
 
-  // trx.actions.emplace_back(
-  //   permission,
-  //   contract,
-  //   action,
-  //   data
-  // );
+  trx.actions.emplace_back(
+    permission,
+    contract,
+    action,
+    data
+  );
 
-  // trx.delay_sec = 1;
-  // trx.send(d_s.id, _self);
+  trx.delay_sec = 1;
+  trx.send(d_s.id, _self);
 
 }
 
