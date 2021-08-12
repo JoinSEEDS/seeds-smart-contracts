@@ -48,8 +48,7 @@ class Proposal {
 
     virtual void check_can_vote(const name & status, const name & stage);
     virtual bool check_prop_majority(std::map<std::string, VariantValue> & args);
-    uint64_t cap_stake(const name & fund);
-    uint64_t min_stake(const asset & quantity, const name & fund);
+    virtual uint64_t min_stake(const asset & quantity, const name & fund);
 
 
     virtual void create_impl(std::map<std::string, VariantValue> & args);
@@ -58,6 +57,9 @@ class Proposal {
     virtual void status_open_impl(std::map<std::string, VariantValue> & args);
     virtual void status_eval_impl(std::map<std::string, VariantValue> & args);
     virtual void status_rejected_impl(std::map<std::string, VariantValue> & args);
+
+
+    uint64_t cap_stake(const name & fund);
 
 
     dao & m_contract;

@@ -99,22 +99,15 @@ const checkProp = async (expectedProp, assert, given, should) => {
 }
 
 const createReferendum = async (contract, creator, settingName, newValue, title, summary, description, image, url) => {
-  await contract.create([
-    { key: 'type', value: ['name', 'r.setting'] },
-    { key: 'creator', value: ['name', creator] },
+  await createProp(contract, creator, 'r.setting', title, summary, description, image, url, creator, '0.0000 SEEDS', [
     { key: 'setting_name', value: ['name', settingName] },
-    { key: 'title', value: ['string', title] },
-    { key: 'summary', value: ['string', summary] },
-    { key: 'description', value: ['string', description] },
-    { key: 'image', value: ['string', image] },
-    { key: 'url', value: ['string', url] },
     { key: 'new_value', value: newValue },
     { key: 'test_cycles', value: ['uint64', 1] },
     { key: 'eval_cycles', value: ['uint64', 3] }
-  ], { authorization: `${creator}@active` })
+  ])
 }
 
-describe('Referendums Settings', async assert => {
+describe.only('Referendums Settings', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -331,7 +324,9 @@ describe('Referendums Settings', async assert => {
         stage: 'staged',
         type: 'r.setting',
         last_ran_cycle: 0,
-        age: 0
+        age: 0,
+        fund: firstuser,
+        quantity: '0 '
       },
       {
         proposal_id: 2,
@@ -348,7 +343,9 @@ describe('Referendums Settings', async assert => {
         stage: 'staged',
         type: 'r.setting',
         last_ran_cycle: 0,
-        age: 0
+        age: 0,
+        fund: seconduser,
+        quantity: '0 '
       }
     ]
   })
@@ -1155,7 +1152,7 @@ describe('Voice Delegation', async assert => {
 
 })
 
-describe.only('Alliances', async assert => {
+describe('Alliances', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1180,12 +1177,29 @@ describe.only('Alliances', async assert => {
   await createProp(contracts.dao, firstuser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '10000.0000 SEEDS', [
     { key: 'recipient', value: ['name', firstuser] }
   ])
+  await createProp(contracts.dao, firstuser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '1000000.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+  await createProp(contracts.dao, seconduser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '1000000.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
 
   // console.log('changing minimum amount to stake')
   // await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
   await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${10000}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${10000}.0000 SEEDS`, '2', { authorization: `${firstuser}@active` })
+
+  await contracts.dao.update([
+    { key: 'proposal_id', value: ['uint64', 1] },
+    { key: 'title', value: ['string', 'title updated'] },
+    { key: 'summary', value: ['string', 'summary updated'] },
+    { key: 'description', value: ['string', 'description updated'] },
+    { key: 'image', value: ['string', 'image updated'] },
+    { key: 'url', value: ['string', 'url updated'] }
+  ], { authorization: `${firstuser}@active` })
 
   await checkProp(
     {
@@ -1224,32 +1238,109 @@ describe.only('Alliances', async assert => {
   await contracts.dao.favour(seconduser, 0, 10, { authorization: `${seconduser}@active` })
   await contracts.dao.favour(thirduser, 0, 10, { authorization: `${thirduser}@active` })
 
+  await contracts.dao.favour(firstuser, 1, 9, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 1, 9, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 9, { authorization: `${thirduser}@active` })
+
+  await contracts.dao.against(firstuser, 2, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 2, 9, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 2, { authorization: `${thirduser}@active` })
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 30,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      status: 'open',
+      stage: 'active',
+      quantity: '10000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to active'
+  )
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 27,
+      against: 0,
+      staked: '10000.0000 SEEDS',
+      status: 'open',
+      stage: 'active',
+      quantity: '1000000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to active'
+  )
+
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
-  // await checkProp(
-  //   {
-  //     proposal_id: 0,
-  //     favour: 0,
-  //     against: 0,
-  //     staked: '555.0000 SEEDS',
-  //     creator: 'seedsuseraaa',
-  //     title: 'title',
-  //     summary: 'summary',
-  //     description: 'description',
-  //     image: 'image',
-  //     url: 'url',
-  //     status: 'open',
-  //     stage: 'staged',
-  //     type: 'p.alliance',
-  //     last_ran_cycle: 0,
-  //     age: 0,
-  //     fund: 'allies.seeds',
-  //     quantity: '10000.0000 SEEDS'
-  //   },
-  //   assert
-  // )
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 30,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'evaluate',
+      stage: 'active',
+      quantity: '10000.0000 SEEDS',
+      current_payout: '10000.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to evaluate'
+  )
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 27,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'evaluate',
+      stage: 'active',
+      quantity: '1000000.0000 SEEDS',
+      current_payout: '1000000.0000 SEEDS',
+      lock_id: 1,
+      passed_cycle: 2,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to evaluate'
+  )
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 9,
+      against: 10,
+      staked: '0.0000 SEEDS',
+      status: 'rejected',
+      stage: 'done',
+      quantity: '1000000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to evaluate'
+  )
 
   const escrowTable = await getTableRows({
     code: escrow,
@@ -1257,7 +1348,121 @@ describe.only('Alliances', async assert => {
     table: 'locks',
     json: true
   })
-  console.log(escrowTable.rows)
+
+  assert({
+    given: 'proposals accepted',
+    should: 'create locks',
+    actual: escrowTable.rows.map(r => {
+      delete r.vesting_date
+      delete r.created_date
+      delete r.updated_date
+      return r
+    }),
+    expected:   [
+      {
+        id: 0,
+        lock_type: 'event',
+        sponsor: 'allies.seeds',
+        beneficiary: 'seedsuseraaa',
+        quantity: '10000.0000 SEEDS',
+        trigger_event: 'golive',
+        trigger_source: 'dao.hypha',
+        notes: 'proposal_id: 0'
+      },
+      {
+        id: 1,
+        lock_type: 'event',
+        sponsor: 'allies.seeds',
+        beneficiary: 'seedsuseraaa',
+        quantity: '1000000.0000 SEEDS',
+        trigger_event: 'golive',
+        trigger_source: 'dao.hypha',
+        notes: 'proposal_id: 1'
+      }
+    ]
+  })
+
+  console.log('running onperiod more times...')
+  for (let i = 0; i < 2; i++) {
+    await contracts.dao.onperiod({ authorization: `${dao}@active` })
+    await sleep(2000)
+  }
+
+  console.log('voting down for prop 1')
+  await contracts.dao.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.dao.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 30,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'evaluate',
+      stage: 'active',
+      quantity: '10000.0000 SEEDS',
+      last_ran_cycle: 5,
+      current_payout: '10000.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'keep prop on evaluate'
+  )
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 9,
+      against: 18,
+      staked: '0.0000 SEEDS',
+      status: 'rejected',
+      stage: 'done',
+      quantity: '1000000.0000 SEEDS',
+      last_ran_cycle: 4,
+      current_payout: '1000000.0000 SEEDS',
+      lock_id: 1,
+      passed_cycle: 2,
+      recipient: firstuser
+    },
+    assert,
+    'on period ran',
+    'move prop to reject state'
+  )
+
+  const escrowTableAfter = await getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+
+  assert({
+    given: 'proposal cancel',
+    should: 'cancel lock',
+    actual: escrowTableAfter.rows.map(r => {
+      delete r.vesting_date
+      delete r.created_date
+      delete r.updated_date
+      return r
+    }),
+    expected:   [
+      {
+        id: 0,
+        lock_type: 'event',
+        sponsor: 'allies.seeds',
+        beneficiary: 'seedsuseraaa',
+        quantity: '10000.0000 SEEDS',
+        trigger_event: 'golive',
+        trigger_source: 'dao.hypha',
+        notes: 'proposal_id: 0'
+      }
+    ]
+  })
 
 })
 
