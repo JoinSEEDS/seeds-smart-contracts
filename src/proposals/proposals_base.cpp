@@ -12,8 +12,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
   name fund = std::get<name>(args["fund"]);
   asset quantity = std::get<asset>(args["quantity"]);
 
-  check(false, "mmmm");
-
   proposals_t.emplace(contract_name, [&](auto & item) {
     item.proposal_id = proposal_id;
     item.favour = 0;

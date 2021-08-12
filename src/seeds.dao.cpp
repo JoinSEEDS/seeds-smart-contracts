@@ -83,6 +83,14 @@ ACTION dao::reset () {
     msitr = minstake_t.erase(msitr);
   }
 
+  for (int i = 0; i < 30; i++) {
+    voted_proposals_tables votedprops_t(get_self(), i);
+    auto vitr = votedprops_t.begin();
+    while (vitr != votedprops_t.end()) {
+      vitr = votedprops_t.erase(vitr);
+    }
+  }
+
   cycle_tables cycle_t(get_self(), get_self().value);
   cycle_t.remove();
 }
