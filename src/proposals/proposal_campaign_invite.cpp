@@ -100,7 +100,7 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
     permission_level(pitr->fund, "active"_n),
     contracts::token,
     "transfer"_n,
-    std::make_tuple(pitr->fund, contract_name.to_string(), payout_amount, "invites")
+    std::make_tuple(pitr->fund, contract_name, payout_amount, string("invites"))
   );
 
   this->m_contract.send_inline_action(
@@ -111,24 +111,26 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
   );
 
   name recipient = std::get<name>(paitr->special_attributes.at("recipient"));
+  asset max_amount_per_invite = std::get<asset>(paitr->special_attributes.at("max_amount_per_invite"));
+  asset planted = std::get<asset>(paitr->special_attributes.at("planted"));
+  asset reward = std::get<asset>(paitr->special_attributes.at("reward"));
 
   this->m_contract.send_inline_action(
-    permission_level(contract_name, "active"_n),
+    permission_level(contracts::onboarding, "active"_n),
     contracts::onboarding,
     "createcmpdao"_n,
     std::make_tuple(
-      contract_name.to_string(),
+      contract_name,
       pitr->creator,
-      paitr->special_attributes.at("max_amount_per_invite"),
-      paitr->special_attributes.at("planted"),
+      max_amount_per_invite,
+      planted,
       recipient,
-      paitr->special_attributes.at("reward"),
+      reward,
       payout_amount,
-      pitr->proposal_id
+      proposal_id
     )
   );
 }
-
 
 void ProposalCampaignInvite::status_eval_impl(std::map<std::string, VariantValue> & args) {
   name contract_name = this->m_contract.get_self();
@@ -199,19 +201,6 @@ void ProposalCampaignInvite::status_rejected_impl(std::map<std::string, VariantV
   propaux_t.modify(paitr, contract_name, [&](auto & proposal_aux) {
     proposal_aux.special_attributes.insert(std::make_pair("executed", true));
   });
-
-  // dao::proposal_tables proposals_t(contract_name, contract_name.value);
-  // auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-
-  // proposals_t.modify(pitr, _self, [&](auto& proposal) {
-  //   if (pitr->status != status_evaluate) {
-  //     proposal.passed_cycle = prop_cycle;
-  //   }
-  //   proposal.executed = false;
-  //   proposal.staked = asset(0, seeds_symbol);
-  //   proposal.status = status_rejected;
-  //   proposal.stage = stage_done;
-  // });
 }
 
 void ProposalCampaignInvite::callback(std::map<std::string, VariantValue> & args) {

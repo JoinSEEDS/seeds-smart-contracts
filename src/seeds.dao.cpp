@@ -180,7 +180,6 @@ ACTION dao::callback (std::map<std::string, VariantValue> & args) {
 }
 
 ACTION dao::stake (const name & from, const name & to, const asset & quantity, const string & memo) {
-  print("\n\nSTAKE DAO\n\n");
   if ( get_first_receiver() == contracts::token && 
        to == get_self() && 
        quantity.symbol == utils::seeds_symbol ) {

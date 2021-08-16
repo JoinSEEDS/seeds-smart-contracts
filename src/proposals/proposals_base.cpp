@@ -12,8 +12,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
   name fund = std::get<name>(args["fund"]);
   asset quantity = std::get<asset>(args["quantity"]);
 
-  check(false, "mmmm");
-
   proposals_t.emplace(contract_name, [&](auto & item) {
     item.proposal_id = proposal_id;
     item.favour = 0;
@@ -153,8 +151,6 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
       valid_quorum = votes_in_favor >= quorum_votes_needed;
     }
 
-    print("proposal_id:", proposal_id, ", passed:", passed, ", quorum:", valid_quorum, "\n");
-
     if (passed && valid_quorum) {
 
       if (current_status == ProposalsCommon::status_open) {
@@ -218,10 +214,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
     this->m_contract.size_change(this->m_contract.prop_active_size, -1);
 
   } else if (current_stage == ProposalsCommon::stage_staged) {
-    // uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
-    uint64_t m_stake = 0;
-
-    print("prop_id:", proposal_id, ", min stake:", m_stake, "\n");
+    uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
 
     if (pitr->staked.amount >= m_stake) {
       proposals_t.modify(pitr, contract_name, [&](auto& proposal) {
@@ -235,7 +228,6 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 }
 
 void Proposal::stake (std::map<std::string, VariantValue> & args) {
-  print("\n\nSTAKE DAO BASE\n\n");
 
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
   asset quantity = std::get<asset>(args["quantity"]);

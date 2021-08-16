@@ -696,7 +696,7 @@ ACTION onboarding::createcmpdao(
   asset total_amount,
   uint64_t proposal_id
 ) {
-  require_auth(origin_account);
+  require_auth(get_self());
 
   check_user(owner);
   check_user(reward_owner);
