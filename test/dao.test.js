@@ -145,22 +145,6 @@ describe('Referendums Settings', async assert => {
   console.log('reset accounts')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-  const createReferendum = async (creator, settingName, newValue, title, summary, description, image, url) => {
-    await contracts.dao.create([
-      { key: 'type', value: ['name', 'r.setting'] },
-      { key: 'creator', value: ['name', creator] },
-      { key: 'setting_name', value: ['name', settingName] },
-      { key: 'title', value: ['string', title] },
-      { key: 'summary', value: ['string', summary] },
-      { key: 'description', value: ['string', description] },
-      { key: 'image', value: ['string', image] },
-      { key: 'url', value: ['string', url] },
-      { key: 'new_value', value: newValue },
-      { key: 'test_cycles', value: ['uint64', 1] },
-      { key: 'eval_cycles', value: ['uint64', 3] }
-    ], { authorization: `${creator}@active` })
-  }
-
   const checkReferendums = async (
     expectedRefs,
     expectedAuxs,
@@ -272,9 +256,9 @@ describe('Referendums Settings', async assert => {
   await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
 
   console.log('create referendum')
-  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(seconduser, testSettingFloat, ['float64', testSettingFloatNewValue], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createReferendum(contracts.dao, seconduser, testSettingFloat, ['float64', testSettingFloatNewValue], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
 
   console.log('update referendum')
   await contracts.dao.update([
@@ -326,7 +310,7 @@ describe('Referendums Settings', async assert => {
         last_ran_cycle: 0,
         age: 0,
         fund: firstuser,
-        quantity: '0 '
+        quantity: '0.0000 SEEDS'
       },
       {
         proposal_id: 2,
@@ -345,7 +329,7 @@ describe('Referendums Settings', async assert => {
         last_ran_cycle: 0,
         age: 0,
         fund: seconduser,
-        quantity: '0 '
+        quantity: '0.0000 SEEDS'
       }
     ]
   })
@@ -574,10 +558,10 @@ describe('Referendums Settings', async assert => {
   console.log('failing referendums')
 
   console.log('create referendum')
-  await createReferendum(firstuser, testSetting, ['uint64', 5], 'title', 'summary', 'description', 'image', 'url')
-  await createReferendum(seconduser, testSettingFloat, ['float64', 0.2], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
-  await createReferendum(thirduser, testSettingFloat, ['float64', 22.2], 'title 3', 'summary 3', 'description 3', 'image 3', 'url 3')
-  await createReferendum(thirduser, testSettingFloat, ['float64', 3.2], 'title 4', 'summary 4', 'description 4', 'image 4', 'url 4')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 5], 'title', 'summary', 'description', 'image', 'url')
+  await createReferendum(contracts.dao, seconduser, testSettingFloat, ['float64', 0.2], 'title 2', 'summary 2', 'description 2', 'image 2', 'url 2')
+  await createReferendum(contracts.dao, thirduser, testSettingFloat, ['float64', 22.2], 'title 3', 'summary 3', 'description 3', 'image 3', 'url 3')
+  await createReferendum(contracts.dao, thirduser, testSettingFloat, ['float64', 3.2], 'title 4', 'summary 4', 'description 4', 'image 4', 'url 4')
 
   console.log('staking for referendums')
   await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '3', { authorization: `${firstuser}@active` })
@@ -1053,27 +1037,11 @@ describe('Voice Delegation', async assert => {
 
   await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', 'high', { authorization: `${settings}@active` })
 
-  const createReferendum = async (creator, settingName, newValue, title, summary, description, image, url) => {
-    await contracts.dao.create([
-      { key: 'type', value: ['name', 'r.setting'] },
-      { key: 'creator', value: ['name', creator] },
-      { key: 'setting_name', value: ['name', settingName] },
-      { key: 'title', value: ['string', title] },
-      { key: 'summary', value: ['string', summary] },
-      { key: 'description', value: ['string', description] },
-      { key: 'image', value: ['string', image] },
-      { key: 'url', value: ['string', url] },
-      { key: 'new_value', value: newValue },
-      { key: 'test_cycles', value: ['uint64', 1] },
-      { key: 'eval_cycles', value: ['uint64', 3] }
-    ], { authorization: `${creator}@active` })
-  }
-
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
   console.log('create referendum')
-  await createReferendum(firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
 
   console.log('changing minimum amount to stake')
   await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
