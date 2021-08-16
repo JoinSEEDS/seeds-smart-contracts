@@ -68,7 +68,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
 }
 
 void Proposal::update (std::map<std::string, VariantValue> & args) {
-
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
@@ -85,7 +84,6 @@ void Proposal::update (std::map<std::string, VariantValue> & args) {
   });
 
   update_impl(args);
-
 }
 
 void Proposal::cancel (std::map<std::string, VariantValue> & args) {
@@ -162,8 +160,6 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
       valid_quorum = votes_in_favor >= quorum_votes_needed;
     }
 
-    print("proposal_id:", proposal_id, ", passed:", passed, ", quorum:", valid_quorum, "\n");
-
     if (passed && valid_quorum) {
 
       if (current_status == ProposalsCommon::status_open) {
@@ -190,8 +186,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
         status_eval_impl(args);
       }
 
-    }
-    else {
+    } else {
 
       if (current_status != ProposalsCommon::status_evaluate) {
         this->m_contract.send_inline_action(
@@ -227,11 +222,8 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
     this->m_contract.size_change(this->m_contract.prop_active_size, -1);
 
-
   } else if (current_stage == ProposalsCommon::stage_staged) {
     uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
-
-    print("prop_id:", proposal_id, ", min stake:", m_stake, "\n");
 
     if (pitr->staked.amount >= m_stake) {
       proposals_t.modify(pitr, contract_name, [&](auto& proposal) {

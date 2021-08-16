@@ -5,7 +5,7 @@ const { prop } = require('ramda')
 
 const { 
   dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
-  alliancesbank, campaignbank, escrow
+  alliancesbank, campaignbank, escrow, onboarding
 } = names
 
 const scopes = ['alliance', proposals, 'milestone', referendums]
@@ -134,7 +134,7 @@ describe('Referendums Settings', async assert => {
 
   const users = [firstuser, seconduser, thirduser, fourthuser]
 
-  const contracts = await initContracts({ dao, token, settings, accounts })
+  const contracts = await initContracts({ dao, token, settings, accounts, onboarding })
 
   console.log('reset referendums')
   await contracts.dao.reset({ authorization: `${dao}@active` })
@@ -662,10 +662,9 @@ describe('Referendums Settings', async assert => {
 
 })
 
-
 async function resetContracts () {
   const users = [firstuser, seconduser, thirduser, fourthuser]
-  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, onboarding })
   console.log('reset dao')
   await contracts.dao.reset({ authorization: `${dao}@active` })
   console.log('reset settings')
@@ -674,6 +673,8 @@ async function resetContracts () {
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
   console.log('reset harvest')
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  console.log('reset onboarding')
+  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
   
   console.log('join users')
   await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
@@ -1120,6 +1121,20 @@ describe('Voice Delegation', async assert => {
 
 })
 
+const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, options) => {
+  await contract.update([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    ...options
+  ], { authorization: `${creator}@active` })
+}
+
 describe('Alliances', async assert => {
 
   if (!isLocal()) {
@@ -1258,56 +1273,24 @@ describe('Alliances', async assert => {
   await checkProp(
     {
       proposal_id: 0,
-      favour: 30,
+      favour: 0,
       against: 0,
-      staked: '0.0000 SEEDS',
-      status: 'evaluate',
-      stage: 'active',
-      quantity: '10000.0000 SEEDS',
-      current_payout: '10000.0000 SEEDS',
-      lock_id: 0,
-      passed_cycle: 2,
-      recipient: firstuser
+      staked: '555.0000 SEEDS',
+      creator: 'seedsuseraaa',
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.alliance',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: 'allies.seeds',
+      quantity: '10000.0000 SEEDS'
     },
-    assert,
-    'on period ran',
-    'move prop to evaluate'
-  )
-  await checkProp(
-    {
-      proposal_id: 1,
-      favour: 27,
-      against: 0,
-      staked: '0.0000 SEEDS',
-      status: 'evaluate',
-      stage: 'active',
-      quantity: '1000000.0000 SEEDS',
-      current_payout: '1000000.0000 SEEDS',
-      lock_id: 1,
-      passed_cycle: 2,
-      recipient: firstuser
-    },
-    assert,
-    'on period ran',
-    'move prop to evaluate'
-  )
-  await checkProp(
-    {
-      proposal_id: 2,
-      favour: 9,
-      against: 10,
-      staked: '0.0000 SEEDS',
-      status: 'rejected',
-      stage: 'done',
-      quantity: '1000000.0000 SEEDS',
-      current_payout: '0.0000 SEEDS',
-      lock_id: 0,
-      passed_cycle: 2,
-      recipient: firstuser
-    },
-    assert,
-    'on period ran',
-    'move prop to evaluate'
+    assert
   )
 
   const escrowTable = await getTableRows({
@@ -1434,4 +1417,250 @@ describe('Alliances', async assert => {
 
 })
 
+describe.only('Campaigns', async assert => {
 
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+
+  console.log(`\n\n\n ${firstuser} \n\n\n ${seconduser} \n\n\n ${thirduser} \n\n\n`)
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  console.log('reset escrow')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  const minStake = 1111
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '1000.0000 SEEDS', [
+    { key: 'max_amount_per_invite', value: ['asset', '20.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '2.0000 SEEDS'] },
+    { key: 'recipient', value: ['name', seconduser] }
+  ])
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '1000.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 0,
+      recipient: seconduser,
+      max_age: 6,
+      max_amount_per_invite: "20.0000 SEEDS",
+      planted: "6.0000 SEEDS",
+      reward: '2.0000 SEEDS'
+    },
+    assert,
+    'prop campaign invite created',
+    'create entry in props table'
+  )
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+
+  console.log('update proposal')
+  await updateProp(contracts.dao, firstuser, 'p.camp.inv', 'titleU', 'summaryU', 'descriptionU', 'imageU', 'urlU', campaignbank, [
+    { key: 'max_amount_per_invite', value: ['asset', '10.0000 SEEDS'] },
+    { key: 'planted', value: ['asset', '2000.0000 SEEDS'] },
+    { key: 'reward', value: ['asset', '52.0000 SEEDS'] },
+    { key: 'proposal_id', value: ['uint64', 0] },
+    { key: 'current_payout', value: ["asset", "20.0000 SEEDS"] },
+    { key: 'passed_cycle', value: ['uint64', 2] },
+    { key: 'lock_id', value: ['uint64', 0] },
+    { key: 'max_age', value: ['uint64', 7] },
+    { key: 'recipient', value: ['name', seconduser] }
+  ])
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'titleU',
+      summary: 'summaryU',
+      description: 'descriptionU',
+      image: 'imageU',
+      url: 'urlU',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '1000.0000 SEEDS',
+      current_payout: '20.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: seconduser,
+      max_age: 7,
+      max_amount_per_invite: "10.0000 SEEDS",
+      planted: "2000.0000 SEEDS",
+      reward: '52.0000 SEEDS'
+    },
+    assert,
+    'prop campaign invite updated',
+    'update entry in props table'
+  )
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 0, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 0, 10, { authorization: `${thirduser}@active` })
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 30,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'titleU',
+      summary: 'summaryU',
+      description: 'descriptionU',
+      image: 'imageU',
+      url: 'urlU',
+      status: 'open',
+      stage: 'active',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '1000.0000 SEEDS',
+      current_payout: '20.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: seconduser,
+      max_age: 7,
+      max_amount_per_invite: "10.0000 SEEDS",
+      planted: "2000.0000 SEEDS",
+      reward: '52.0000 SEEDS'
+    },
+    assert,
+    'prop campaign votes',
+    'update campaign votes'
+  )
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 30,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'titleU',
+      summary: 'summaryU',
+      description: 'descriptionU',
+      image: 'imageU',
+      url: 'urlU',
+      status: 'open',
+      stage: 'active',
+      type: 'p.camp.inv',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '1000.0000 SEEDS',
+      current_payout: '20.0000 SEEDS',
+      lock_id: 0,
+      max_age: 7,
+      max_amount_per_invite: '10.0000 SEEDS',
+      passed_cycle: 2,
+      planted: '2000.0000 SEEDS',
+      recipient: seconduser,
+      reward: '52.0000 SEEDS'
+    },
+    assert
+  )
+
+  console.log('voting down for prop 1')
+  await contracts.dao.revertvote(firstuser, 0, { authorization: `${firstuser}@active` })
+  await contracts.dao.revertvote(seconduser, 0, { authorization: `${seconduser}@active` })
+
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await checkProp(
+    {
+      proposal_id: 0,
+      favour: 10,
+      against: 20,
+      staked: '0.0000 SEEDS',
+      status: 'rejected',
+      stage: 'done',
+      quantity: '1000.0000 SEEDS',
+      last_ran_cycle: 0,
+      current_payout: '20.0000 SEEDS',
+      passed_cycle: 3,
+      lock_id: 0,
+      recipient: seconduser,
+      max_age: 7,
+      max_amount_per_invite: '10.0000 SEEDS',
+      planted: '2000.0000 SEEDS',
+      reward: '52.0000 SEEDS'
+    },
+    assert,
+    'on period ran after rever votes',
+    'move prop to rejected status'
+  )
+
+  const campaignTable = await getTableRows({
+    code: onboarding,
+    scope: onboarding,
+    table: 'campaigns',
+    json: true
+  })
+
+  console.log(campaignTable.rows)
+
+  assert({
+    given: 'proposal cancel',
+    should: 'cancel lock',
+    actual: campaignTable.rows[0],
+    expected: {
+      campaign_id: 1,
+      type: 'invite',
+      origin_account: 'dao.seeds',
+      owner: firstuser,
+      max_amount_per_invite: '10.0000 SEEDS',
+      planted: '2000.0000 SEEDS',
+      reward_owner: seconduser,
+      reward: '52.0000 SEEDS',
+      authorized_accounts: [ firstuser ],
+      total_amount: '1000.0000 SEEDS',
+      remaining_amount: '1000.0000 SEEDS'
+    }
+  })
+})

@@ -2,6 +2,7 @@
 
 #include "referendum_settings.hpp"
 #include "proposal_alliance.hpp"
+#include "proposal_campaign_invite.hpp"
 
 
 class ProposalsFactory {
@@ -16,6 +17,9 @@ class ProposalsFactory {
 
       case ProposalsCommon::type_prop_alliance.value:
         return new ProposalAlliance(_contract);
+
+      case ProposalsCommon::type_prop_campaign_invite.value:
+        return new ProposalCampaignInvite(_contract);
       
       default:
         break;

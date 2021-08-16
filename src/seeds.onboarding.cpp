@@ -1,6 +1,8 @@
 #include <seeds.onboarding.hpp>
 #include <eosio/transaction.hpp>
 
+typedef std::variant<std::monostate, uint64_t, int64_t, double, name, asset, string, bool, eosio::time_point> VariantValue; 
+
 void onboarding::create_account(name account, string publicKey, name domain)
 {
   if (is_account(account))
@@ -682,6 +684,71 @@ ACTION onboarding::createcampg(
                       item.total_amount = total_amount;
                       item.remaining_amount = total_amount;
                     });
+}
+
+ACTION onboarding::createcmpdao(
+  name origin_account,
+  name owner,
+  asset max_amount_per_invite,
+  asset planted,
+  name reward_owner,
+  asset reward,
+  asset total_amount,
+  uint64_t proposal_id
+) {
+  require_auth(get_self());
+
+  check_user(owner);
+  check_user(reward_owner);
+
+  utils::check_asset(max_amount_per_invite);
+  utils::check_asset(planted);
+  utils::check_asset(reward);
+  utils::check_asset(total_amount);
+
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(planted.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted));
+
+  uint64_t max_reward = config_get("inv.max.rwrd"_n);
+  check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
+
+  auto sitr = sponsors.find(origin_account.value);
+  check(sitr != sponsors.end(), "origin account " + origin_account.to_string() + " does not have a balance entry");
+  check(sitr->balance >= total_amount, "origin account " + origin_account.to_string() + " does not have enough balance");
+
+  sponsors.modify(sitr, _self, [&](auto &item) {
+    item.balance -= total_amount;
+  });
+
+  name type = private_campaign;
+  uint64_t key = campaigns.available_primary_key();
+  key = key > 0 ? key : 1;
+
+  type = invite_campaign;
+
+  std::map<std::string, VariantValue> args;
+  args.insert(std::make_tuple("proposal_id", proposal_id));
+
+  action(
+    permission_level(contracts::dao, "active"_n),
+    contracts::dao,
+    "callback"_n,
+    std::make_tuple(args)
+  ).send();
+
+  campaigns.emplace(_self, [&](auto &item) {
+    item.campaign_id = key;
+    item.type = type;
+    item.origin_account = origin_account;
+    item.owner = owner;
+    item.max_amount_per_invite = max_amount_per_invite;
+    item.planted = planted;
+    item.reward_owner = reward_owner;
+    item.reward = reward;
+    item.authorized_accounts = {owner};
+    item.total_amount = total_amount;
+    item.remaining_amount = total_amount;
+  });
 }
 
 ACTION onboarding::campinvite(uint64_t campaign_id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash)
