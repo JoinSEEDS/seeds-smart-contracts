@@ -100,6 +100,15 @@ void Proposal::cancel (std::map<std::string, VariantValue> & args) {
 
   check(pitr->stage == ProposalsCommon::stage_staged, "can not cancel proposal, it is not staged");
 
+  if (pitr->staked.amount > 0) {
+    this->m_contract.send_inline_action(
+      permission_level(contracts::bank, "active"_n),
+      contracts::token,
+      "transfer"_n,
+      std::make_tuple(contracts::bank, pitr->creator, pitr->staked, string(""))
+    );
+  }
+
   proposals_t.erase(pitr);
 
   if (paitr != propaux_t.end()) {
