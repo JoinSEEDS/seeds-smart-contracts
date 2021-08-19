@@ -64,7 +64,6 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
 
   args.insert(std::make_tuple("proposal_id", proposal_id));
   create_impl(args);
-
 }
 
 void Proposal::update (std::map<std::string, VariantValue> & args) {
@@ -204,7 +203,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
       });
 
       propaux_t.modify(paitr, contract_name, [&](auto & propaux){
-        if (current_status != ProposalsCommon::status_evaluate) {
+        if (current_status == ProposalsCommon::status_open) {
           propaux.special_attributes.at("passed_cycle") = propcycle;
         }
       });
@@ -215,6 +214,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
   } else if (current_stage == ProposalsCommon::stage_staged) {
     uint64_t m_stake = min_stake(pitr->quantity, pitr->fund);
+
 
     if (pitr->staked.amount >= m_stake) {
       proposals_t.modify(pitr, contract_name, [&](auto& proposal) {

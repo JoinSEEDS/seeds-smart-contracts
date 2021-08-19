@@ -696,7 +696,7 @@ ACTION onboarding::createcmpdao(
   asset total_amount,
   uint64_t proposal_id
 ) {
-  require_auth(get_self());
+  require_auth(origin_account);
 
   check_user(owner);
   check_user(reward_owner);
@@ -724,17 +724,20 @@ ACTION onboarding::createcmpdao(
   uint64_t key = campaigns.available_primary_key();
   key = key > 0 ? key : 1;
 
-  type = invite_campaign;
-
   std::map<std::string, VariantValue> args;
+  args.insert(std::make_tuple("campaign_id", key));
   args.insert(std::make_tuple("proposal_id", proposal_id));
 
-  action(
-    permission_level(contracts::dao, "active"_n),
-    contracts::dao,
-    "callback"_n,
-    std::make_tuple(args)
-  ).send();
+  if (origin_account == contracts::dao)
+  {
+    type = invite_campaign;
+    action(
+      permission_level(contracts::dao, "active"_n),
+      contracts::dao,
+      "callback"_n,
+      std::make_tuple(args)
+    ).send();
+  }
 
   campaigns.emplace(_self, [&](auto &item) {
     item.campaign_id = key;
