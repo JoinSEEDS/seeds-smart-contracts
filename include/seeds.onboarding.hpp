@@ -46,7 +46,6 @@ public:
   ACTION cleanup(uint64_t start_id, uint64_t max_id, uint64_t batch_size);
 
   ACTION createcampg(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
-  ACTION createcmpdao(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
   ACTION campinvite(uint64_t id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash);
   ACTION addauthorized(uint64_t id, name account);
   ACTION remauthorized(uint64_t id, name account);
@@ -204,7 +203,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
   {
     switch (action)
     {
-      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(reward)(cancel)(chkcleanup)(cleanup)(createcampg)(createcmpdao)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux))
+      EOSIO_DISPATCH_HELPER(onboarding, (reset)(invite)(invitefor)(accept)(onboardorg)(createregion)(acceptnew)(acceptexist)(reward)(cancel)(chkcleanup)(cleanup)(createcampg)(campinvite)(addauthorized)(remauthorized)(returnfunds)(rtrnfundsaux))
     }
   }
 }

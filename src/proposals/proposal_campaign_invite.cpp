@@ -47,9 +47,6 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
   name prop_type = this->m_contract.get_fund_type(pitr->fund);
 
   asset payout_amount = pitr->quantity;
-  if (payout_amount.amount == 0) return;
-
-  utils::check_asset(payout_amount);
 
   this->m_contract.send_inline_action(
     permission_level(pitr->fund, "active"_n),
@@ -74,7 +71,7 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
   this->m_contract.send_inline_action(
     permission_level(contract_name, "active"_n),
     contracts::onboarding,
-    "createcmpdao"_n,
+    "createcampg"_n,
     std::make_tuple(
       contract_name,
       pitr->creator,
@@ -115,7 +112,7 @@ void ProposalCampaignInvite::status_eval_impl(std::map<std::string, VariantValue
 
   uint64_t max_age = std::get<uint64_t>(paitr->special_attributes.at("max_age"));
   asset current_payout = std::get<asset>(paitr->special_attributes.at("current_payout"));
-  asset payout_amount = pitr -> quantity;
+  asset payout_amount = pitr->quantity;
   uint64_t propcycle = std::get<uint64_t>(args["propcycle"]);
 
   name prop_type = this->m_contract.get_fund_type(pitr->fund);
@@ -131,11 +128,11 @@ void ProposalCampaignInvite::status_eval_impl(std::map<std::string, VariantValue
     }
   });
 
-  propaux_t.modify(paitr, contract_name, [&](auto & proposal_aux) {
-    if (age >= num_cycles) {
+  if (age >= max_age) {
+    propaux_t.modify(paitr, contract_name, [&](auto & proposal_aux) {
       proposal_aux.special_attributes.at("executed") = true;
-    }
-  });
+    });
+  }
 }
 
 void ProposalCampaignInvite::status_rejected_impl(std::map<std::string, VariantValue> & args) {
