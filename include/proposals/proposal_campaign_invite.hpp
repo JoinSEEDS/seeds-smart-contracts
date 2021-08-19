@@ -15,7 +15,6 @@ class ProposalCampaignInvite : public Proposal {
     void callback(std::map<std::string, VariantValue> & args) override;
 
     void create_impl(std::map<std::string, VariantValue> & args) override;
-    void update_impl(std::map<std::string, VariantValue> & args) override;
 
     void status_open_impl(std::map<std::string, VariantValue> & args) override;
     void status_eval_impl(std::map<std::string, VariantValue> & args) override;
