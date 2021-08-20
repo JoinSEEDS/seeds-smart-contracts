@@ -1053,7 +1053,16 @@ void proposals::create(
   name fund
 ) {
   require_auth(creator);
+
   std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  if (fund == bankaccts::alliances) {
+    perc = { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  } else if (fund == bankaccts::milestone) {
+    perc = { 100 };
+  } else {
+    perc = { 25, 25, 25, 25 };
+  }
 
   createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
 }
