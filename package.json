@@ -23,7 +23,7 @@
     "eosio-signing-request": "^2.2.1",
     "eosjs": "^21.0.3",
     "eosjs-ecc": "^4.0.7",
-    "handlebars": "^4.7.6",
+    "handlebars": "^4.7.7",
     "json": "^9.0.6",
     "mocha": "^6.1.4",
     "moment": "^2.24.0",
