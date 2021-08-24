@@ -183,7 +183,9 @@ const accountsMetadata = (network) => {
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
       pool: contract('pool.seeds', 'pool'),
-      dao: contract('dao.seeds', 'dao')
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
+
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -222,7 +224,8 @@ const accountsMetadata = (network) => {
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
       pool: contract('pool.seeds', 'pool'),
-      dao: contract('dao.seeds', 'dao')
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -269,7 +272,8 @@ const accountsMetadata = (network) => {
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
       pool: contract('pool.seeds', 'pool'),
-      dao: contract('dao.seeds', 'dao')
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
