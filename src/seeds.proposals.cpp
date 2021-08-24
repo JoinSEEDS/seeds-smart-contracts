@@ -1517,6 +1517,11 @@ void proposals::addvoice(name user, uint64_t amount) {
   voice_change(user, amount, false, ""_n);
 }
 
+void proposals::questvote (name user, uint64_t amount, bool reduce, name scope) {
+  require_auth(get_self());
+  voice_change(user, amount, reduce, scope);
+}
+
 double proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
   double percentage_used = 0.0;
 

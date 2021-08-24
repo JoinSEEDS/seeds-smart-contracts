@@ -182,10 +182,10 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests'),
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -223,6 +223,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests'),
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
@@ -271,6 +272,7 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests'),
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
@@ -647,6 +649,21 @@ var permissions = [{
 }, {
   target: `${accounts.service.account}@invite`,
   action: 'createinvite'
+},{
+  target: `${accounts.quests.account}@active`,
+  actor: `${accounts.quests.account}@eosio.code`
+}, {
+  // TODO REVIEW
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  // TODO REVIEW: Make more specific
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  // TODO REVIEW: Make more specific
+  target: `${accounts.accounts.account}@active`,
+  actor: `${accounts.quests.account}@active`
 }, {
   target: `${accounts.accounts.account}@execute`,
   action: 'rankorgreps'
@@ -881,4 +898,3 @@ module.exports = {
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
 }
-

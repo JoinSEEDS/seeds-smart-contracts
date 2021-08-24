@@ -330,6 +330,15 @@ void settings::reset() {
   confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
+  // quests
+  // =====================================
+  confwithdesc(name("prop.q.mjrty"), 90, "Majority quest proposals threshold", high_impact);
+  confwithdesc(name("qst.exp.appl"), 1209600, "Number of seconds to wait before the applicant can be expired", high_impact);
+  confwithdesc(name("qst.rep.appl"), 3, "Reputation for the quest maker once the owner has reated the applicant", high_impact);
+  confwithdesc(name("qst.rep.qst"), 3, "Reputation for the quest owner once the applicant has rated the quest", high_impact);
+  confwithdesc(name("quest.quorum"), 20, "Quorum required for the quest to be executed", high_impact);
+
+  // =====================================
   // gratitude 
   // =====================================
   confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
