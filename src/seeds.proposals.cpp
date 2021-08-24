@@ -1,5 +1,6 @@
 #include <seeds.proposals.hpp>
 #include <eosio/system.hpp>
+#include <math.h>
 
 void proposals::reset() {
   require_auth(_self);
@@ -17,15 +18,24 @@ void proposals::reset() {
     pitr = props.erase(pitr);
   }
 
-  auto voiceitr = voice.begin();
-  while (voiceitr != voice.end()) {
-    voiceitr = voice.erase(voiceitr);
-  }
+  for (auto & s : scopes) {
+    voice_tables voice_t(get_self(), s.value);
+    auto vitr = voice_t.begin();
+    while (vitr != voice_t.end()) {
+      vitr = voice_t.erase(vitr);
+    }
 
-  voice_tables voice_alliance(get_self(), alliance_type.value);
-  auto vaitr = voice_alliance.begin();
-  while (vaitr != voice_alliance.end()) {
-    vaitr = voice_alliance.erase(vaitr);
+    delegate_trust_tables deltrusts(get_self(), s.value);
+    auto ditr = deltrusts.begin();
+    while (ditr != deltrusts.end()) {
+      ditr = deltrusts.erase(ditr);
+    }
+
+    support_level_tables support(get_self(), s.value);
+    auto sitr = support.begin();
+    while (sitr != support.end()) {
+      sitr = support.erase(sitr);
+    }
   }
 
   auto paitr = participants.begin();
@@ -47,15 +57,6 @@ void proposals::reset() {
   auto sitr = sizes.begin();
   while (sitr != sizes.end()) {
     sitr = sizes.erase(sitr);
-  }
-
-  name scopes[] = { get_self(), alliance_type };
-  for (int i = 0; i < 2; i++) {
-    delegate_trust_tables deltrusts(get_self(), (scopes[i]).value);
-    auto ditr = deltrusts.begin();
-    while (ditr != deltrusts.end()) {
-      ditr = deltrusts.erase(ditr);
-    }
   }
 
   auto citr = cyclestats.begin();
@@ -249,6 +250,53 @@ void proposals::calcvotepow() {
 
 }
 
+void proposals::set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type) {
+  
+  uint64_t votes_needed = calc_voice_needed(votes_cast, num_proposals);
+
+  support_level_tables support(get_self(), type.value);
+  auto sitr = support.find(cycle);
+
+  if (sitr != support.end()) {
+    support.modify(sitr, _self, [&](auto & item){
+      item.num_proposals = num_proposals;
+      item.total_voice_cast = votes_cast;
+      item.voice_needed = votes_needed;
+    });
+  } else {
+    support.emplace(_self, [&](auto & item){
+      item.propcycle = cycle;
+      item.num_proposals = num_proposals;
+      item.total_voice_cast = votes_cast;
+      item.voice_needed = calc_voice_needed(votes_cast, num_proposals);
+    });
+  }
+}
+
+void proposals::add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type) {
+  support_level_tables support(get_self(), type.value);
+  auto sitr = support.find(cycle);
+  check(sitr != support.end(), "cycle not found "+std::to_string(cycle));
+  support.modify(sitr, _self, [&](auto & item){
+    uint64_t total_voice = item.total_voice_cast + voice_cast;
+    item.total_voice_cast = total_voice;
+    item.voice_needed = calc_voice_needed(total_voice, item.num_proposals);
+  });
+}
+
+uint64_t proposals::calc_voice_needed(uint64_t total_voice, uint64_t num_proposals) {
+  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
+}
+
+void proposals::add_num_prop(uint64_t cycle, uint64_t num_prop, name type) {
+  support_level_tables support(get_self(), type.value);
+  auto sitr = support.find(cycle);
+  check(sitr != support.end(), "cycle not found "+std::to_string(cycle));
+  support.modify(sitr, _self, [&](auto & item){
+    item.num_proposals += num_prop;
+  });
+}
+
 uint64_t proposals::active_cutoff_date() {
   uint64_t now = current_time_point().sec_since_epoch();
   uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
@@ -261,237 +309,426 @@ bool proposals::is_active(name account, uint64_t cutoff_date) {
   return aitr != actives.end() && aitr->timestamp > cutoff_date;
 }
 
-void proposals::onperiod() {
-    require_auth(_self);
+void proposals::send_create_invite (
+  name origin_account, 
+  name owner, 
+  asset max_amount_per_invite, 
+  asset planted, 
+  name reward_owner, 
+  asset reward, 
+  asset total_amount,
+  uint64_t proposal_id
+) {
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "createcampg"_n,
+    std::make_tuple(origin_account, owner, max_amount_per_invite, planted, reward_owner, reward, total_amount, proposal_id)
+  ).send();
+}
 
-    auto props_by_status = props.get_index<"bystatus"_n>();
+void proposals::send_return_funds_campaign (uint64_t campaign_id) {
+  action(
+    permission_level(get_self(), "active"_n),
+    contracts::onboarding,
+    "returnfunds"_n,
+    std::make_tuple(campaign_id)
+  ).send();
+}
 
-    uint64_t prop_majority = config_get(name("propmajority"));
+void proposals::send_cancel_lock (name fromfund, uint64_t campaign_id, asset quantity) {
+  action(
+    permission_level(fromfund, "active"_n),
+    contracts::escrow,
+    "cancellock"_n,
+    std::make_tuple(campaign_id)
+  ).send();
 
-    uint64_t number_active_proposals = get_size(prop_active_size);
-    uint64_t total_eligible_voters = get_size(user_active_size);
-    check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
-    
-    uint64_t quorum =  get_quorum(number_active_proposals);
+  action(
+    permission_level(fromfund, "active"_n),
+    contracts::escrow,
+    "withdraw"_n,
+    std::make_tuple(fromfund, quantity)
+  ).send();
+}
 
-    cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-    uint64_t current_cycle = c.propcycle;
+void proposals::update_cycle_stats_from_proposal (uint64_t proposal_id, name type, name array) {
+  cycle_table c = cycle.get();
 
-    std::vector<uint64_t> active_props;
-    std::vector<uint64_t> eval_props;
+  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
 
-    // TODO this is not working at the moment, use old way... FIX after this cycle.
+  auto citr = cyclestats.find(c.propcycle);
 
-    // find smallesd prop id that's in open or eval stage
-    // this way we skip all proposals that are definitely already passed or rejected
-    // auto pps_itr = props_by_status.begin();
-    // uint64_t smallest_prop_id = 0;
-    // while (pps_itr != props_by_status.end() && 
-    //   (pps_itr -> status == status_open || pps_itr -> status == status_evaluate) ) {
-    //   smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
-    //   pps_itr++;
-    // }
+  cyclestats.modify(citr, _self, [&](auto & item){
+    if (array == stage_active) {
+      item.active_props.push_back(proposal_id);
+    } else if (array == status_evaluate) {
+      item.eval_props.push_back(proposal_id);
+    }
+  });
 
-    // print("smallest id: "+std::to_string(smallest_prop_id));
-      
-    // auto pitr = props.find(smallest_prop_id);
+  if (array == stage_active) {
+    add_num_prop(c.propcycle, 1, type);
+  } 
 
-    auto pitr = props.begin();
-    
-    while (pitr != props.end()) {
-      uint64_t prop_id = pitr -> id;
+}
 
-      // active proposals are evaluated
-      if (pitr->stage == stage_active) {
+void proposals::send_punish (name account) {
+  action(
+    permission_level(contracts::accounts, "active"_n),
+    contracts::accounts,
+    "punish"_n,
+    std::make_tuple(account, config_get("prop.evl.psh"_n))
+  ).send();
+}
 
-        votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
+bool proposals::check_prop_majority (uint64_t favour, uint64_t against) {
+  uint64_t prop_majority = config_get(name("propmajority"));
+  double majority = double(prop_majority) / 100.0;
+  double fav = double(favour);
+  return favour > 0 && fav >= double(favour + against) * majority;
+}
 
-        double majority = double(prop_majority) / 100.0;
-        double fav = double(pitr->favour);
-        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        name prop_type = get_type(pitr->fund);
-        bool is_alliance_type = prop_type == alliance_type;
-        bool is_campaign_type = prop_type == campaign_type;
+ACTION proposals::checkprop (uint64_t proposal_id, string message) {
+  auto pitr = props.get(proposal_id, "propsal not found");
+  string msg = message.length() > 0 ? message : "proposal is not passing";
+  check(check_prop_majority(pitr.favour, pitr.against), msg);
+}
 
-        bool valid_quorum = false;
+ACTION proposals::doneprop (uint64_t proposal_id) {
+  require_auth(get_self());
+  
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
 
-        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
-          valid_quorum = true;
-        } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
-        }
+  props.modify(pitr, _self, [&](auto & item){
+    item.executed = true;
+    item.status = status_passed;
+    item.stage = stage_done;
+  });
+}
 
-        if (passed && valid_quorum) {
+void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
+  require_auth(get_self());
 
-          if (pitr -> status == status_open) {
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
 
-            refund_staked(pitr->creator, pitr->staked);
-            change_rep(pitr->creator, true);
+  uint64_t number_active_proposals = 0;
+  uint64_t quorum_votes_needed = 0;
 
-            asset payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-            
-            if (is_alliance_type) {
-              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-            } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
-            }
+  name prop_type = get_type(pitr->fund);
 
-            // TODO: if we allow num_cycles == 1, this needs to go into passed instead of evaluate.
-            // uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
+  support_level_tables support(get_self(), prop_type.value);
+  auto citr = support.find(prop_cycle);
 
-            props.modify(pitr, _self, [&](auto & proposal){
-              proposal.passed_cycle = current_cycle;
-              proposal.age = 0;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = status_evaluate;
-              proposal.current_payout += payout_amount;
-            });
+  if (citr !=  support.end()) {
+    number_active_proposals = citr->num_proposals;
+    quorum_votes_needed = citr->voice_needed;
+  } else {
+    number_active_proposals = get_size(prop_active_size);
+  }
 
-            eval_props.push_back(prop_id);
+  // active proposals are evaluated
+  if (pitr->stage == stage_active) {
 
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
+    bool is_alliance_type = prop_type == alliance_type;
+    bool is_campaign_type = prop_type == campaign_type;
+    bool is_milestone_type = prop_type == milestone_type;
+
+    bool valid_quorum = false;
+
+    if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+      valid_quorum = true;
+    } else { // in open status, quorum is calculated
+      uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+      valid_quorum = votes_in_favor >= quorum_votes_needed;
+    }
+
+    if (passed && valid_quorum) {
+
+      if (pitr -> status == status_open) {
+
+        refund_staked(pitr->creator, pitr->staked);
+        change_rep(pitr->creator, true);
+
+        asset payout_amount;
+
+        if (is_alliance_type) { 
+          payout_amount = pitr->quantity;
+          send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+        } else if (is_milestone_type) {
+          payout_amount = pitr->quantity;
+          withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+        } else if (is_campaign_type) {
+          payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+          if (pitr->campaign_type == campaign_invite_type) {
+            withdraw(get_self(), payout_amount, pitr->fund, "invites");
+            withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+            send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
           } else {
-            
-            uint64_t age = pitr -> age + 1;
-
-            asset payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
-
-            if (is_alliance_type) {
-              send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-            } else {
-              withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
-            }
-
-            uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
-
-            props.modify(pitr, _self, [&](auto & proposal){
-              proposal.age = age;
-              if (age == num_cycles) {
-                proposal.executed = true;
-                proposal.status = status_passed;
-                proposal.stage = stage_done;
-              } else {
-                eval_props.push_back(prop_id);
-              }
-              proposal.current_payout += payout_amount;
-            });
+            withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
           }
-
-        } else {
-          if (pitr->status != status_evaluate) {
-            burn(pitr->staked);
-          }
-
-          props.modify(pitr, _self, [&](auto& proposal) {
-              if (pitr->status != status_evaluate) {
-                proposal.passed_cycle = current_cycle;
-              }
-              proposal.executed = false;
-              proposal.staked = asset(0, seeds_symbol);
-              proposal.status = status_rejected;
-              proposal.stage = stage_done;
-          });
         }
 
-        size_change(prop_active_size, -1);
-      
-      }
-      
-      // staged proposals become active if there's enough stake
-      if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
-        props.modify(pitr, _self, [&](auto& proposal) {
-          proposal.stage = stage_active;
+        bool is_done = pitr->pay_percentages.size() <= 1;
+
+        // This code needs some clarity - it's way too confusing.
+
+        props.modify(pitr, _self, [&](auto & proposal){
+          proposal.passed_cycle = prop_cycle;
+          proposal.age = 0; 
+          proposal.staked = asset(0, seeds_symbol);
+          if (is_done && !is_alliance_type) { // alliance types remain in eval... 
+            proposal.executed = true;
+            proposal.status = status_passed;
+            proposal.stage = stage_done;
+          } else {
+            proposal.status = status_evaluate;
+            update_cycle_stats_from_proposal(pitr->id, prop_type, status_evaluate);
+          }
+          proposal.current_payout += payout_amount;
         });
-        size_change(prop_active_size, 1);
-        active_props.push_back(prop_id);
+
+      } else {
+        
+        uint64_t age = pitr -> age + 1;
+
+        asset payout_amount;
+
+        if (is_campaign_type) {
+          payout_amount = get_payout_amount(pitr->pay_percentages, age, pitr->quantity, pitr->current_payout);
+          withdraw(pitr->recipient, payout_amount, pitr->fund, "");// TODO limit by amount available
+        } else {
+          payout_amount = asset(0, utils::seeds_symbol);
+        }
+
+        uint64_t num_cycles = pitr -> pay_percentages.size() - 1;
+
+        props.modify(pitr, _self, [&](auto & proposal){
+          proposal.age = age;
+          if (age >= num_cycles && !is_alliance_type) {
+            proposal.executed = true;
+            proposal.status = status_passed;
+            proposal.stage = stage_done;
+          } else {
+            update_cycle_stats_from_proposal(pitr->id, prop_type, status_evaluate);
+          }
+          proposal.current_payout += payout_amount;
+        });
       }
 
-      pitr++;
-    } 
+    } else {
+      if (pitr->status != status_evaluate) {
+        burn(pitr->staked);
+      } else {
+        send_punish(pitr->creator);
 
-    update_cycle();
-    update_cycle_stats(active_props, eval_props);
-    updatevoices();
+        if (pitr->campaign_type == campaign_invite_type) {
+          send_return_funds_campaign(pitr->campaign_id);
+        }
+
+        if (is_alliance_type) {
+          send_cancel_lock(pitr->fund, pitr->campaign_id, pitr->quantity);
+        }
+      }
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+          if (pitr->status != status_evaluate) {
+            proposal.passed_cycle = prop_cycle;
+          }
+          proposal.executed = false;
+          proposal.staked = asset(0, seeds_symbol);
+          proposal.status = status_rejected;
+          proposal.stage = stage_done;
+      });
+    }
+
+    size_change(prop_active_size, -1);
+  
+  } else if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
+    // staged proposals become active if there's enough stake
+    props.modify(pitr, _self, [&](auto& proposal) {
+      proposal.stage = stage_active;
+    });
+    size_change(prop_active_size, 1);
+    update_cycle_stats_from_proposal(pitr->id, prop_type, stage_active);
+  }
+
+}
+
+void proposals::send_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "evalproposal"_n,
+    std::make_tuple(proposal_id, prop_cycle)
+  );
+  // trx.delay_sec = 1;
+  trx.send(proposal_id, _self);
+}
+
+void proposals::send_update_voices () {
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "updatevoice"_n,
+    std::make_tuple(uint64_t(0))
+  );
+  // trx.delay_sec = 1;
+  trx.send(eosio::current_time_point().sec_since_epoch() + contracts::proposals.value, _self);
+}
+
+void proposals::onperiod() {
+  require_auth(get_self());
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+
+  auto citr = cyclestats.find(c.propcycle);
+  if (citr != cyclestats.end()) {
+    cyclestats.modify(citr, _self, [&](auto & item){
+      item.total_eligible_voters = get_size(user_active_size);
+    });
+  }
+
+  uint64_t number_active_proposals = get_size(prop_active_size);
+
+  auto props_by_stage = props.get_index<"bystage"_n>();
+
+  auto spitr = props_by_stage.find(stage_staged.value);
+  while (spitr != props_by_stage.end() && spitr->stage == stage_staged) {
+    send_eval_prop(spitr->id, c.propcycle);
+    spitr++;
+  }
+
+  auto apitr = props_by_stage.find(stage_active.value);
+  while (apitr != props_by_stage.end() && apitr->stage == stage_active) {
+    send_eval_prop(apitr->id, c.propcycle);
+    apitr++;
+  }
+
+  update_cycle();
+  init_cycle_new_stats();
+  send_update_voices();
+  
+  transaction trx_erase_participants{};
+  trx_erase_participants.actions.emplace_back(
+    permission_level(_self, "active"_n),
+    _self,
+    "erasepartpts"_n,
+    std::make_tuple(number_active_proposals)
+  );
+  // trx_erase_participants.delay_sec = 5;
+  trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
+}
+
+void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
+  require_auth(get_self());
+
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
+
+  uint64_t number_active_proposals = 0;
+  uint64_t quorum_votes_needed = 0;
+  
+  support_level_tables support(get_self(), get_type(pitr->fund).value);
+  auto citr = support.find(prop_cycle);
+
+  if (citr !=  support.end()) {
+    number_active_proposals = citr->num_proposals;
+    quorum_votes_needed = citr->voice_needed;
+  } else {
+    number_active_proposals = get_size(prop_active_size);
+  }
+  
+  // active proposals are evaluated
+  if (pitr->stage == stage_active) {
+
+    // votes_tables votes(get_self(), pitr->id);
+    // uint64_t voters_number = distance(votes.begin(), votes.end());
+
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
+    name prop_type = get_type(pitr->fund);
+    bool is_alliance_type = prop_type == alliance_type;
+    bool is_campaign_type = prop_type == campaign_type;
+
+    bool valid_quorum = false;
+
+    if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
+      valid_quorum = true;
+    } else { // in open status, quorum is calculated
+      uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+      valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+      print(
+        " prop ID " + std::to_string(pitr->id) +
+        " vp favor " + std::to_string(votes_in_favor) +
+        " needed: " + std::to_string(quorum_votes_needed) +
+        " valid: " + ( valid_quorum ? "YES " : "NO ") 
+      );
+    }
+
+    if (passed && valid_quorum) {
+
+      if (pitr -> status == status_open) {
+        print("PROPOSAL: ", pitr->id, ", PASSED, status: from ", pitr->status, " -> to ", status_evaluate, "\n");
+      } else {
+        print("PROPOSAL: ", pitr->id, ", PASSED, status: ", pitr->status, "\n");
+      }
+
+    } else {
+      print("PROPOSAL: ", pitr->id, ", FAILED, status: from ", pitr->status, " -> to ", status_rejected, "\n");
+    }
     
-    transaction trx_erase_participants{};
-    trx_erase_participants.actions.emplace_back(
-      permission_level(_self, "active"_n),
-      _self,
-      "erasepartpts"_n,
-      std::make_tuple(number_active_proposals)
-    );
-    // I don't know how long delay I should use
-    // trx_erase_participants.delay_sec = 5;
-    trx_erase_participants.send(eosio::current_time_point().sec_since_epoch(), _self);
+  } else if (pitr->stage == stage_staged && is_enough_stake(pitr->staked, pitr->quantity, pitr->fund) ) {
+    print("PROPOSAL: ", pitr->id, ", BECAME ACTIVE\n");
+  }
+
+}
+
+void proposals::send_test_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
+  transaction trx{};
+  trx.actions.emplace_back(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "testevalprop"_n,
+    std::make_tuple(proposal_id, prop_cycle)
+  );
+  // trx.delay_sec = 1;
+  trx.send(proposal_id, _self);
 }
 
 void proposals::testperiod() {
-    require_auth(_self);
+  require_auth(get_self());
 
-    auto props_by_status = props.get_index<"bystatus"_n>();
-    uint64_t prop_majority = config_get(name("propmajority"));
-    uint64_t number_active_proposals = get_size(prop_active_size);
-    uint64_t total_eligible_voters = get_size(user_active_size);
-    check(total_eligible_voters > 0, "no eligible voters - likely an error; can't run proposals.");
-    
-    uint64_t quorum =  get_quorum(number_active_proposals);
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
 
-    std::vector<uint64_t> active_props;
-    std::vector<uint64_t> eval_props;
+  auto citr = cyclestats.find(c.propcycle);
+  if (citr != cyclestats.end()) {
+    // This will modify cycle stats, but it's ok as this is true information and it doesn't affect the real onperiod method
+    cyclestats.modify(citr, _self, [&](auto & item){
+      item.total_eligible_voters = get_size(user_active_size);
+    });
+  }
 
-    // TODO this is not working at the moment, use old way... FIX after this cycle.
+  auto props_by_stage = props.get_index<"bystage"_n>();
 
-    // find smallesd prop id that's in open or eval stage
-    // this way we skip all proposals that are definitely already passed or rejected
-    // auto pps_itr = props_by_status.begin();
-    // uint64_t smallest_prop_id = 0;
-    // while (pps_itr != props_by_status.end() && 
-    //   (pps_itr -> status == status_open || pps_itr -> status == status_evaluate) ) {
-    //   smallest_prop_id  = std::min(smallest_prop_id, pps_itr -> id);
-    //   pps_itr++;
-    // }
+  auto spitr = props_by_stage.find(stage_staged.value);
+  while (spitr != props_by_stage.end() && spitr->stage == stage_staged) {
+    send_test_eval_prop(spitr->id, c.propcycle);
+    spitr++;
+  }
 
-    // print("smallest id: "+std::to_string(smallest_prop_id) );
-      
-    // auto pitr = props.find(smallest_prop_id);
-    auto pitr = props.find(50);
-
-    while (pitr != props.end()) {
-      uint64_t prop_id = pitr -> id;
-
-      print(" checking id: "+std::to_string(prop_id));
-
-      // active proposals are evaluated
-      if (pitr->stage == stage_active) {
-
-        votes_tables votes(get_self(), pitr->id);
-        uint64_t voters_number = distance(votes.begin(), votes.end());
-        
-        print(" voters: "+std::to_string(voters_number));
-
-        double majority = double(prop_majority) / 100.0;
-        double fav = double(pitr->favour);
-        bool passed = pitr->favour > 0 && fav >= double(pitr->favour + pitr->against) * majority;
-        bool valid_quorum = false;
-
-        if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
-          valid_quorum = true;
-        } else { // in open status, quorum is calculated
-          valid_quorum = utils::is_valid_quorum(voters_number, quorum, total_eligible_voters);
-        }
-
-        if (passed && valid_quorum) {
-          
-          print(" passed ");
-
-        } else {
-            print(" failed ");
-        }
-      
-      }
-      pitr++;
-    } 
+  auto apitr = props_by_stage.find(stage_active.value);
+  while (apitr != props_by_stage.end() && apitr->stage == stage_active) {
+    send_test_eval_prop(apitr->id, c.propcycle);
+    apitr++;
+  }
 }
+
 void proposals::updatevoices() {
   require_auth(get_self());
   updatevoice((uint64_t)0);
@@ -506,7 +743,6 @@ void proposals::updatevoice(uint64_t start) {
   uint64_t cutoff_date = active_cutoff_date();
 
   cs_points_tables cspoints(contracts::harvest, contracts::harvest.value);
-  voice_tables voice_alliance(get_self(), alliance_type.value);
 
   auto vitr = start == 0 ? voice.begin() : voice.find(start);
 
@@ -591,6 +827,7 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
 
   voice_tables voice_alliance(get_self(), alliance_type.value);
+  voice_tables voice_milestone(get_self(), milestone_type.value);
 
   uint64_t percentage_decay = config_get(name("vdecayprntge"));
   check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
@@ -600,7 +837,8 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   double multiplier = (100.0 - (double)percentage_decay) / 100.0;
 
   while (vitr != voice.end() && count < chunksize) {
-    auto vaitr = voice_alliance.find(vitr -> account.value);
+    auto vaitr = voice_alliance.find(vitr->account.value);
+    auto hvitr = voice_milestone.find(vitr->account.value);
 
     voice.modify(vitr, _self, [&](auto & v){
       v.balance *= multiplier;
@@ -612,6 +850,11 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
       });
     }
 
+    if (hvitr != voice_milestone.end()) {
+      voice_milestone.modify(hvitr, _self, [&](auto & hv){
+        hv.balance *= multiplier;
+      });
+    }
     vitr++;
     count++;
   }
@@ -632,43 +875,6 @@ void proposals::decayvoice(uint64_t start, uint64_t chunksize) {
   }
 }
 
-void proposals::migratevoice(uint64_t start) {
-  require_auth(get_self());
-
-  auto vitr = start == 0 ? voice.begin() : voice.find(start);
-  uint64_t chunksize = 200;
-  uint64_t count = 0;
-
-  voice_tables voice_alliance(get_self(), alliance_type.value);
-
-  while (vitr != voice.end() && count < chunksize) {
-    auto vaitr = voice_alliance.find(vitr -> account.value);
-    if (vaitr == voice_alliance.end()) {
-      voice_alliance.emplace(_self, [&](auto & voice){
-        voice.account = vitr -> account;
-        voice.balance = vitr -> balance;
-      });
-    }
-    vitr++;
-    count++;
-  }
-
-  if (vitr != voice.end()) {
-    uint64_t next_value = vitr -> account.value;
-    action next_execution(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "migratevoice"_n,
-        std::make_tuple(next_value)
-    );
-
-    transaction tx;
-    tx.actions.emplace_back(next_execution);
-    tx.delay_sec = 1;
-    tx.send(next_value, _self);
-  }
-}
-
 void proposals::update_cycle() {
     cycle_table c = cycle.get_or_create(get_self(), cycle_table());
     c.propcycle += 1;
@@ -676,78 +882,76 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
-void proposals::update_cycle_stats (std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props) {
+void proposals::init_cycle_new_stats () {
   cycle_table c = cycle.get();
-
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
-  uint64_t num_proposals = active_props.size();
 
   cyclestats.emplace(_self, [&](auto & item){
     item.propcycle = c.propcycle;
     item.start_time = c.t_onperiod;
     item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
-    item.num_proposals = num_proposals;
+    // item.num_proposals = 0;
     item.num_votes = 0;
     item.total_voice_cast = 0;
     item.total_favour = 0;
     item.total_against = 0;
     item.total_citizens = get_size("voice.sz"_n);
-    item.quorum_vote_base = quorum_vote_base;
-    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
+    // item.quorum_vote_base = 0;
+    // item.quorum_votes_needed = 0;;
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
-    item.active_props.assign(active_props.begin(), active_props.end());
-    item.eval_props.assign(eval_props.begin(), eval_props.end());
+    item.total_eligible_voters = 0;
   });
 
+  set_support_level(c.propcycle, 0, 0, alliance_type);
+  
+  set_support_level(c.propcycle, 0, 0, campaign_type);
+
+  set_support_level(c.propcycle, 0, 0, milestone_type);
+
 }
 
-void proposals::create(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
-  string summary, 
-  string description, 
-  string image, 
-  string url, 
-  name fund
-) {
-  require_auth(creator);
-  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
-
-  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc );
-}
-
-void proposals::createx(
-  name creator, 
-  name recipient, 
-  asset quantity, 
-  string title, 
+void proposals::create_aux (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
   string summary, 
   string description, 
   string image, 
   string url, 
   name fund,
-  std::vector<uint64_t> pay_percentages
-) {
-  
+  name campaign_type,
+  std::vector<uint64_t> pay_percentages,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
+) {  
+
   require_auth(creator);
 
-  check_user(creator);
+  // For the time being, organizations are allowed to create alliance type proposals
+  check_resident(creator, campaign_type == alliance_type );
   
-  check_percentages(pay_percentages);
+  check_values(title, summary, description, image, url);
+
+  if (campaign_type != campaign_invite_type) {
+    if (campaign_type == alliance_type || campaign_type == milestone_type) {
+      pay_percentages = { 100 };
+    } else {
+      check_percentages(pay_percentages);
+    }
+  }
 
   check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
 
   if (fund == bankaccts::milestone) { // Milestone Seeds
-    check(recipient == bankaccts::hyphabank, "Hypha proposals must go to " + bankaccts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
+    check(recipient == bankaccts::hyphabank, "Hypha milestone proposals must go to " + bankaccts::hyphabank.to_string() + " - wrong recepient: " + recipient.to_string());
   } else {
     check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
     check(is_account(fund), "fund is not a valid account: " + fund.to_string());
   }
-  utils::check_asset(quantity);
 
+  utils::check_asset(quantity);
 
   uint64_t lastId = 0;
   if (props.begin() != props.end()) {
@@ -781,6 +985,11 @@ void proposals::createx(
       proposal.passed_cycle = 0;
       proposal.age = 0;
       proposal.current_payout = asset(0, seeds_symbol);
+      proposal.campaign_type = campaign_type;
+      proposal.max_amount_per_invite = max_amount_per_invite;
+      proposal.planted = planted;
+      proposal.reward = reward;
+      proposal.campaign_id = 0;
   });
 
   auto litr = lastprops.find(creator.value);
@@ -796,6 +1005,96 @@ void proposals::createx(
     });
   }
   update_min_stake(propKey);
+}
+
+void proposals::createinvite (
+  name creator,
+  name recipient,
+  asset quantity,
+  string title,
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  asset max_amount_per_invite,
+  asset planted,
+  asset reward
+) {
+
+  require_auth(creator);
+
+  check(fund == bankaccts::campaigns, "the bank must be " + bankaccts::campaigns.to_string() + " for invite campaign proposals");
+
+  utils::check_asset(max_amount_per_invite);
+  utils::check_asset(planted);
+  utils::check_asset(reward);
+
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(planted.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted));
+
+  uint64_t max_reward = config_get("inv.max.rwrd"_n);
+  check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
+  
+  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0, 0};
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
+
+}
+
+void proposals::create(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund
+) {
+  require_auth(creator);
+
+  std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  if (fund == bankaccts::alliances) {
+    perc = { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  } else if (fund == bankaccts::milestone) {
+    perc = { 100 };
+  } else {
+    perc = { 25, 25, 25, 25 };
+  }
+
+  createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
+}
+
+void proposals::createx(
+  name creator, 
+  name recipient, 
+  asset quantity, 
+  string title, 
+  string summary, 
+  string description, 
+  string image, 
+  string url, 
+  name fund,
+  std::vector<uint64_t> pay_percentages
+) {
+  
+  require_auth(creator);
+  asset cero_value = asset(0, utils::seeds_symbol);
+
+  name type;
+
+  if (fund == bankaccts::alliances) {
+    type = alliance_type;
+  } else if (fund == bankaccts::milestone) {
+    type = milestone_type;
+  } else {
+    type = campaign_funding_type;
+  }
+
+  create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, type, pay_percentages, cero_value, cero_value, cero_value);
+
 }
 
 void proposals::update(uint64_t id, string title, string summary, string description, string image, string url) {
@@ -819,13 +1118,89 @@ void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
   check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
 }
 
+void proposals::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "prop not found");
+
+  // make backup - only the first time
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.find(id);
+  if (bitr == bprops.end()) {
+    bprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = pitr->description;
+    });
+  } 
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+
+  auto fix_itr = fixprops.find(id);
+
+  if (fix_itr == fixprops.end()) {
+    fixprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = description;
+    });
+  } else {
+    fixprops.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void proposals::applyfixprop() {
+  require_auth(get_self());
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+  auto fitr = fixprops.begin();
+  while(fitr != fixprops.end()) {
+    print(" processing "+std::to_string(fitr->prop_id));
+    auto pitr = props.find(fitr->prop_id);
+    if (pitr != props.end()) {
+      print(" replace id "+std::to_string(fitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void proposals::backfixprop() {
+  require_auth(get_self());
+
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.begin();
+  while(bitr != bprops.end()) {
+    print(" b processing "+std::to_string(bitr->prop_id));
+    auto pitr = props.find(bitr->prop_id);
+    if (pitr != props.end()) {
+      print(" restore id "+std::to_string(bitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}
+
 void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
   auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
+  
+  check_values(title, summary, description, image, url);
+
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
+  
+  if (pitr->campaign_type == campaign_invite_type) {
+    pay_percentages = { 100, 0, 0, 0, 0, 0 };
+  }
 
   check_percentages(pay_percentages);
 
@@ -859,6 +1234,9 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
       utils::check_asset(quantity);
       //check_user(from);
+
+      if (from == contracts::onboarding) { return; }
+      if (from == bankaccts::campaigns) { return; }
 
       uint64_t id = 0;
 
@@ -920,30 +1298,6 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-bool proposals::revert_vote (name voter, uint64_t id) {
-  auto pitr = props.find(id);
-  
-  check(pitr != props.end(), "Proposal not found");
-
-  votes_tables votes(get_self(), id);
-  auto voteitr = votes.find(voter.value);
-
-  if (voteitr != votes.end()) {
-    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
-    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-      proposal.total -= voteitr->amount;
-      proposal.favour -= voteitr->amount;
-    });
-
-    votes.erase(voteitr);
-    return true;
-  }
-
-  return false;
-}
-
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
@@ -976,13 +1330,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     });
   }
 
-  name scope;
-  name fund_type = get_type(pitr -> fund);
-  if (fund_type == alliance_type) {
-    scope = alliance_type;
-  } else {
-    scope = get_self();
-  }
+  name scope = get_scope(pitr -> fund);
 
   double percenetage_used = voice_change(voter, amount, true, scope);
   
@@ -1048,8 +1396,21 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
-  increase_voice_cast(voter, amount, option);
+  increase_voice_cast(amount, option, get_type(pitr -> fund));
 
+}
+
+name proposals::get_scope(name fund) {
+  name scope;
+  name fund_type = get_type(fund);
+
+  if (fund_type == campaign_type) {
+    scope = get_self();
+  } else {
+    scope = fund_type;
+  }
+
+  return scope;
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -1059,8 +1420,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
-  bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
+  vote_aux(voter, id, amount, distrust, true, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
@@ -1068,12 +1428,87 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
+void proposals::revertvote(name voter, uint64_t id) {
+  require_auth(voter);
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  check(voteitr != votes.end(), "Voter has not voted on this proposal, can't revert");
+
+  uint64_t amount = voteitr->amount;
+
+  check(voteitr->favour == true && amount > 0, "Only trust votes can be changed");
+
+  votes.modify(voteitr, _self, [&](auto& item) {
+    item.favour = false;
+  });
+
+  props.modify(pitr, _self, [&](auto& proposal) {
+    proposal.against += amount;
+    proposal.favour -= amount;
+  });
+
+  name scope = get_scope(pitr -> fund);
+  if (has_delegates(voter, scope)) {
+
+    action(
+      permission_level{get_self(), "active"_n},
+      get_self(), 
+      "mimicrevert"_n,
+      std::make_tuple(voter, (uint64_t)0, scope, id, (uint64_t)30)
+    ).send();
+
+  }
+
+}
+
+bool proposals::has_delegates(name voter, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto ditr = deltrusts_by_delegatee.find(voter.value);
+  return ditr != deltrusts_by_delegatee.end();
+}
+
+void proposals::revertvote_delegate(name voter, uint64_t id) {
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    uint64_t amount = voteitr->amount;
+
+    if (voteitr->favour == true && amount > 0) {
+      votes.modify(voteitr, _self, [&](auto& item) {
+        item.favour = false;
+       });
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+        proposal.against += amount;
+        proposal.favour -= amount;
+      });
+    }
+  }
+}
+
+
 void proposals::voteonbehalf(name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(get_self());
   bool is_new = true;
-  if (option == distrust) {
-    is_new = !(revert_vote(voter, id));
-  }
+  // if (option == distrust) {
+  //   is_new = !(revert_vote(voter, id));
+  // TODO not sure I think revert vote needs to somehow work for delegated votes too
+  // }
   vote_aux(voter, id, amount, option, is_new, true);
 }
 
@@ -1091,54 +1526,51 @@ double proposals::voice_change (name user, uint64_t amount, bool reduce, name sc
   double percentage_used = 0.0;
 
   if (scope == ""_n) {
-    voice_tables voice_alliance(get_self(), alliance_type.value);
 
-    auto vitr = voice.find(user.value);
-    auto vaitr = voice_alliance.find(user.value);
+    bool increase_size = true;
 
-    if (vitr == voice.end() && vaitr == voice_alliance.end()) {
-      check(!reduce, "user can not have negative voice balance");
-      voice.emplace(_self, [&](auto & voice) {
-        voice.account = user;
-        voice.balance = amount;
-      });
-      size_change("voice.sz"_n, 1);
-      voice_alliance.emplace(_self, [&](auto & voice){
-        voice.account = user;
-        voice.balance = amount;
-      });
-    } else if (vitr != voice.end() && vaitr != voice_alliance.end()) {
-      if (reduce) {
-        check(amount <= vitr -> balance && amount <= vaitr -> balance, "voice balance exceeded");
-        percentage_used = amount / double(vitr -> balance);
+    for (auto & s : scopes) {
+      voice_tables voice_t(get_self(), s.value);
+      auto vitr = voice_t.find(user.value);
+
+      if (vitr == voice_t.end()) {
+        check(!reduce, "user can not have negative voice balance");
+        voice_t.emplace(_self, [&](auto & voice){
+          voice.account = user;
+          voice.balance = amount;
+        });
       }
-      voice.modify(vitr, _self, [&](auto& voice) {
+      else {
         if (reduce) {
-          voice.balance -= amount;
-        } else {
-          voice.balance += amount;
+          check(amount <= vitr->balance, s.to_string() + " voice balance exceeded");
         }
-      });
-      voice_alliance.modify(vaitr, _self, [&](auto & voice){
-        if (reduce) {
-          voice.balance -= amount;
-        } else {
-          voice.balance += amount;
-        }
-      });
+
+        increase_size = false;
+
+        voice_t.modify(vitr, _self, [&](auto & voice){
+          if (reduce) {
+            voice.balance -= amount;
+          } else {
+            voice.balance += amount;
+          }
+        });
+      }
     }
-  } else {
-    check_voice_scope(scope);
-    
-    voice_tables voices(get_self(), scope.value);
-    auto vitr = voices.find(user.value);
-    check(vitr != voices.end(), "user does not have voice");
+
+    if (increase_size) {
+      size_change("voice.sz"_n, 1);
+    }
+
+  } else {    
+    voice_tables voice_t(get_self(), scope.value);
+    auto vitr = voice_t.find(user.value);
+    check(vitr != voice_t.end(), "user does not have voice");
 
     if (reduce) {
-      check(amount <= vitr -> balance, "voice balance exceeded");
+      check(amount <= vitr->balance, "voice balance exceeded");
       percentage_used = amount / double(vitr -> balance);
     }
-    voices.modify(vitr, _self, [&](auto & voice){
+    voice_t.modify(vitr, _self, [&](auto & voice){
       if (reduce) {
         voice.balance -= amount;
       } else {
@@ -1151,37 +1583,32 @@ double proposals::voice_change (name user, uint64_t amount, bool reduce, name sc
 
 void proposals::set_voice (name user, uint64_t amount, name scope) {
   if (scope == ""_n) {
-    voice_tables voice_alliance(get_self(), alliance_type.value);
 
-    auto vitr = voice.find(user.value);
-    auto vaitr = voice_alliance.find(user.value);
+    bool increase_size = true;
 
-    if (vitr == voice.end()) {
-        voice.emplace(_self, [&](auto& voice) {
-            voice.account = user;
-            voice.balance = amount;
+    for (auto & s : scopes) {
+      voice_tables voice_t(get_self(), s.value);
+      auto vitr = voice_t.find(user.value);
+
+      if (vitr == voice_t.end()) {
+        voice_t.emplace(_self, [&](auto & voice){
+          voice.account = user;
+          voice.balance = amount;
         });
-        size_change("voice.sz"_n, 1);
-    } else {
-      voice.modify(vitr, _self, [&](auto& voice) {
-        voice.balance = amount;
-      });
+      }
+      else {
+        increase_size = false;
+        voice_t.modify(vitr, _self, [&](auto & voice){
+          voice.balance = amount;
+        });
+      }
     }
 
-    if (vaitr == voice.end()) {
-      voice_alliance.emplace(_self, [&](auto & voice){
-        voice.account = user;
-        voice.balance = amount;
-      });
-    } else {
-      voice_alliance.modify(vaitr, _self, [&](auto & voice){
-        voice.balance = amount;
-      });
+    if (increase_size) {
+      size_change("voice.sz"_n, 1);
     }
 
-  } else {
-    check_voice_scope(scope);
-    
+  } else {    
     voice_tables voices(get_self(), scope.value);
     auto vitr = voices.find(user.value);
     check(vitr != voices.end(), "user does not have a voice entry");
@@ -1194,15 +1621,13 @@ void proposals::set_voice (name user, uint64_t amount, name scope) {
 
 void proposals::erase_voice (name user) {
   require_auth(get_self());
-  
-  voice_tables voice_alliance(get_self(), alliance_type.value);
-  
-  auto vitr = voice.find(user.value);
-  auto vaitr = voice_alliance.find(user.value);
 
-  voice.erase(vitr);
-  voice_alliance.erase(vaitr);
-
+  for (auto & s : scopes) {
+    voice_tables voice_t(get_self(), s.value);
+    auto vitr = voice_t.find(user.value);
+    voice_t.erase(vitr);
+  }
+  
   size_change("voice.sz"_n, -1);
   
   auto aitr = actives.find(user.value);
@@ -1210,7 +1635,6 @@ void proposals::erase_voice (name user) {
     actives.erase(aitr);
     size_change(user_active_size, -1);
   }
-
 }
 
 void proposals::changetrust(name user, bool trust) {
@@ -1311,6 +1735,17 @@ void proposals::check_citizen(name account)
   auto uitr = users.find(account.value);
   check(uitr != users.end(), "no user");
   check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+void proposals::check_resident(name account, bool org_allowed)
+{
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(
+    uitr->status == name("citizen") || 
+    uitr->status == name("resident") ||
+    ( org_allowed && uitr->type == "organisation"_n ), 
+    "user is not a resident or citizen or an organization with alliance proposal");
 }
 
 void proposals::addactive(name account) {
@@ -1414,11 +1849,15 @@ void proposals::testsetvoice(name user, uint64_t amount) {
   set_voice(user, amount, ""_n);
 }
 
-name proposals::get_type (name fund) {
+name proposals::get_type (const name & fund) {
   if (fund == bankaccts::alliances) {
     return alliance_type;
-  } else if (fund == bankaccts::campaigns || bankaccts::milestone) {
+  } 
+  else if (fund == bankaccts::campaigns) {
     return campaign_type;
+  } 
+  else if (fund == bankaccts::milestone) {
+    return milestone_type;
   }
   return "none"_n;
 }
@@ -1455,7 +1894,7 @@ ACTION proposals::initnumprop() {
 }
 
 void proposals::check_voice_scope (name scope) {
-  check(scope == _self || scope == alliance_type, "invalid scope for voice");
+  check(scope == _self || scope == alliance_type || scope == milestone_type, "invalid scope for voice");
 }
 
 bool proposals::is_trust_delegated (name account, name scope) {
@@ -1467,7 +1906,6 @@ bool proposals::is_trust_delegated (name account, name scope) {
 ACTION proposals::delegate (name delegator, name delegatee, name scope) {
 
   require_auth(delegator);
-  check_voice_scope(scope);
 
   voice_tables voice(get_self(), scope.value);
   auto vitr = voice.find(delegator.value);
@@ -1571,12 +2009,14 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
     name voter = ditr -> delegator;
 
     auto vitr = voices.find(voter.value);
-    if (option == trust) {
-      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
-    } else if (option == distrust) {
-      send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, distrust);
-    } else if (option == abstain) {
-      send_vote_on_behalf(voter, proposal_id, uint64_t(0), abstain);
+    if (vitr != voices.end()) {
+      if (option == trust) {
+        send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, trust);
+      } else if (option == distrust) {
+        send_vote_on_behalf(voter, proposal_id, vitr -> balance * percentage_used, distrust);
+      } else if (option == abstain) {
+        send_vote_on_behalf(voter, proposal_id, uint64_t(0), abstain);
+      }
     }
 
     ditr++;
@@ -1589,6 +2029,45 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
       get_self(),
       "mimicvote"_n,
       std::make_tuple(delegatee, ditr -> delegator, scope, proposal_id, percentage_used, option, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
+ACTION proposals::mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
+
+  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
+  
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+
+    revertvote_delegate(voter, proposal_id);
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicrevert"_n,
+      std::make_tuple(delegatee, ditr -> delegator.value, scope, proposal_id, chunksize)
     );
 
     transaction tx;
@@ -1616,7 +2095,7 @@ ACTION proposals::undelegate (name delegator, name scope) {
   deltrusts.erase(ditr);
 }
 
-void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
+void proposals::increase_voice_cast (uint64_t amount, name option, name prop_type) {
 
   cycle_table c = cycle.get();
   auto citr = cyclestats.find(c.propcycle);
@@ -1632,6 +2111,7 @@ void proposals::increase_voice_cast (name voter, uint64_t amount, name option) {
       item.num_votes += 1;
     });
   }
+  add_voice_cast(c.propcycle, amount, prop_type);
 
 }
 
@@ -1681,128 +2161,246 @@ void proposals::add_voted_proposal (uint64_t proposal_id) {
 
 }
 
-ACTION proposals::migrtevotedp () {
+ACTION proposals::addcampaign (uint64_t proposal_id, uint64_t campaign_id) {
   require_auth(get_self());
 
-  auto pitr = props.begin();
-  
-  while (pitr != props.end()) {
-    if (pitr -> passed_cycle != 0) {
-      voted_proposals_tables votedprops(get_self(), pitr -> passed_cycle);
-      auto vpitr = votedprops.find(pitr -> id);
-      if (vpitr == votedprops.end()) {
-        votedprops.emplace(_self, [&](auto & item){
-          item.proposal_id = pitr -> id;
-        });
-      }
-    }
-    pitr++;
-  }
+  auto pitr = props.find(proposal_id);
+  if (pitr == props.end()) { return; }
+
+  props.modify(pitr, _self, [&](auto & item){
+    item.campaign_id = campaign_id;
+  });
 
 }
 
-ACTION proposals::migrpass () {
+ACTION proposals::cleanmig () {
   require_auth(get_self());
-  // fix passed for rejected proposla in the range from cycle 25 
 
-  // Manual review results: 
 
-  // 72 - 25
-  // 80 - 26 
-  // 90 - 27
-  // 95 - 28
-  // 100 - 28 <-- current cycle
+}
 
-  auto pitr = props.find(72);
+void proposals::testpropquor(uint64_t current_cycle, uint64_t prop_id) {
+  require_auth(get_self());
+  auto pitr = props.find(prop_id);
+  check(pitr != props.end(), "proposal not found");
 
-  while(pitr != props.end() && pitr->id <= 100) {
-    if (pitr->status == status_rejected && pitr->passed_cycle == 0) {
+  uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
 
-      uint64_t cycle = 25;
+  name fund_type = get_type(pitr -> fund);
 
-      if (pitr->id >= 80) {
-        cycle = 26;
+  support_level_tables support(get_self(), fund_type.value);
+
+  auto sitr = support.find(current_cycle);
+  uint64_t voice_needed = sitr != support.end() ? sitr -> voice_needed : 0;
+  bool valid_quorum = votes_in_favor >= voice_needed;
+
+  print(
+    " vp favor " + std::to_string(votes_in_favor) + " " +
+    "needed: " + std::to_string(voice_needed) + " " + 
+    "valid: " + ( valid_quorum ? "YES " : "NO ") 
+  );
+
+}
+
+// migration - evaluate a proposal that should not have been rejected
+void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
+  require_auth(get_self());
+
+  auto pitr = props.find(proposal_id);
+  check(pitr != props.end(), "prop not found"); 
+
+  name prop_type = get_type(pitr->fund);
+
+  uint64_t number_active_proposals = 0;
+  uint64_t quorum_votes_needed = 0;
+
+  support_level_tables support(get_self(), prop_type.value);
+  auto sitr = support.get(prop_cycle, "no stats for cycle");
+
+  number_active_proposals = sitr.num_proposals;
+  quorum_votes_needed = sitr.voice_needed;
+  
+  // re-evaluate only proposals which have been rejected
+  if (pitr -> stage == stage_done && pitr -> status == status_rejected) {
+
+    check(pitr -> passed_cycle == prop_cycle, "invalid cycle");
+
+    bool passed = check_prop_majority(pitr->favour, pitr->against);
+    bool is_alliance_type = prop_type == alliance_type;
+    bool is_campaign_type = prop_type == campaign_type;
+    bool is_milestone_type = prop_type == milestone_type;
+
+    bool valid_quorum = false;
+
+    uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
+    valid_quorum = votes_in_favor >= quorum_votes_needed;
+
+    print(" re-eval "+std::to_string(proposal_id) + 
+      " passed:  " + (passed ? "YES" : "NO") + 
+      " quorum: " + (valid_quorum ? "YES" : "NO") +
+      " votes in favor: " + std::to_string(pitr->favour) +
+      " votes needed: " + std::to_string(quorum_votes_needed) +
+      " votes against: " + std::to_string(pitr->against) +
+
+      + " ");
+
+    if (passed && valid_quorum) {
+
+      print(" re-eval : CHANGED STATUS TO PASSED");
+  
+      // refund_staked(pitr->creator, pitr->staked);
+      change_rep(pitr->creator, true);
+
+      asset payout_amount;
+
+      if (is_alliance_type) {
+        payout_amount = pitr->quantity;
+        send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+      }
+      if (is_milestone_type) {
+        payout_amount = pitr->quantity;
+        withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+      } 
+      else {
+        payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+        if (pitr->campaign_type == campaign_invite_type) {
+          withdraw(get_self(), payout_amount, pitr->fund, "invites");
+          withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+          send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+        } else {
+          withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+        }
       }
 
-      if (pitr->id >= 90) {
-        cycle = 27;
-      }
-      
-      if (pitr->id >= 95) {
-        cycle = 28;
-      }
+      uint64_t num_cycles = pitr->pay_percentages.size() - 1;
 
-      props.modify(pitr, _self, [&](auto& proposal) {
-        proposal.passed_cycle = cycle;
+      props.modify(pitr, _self, [&](auto & proposal){
+        proposal.passed_cycle = prop_cycle;
+        proposal.age = 0;
+        proposal.staked = asset(0, seeds_symbol);
+        if (proposal.age >= num_cycles && !is_alliance_type) {
+          proposal.executed = true;
+          proposal.status = status_passed;
+          proposal.stage = stage_done;
+        } else {
+          proposal.status = status_evaluate;
+          proposal.stage = stage_active;
+        }
+        proposal.current_payout += payout_amount;
       });
 
-    }
-    pitr++;
+    } else {
+      print(" prop still failed ");
+    }  
+  } else {
+    print(" not re-evaluating proposals that passed ");
   }
+
 }
 
-ACTION proposals::migstats (uint64_t cycle) {
+
+ACTION proposals::testalliance (uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type) {
+
   require_auth(get_self());
 
-  auto citr = cyclestats.find(cycle);
-  while(citr != cyclestats.end()) {
-    citr = cyclestats.erase(citr);
-  }
-
-  // calculate vote power for cycle
-  auto pitr = props.find(72);
-
-  uint64_t num_proposals = 0;
-  uint64_t num_votes = 0;
-  uint64_t total_voice_cast = 0;
-  uint64_t total_favour = 0;
-  uint64_t total_against = 0; 
-
-  while(pitr != props.end() && pitr->passed_cycle <= cycle) {
-    if (pitr->passed_cycle == cycle) {
-      print("passed: "+std::to_string(cycle) + " " + std::to_string(pitr->id));
-      num_proposals++;
-      votes_tables votes(get_self(), pitr->id);
-      auto vitr = votes.begin();
-      while(vitr != votes.end()) {
-        num_votes++;
-        total_voice_cast += vitr -> amount;
-        if (vitr->favour) {
-          total_favour += vitr -> amount;
-        } else {
-          total_against += vitr -> amount;
-        }
-        vitr++;
-      }
-    }
-    pitr++;
-  }
-
-  cyclestats.emplace(_self, [&](auto & item){
-    item.propcycle = cycle;
-    item.num_proposals = num_proposals;
-    item.num_votes = num_votes;
-    item.total_voice_cast = total_voice_cast;
-    item.total_favour = total_favour;
-    item.total_against = total_against;
+  props.emplace(_self, [&](auto & prop){
+    prop.id = id;
+    prop.creator = creator;
+    prop.quantity = quantity;
+    prop.current_payout = current_payout;
+    prop.status = status;
+    prop.stage = stage;
+    prop.campaign_type = campaign_type;
+    prop.fund = bankaccts::alliances;
+    prop.recipient = creator;
   });
 
 }
 
-void proposals::migcycstat() {
-  cycle_table c = cycle.get();
+// TODO: Remove
+ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
+  require_auth(get_self());
 
-  auto citr = cyclestats.find(c.propcycle);
+  auto props_by_campaign_type_id = props.get_index<"bycmptypeid"_n>();
 
-  uint64_t num_proposals = citr->active_props.size();
+  uint128_t id = (uint128_t(alliance_type.value) << 64) + start;
+  auto pitr = props_by_campaign_type_id.lower_bound(id);
 
-  cyclestats.modify(citr, _self, [&](auto & item){
-    item.num_proposals = num_proposals;
-    item.quorum_vote_base = quorum_vote_base;
-    item.quorum_votes_needed = quorum_vote_base * (get_quorum(num_proposals) / 100.0);
-    item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
-  });
+  uint64_t count = 0;
 
+  while (pitr != props_by_campaign_type_id.end() && pitr->campaign_type == alliance_type && count < chunksize) {
+
+    if (pitr->campaign_type == alliance_type) { // just to be extra sure it only affects alliance props
+
+      print(" FUND ID:", pitr->id, ", status=", pitr->status, "\n");
+
+      if (pitr->status == status_evaluate) {
+
+        asset payout_amount = pitr->quantity - pitr->current_payout;
+
+        print(" QUANTITY:", payout_amount, " \n");
+
+        if (payout_amount.amount > 0) {
+          print(">>Sending! ", payout_amount, "\n");
+
+          //check(false, "disabled");
+          
+          send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
+
+          props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
+            prop.current_payout += payout_amount;
+          });
+
+        }
+
+      }
+
+    }
+
+    pitr++;
+    count++;
+  }
+
+  if (pitr != props_by_campaign_type_id.end() && pitr->campaign_type == alliance_type) {
+
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migalliances"_n,
+      std::make_tuple(pitr->id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(pitr->id, _self);
+
+  }
+
+}
+
+void proposals::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
 }

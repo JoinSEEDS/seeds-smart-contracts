@@ -50,25 +50,7 @@ describe('token.transfer.history', async assert => {
   console.log('transfer token')
   await transfer()
   await sleep(500)
-  
-  const { rows } = await getTableRows({
-    code: history,
-    scope: firstuser,
-    table: 'transactions',
-    json: true
-  })
-  delete rows[0].timestamp
-
-  assert({
-    given: 'transactions table',
-    should: 'have transaction entry',
-    actual: rows,
-    expected: [{
-      id: 0,
-      to: seconduser,
-      quantity: '10.0000 SEEDS',
-    }]
-  })
+  console.log('transfer 2')
 
   await transfer()
   await sleep(500)
@@ -79,8 +61,6 @@ describe('token.transfer.history', async assert => {
     table: 'trxstat',
     json: true
   })
-
-  //console.log("stats: "+JSON.stringify(stats, null, 2))
 
   assert({
     given: 'transactions',
@@ -298,7 +278,10 @@ describe('token.resetweekly', async assert => {
     json: true
   })
 
-  balancesBefore = balancesBefore.rows.map(row => row.outgoing_transactions)
+  balancesBefore = balancesBefore.rows.filter(row => 
+      row.account == firstuser || row.account == seconduser || row.account == thirduser)
+
+  balancesBefore = balancesBefore.map(row => row.outgoing_transactions)
  
   console.log('reset token')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -312,23 +295,96 @@ describe('token.resetweekly', async assert => {
     json: true
   })
 
-  balancesAfter = balancesAfter.rows.map(row => row.outgoing_transactions)
+  balancesAfter = balancesAfter.rows.filter(row => 
+    row.account == firstuser || row.account == seconduser || row.account == thirduser)
+
+  balancesAfter = balancesAfter.map(row => row.outgoing_transactions)
 
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
   assert({
     given: 'called resetweekly',
     should: 'have trxstat table entry',
-    actual: balancesBefore.splice(0, 3),
+    actual: balancesBefore,
     expected: [1, 1, 1]
   })
 
   assert({
     given: 'called resetweekly',
     should: 'reset trxstat table',
-    actual: balancesAfter.splice(0, 3),
+    actual: balancesAfter,
     expected: [0, 0, 0]
   })
 
 })
 
+describe('transaction limits', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ token, settings, accounts, harvest })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('set tx limit min to 3')
+  let minTrx = 3
+  await contracts.settings.configure("txlimit.min", minTrx, { authorization: `${settings}@active` })
+
+  console.log('set tx multiplier to 2')
+  await contracts.settings.configure("txlimit.mul", 2, { authorization: `${settings}@active` })
+  
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('plant')
+  await contracts.token.transfer(firstuser, harvest, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '3.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  let transfer = async (from, to) => {
+    return await contracts.token.transfer(from, to, '0.0001 SEEDS', ``, { authorization: `${from}@active` })
+  }
+
+  let verifyLimit = async (from, to, limit) => {
+
+    for(let i = 0; i < limit; i++) {
+      await transfer(from, to)
+    }
+
+    let overLimit = false
+    try {
+      await transfer(from, to)
+      overLimit = true
+    } catch(err) {
+
+    }
+    assert({
+      given: from + ' has limit of ' + limit,
+      should: 'allow limit but not more',
+      actual: overLimit,
+      expected: false
+    })
+  }
+  // first user can make min tx but not more
+  console.log("first user has 1 planted, can make transactions" + minTrx)
+  await verifyLimit(firstuser, seconduser, minTrx)
+
+  console.log("second user has 3 planted, can make 6 transactions")
+  await verifyLimit(seconduser, firstuser, 6)
+
+  console.log("third user has nothing planted, can make minTrx transactions")
+  await verifyLimit(thirduser, firstuser, minTrx)
+
+})

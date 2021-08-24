@@ -1,13 +1,19 @@
 const { describe } = require('riteway')
 const R = require('ramda')
-const { eos, names, getTableRows, getBalance, initContracts, isLocal } = require('../scripts/helper');
+const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64ByteHexString, fromHexString, sha256 } = require('../scripts/helper');
 const { expect } = require('chai');
 
-const { harvest, accounts, proposals, settings, escrow, token, campaignbank, milestonebank, alliancesbank, firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser } = names
+const { 
+  harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
+  campaignbank, milestonebank, alliancesbank, hyphabank,
+  firstuser, seconduser, thirduser, fourthuser, fifthuser
+} = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
 describe('Proposals', async assert => {
 
@@ -28,6 +34,8 @@ describe('Proposals', async assert => {
   console.log('change min stake')
   await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
   await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -46,6 +54,10 @@ describe('Proposals', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(fourthuser, { authorization: `${accounts}@active` })
 
   const cyclesTable = await getTableRows({
     code: proposals,
@@ -86,15 +98,8 @@ describe('Proposals', async assert => {
   const numberOfProposalsAfterCancel = await numberOfProposals()
 
   console.log('create alliance proposal')
-  await contracts.proposals.createx(fourthuser, fourthuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${fourthuser}@active` })
-
-  // let notOwnerStake = true
-  // try {
-  //   await contracts.token.transfer(seconduser, proposals, '50.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
-  //   notOwnerStake = false
-  // } catch(err) {
-  //   console.log('stake from not owner (failed)')
-  // }
+  const allianceSeedsAmount = 12
+  await contracts.proposals.createx(fourthuser, fourthuser, allianceSeedsAmount+'.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, [], { authorization: `${fourthuser}@active` })
 
   console.log('update proposal')
   await contracts.proposals.update(1, 'title2', 'summary2', 'description2', 'image2', 'url2', { authorization: `${firstuser}@active` })
@@ -145,9 +150,9 @@ describe('Proposals', async assert => {
   }
 
   console.log('update contribution score of citizens')
-  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
-  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
-  await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 90, { authorization: `${harvest}@active` })
 
   console.log('1 move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -160,7 +165,7 @@ describe('Proposals', async assert => {
     table: 'cyclestats',
     json: true,
   })
-  console.log(cyclestats1)
+  console.log("cycle stats 1",cyclestats1)
 
   const activeProposals = await eos.getTableRows({
     code: proposals,
@@ -184,21 +189,21 @@ describe('Proposals', async assert => {
   console.log("voice "+JSON.stringify(voice, null, 2))
 
   console.log('favour first proposal')
-  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(firstuser, 1, 2, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 40, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 1, 10, { authorization: `${firstuser}@active` })
 
   console.log('favour second proposal but not enough for 80% majority')
-  await contracts.proposals.against(seconduser, 2, 4, { authorization: `${seconduser}@active` })
-  await contracts.proposals.favour(firstuser, 2, 6, { authorization: `${firstuser}@active` })
+  await contracts.proposals.against(seconduser, 2, 20, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 30, { authorization: `${firstuser}@active` })
 
   console.log('favour alliance proposal ' + theAllianceProp.id)
-  await contracts.proposals.favour(seconduser, theAllianceProp.id, 4, { authorization: `${seconduser}@active` })
-  await contracts.proposals.favour(firstuser, theAllianceProp.id, 4, { authorization: `${firstuser}@active` })
-  await contracts.proposals.favour(thirduser, theAllianceProp.id, 4, { authorization: `${thirduser}@active` })
+  await contracts.proposals.favour(seconduser, theAllianceProp.id, 20, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, theAllianceProp.id, 20, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(thirduser, theAllianceProp.id, 20, { authorization: `${thirduser}@active` })
 
   var exceedBalanceHasError = true
   try {
-    await contracts.proposals.against(thirduser, 1, 100, { authorization: `${thirduser}@active` })
+    await contracts.proposals.against(thirduser, 90, 100, { authorization: `${thirduser}@active` })
     exceedBalanceHasError = false
   } catch (err) {
     console.log('tried to spend more voice than they have - fails')
@@ -242,17 +247,20 @@ describe('Proposals', async assert => {
     json: true,
   })
 
+  const alliancesBalanceBefore = await getBalance(alliancesbank)
+
   console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
 
-  console.log('------------------------------------')
+  //console.log('------------------------------------')
   const cyclestats2 = await eos.getTableRows({
     code: proposals,
     scope: proposals,
     table: 'cyclestats',
     json: true,
   })
-  console.log(cyclestats2)
+  //console.log("cycle stats 2",cyclestats2)
 
   const repsAfter = await eos.getTableRows({
     code: accounts,
@@ -262,7 +270,7 @@ describe('Proposals', async assert => {
     upper: firstuser,
     json: true,
   })
-  console.log("reps: "+JSON.stringify(repsAfter))
+  //console.log("reps: "+JSON.stringify(repsAfter))
 
   await sleep(2000)
   
@@ -285,6 +293,7 @@ describe('Proposals', async assert => {
     await getBalance(campaignbank),
   ]
 
+  const alliancesBalanceAfter = await getBalance(alliancesbank)
 
   const escrowLocks = await eos.getTableRows({
     code: escrow,
@@ -301,6 +310,8 @@ describe('Proposals', async assert => {
     table: 'props',
     json: true
   })
+
+  console.log("PROPS: "+JSON.stringify(rows, null, 2))
 
   delete rows[0].creation_date
   delete rows[1].creation_date
@@ -353,7 +364,7 @@ describe('Proposals', async assert => {
     given: 'voice reset after onperiod',
     should: 'have amount of voice proportional to contribution score (first account)',
     actual: balances,
-    expected: [20, 40, 60, 80]
+    expected: [90, 90, 90, 80]
   })
 
   assert({
@@ -381,7 +392,7 @@ describe('Proposals', async assert => {
     given: 'passed proposal',
     should: 'gain rep',
     actual: repsAfter.rows[0].rep - repsBefore.rows[0].rep,
-    expected: 10
+    expected: 15
   })
 
   assert({
@@ -390,13 +401,6 @@ describe('Proposals', async assert => {
     actual: balancesAfter[1] - balancesBefore[1],
     expected: 0
   })
-
-  // assert({
-  //   given: 'stake from not owner',
-  //   should: 'has error',
-  //   actual: notOwnerStake,
-  //   expected: true
-  // })
 
   assert({
     given: 'cancel proposal',
@@ -430,9 +434,9 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 0,
-      total: 10,
-      favour: 8,
-      against: 2,
+      total: 50,
+      favour: 40,
+      against: 10,
       stage: 'active',
       title: 'title2',
       summary: 'summary2',
@@ -444,7 +448,12 @@ describe('Proposals', async assert => {
       pay_percentages: [10,30,30,30],
       passed_cycle: initialCycle + 1,
       age: 0,
-      current_payout: '10.0000 SEEDS'
+      current_payout: '10.0000 SEEDS',
+      campaign_type: 'cmp.funding',
+      max_amount_per_invite: '0.0000 SEEDS',
+      planted: '0.0000 SEEDS',
+      reward: '0.0000 SEEDS',
+      campaign_id: 0
     }
   })
 
@@ -459,9 +468,9 @@ describe('Proposals', async assert => {
       quantity: '55.7000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 0,
-      total: 10,
-      favour: 6,
-      against: 4,
+      total: 50,
+      favour: 30,
+      against: 20,
       stage: 'done',
       title: 'title',
       summary: 'summary',
@@ -473,7 +482,12 @@ describe('Proposals', async assert => {
       pay_percentages: [10,30,30,30],
       passed_cycle: 1,
       age: 0,
-      current_payout: '0.0000 SEEDS'
+      current_payout: '0.0000 SEEDS',
+      campaign_type: 'cmp.funding',
+      max_amount_per_invite: '0.0000 SEEDS',
+      planted: '0.0000 SEEDS',
+      reward: '0.0000 SEEDS',
+      campaign_id: 0
     }
   })
 
@@ -481,6 +495,7 @@ describe('Proposals', async assert => {
     given: 'rejected proposal',
     should: 'show rejected proposal',
     actual: rows[2],
+    
     expected: {
       id: 3,
       creator: seconduser,
@@ -502,7 +517,12 @@ describe('Proposals', async assert => {
       pay_percentages: [10,30,30,30],
       passed_cycle: 1,
       age: 0,
-      current_payout: '0.0000 SEEDS'
+      current_payout: '0.0000 SEEDS',
+      campaign_type: 'cmp.funding',
+      max_amount_per_invite: '0.0000 SEEDS',
+      planted: '0.0000 SEEDS',
+      reward: '0.0000 SEEDS',
+      campaign_id: 0
     }
   })
 
@@ -537,11 +557,18 @@ describe('Proposals', async assert => {
       "lock_type": "event",
       "sponsor": "allies.seeds",
       "beneficiary": "seedsuserxxx",
-      "quantity": "1.2000 SEEDS",
+      "quantity": "12.0000 SEEDS",
       "trigger_event": "golive",
       "trigger_source": "dao.hypha",
       "notes": "proposal id: 4",
     }
+  })
+
+  assert({
+    given: 'alliance proposal passed allies - balances',
+    should: 'alliance balance reduced by '+allianceSeedsAmount,
+    actual: alliancesBalanceBefore - alliancesBalanceAfter,
+    expected: allianceSeedsAmount
   })
 
   delete propTableAfterFinish.rows[0].creation_date
@@ -557,9 +584,9 @@ describe('Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       staked: '0.0000 SEEDS',
       executed: 1,
-      total: 10,
-      favour: 8,
-      against: 2,
+      total: 50,
+      favour: 40,
+      against: 10,
       title: 'title2',
       summary: 'summary2',
       description: 'description2',
@@ -571,36 +598,46 @@ describe('Proposals', async assert => {
       pay_percentages: [10,30,30,30],
       passed_cycle: initialCycle + 1,
       age: 3,
-      current_payout: '100.0000 SEEDS'
+      current_payout: '100.0000 SEEDS',
+      campaign_type: 'cmp.funding',
+      max_amount_per_invite: '0.0000 SEEDS',
+      planted: '0.0000 SEEDS',
+      reward: '0.0000 SEEDS',
+      campaign_id: 0
     },
     actual: propTableAfterFinish.rows[0]
   })
 
   assert({
-    given: 'finished cycle number 3',
-    should: 'complete execution of proposal 4',
+    given: 'finished cycle number 3, proposal 4',
+    should: 'still be active',
     expected: {
       id: 4,
       creator: fourthuser,
       recipient: fourthuser,
       quantity: '12.0000 SEEDS',
       staked: '0.0000 SEEDS',
-      executed: 1,
-      total: 12,
-      favour: 12,
+      executed: 0,
+      total: 60,
+      favour: 60,
       against: 0,
       title: 'alliance',
       summary: 'test alliance',
       description: 'description',
       image: 'image',
       url: 'url',
-      status: 'passed',
-      stage: 'done',
+      status: 'evaluate',
+      stage: 'active',
       fund: 'allies.seeds',
-      pay_percentages: [10,30,30,30],
+      pay_percentages: [100],
       passed_cycle: initialCycle + 1,
-      age: 3,
-      current_payout: '12.0000 SEEDS'
+      age: 4,
+      current_payout: '12.0000 SEEDS',
+      campaign_type: 'alliance',
+      max_amount_per_invite: '0.0000 SEEDS',
+      planted: '0.0000 SEEDS',
+      reward: '0.0000 SEEDS',
+      campaign_id: 0
     },
     actual: propTableAfterFinish.rows[3]
   })
@@ -622,15 +659,16 @@ describe('Proposals', async assert => {
     expected: [
       {
         propcycle: initialCycle + 1,
-        num_proposals: 4,
+        num_proposals: 0,
         num_votes: 0,
         total_voice_cast: 0,
         total_favour: 0,
         total_against: 0,
         total_citizens: 3,
-        quorum_vote_base: 75,
-        quorum_votes_needed: 15,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
+        total_eligible_voters: 0,
         active_props: [ 1, 2, 3, 4 ],
         eval_props: []
       }
@@ -649,29 +687,31 @@ describe('Proposals', async assert => {
     expected: [
       {
         propcycle: initialCycle + 1,
-        num_proposals: 4,
+        num_proposals: 0,
         num_votes: 8,
-        total_voice_cast: 33,
-        total_favour: 26,
-        total_against: 7,
+        total_voice_cast: 161,
+        total_favour: 130,
+        total_against: 31,
         total_citizens: 3,
-        quorum_vote_base: 75,
-        quorum_votes_needed: 15,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
+        total_eligible_voters: 4,
         active_props: [ 1, 2, 3, 4 ],
         eval_props: []
       },
       {
         propcycle: initialCycle + 2,
-        num_proposals: 2,
+        num_proposals: 0,
         num_votes: 0,
         total_voice_cast: 0,
         total_favour: 0,
         total_against: 0,
         total_citizens: 4,
-        quorum_vote_base: 33,
-        quorum_votes_needed: 6,
+        quorum_vote_base: 0,
+        quorum_votes_needed: 0,
         unity_needed: '0.80000001192092896',
+        total_eligible_voters: 0,
         active_props: [],
         eval_props: [ 1, 4 ]
       }
@@ -716,10 +756,15 @@ describe('Evaluation phase', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  console.log('disable quorum - support requirement')
+  await contracts.settings.configure('quorum.base', 0, { authorization: `${settings}@active` })
   console.log('change batch size')
   await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
   console.log('change min stake')
   await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
 
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
@@ -738,6 +783,10 @@ describe('Evaluation phase', async assert => {
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log(`add rep to ${firstuser}`)
+  await contracts.accounts.addrep(firstuser, 100, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
   await contracts.proposals.createx(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
@@ -809,7 +858,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote1 = false
   try {
-    await contracts.proposals.against(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+    await contracts.proposals.revertvote(thirduser, 2, { authorization: `${thirduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that did not vote, tries to vote in evaluate phase (fails)')
@@ -817,7 +866,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote2 = false
   try {
-    await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
@@ -825,15 +874,22 @@ describe('Evaluation phase', async assert => {
 
   let changeVote3 = false
   try {
-    await contracts.proposals.against(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
   }
 
-  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
-  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(thirduser, 1, 8, { authorization: `${thirduser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+  await contracts.proposals.revertvote(thirduser, 1, { authorization: `${thirduser}@active` })
+
+  const repsBefore = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    json: true,
+  })
 
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
   await sleep(3000)
@@ -844,6 +900,13 @@ describe('Evaluation phase', async assert => {
   await sleep(3000)
 
   await testQuantity(['40.0000 SEEDS', '200.0000 SEEDS'])
+
+  const repsAfter = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'rep',
+    json: true,
+  })
 
   assert({
     given: 'trying to vote in evaluate state',
@@ -866,8 +929,14 @@ describe('Evaluation phase', async assert => {
     expected: false
   })
 
-})
+  assert({
+    given: 'proposal in eval state failed',
+    should: 'lose rep',
+    actual: repsAfter.rows[0].rep - repsBefore.rows[0].rep,
+    expected: -100
+  })
 
+})
 
 describe('Participants', async assert => {
   if (!isLocal()) {
@@ -885,6 +954,9 @@ describe('Participants', async assert => {
   console.log('change min stake')
   await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
 
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
@@ -901,6 +973,8 @@ describe('Participants', async assert => {
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
   await contracts.proposals.create(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, { authorization: `${firstuser}@active` })
@@ -1110,7 +1184,7 @@ describe('Change Trust', async assert => {
 
 })
 
-describe('Proposals Quorum', async assert => {
+describe('Proposals Quorum And Support Levels', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1123,7 +1197,8 @@ describe('Proposals Quorum', async assert => {
   await contracts.settings.reset({ authorization: `${settings}@active` })
   console.log('set settings')
   await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
-
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
   // tested with 25 - pass, pass
   // 33 - fail, pass
   // 50 - fail, pass
@@ -1143,12 +1218,15 @@ describe('Proposals Quorum', async assert => {
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fifthuser, 'fifthuser', 'individual', { authorization: `${accounts}@active` })
-  await contracts.accounts.adduser(sixthuser, 'sixthuser', 'individual', { authorization: `${accounts}@active` })
 
   console.log('create proposal')
-  await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', '0', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', '1', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', '2', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '1.7777 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
 
   console.log('deposit stake (memo 1)')
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
@@ -1156,8 +1234,10 @@ describe('Proposals Quorum', async assert => {
   await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
   console.log('deposit stake 3')
   await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  console.log('deposit stake 4')
+  await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
 
-  let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser, sixthuser]
+  let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
   for (i = 0; i<users.length; i++ ) {
     let user = users[i]
     console.log('make citizen '+user)
@@ -1166,6 +1246,9 @@ describe('Proposals Quorum', async assert => {
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await sleep(1000)
 
   for (i = 0; i<users.length; i++ ) {
     let user = users[i]
@@ -1177,19 +1260,32 @@ describe('Proposals Quorum', async assert => {
   await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
 
   console.log('vote on second proposal')
-  await contracts.proposals.favour(seconduser, 2, 3, { authorization: `${seconduser}@active` })
-  await contracts.proposals.favour(firstuser, 2, 3, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 2, 20, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(firstuser, 2, 30, { authorization: `${firstuser}@active` })
 
-  console.log('execute proposals')
-  const sizes = await getTableRows({
+  console.log('vote on 4th proposal')
+  await contracts.proposals.favour(seconduser, 4, 11, { authorization: `${seconduser}@active` })
+
+  const supportForAlliances = await getTableRows({
     code: proposals,
-    scope: proposals,
-    table: 'sizes',
+    scope: "alliance",
+    table: 'support',
     json: true
   })
-  console.log("sizes "+JSON.stringify(sizes, null, 2))
 
+  const supportForCampaigns = await getTableRows({
+    code: proposals,
+    scope: "campaign",
+    table: 'support',
+    json: true
+  })
+
+  // console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
+  // console.log("supportForAlliances "+JSON.stringify(supportForAlliances, null, 2))
+
+  console.log('execute proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
 
   const props = await getTableRows({
     code: proposals,
@@ -1204,26 +1300,25 @@ describe('Proposals Quorum', async assert => {
     try {
       await contracts.proposals.testquorum(numberProposals, { authorization: `${proposals}@active` })
     } catch (err) {
-      const e = JSON.parse(err)
+      //console.log("catch errrrrr ==== \n", JSON.stringify(err, null, 2), "\n====")
       assert({
         given: 'get quorum called',
         should: 'give the correct quorum threshold',
         expected: `assertion failure with message: ${expectedValue}`,
-        actual: e.error.details[0].message
+        actual: err.json.error.details[0].message
       })
     }
   }
 
-  //console.log("props "+JSON.stringify(props, null, 2))
-
   const min = 7
-  const max = 20
-  await testQuorum(0, 5)
-  await testQuorum(1, 20)
-  await testQuorum(2, 20)
-  await testQuorum(5, 18)
-  await testQuorum(10, 9)
-  await testQuorum(20, 5)
+  const max = 40
+
+  await testQuorum(0, min)
+  await testQuorum(1, max)
+  await testQuorum(2, max)
+  await testQuorum(5, 20)
+  await testQuorum(10, 10)
+  await testQuorum(20, min)
 
   assert({
     given: 'failed proposal quorum',
@@ -1232,7 +1327,6 @@ describe('Proposals Quorum', async assert => {
     expected: 'rejected'
   })
 
-
   assert({
     given: 'passed proposal quorum majority',
     should: 'have passed',
@@ -1240,28 +1334,60 @@ describe('Proposals Quorum', async assert => {
     expected: "evaluate"
   })
 
+  assert({
+    given: 'campaign support',
+    should: 'have the right numbers',
+    actual: supportForCampaigns.rows[0],
+    expected: {
+      "propcycle": 1,
+      "num_proposals": 3,
+      "total_voice_cast": 60,
+      "voice_needed": 20
+    }
+  })
+
+  assert({
+    given: 'alliance support',
+    should: 'have the right numbers',
+    actual: supportForAlliances.rows[0],
+    expected: {
+      "propcycle": 1,
+      "num_proposals": 1,
+      "total_voice_cast": 11,
+      "voice_needed": 5
+    }
+  })
+
+
 })
 
-describe('Recepient invalid', async assert => {
+describe('Creating Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, organization })
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('organization reset')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
 
   console.log('proposals reset')
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
   console.log('create proposal')
   var createdProp = false
@@ -1293,6 +1419,24 @@ describe('Recepient invalid', async assert => {
 
   }
 
+  console.log('create organization')
+  const org1 = "org1"
+  await contracts.token.transfer(firstuser, organization, "400.0000 SEEDS", "Initial supply", { authorization: `${firstuser}@active` })
+  await contracts.organization.create(firstuser, org1, "Org Number 1", eosDevKey, { authorization: `${firstuser}@active` })
+
+  console.log('org create campaign')
+  var orgCreateCampaign = false
+  try {
+    await contracts.proposals.createx(org1, org1, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${org1}@active` })
+    orgCreateCampaign = true
+  } catch (err) {
+
+  }
+
+  console.log('org create alliance')
+  var orgCreateAlliance = false
+  await contracts.proposals.createx(org1, org1, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${org1}@active` })
+  orgCreateAlliance = true
 
   assert({
     given: 'create proposal with invalid recepient',
@@ -1315,6 +1459,20 @@ describe('Recepient invalid', async assert => {
     expected: false
   })
 
+  assert({
+    given: 'create campaign proposal with org ',
+    should: 'fail',
+    actual: orgCreateCampaign,
+    expected: false
+  })
+  
+  assert({
+    given: 'create alliance proposal with org ',
+    should: 'succeed',
+    actual: orgCreateAlliance,
+    expected: true
+  })
+
 })
 
 
@@ -1329,6 +1487,9 @@ describe('Stake limits', async assert => {
 
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
 
   console.log('token reset')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
@@ -1351,6 +1512,9 @@ describe('Stake limits', async assert => {
   await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(fourthuser, { authorization: `${accounts}@active` })
 
   console.log('create proposal '+campaignbank)
   await contracts.proposals.createx(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
@@ -1386,6 +1550,7 @@ describe('Stake limits', async assert => {
   await contracts.token.transfer(thirduser, proposals, '75000.0000 SEEDS', '', { authorization: `${thirduser}@active` })
   await contracts.proposals.checkstake(3, { authorization: `${firstuser}@active` })
 
+  
   await contracts.proposals.createx(fourthuser, fourthuser, '2.0000 SEEDS', '2 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${fourthuser}@active` })
   await contracts.token.transfer(fourthuser, proposals, '2.0000 SEEDS', '', { authorization: `${fourthuser}@active` })
   let expectNotEnough3 = true
@@ -1397,6 +1562,7 @@ describe('Stake limits', async assert => {
   }
 
   await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
+  await sleep(2000)
 
   const activeProposals = await eos.getTableRows({
     code: proposals,
@@ -1441,7 +1607,7 @@ describe('Stake limits', async assert => {
     json: true,
   })
 
-  console.log("min stake "+JSON.stringify(minStakes, null, 2))
+  //console.log("min stake "+JSON.stringify(minStakes, null, 2))
 
   assert({
     given: 'proposal not having enough stake',
@@ -1532,6 +1698,10 @@ describe('Active count and vote power', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('batchsize', 10, { authorization: `${settings}@active` })
+
   console.log('token reset')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
 
@@ -1608,7 +1778,7 @@ describe('Active count and vote power', async assert => {
     await contracts.proposals.createx(firstuser, firstuser, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
     await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '', { authorization: `${firstuser}@active` })
     await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-    await sleep(1000)
+    await sleep(3000)
   }
 
   await createprop()
@@ -1618,7 +1788,7 @@ describe('Active count and vote power', async assert => {
     
   console.log('onperiod 1')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-
+  
   await testActiveSize(3, votePower3 + votePower2 + votePower1)
 
   console.log('sleep 2 cycle lengths + 1/2 cycle length')
@@ -1626,8 +1796,7 @@ describe('Active count and vote power', async assert => {
 
   console.log('onperiod 2')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-
-  await sleep(500)
+  await sleep(2000)
 
 
   const sizes = await eos.getTableRows({
@@ -1647,22 +1816,26 @@ describe('Active count and vote power', async assert => {
 
   console.log('actives '+JSON.stringify(actives, null, 2))
 
-  console.log('only 1 remoains active')
+  console.log('only 1 remains active')
   await testActiveSize(1, votePower2)
+
+  await sleep(3000)
   
   console.log('vote on prop to become active again')
   await createprop()
+  await sleep(2000)
   await contracts.proposals.favour(firstuser, 2, 5, { authorization: `${firstuser}@active` })
   await contracts.proposals.favour(seconduser, 2, 1, { authorization: `${seconduser}@active` })
   await contracts.proposals.initsz( { authorization: `${proposals}@active` })
 
-  await testActiveSize(2, 0) // it's 0 here because cycle ran before the votes and everyone was out of active
+  // Note: we don't do active size anymore.  
+  //await testActiveSize(2, 40) // not sure we still even use this..
 
-  console.log("run props")
-  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
-  await sleep(2000)
+  //console.log("run props")
+  //await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  //await sleep(3000)
 
-  await testActiveSize(2, votePower2 + votePower1)
+  //await testActiveSize(2, votePower2 + votePower1)
 
 })
 
@@ -1697,6 +1870,9 @@ describe('Voice decay', async assert => {
   console.log('propdecaysec')
   await contracts.settings.configure('propdecaysec', 5, { authorization: `${settings}@active` })
 
+  console.log('vdecayprntge = 15%')
+  await contracts.settings.configure('vdecayprntge', 15, { authorization: `${settings}@active` })
+  
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
@@ -1733,6 +1909,13 @@ describe('Voice decay', async assert => {
       json: true,
     })
 
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: 'milestone',
+      table: 'voice',
+      json: true,
+    })
+
     assert({
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices if required',
@@ -1743,6 +1926,12 @@ describe('Voice decay', async assert => {
       given: 'ran voice decay for the ' + n + ' time',
       should: 'decay voices for alliance if required',
       actual: voiceAlliance.rows.map(r => r.balance),
+      expected: expectedValues
+    })
+    assert({
+      given: 'ran voice decay for the ' + n + ' time',
+      should: 'decay voices for hypha if required',
+      actual: voiceHypha.rows.map(r => r.balance),
       expected: expectedValues
     })
   }
@@ -1796,6 +1985,7 @@ describe('Voice scope', async assert => {
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
   console.log('force status')
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
@@ -1815,6 +2005,7 @@ describe('Voice scope', async assert => {
   
   console.log('active proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
 
   console.log('add voice')
   await contracts.proposals.testsetvoice(firstuser, 40, { authorization: `${proposals}@active` })
@@ -1883,7 +2074,11 @@ describe('delegate trust', async assert => {
   await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
   console.log('change batch size')
-  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+  await contracts.settings.configure('batchsize', 10, { authorization: `${settings}@active` })
+  console.log('majority 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  console.log('disable quorum')
+  await contracts.settings.configure('quorum.base', 0, { authorization: `${settings}@active` })
 
   console.log('join users')
   const users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
@@ -1900,9 +2095,13 @@ describe('delegate trust', async assert => {
   console.log('create alliance proposal')
   await contracts.proposals.create(firstuser, firstuser, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${firstuser}@active` })
   
+  console.log('create hypha proposal')
+  await contracts.proposals.create(firstuser, hyphabank, '12.0000 SEEDS', 'alliance', 'test alliance', 'description', 'image', 'url', milestonebank, { authorization: `${firstuser}@active` })
+
   console.log('stake')
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '3', { authorization: `${firstuser}@active` })
   
   console.log('active proposals')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -1924,12 +2123,16 @@ describe('delegate trust', async assert => {
   await contracts.proposals.delegate(seconduser, thirduser, scopeAlliance, { authorization: `${seconduser}@active` })
   await contracts.proposals.delegate(fourthuser, thirduser, scopeAlliance, { authorization: `${fourthuser}@active` })
 
+  console.log('delegate trust for hypha')
+  const scopeHypha = 'milestone'
+  await contracts.proposals.delegate(seconduser, thirduser, scopeHypha, { authorization: `${seconduser}@active` })
+
   let avoidCyclesWorks = true
   try {
     await contracts.proposals.delegate(firstuser, fourthuser, scopeCampaigns, { authorization: `${firstuser}@active` })
     avoidCyclesWorks = false
   } catch (err) {
-    console.log('no cycles allowed', err)
+    console.log('no cycles allowed')
   }
 
   const getVoices = async () => {
@@ -1945,9 +2148,16 @@ describe('delegate trust', async assert => {
       table: 'voice',
       json: true,
     })
+    const voiceHypha = await eos.getTableRows({
+      code: proposals,
+      scope: scopeHypha,
+      table: 'voice',
+      json: true,
+    })
     return {
       campaigns: voiceCampaigns.rows,
-      alliances: voiceAlliances.rows
+      alliances: voiceAlliances.rows,
+      hypha: voiceHypha.rows
     }
   }
 
@@ -1968,12 +2178,33 @@ describe('delegate trust', async assert => {
   }
 
   console.log('vote for campaigns')
+  const campBeforeDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campBeforeDelegateVote " + JSON.stringify(campBeforeDelegateVote,null,2))
+
   await contracts.proposals.favour(firstuser, 1, 5, { authorization: `${firstuser}@active` })
-  await sleep(3000)
+  await sleep(5000)
+
+  const campAfterDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateVote " + JSON.stringify(campAfterDelegateVote,null,2))
 
   console.log('vote for alliances')
   await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
-  await sleep(3000)
+  await sleep(5000)
+
+  await contracts.proposals.against(thirduser, 3, 50, { authorization: `${thirduser}@active` })
+  await sleep(5000)
 
   const usersTable = await eos.getTableRows({
     code: accounts,
@@ -2000,9 +2231,33 @@ describe('delegate trust', async assert => {
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
   
+  const votesBeforeDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
   console.log('change opinion')
-  await contracts.proposals.against(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+
   await sleep(3000)
+
+  const campAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+  
+  const votesAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateRevert " + JSON.stringify(campAfterDelegateRevert,null,2))
 
   const voicesAfterOnperiod = await getVoices()
 
@@ -2076,31 +2331,110 @@ describe('delegate trust', async assert => {
         { account: thirduser, balance: 0 },
         { account: fourthuser, balance: 0 },
         { account: fifthuser, balance: 22 }
+      ],
+      hypha: [
+        { account: firstuser,balance:20 },
+        { account: seconduser, balance: 0 },
+        { account: thirduser, balance: 0 },
+        { account: fourthuser, balance:35 },
+        { account: fifthuser, balance:22 }
       ]
     }
   })
 
   assert({
-    given: 'trust delegated and opinion changed',
-    should: 'decrease the voice of delegators',
-    actual: voicesAfterOnperiod,
-    expected: {
-      campaigns: [
-        { account: firstuser, balance: 10 },
-        { account: seconduser, balance: 5 },
-        { account: thirduser, balance: 25 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ],
-      alliances: [
-        { account: firstuser, balance: 20 },
-        { account: seconduser, balance: 10 },
-        { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ]
+    given: 'vote table after delegatee has voted',
+    should: 'have delegate votes in it',
+    actual: votesBeforeDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
     }
+  ]
   })
+
+  assert({
+    given: 'vote table after delegatee has reverted their vote, but seedsuserxxx has canceled their delegation',
+    should: 'delegate votes are now against, except seedsuserxxx',
+    actual: votesAfterDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
+    }
+  ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate vote',
+    should: 'have all delegates voices counted',
+    actual: [
+      campAfterDelegateVote.rows[0].total,
+      campAfterDelegateVote.rows[0].favour,
+      campAfterDelegateVote.rows[0].against,
+    ],
+    expected: [
+      27,
+      27,
+      0,
+    ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate reverse vote',
+    should: 'have all delegates voices reversed, except one with 8 votes',
+    actual: [
+      campAfterDelegateRevert.rows[0].total,
+      campAfterDelegateRevert.rows[0].favour,
+      campAfterDelegateRevert.rows[0].against,
+    ],
+    expected: [
+      27,
+      8,
+      19,
+    ]
+  })
+
+  assert({
+    given: 'total delegated voted before reverse trust',
+    should: 'have all delegates voices counted',
+    actual: delCampaigns.rows,
+    expected: []
+  })
+
 
   assert({
     given: 'trust canceled by delegatee',
@@ -2114,6 +2448,592 @@ describe('delegate trust', async assert => {
     should: 'not create a cycle',
     actual: avoidCyclesWorks,
     expected: true
+  })
+
+})
+
+describe("invite campaigns", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding })
+
+  const secondUserInitialBalance = await getBalance(seconduser)
+
+  const checkCampaigns = async (number) => {
+    const campaigns = await eos.getTableRows({
+      code: onboarding,
+      scope: onboarding,
+      table: 'campaigns',
+      json: true,
+    })
+    assert({
+      given: 'proposals creating campaigns',
+      should: 'have the correct number of them',
+      actual: campaigns.rows.length,
+      expected: number
+    })
+  }
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+  console.log('change min stake')
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.base', 90, { authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('onboarding reset')
+  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 20, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 40, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 60, { authorization: `${harvest}@active` })
+
+  const cyclesTable = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cycle',
+    json: true
+  })
+  const initialCycle = cyclesTable.rows[0] ? cyclesTable.rows[0].propcycle : 0
+
+  await contracts.proposals.createinvite(
+    firstuser, firstuser, '200.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+    campaignbank, '20.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+
+  await contracts.proposals.createinvite(
+    seconduser, firstuser, '300.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+    campaignbank, '40.0000 SEEDS', '6.0000 SEEDS', '50.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+  await contracts.proposals.createinvite(
+    seconduser, firstuser, '300.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+    campaignbank, '40.0000 SEEDS', '6.0000 SEEDS', '50.0000 SEEDS', { authorization: `${seconduser}@active` })
+
+  await contracts.token.transfer(firstuser, proposals, '500.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, proposals, '500.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  
+  console.log('move proposal to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  await sleep(3000)
+
+  console.log('vote on proposal')
+  await contracts.proposals.favour(firstuser, 1, 8, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 1, 8, { authorization: `${thirduser}@active` })
+
+  await contracts.proposals.favour(firstuser, 2, 8, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+  
+  console.log('approve proposal')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await checkCampaigns(2)
+
+  const proposalsBalanceBefore = await getBalance(proposals)
+
+  console.log('create invite')
+  const inviteSecret = await ramdom64ByteHexString()
+  const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+  await contracts.onboarding.campinvite(1, firstuser, '10.0000 SEEDS', '8.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod 2')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(1000)
+
+  console.log('running onperiod 3')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(1000)
+
+  console.log('downvoting the first proposal')
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+
+  console.log('running on period 4')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await checkCampaigns(1)
+
+  console.log('running on period 5')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(1000)
+
+  console.log('running on period 6')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(1000)
+
+  const proposalsBalanceAfter = await getBalance(proposals)
+
+  assert({
+    given: 'a proposal rejected',
+    should: 'have the correct balance',
+    actual: proposalsBalanceAfter - proposalsBalanceBefore,
+    expected: 200
+  })
+
+  const campaigns = await eos.getTableRows({
+    code: onboarding,
+    scope: onboarding,
+    table: 'campaigns',
+    json: true,
+  })
+  console.log(campaigns)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+  console.log(props)
+
+})
+
+describe('Alliance campaigns', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding, pool })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+  console.log('change min stake')
+  await contracts.settings.configure('prop.cmp.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('prop.al.min', 500 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.base', 90, { authorization: `${settings}@active` })
+
+  const eventSource = 'dao.hypha'
+  const eventName = 'golive'
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('pool reset')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+  await contracts.escrow.resettrigger(eventSource, { authorization: `${escrow}@active` })
+
+  console.log('onboarding reset')
+  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('force status')
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('give rank in the contribution score table')
+  await contracts.harvest.testupdatecs(firstuser, 99, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 99, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 99, { authorization: `${harvest}@active` })
+  
+  const propose = async (user, amount, propId) => {
+    await contracts.proposals.create(user, user, amount, 'alliance', 'test alliance', 'description', 'image', 'url', alliancesbank, { authorization: `${user}@active` })
+    await contracts.token.transfer(user, proposals, '500.0000 SEEDS', `${propId}`, { authorization: `${user}@active` })
+  }
+
+  const voteProp = async (propId, approve=true) => {
+    const vote = approve ? contracts.proposals.favour : contracts.proposals.against
+    await vote(firstuser, propId, 8, { authorization: `${firstuser}@active` })
+    await vote(seconduser, propId, 8, { authorization: `${seconduser}@active` })
+    await vote(thirduser, propId, 8, { authorization: `${thirduser}@active` })
+  }
+
+  const revertVote = async (propId) => {
+    await contracts.proposals.revertvote(firstuser, propId, { authorization: `${firstuser}@active` })
+    await contracts.proposals.revertvote(seconduser, propId, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(thirduser, propId, { authorization: `${thirduser}@active` })
+  }
+
+  const checkEscrowLocks = async (expectedLocks) => {
+    const lockTable = await eos.getTableRows({
+      code: escrow,
+      scope: escrow,
+      table: 'locks',
+      json: true,
+    })
+    const locks = lockTable.rows.map(r => {
+      return {
+        propId: parseInt(r.notes.substring(13)),
+        amount: r.quantity
+      }
+    })
+    assert({
+      given: 'alliances accepted',
+      should: 'have the correct entries in the locks table',
+      actual: locks,
+      expected: expectedLocks
+    })
+  }
+
+  const checkProps = async (expectedProps) => {
+    const propsTable = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'props',
+      json: true,
+    })
+    const props = propsTable.rows.map(r => {
+      return {
+        propId: r.id,
+        status: r.status,
+        stage: r.stage
+      }
+    })
+    assert({
+      given: 'onperiod ran, props',
+      should: 'have the correct status and stage',
+      actual: props,
+      expected: expectedProps
+    })
+  }
+
+  console.log('create alliance proposal')
+  const amountRequested = '12.0000 SEEDS'
+  await propose(firstuser, amountRequested, 1) // passing, lock claimed successfully
+  await propose(firstuser, amountRequested, 2) // not passing
+  await propose(seconduser, amountRequested, 3) // passing, but downvoted
+  await propose(thirduser, amountRequested, 4) // passing, but failing before claiming lock
+
+  console.log('activate proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await voteProp(1)
+  await voteProp(2, false)
+  await voteProp(3)
+  await voteProp(4)
+
+  console.log('running onperiod 1')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  let expectedLocks = [
+    {
+      propId: 1,
+      amount: amountRequested
+    },
+    {
+      propId: 3,
+      amount: amountRequested
+    },
+    {
+      propId: 4,
+      amount: amountRequested
+    }
+  ]
+
+  await checkEscrowLocks(expectedLocks)
+
+  console.log('running onperiod 2')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  console.log('downvote prop 3')
+  await revertVote(3)
+
+  console.log('running onperiod 3')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  expectedLocks = expectedLocks.filter(e => e.propId !== 3)
+  await checkEscrowLocks(expectedLocks)
+
+  console.log('downvote prop 4')
+  await revertVote(4)
+
+  console.log('going live')
+  await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
+  await sleep(5000)
+
+  const poolBalances = await eos.getTableRows({
+    code: pool,
+    scope: pool,
+    table: 'balances',
+    json: true
+  })
+  
+  await checkEscrowLocks([
+    { propId: 4, amount: '12.0000 SEEDS' }
+  ])
+
+  assert({
+    given: 'golive triggered',
+    should: 'have the correct pool balances',
+    actual: poolBalances.rows,
+    expected: [
+      { account: firstuser, balance: '12.0000 SEEDS' }
+    ]
+  })
+
+  await checkProps([
+    {
+      propId: 1,
+      status: 'passed',
+      stage: 'done'
+    },
+    {
+      propId: 2,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 3,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 4,
+      status: 'evaluate',
+      stage: 'active'
+    }
+  ])
+
+  console.log('running onperiod 4')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await checkEscrowLocks([])
+
+  await checkProps([
+    {
+      propId: 1,
+      status: 'passed',
+      stage: 'done'
+    },
+    {
+      propId: 2,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 3,
+      status: 'rejected',
+      stage: 'done'
+    },
+    {
+      propId: 4,
+      status: 'rejected',
+      stage: 'done'
+    }
+  ])
+
+})
+
+
+
+describe('Hypha proposals', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow, onboarding, pool })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+
+  console.log('create proposal '+milestonebank)
+
+  await contracts.proposals.createx(firstuser, hyphabank, '100.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', milestonebank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, hyphabank, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', milestonebank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+
+  await contracts.proposals.createx(seconduser, seconduser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '555.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 90, { authorization: `${harvest}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
+
+  await contracts.proposals.favour(thirduser, 2, 1, { authorization: `${thirduser}@active` })
+
+  const voiceTable = await eos.getTableRows({
+    code: proposals,
+    scope: 'milestone',
+    table: 'voice',
+    json: true
+  })
+  console.log(voiceTable)
+
+  assert({
+    given: 'voted on hypha props',
+    should: 'have the correct voice',
+    actual: voiceTable.rows,
+    expected: [
+      { account: firstuser, balance: 90 },
+      { account: seconduser, balance: 80 },
+      { account: thirduser, balance: 79 }
+    ]
+  })
+
+  console.log('eval proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  assert({
+    given: 'hypha props created',
+    should: 'evaluated them correctly',
+    actual: props.rows.map(p => {
+      return {
+        id: p.id,
+        status: p.status,
+        stage: p.stage,
+        current_payout: p.current_payout,
+        campaign_type: p.campaign_type
+      }
+    }),
+    expected: [
+      {
+        id: 1,
+        status: 'passed',
+        stage: 'done',
+        current_payout: '100.0000 SEEDS',
+        campaign_type: 'milestone'
+      },
+      {
+        id: 2,
+        status: 'rejected',
+        stage: 'done',
+        current_payout: '0.0000 SEEDS',
+        campaign_type: 'milestone'
+      },
+      {
+        id: 3,
+        status: 'rejected',
+        stage: 'done',
+        current_payout: '0.0000 SEEDS',
+        campaign_type: 'cmp.funding'
+      }
+    ]
+  })
+
+  const supportTable = await eos.getTableRows({
+    code: proposals,
+    scope: 'milestone',
+    table: 'support',
+    json: true
+  })
+
+  assert({
+    given: 'milestone props created',
+    should: 'have the correct support',
+    actual: supportTable.rows,
+    expected: [
+      {
+        propcycle: 1,
+        num_proposals: 2,
+        total_voice_cast: 21,
+        voice_needed: 9
+      },
+      {
+        propcycle: 2,
+        num_proposals: 0,
+        total_voice_cast: 0,
+        voice_needed: 0
+      }
+    ]
   })
 
 })

@@ -181,11 +181,13 @@ void token::check_limit_transactions(name from) {
 
   if (uitr != users.end()) {
     uint64_t max_trx = 0;
+    auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
     if (bitr != balances.end() && bitr -> planted > asset(0, seeds_symbol)) {
       auto mul_trx = config.get(name("txlimit.mul").value, "The txlimit.mul parameters has not been initialized yet.");
       max_trx = (mul_trx.value * (bitr -> planted).amount) / 10000;
-    } else {
-      auto min_trx = config.get(name("txlimit.min").value, "The txlimit.min parameters has not been initialized yet.");
+    } 
+        
+    if (min_trx.value > max_trx) {
       max_trx = min_trx.value;
     }
 
@@ -405,7 +407,7 @@ uint64_t token::balance_for( const name& owner ) {
 }
 
 
-void token::minttst (const name& to, const asset& quantity, const string& memo) {
+void token::minthrvst (const name& to, const asset& quantity, const string& memo) {
 
   require_auth(get_self());
 
@@ -439,4 +441,5 @@ void token::minttst (const name& to, const asset& quantity, const string& memo) 
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minttst) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(burn)(resetweekly)(resetwhelper)(updatecirc)(minthrvst) )
+  

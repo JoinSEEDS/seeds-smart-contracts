@@ -21,6 +21,7 @@
     "commander": "^3.0.2",
     "commonmark": "^0.29.2",
     "dotenv": "^8.1.0",
+    "eosio-signing-request": "^2.2.1",
     "eosjs": "^21.0.3",
     "eosjs-ecc": "^4.0.7",
     "fs-extra": "^9.1.0",

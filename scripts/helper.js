@@ -29,7 +29,7 @@ const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
   telosTestnet: 'https://test.hypha.earth',
-  telosMainnet: 'https://node.hypha.earth'
+  telosMainnet: 'https://api.telosfoundation.io'
 }
 
 const ownerAccounts = {
@@ -133,19 +133,23 @@ const token = (accountName, issuer, supply) => ({
   supply
 })
 
-const bdc = 'bdc'
+const rgn = 'rgn'
 
 const accountsMetadata = (network) => {
   if (network == networks.local) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
       firstuser: account('seedsuseraaa', '10000000.0000 SEEDS'),
       seconduser: account('seedsuserbbb', '10000000.0000 SEEDS'),
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS'),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS'),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS'),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
+      orguser: account('org1', '100.0000 SEEDS'),
+      hyphabank: account('seeds.hypha', '100.0000 SEEDS'),
+      
 
       // on main net first bank has 525000000 seeds but we use 25M above for our test accounts
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
@@ -172,18 +176,21 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      quests: contract('quests.seeds', 'quests')
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.telosMainnet) {
     return {
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
       campaignbank: account('gift.seeds',  '525000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
       thirdbank: account('hypha.seeds',  '300000000.0000 SEEDS'),
@@ -193,6 +200,7 @@ const accountsMetadata = (network) => {
       bank: account('system.seeds'),
       globaldho: account('gdho.seeds'),
       testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       history: contract('histry.seeds', 'history'),
       accounts: contract('accts.seeds', 'accounts'),
@@ -209,12 +217,16 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -223,10 +235,11 @@ const accountsMetadata = (network) => {
       thirduser: account('seedsuserccc', '5000000.0000 SEEDS'),
       fourthuser: account('seedsuserxxx', '10000000.0000 SEEDS', testnetUserPubkey),
       fifthuser: account('seedsuseryyy', '10000000.0000 SEEDS', testnetUserPubkey),
-      sixthuser: account('seedsuserzzz', '5000000.0000 SEEDS', testnetUserPubkey),
+      sixthuser: account('seedsuserzzz', '5000.0000 SEEDS', testnetUserPubkey),
+      constitutionalGuardians: account('cg.seeds', '1.0000 SEEDS'),
 
       owner: account(owner),
-      bdc: account(bdc),
+      rgn: account(rgn),
 
       campaignbank: account('gift.seeds',  '500000000.0000 SEEDS'),
       milestonebank: account('milest.seeds', '75000000.0000 SEEDS'),
@@ -253,12 +266,16 @@ const accountsMetadata = (network) => {
       forum: contract('forum.seeds', 'forum'),
       scheduler: contract('cycle.seeds', 'scheduler'),
       organization: contract('orgs.seeds', 'organization'),
-      bioregion: contract('bio.seeds', 'bioregion'),
+      region: contract('region.seeds', 'region'),
       msig: contract('msig.seeds', 'msig'),
       guardians: contract('guard.seeds', 'guardians'),
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -291,27 +308,24 @@ allBankAccountNames.sort()
 
 var permissions = [{
   target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.milestonebank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.alliancesbank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
-  actor: `${accounts.accounts.account}@active`
+  actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.globaldho.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
 }, {
-  target: `${accounts.accounts.account}@owner`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
+  target: `${accounts.accounts.account}@owner`, // probably don't need this
   actor: `${accounts.accounts.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -324,7 +338,7 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.harvest.account}@active`
+  actor: `${accounts.harvest.account}@eosio.code`
 }, {
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.accounts.account}@active`
@@ -333,13 +347,13 @@ var permissions = [{
   actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.bank.account}@active`,
-  actor: `${accounts.proposals.account}@active`
+  actor: `${accounts.proposals.account}@eosio.code`
 }, {
   target: `${accounts.referendums.account}@active`,
   actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.settings.account}@active`,
-  actor: `${accounts.referendums.account}@active`
+  actor: `${accounts.referendums.account}@eosio.code`
 }, {
   target: `${accounts.history.account}@active`,
   actor: `${accounts.harvest.account}@active`
@@ -361,8 +375,9 @@ var permissions = [{
   key: exchangePublicKey,
   parent: 'active'
 }, {
-  target: `${accounts.accounts.account}@api`,
-  action: 'addrep'
+  target: `${accounts.exchange.account}@update`,
+  key: exchangePublicKey,
+  parent: 'active'
 }, {
   target: `${accounts.accounts.account}@api`,
   action: 'subrep'
@@ -381,10 +396,13 @@ var permissions = [{
   target: `${accounts.exchange.account}@purchase`,
   action: 'newpayment'
 }, {
+  target: `${accounts.exchange.account}@update`,
+  action: 'updatetlos'
+}, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
-  target: `${accounts.onboarding.account}@owner`,
+  target: `${accounts.onboarding.account}@owner`, // should be active
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@active`,
@@ -394,7 +412,7 @@ var permissions = [{
   actor: `${accounts.organization.account}@active`,
 }, {
   target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.bioregion.account}@active`,
+  actor: `${accounts.region.account}@active`,
 }, {
   target: `${accounts.onboarding.account}@application`,
   key: applicationPublicKey,
@@ -466,17 +484,6 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   action: 'rankcbss'
 }, {
-  target: `${accounts.accounts.account}@execute`,
-  target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
-}, {
-  target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
   target: `${accounts.forum.account}@execute`,
   action: 'newday'
 }, {
@@ -494,11 +501,11 @@ var permissions = [{
   target: `${accounts.accounts.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
-  target: `${accounts.bdc.account}@owner`,
+  target: `${accounts.rgn.account}@owner`,
   actor: `${accounts.onboarding.account}@eosio.code`
 }, {
-  target: `${accounts.bioregion.account}@active`,
-  actor: `${accounts.bioregion.account}@eosio.code`
+  target: `${accounts.region.account}@active`,
+  actor: `${accounts.region.account}@eosio.code`
 }, {
   target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -524,6 +531,9 @@ var permissions = [{
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'
 }, {
+  target: `${accounts.exchange.account}@execute`,
+  action: 'incprice'
+}, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'
 }, {
@@ -541,14 +551,12 @@ var permissions = [{
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.token.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
+  actor: `${accounts.scheduler.account}@active`,
+  parent: 'active',
+  type: 'createActorPermission'
 }, {
   target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly'
+  action: 'resetweekly',
 }, {
   target: `${accounts.onboarding.account}@application`,
   action: 'acceptnew'
@@ -618,13 +626,13 @@ var permissions = [{
   type: 'createActorPermission'
 }, {
   target: `${accounts.token.account}@minthrvst`,
-  action: 'minttst'
+  action: 'minthrvst'
 }, { 
   target: `${accounts.harvest.account}@active`,
   actor: `${accounts.organization.account}@active`
 }, {
   target: `${accounts.harvest.account}@execute`,
-  action: 'rankbiocss'
+  action: 'rankrgncss'
 }, {
   target: `${accounts.gratitude.account}@active`,
   actor: `${accounts.gratitude.account}@eosio.code`
@@ -641,21 +649,111 @@ var permissions = [{
 }, {
   target: `${accounts.service.account}@invite`,
   action: 'createinvite'
-}, {
-  // target: `${accounts.bank.account}@active`,
-  // actor: `${accounts.pouch.account}@active`
 },{
   target: `${accounts.quests.account}@active`,
   actor: `${accounts.quests.account}@eosio.code`
 }, {
+  // TODO REVIEW
   target: `${accounts.campaignbank.account}@active`,
   actor: `${accounts.quests.account}@active`
 }, {
+  // TODO REVIEW: Make more specific
   target: `${accounts.proposals.account}@active`,
   actor: `${accounts.quests.account}@active`
 }, {
+  // TODO REVIEW: Make more specific
   target: `${accounts.accounts.account}@active`,
   actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgreps'
+}, {
+  target: `${accounts.accounts.account}@execute`,
+  action: 'rankorgcbss'
+}, {
+  target: `${accounts.harvest.account}@execute`,
+  action: 'rankorgcss'
+}, {
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.proposals.account}@active`
+}, {
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.onboarding.account}@active`,
+}, { 
+  target: `${accounts.proposals.account}@active`,
+  actor: `${accounts.escrow.account}@active`
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  actor: `${accounts.history.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addcbs`,
+  action: 'addcbs'
+}, {
+  target: `${accounts.pool.account}@active`,
+  actor: `${accounts.pool.account}@eosio.code`
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  actor: `${accounts.harvest.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.pool.account}@hrvst.pool`,
+  action: 'payouts'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'calcmappuses'
+}, {
+  target: `${accounts.organization.account}@execute`,
+  action: 'rankappuses'
+}, {
+  target: `${accounts.msig.account}@owner`,
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.msig.account}@active`,
+  actor: `${accounts.msig.account}@eosio.code`
+}, {
+  target: `${accounts.onboarding.account}@execute`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.onboarding.account}@execute`,
+  action: 'chkcleanup'
+}, {
+  target: `${accounts.history.account}@active`,
+  actor: `${accounts.history.account}@eosio.code`
+}, {
+  target: `${accounts.history.account}@execute`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.history.account}@execute`,
+  action: 'cleanptrxs'
+}, {
+  target: `${accounts.dao.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'api',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  action: 'addrep'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  action: 'configure'
+},{
+  target: `${accounts.settings.account}@referendum`,
+  action: 'conffloat'
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -690,13 +788,15 @@ if (keyProvider.length == 0 || keyProvider[0] == null) {
   console.log("ERROR: Invalid Key Provider: "+JSON.stringify(keyProvider, null, 2))
 }
 
+const isLocal = () => { return chainId == networks.local }
+
 const config = {
   keyProvider,
   httpEndpoint,
   chainId
 }
 
-const eos = new Eos(config)
+const eos = new Eos(config, isLocal)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -713,7 +813,7 @@ const getEOSWithEndpoint = (ep) => {
     httpEndpoint: ep,
     chainId
   }
-  return new Eos(config)
+  return new Eos(config, isLocal)
 }
 
 // ===========================================================================
@@ -754,23 +854,18 @@ const initContracts = (accounts) =>
     ))
   )
   
-const sha256 = Eos.getEcc().sha256
-
-const isLocal = () => { return chainId == networks.local }
+const ecc = require('eosjs-ecc')
+const sha256 = ecc.sha256
 
 const ramdom64ByteHexString = async () => {
-  let privateKey = await Eos.getEcc().randomKey({}, {
-    secureEnv: true
-  })
+  let privateKey = await ecc.randomKey()
   const encoded = Buffer.from(privateKey).toString('hex').substring(0, 64); 
   return encoded
 }
 const fromHexString = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
 
 const createKeypair = async () => {
-  let private = await Eos.getEcc().randomKey({}, {
-    secureEnv: true
-  })
+  let private = await ecc.randomKey()
   let public = await Eos.getEcc().privateToPublic(private)
   return{ private, public }
 }
@@ -779,8 +874,27 @@ const sleep = async (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function asset (quantity) {
+  if (typeof quantity == 'object') {
+    if (quantity.symbol) {
+      return quantity
+    }
+    return null
+  }
+  const [amount, symbol] = quantity.split(' ')
+  const indexDecimal = amount.indexOf('.')
+  const precision = amount.substring(indexDecimal + 1).length
+  return {
+    amount: parseFloat(amount),
+    symbol,
+    precision,
+    toString: quantity
+  }
+}
+
 module.exports = {
+  keyProvider, httpEndpoint,
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
 }

@@ -18,9 +18,7 @@ void exchange::reset() {
   unpause();
   setflag(tlos_paused_flag, 1);
 
-  // COMMENT in for testing, never check in commented in
-/**
-  // we never want to erase rounds or sold table or history except for unit testing
+  check(false, "Comment this out- safety stop. Always check in uncommented. ");
   
   sold.remove();
 
@@ -43,7 +41,6 @@ void exchange::reset() {
   while(fitr != flags.end()) {
     fitr = flags.erase(fitr);
   }
-/**/
 
 }
 
@@ -179,11 +176,27 @@ void exchange::ontransfer(name buyer, name contract, asset tlos_quantity, string
   
     asset tlos_per_usd = c.tlos_per_usd;
 
-    uint64_t usd_amount = (tlos_quantity.amount * tlos_per_usd.amount) / 10000;
+    double tlos_q_double = tlos_quantity.amount / 10000.0;
+    double tlos_per_usd_double = tlos_per_usd.amount / 10000.0;
+
+    uint64_t usd_amount = (tlos_q_double * tlos_per_usd_double) * 10000;
 
     asset usd_asset = asset(usd_amount, usd_symbol);
 
     purchase_usd(buyer, usd_asset, "TLOS", memo);
+
+    auto now = eosio::current_time_point().sec_since_epoch();
+
+    string paymentId = buyer.to_string() + ": "+tlos_quantity.to_string() + " time: " + std::to_string(now);
+
+    payhistory.emplace(_self, [&](auto& item) {
+      item.id = payhistory.available_primary_key();
+      item.recipientAccount = buyer;
+      item.paymentSymbol = "TLOS";
+      item.paymentId = paymentId;
+      item.multipliedUsdValue = usd_asset.amount;
+    });
+
   }
 }
 
@@ -368,6 +381,34 @@ ACTION exchange::addround(uint64_t volume, asset seeds_per_usd) {
     item.seeds_per_usd = seeds_per_usd;
     item.max_sold = prev_vol + volume; 
   });
+}
+
+ACTION exchange::updatevol(uint64_t round_id, uint64_t volume) {
+  require_auth(get_self());
+
+  price_table p = price.get_or_create(get_self(), price_table());
+  check(round_id > p.current_round_id, "cannot change volume on past or already started rounds, only on future rounds");
+
+  uint64_t prev_vol = 0;
+
+  auto previtr = rounds.find(round_id - 1);
+  if (previtr != rounds.end()) {
+    prev_vol = previtr -> max_sold;
+  } else {
+    check(round_id == 0, "invalid round id - must be continuous");
+  }
+
+  auto ritr = rounds.find(round_id);
+
+  while(ritr != rounds.end()) {
+    uint64_t max_sold = prev_vol + volume;
+    rounds.modify(ritr, _self, [&](auto& item) {
+        item.max_sold = max_sold;
+    });
+    prev_vol = max_sold;
+    ritr++;
+  }
+
 }
 
 ACTION exchange::initsale() {

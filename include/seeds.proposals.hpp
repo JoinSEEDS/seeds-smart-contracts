@@ -37,12 +37,18 @@ CONTRACT proposals : public contract {
       
       ACTION createx(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, std::vector<uint64_t> pay_percentages);
 
+      ACTION createinvite(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, name fund, asset max_amount_per_invite, asset planted, asset reward);
+
       ACTION cancel(uint64_t id);
 
       ACTION update(uint64_t id, string title, string summary, string description, string image, string url);
       
       ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
+      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION applyfixprop(); // temp for fixing description
+      ACTION backfixprop(); // revert fixing description
+      
       ACTION stake(name from, name to, asset quantity, string memo);
 
       ACTION addvoice(name user, uint64_t amount);
@@ -55,11 +61,16 @@ CONTRACT proposals : public contract {
 
       ACTION neutral(name user, uint64_t id);
 
+      ACTION revertvote(name user, uint64_t id);
+      ACTION mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize);
+
       ACTION voteonbehalf(name voter, uint64_t id, uint64_t amount, name option);
 
       ACTION erasepartpts(uint64_t active_proposals);
 
       ACTION onperiod();
+
+      ACTION evalproposal(uint64_t proposal_id, uint64_t prop_cycle);
 
       ACTION updatevoices();
 
@@ -79,8 +90,6 @@ CONTRACT proposals : public contract {
 
       ACTION testvdecay(uint64_t timestamp);
 
-      ACTION migratevoice(uint64_t start);
-
       ACTION testsetvoice(name user, uint64_t amount);
       ACTION initsz();
 
@@ -94,14 +103,23 @@ CONTRACT proposals : public contract {
 
       ACTION questvote(name user, uint64_t amount, bool reduce, name scope);
 
+      ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
 
-      ACTION migrtevotedp ();
-      ACTION migrpass ();
+      ACTION checkprop(uint64_t proposal_id, string message);
 
-      ACTION migstats (uint64_t cycle);
-      ACTION migcycstat ();
+      ACTION doneprop(uint64_t proposal_id);
+
+
+      ACTION cleanmig ();
+      ACTION testpropquor(uint64_t current_cycle, uint64_t prop_id);
 
       ACTION testperiod ();
+      ACTION testevalprop(uint64_t proposal_id, uint64_t prop_cycle);
+
+      ACTION reevalprop (uint64_t proposal_id, uint64_t prop_cycle);
+
+      ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
+      ACTION migalliances(uint64_t start, uint64_t chunksize);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -133,6 +151,18 @@ CONTRACT proposals : public contract {
 
       name alliance_type = "alliance"_n;
       name campaign_type = "campaign"_n;
+      name referendum_type = "referendum"_n;
+
+      name campaign_invite_type = "cmp.invite"_n;
+      name campaign_funding_type = "cmp.funding"_n;
+      name milestone_type = "milestone"_n;
+
+      std::vector<name> scopes = {
+        alliance_type,
+        get_self(),
+        milestone_type,
+        referendum_type,
+      };
 
       void update_cycle();
       void update_voicedecay();
@@ -145,6 +175,7 @@ CONTRACT proposals : public contract {
 
       void check_user(name account);
       void check_citizen(name account);
+      void check_resident(name account, bool org_allowed);
       void deposit(asset quantity);
       void withdraw(name account, asset quantity, name sender, string memo);
       void refund_staked(name beneficiary, asset quantity);
@@ -152,7 +183,8 @@ CONTRACT proposals : public contract {
       void burn(asset quantity);
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated);
-      bool revert_vote (name voter, uint64_t id);
+      void revertvote_delegate(name voter, uint64_t id);
+
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
@@ -162,7 +194,10 @@ CONTRACT proposals : public contract {
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
-      name get_type (name fund);
+      name get_type (const name & fund);
+      name get_scope(name fund);
+      bool has_delegates(name voter, name scope);
+
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
@@ -175,10 +210,28 @@ CONTRACT proposals : public contract {
       bool is_active(name account, uint64_t cutoff_date);
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
-      void increase_voice_cast(name voter, uint64_t amount, name option);
+      void increase_voice_cast(uint64_t amount, name option, name prop_type);
       uint64_t calc_quorum_base(uint64_t propcycle);
-      void update_cycle_stats(std::vector<uint64_t>active_props, std::vector<uint64_t> eval_props);
       void add_voted_proposal(uint64_t proposal_id);
+      void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
+        name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);
+      void send_create_invite(name origin_account, name owner, asset max_amount_per_invite, asset planted, name reward_owner, asset reward, asset total_amount, uint64_t proposal_id);
+      void send_return_funds_campaign(uint64_t campaign_id);
+
+      void send_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void init_cycle_new_stats();
+      void update_cycle_stats_from_proposal(uint64_t proposal_id, name type, name array);
+      void send_punish(name account);
+      void send_update_voices();
+      void send_cancel_lock(name fromfund, uint64_t campaign_id, asset quantity);
+      bool check_prop_majority(uint64_t favour, uint64_t against);
+
+      void send_test_eval_prop(uint64_t proposal_id, uint64_t prop_cycle);
+      void set_support_level(uint64_t cycle, uint64_t num_proposals, uint64_t votes_cast, name type);
+      void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
+      void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
+      uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
+      void check_values(string title, string summary, string description, string image, string url);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -216,9 +269,21 @@ CONTRACT proposals : public contract {
           uint64_t passed_cycle;
           uint32_t age;
           asset current_payout;
+          name campaign_type;
+          asset max_amount_per_invite;
+          asset planted;
+          asset reward;
+          uint64_t campaign_id;
 
           uint64_t primary_key()const { return id; }
           uint64_t by_status()const { return status.value; }
+          uint64_t by_stage()const { return stage.value; }
+          uint64_t by_campaign()const { return campaign_id; }
+          uint64_t by_creator()const { return creator.value; }
+
+          uint128_t by_status_id()const { return (uint128_t(status.value) << 64) + id; }
+          uint128_t by_stage_id()const { return (uint128_t(stage.value) << 64) + id; }
+          uint128_t by_campaign_type_id()const { return (uint128_t(campaign_type.value) << 64) + id; }
       };
 
       TABLE min_stake_table {
@@ -226,6 +291,20 @@ CONTRACT proposals : public contract {
           uint64_t min_stake;
           uint64_t primary_key()const { return prop_id; }
       };
+
+      TABLE fix_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixprops"_n, fix_props_table> fix_props_tables;
+
+      TABLE fixb_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixbprops"_n, fixb_props_table> fixb_props_tables;
 
       DEFINE_USER_TABLE
 
@@ -286,18 +365,29 @@ CONTRACT proposals : public contract {
         
         uint64_t start_time; 
         uint64_t end_time; 
-        uint64_t num_proposals;
+        uint64_t num_proposals;           // unused -> see support_level_table, scoped by type
         uint64_t num_votes;
         uint64_t total_voice_cast;
         uint64_t total_favour;
         uint64_t total_against; 
         uint64_t total_citizens;
-        uint64_t quorum_vote_base;
-        uint64_t quorum_votes_needed;
+        uint64_t quorum_vote_base;        // unused -> see support_level_table scoped by type
+        uint64_t quorum_votes_needed;     // unused -> see support_level_table scoped by type
+        uint64_t total_eligible_voters;
         float unity_needed;
 
         std::vector<uint64_t> active_props;
         std::vector<uint64_t> eval_props;
+
+        uint64_t primary_key()const { return propcycle; }
+      };
+
+      TABLE support_level_table {
+        uint64_t propcycle; 
+        
+        uint64_t num_proposals;
+        uint64_t total_voice_cast;
+        uint64_t voice_needed;
 
         uint64_t primary_key()const { return propcycle; }
       };
@@ -310,8 +400,21 @@ CONTRACT proposals : public contract {
 
     typedef eosio::multi_index<"props"_n, proposal_table,
       indexed_by<"bystatus"_n,
-      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_status>>,
+      indexed_by<"bystage"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_stage>>,
+      indexed_by<"bycampaign"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_campaign>>,
+      indexed_by<"bycreator"_n,
+      const_mem_fun<proposal_table, uint64_t, &proposal_table::by_creator>>,
+      indexed_by<"bystatusid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_status_id>>,
+      indexed_by<"bystageid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_stage_id>>,
+      indexed_by<"bycmptypeid"_n,
+      const_mem_fun<proposal_table, uint128_t, &proposal_table::by_campaign_type_id>>
     > proposal_tables;
+    
     typedef eosio::multi_index<"votes"_n, vote_table> votes_tables;
     typedef eosio::multi_index<"participants"_n, participant_table> participant_tables;
     typedef eosio::multi_index<"users"_n, user_table> user_tables;
@@ -329,7 +432,9 @@ CONTRACT proposals : public contract {
     > delegate_trust_tables;
     typedef eosio::multi_index<"cyclestats"_n, cycle_stats_table> cycle_stats_tables;
     typedef eosio::multi_index<"cycvotedprps"_n, voted_proposals_table> voted_proposals_tables;
- 
+
+    typedef eosio::multi_index<"support"_n, support_level_table> support_level_tables;
+
     DEFINE_SIZE_TABLE
     DEFINE_SIZE_TABLE_MULTI_INDEX
 
@@ -350,13 +455,18 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<proposals>(name(receiver), name(code), &proposals::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(update)(updatex)(addvoice)(changetrust)(favour)(against)
-        (neutral)(erasepartpts)(checkstake)(onperiod)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
+        EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
+        (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
-        (migratevoice)(testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
-        (calcvotepow)
-        (migrtevotedp)(migrpass)(testperiod)(migstats)(migcycstat)
         (questvote)
+        (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
+        (calcvotepow)(addcampaign)(checkprop)(doneprop)
+        (testperiod)(testevalprop)
+        (cleanmig)(testpropquor)
+        (reevalprop)
+        (testalliance)(migalliances)
+        (fixdesc)(applyfixprop)(backfixprop)
+        (revertvote)(mimicrevert)
         )
       }
   }

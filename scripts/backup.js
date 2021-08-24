@@ -29,7 +29,7 @@ const harvestFetchData = async () => {
 }
 
 const fetchers = {
-  'accounts': accountsFetchData
+  'accounts': accountsFetchData,
   'harvest': harvestFetchData
 }
 

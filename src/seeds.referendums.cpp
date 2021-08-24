@@ -46,6 +46,9 @@ void referendums::give_voice() {
 
 uint64_t referendums::get_quorum(const name & setting) {
   auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("quorum.high").value) -> value;
+  }
   switch (citr->impact) {
     case high_impact:
       return config.find(name("quorum.high").value) -> value;
@@ -61,6 +64,9 @@ uint64_t referendums::get_quorum(const name & setting) {
 
 uint64_t referendums::get_unity(const name & setting) {
   auto citr = config.find(setting.value);
+  if (citr == config.end()) {
+    return config.find(name("unity.high").value) -> value;
+  }
   switch (citr->impact) {
     case high_impact:
       return config.find(name("unity.high").value) -> value;
@@ -167,7 +173,7 @@ void referendums::onperiod() {
   run_active();
   run_staged();
 
-  give_voice();
+  updatevoice(0, 50);
 
 }
 
@@ -257,6 +263,57 @@ void referendums::addvoice(name account, uint64_t amount) {
   }
 }
 
+ACTION referendums::updatevoice(uint64_t start, uint64_t batchsize) {
+  require_auth(get_self());
+  
+  // Voice table definition from proposals.hpp
+  TABLE voice_table {
+    name account;
+    uint64_t balance;
+    uint64_t primary_key()const { return account.value; }
+  };
+  typedef eosio::multi_index<"voice"_n, voice_table> voice_tables;
+  voice_tables voice(contracts::proposals, "referendum"_n.value);
+
+  auto vitr = start == 0 ? voice.begin() : voice.find(start);
+
+  uint64_t count = 0;
+  
+  while (vitr != voice.end() && count < batchsize) {
+    auto bitr = balances.find(vitr->account.value);
+    if (bitr == balances.end()) {
+      balances.emplace(get_self(), [&](auto& item) {
+        item.account = vitr->account;
+        item.voice = vitr->balance;
+        item.stake = asset(0, seeds_symbol);
+      });
+      count++;// double weight for emplace
+    } else {
+      balances.modify(bitr, get_self(), [&](auto& item) {
+        item.voice = vitr->balance;
+      });
+    }
+
+    vitr++;
+    count++;
+  }
+  
+  if (vitr != voice.end()) {
+    uint64_t next_value = vitr->account.value;
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "updatevoice"_n,
+        std::make_tuple(next_value, batchsize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
 void referendums::stake(name from, name to, asset quantity, string memo) {
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
@@ -292,6 +349,10 @@ void referendums::create(
 ) {
   require_auth(creator);
 
+  check_citizen(creator);
+
+  check_values(title, summary, description, image, url);
+
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
   asset stake_price = asset(price_amount, seeds_symbol);
 
@@ -300,9 +361,18 @@ void referendums::create(
   check(bitr->stake >= stake_price, "user has not sufficient stake");
 
   referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  uint64_t key = std::max(staged.available_primary_key(), active.available_primary_key());
+  key = std::max(key, testing.available_primary_key());
+  key = std::max(key, passed.available_primary_key());
+  key = std::max(key, failed.available_primary_key());
 
   staged.emplace(get_self(), [&](auto& item) {
-    item.referendum_id = staged.available_primary_key();
+    item.referendum_id = key;
     item.favour = 0;
     item.against = 0;
     item.staked = asset(price_amount, seeds_symbol);
@@ -320,6 +390,31 @@ void referendums::create(
   balances.modify(bitr, get_self(), [&](auto& balance) {
     balance.stake -= stake_price;
   });
+}
+
+void referendums::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
 }
 
 void referendums::update(
@@ -344,8 +439,10 @@ void referendums::update(
     }
     sitr++;
   }
-  
+
   check (sitr != refs.end(), "referendum creator not found " + creator.to_string());
+
+  check_values(title, summary, description, image, url);
 
   require_auth(sitr->creator);
 
@@ -446,5 +543,133 @@ void referendums::cancelvote(name voter, uint64_t referendum_id) {
     testing.modify(titr, get_self(), [&](auto& item) {
       item.against -= vitr->amount;
     });
+  }
+}
+void referendums::check_citizen(name account)
+{
+  DEFINE_USER_TABLE;
+  DEFINE_USER_TABLE_MULTI_INDEX;
+  user_tables users(contracts::accounts, contracts::accounts.value);
+
+  auto uitr = users.find(account.value);
+  check(uitr != users.end(), "no user");
+  check(uitr->status == name("citizen"), "user is not a citizen");
+}
+
+void referendums::fixtitle(uint64_t id, string title) 
+{
+  require_auth(get_self());
+  referendum_tables refs(get_self(), name("active").value);
+
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum id not found");
+  refs.modify(ritr, _self, [&](auto& item) {
+    item.title = title;
+  });
+}
+
+void referendums::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+  referendum_tables staged(get_self(), name("staged").value);
+
+  referendum_tables refs(get_self(), name("active").value);
+  auto ritr = refs.find(id);
+  check(ritr != refs.end(), "referendum not found");
+
+  // make backup - only the first time
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.find(id);
+  if (bitr == backrefs.end()) {
+    backrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = ritr->description;
+    });
+  } 
+
+  fix_refs_tables fixrefs(get_self(), get_self().value);
+
+  auto fix_itr = fixrefs.find(id);
+
+  if (fix_itr == fixrefs.end()) {
+    fixrefs.emplace(_self, [&](auto & item){
+      item.ref_id = id;
+      item.description = description;
+    });
+  } else {
+    fixrefs.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void referendums::fixid() 
+{
+  require_auth(get_self());
+  referendum_tables active(get_self(), name("active").value);
+
+  auto ritr = active.find(0);
+  check(ritr != active.end(), "referendum 0 not found");
+
+  auto ritr_1 = active.find(1);
+  check(ritr_1 == active.end(), "referendum 1 already exists");
+
+  active.emplace(get_self(), [&](auto& item) {
+    item.referendum_id = 1;
+    item.favour = ritr->favour;
+    item.against = ritr->against;
+    item.staked = ritr->staked;
+    item.creator = ritr->creator;
+    item.setting_name = ritr->setting_name;
+    item.setting_value = ritr->setting_value;
+    item.title = ritr->title;
+    item.summary = ritr->summary;
+    item.description = ritr->description;
+    item.image = ritr->image;
+    item.url = ritr->url;
+    item.created_at = ritr->created_at;
+  });
+
+  active.erase(ritr);
+
+}
+
+void referendums::applyfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  fix_refs_tables fixrefs(get_self(), get_self().value);
+  auto fitr = fixrefs.begin();
+  while(fitr != fixrefs.end()) {
+    print(" processing "+std::to_string(fitr->ref_id));
+    auto ritr = refs.find(fitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" replace id "+std::to_string(fitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void referendums::backfixref() {
+  require_auth(get_self());
+
+  referendum_tables refs(get_self(), name("active").value);
+
+  back_refs_tables backrefs(get_self(), get_self().value);
+  auto bitr = backrefs.begin();
+  while(bitr != backrefs.end()) {
+    print(" b processing "+std::to_string(bitr->ref_id));
+    auto ritr = refs.find(bitr->ref_id);
+    if (ritr != refs.end()) {
+      print(" restore id "+std::to_string(bitr->ref_id));
+      refs.modify(ritr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
   }
 }

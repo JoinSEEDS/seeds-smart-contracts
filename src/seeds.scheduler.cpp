@@ -5,26 +5,46 @@
 #include <string>
 
 
-bool scheduler::is_ready_to_execute(name operation){
+uint64_t scheduler::is_ready_op (const name & operation, const uint64_t & timestamp) {
+
     auto itr = operations.find(operation.value);
 
-    if (itr == operations.end()) {
-        return false;
-    }
     if(itr -> pause > 0) {
         print("transaction " + operation.to_string() + " is paused");
-        return false;
+        return 0;
     }
 
-    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
     uint64_t periods = 0;
 
     periods = (timestamp - itr -> timestamp) / itr -> period;
 
     print("\nPERIODS: " + std::to_string(periods) + ", current_time: " + std::to_string(timestamp) + ", last_timestap: " + std::to_string(itr->timestamp) );
 
-    if(periods > 0) return true;
-    return false;
+    return periods > 0 ? timestamp : 0;
+    
+}
+
+uint64_t scheduler::is_ready_moon_op (const name & operation, const uint64_t & timestamp) {
+
+    auto mitr = moonops.find(operation.value);
+
+    if (mitr->pause > 0) {
+        print("moon op " + operation.to_string() + " is paused");
+        return 0;
+    }
+
+    uint64_t moon_timestamp = 0;
+
+    if (mitr->start_time > mitr->last_moon_cycle_id) {
+        moon_timestamp = mitr->start_time;
+    } else {
+        auto mpitr = moonphases.find(mitr->last_moon_cycle_id);
+        std::advance(mpitr, mitr->quarter_moon_cycles);
+        moon_timestamp = mpitr->timestamp;
+    }
+
+    return timestamp >= moon_timestamp ? moon_timestamp : 0;
+
 }
 
 
@@ -61,6 +81,12 @@ void scheduler::reset_aux(bool destructive) {
             itr++;
         }
     }
+    if (destructive) {
+        auto itr = moonops.begin();
+        while(itr != moonops.end()) {
+            itr = moonops.erase(itr);
+        }
+    }
 
     auto titr = test.begin();
     while(titr != test.end()){
@@ -72,19 +98,21 @@ void scheduler::reset_aux(bool destructive) {
         name("tokn.resetw"),
 
         name("acct.rankrep"),
+        name("acct.rorgrep"),
         name("acct.rankcbs"),
+        name("acct.rorgcbs"),
 
         name("hrvst.ranktx"),
         name("hrvst.rankpl"),
 
         name("hrvst.calccs"), // after the above 4
         name("hrvst.rankcs"), 
+        name("hrvst.rorgcs"),
         name("hrvst.calctx"), // 24h
-        name("hrvst.biocs"),
+        name("hrvst.rgncs"),
 
         name("org.clndaus"),
         name("org.rankregn"),
-        name("org.rankcbs"),
 
         name("hrvst.orgtxs"),
 
@@ -96,6 +124,12 @@ void scheduler::reset_aux(bool destructive) {
         name("hrvst.qevs"),
         name("hrvst.mintr"),
         name("hrvst.hrvst"),
+
+        name("org.appuses"),
+        name("org.rankapps"),
+
+        name("onbrd.clean"),
+        name("hstry.ptrxs")
     };
     
     std::vector<name> operations_v = {
@@ -103,19 +137,21 @@ void scheduler::reset_aux(bool destructive) {
         name("resetweekly"),
 
         name("rankreps"),
+        name("rankorgreps"),
         name("rankcbss"),
+        name("rankorgcbss"),
         
         name("ranktxs"),
         name("rankplanteds"),
 
         name("calccss"),
         name("rankcss"),
+        name("rankorgcss"),
         name("calctrxpts"),
-        name("rankbiocss"),
+        name("rankrgncss"),
 
         name("cleandaus"),
         name("rankregens"),
-        name("rankcbsorgs"),
 
         name("rankorgtxs"),
 
@@ -127,6 +163,12 @@ void scheduler::reset_aux(bool destructive) {
         name("calcmqevs"),
         name("calcmintrate"),
         name("runharvest"),
+
+        name("calcmappuses"),
+        name("rankappuses"),
+
+        name("chkcleanup"),
+        name("cleanptrxs")
     };
 
     std::vector<name> contracts_v = {
@@ -135,6 +177,8 @@ void scheduler::reset_aux(bool destructive) {
 
         contracts::accounts,
         contracts::accounts,
+        contracts::accounts,
+        contracts::accounts,
 
         contracts::harvest,
         contracts::harvest,
@@ -143,8 +187,8 @@ void scheduler::reset_aux(bool destructive) {
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
+        contracts::harvest,
 
-        contracts::organization,
         contracts::organization,
         contracts::organization,
 
@@ -158,6 +202,12 @@ void scheduler::reset_aux(bool destructive) {
         contracts::harvest,
         contracts::harvest,
         contracts::harvest,
+
+        contracts::organization,
+        contracts::organization,
+
+        contracts::onboarding,
+        contracts::history
     };
 
     std::vector<uint64_t> delay_v = {
@@ -166,17 +216,19 @@ void scheduler::reset_aux(bool destructive) {
 
         utils::seconds_per_hour,
         utils::seconds_per_hour,
+        utils::seconds_per_hour,
+        utils::seconds_per_hour,
 
         utils::seconds_per_hour,
         utils::seconds_per_hour,
 
+        utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_hour,
         utils::seconds_per_day,
         utils::seconds_per_day,
 
         utils::seconds_per_day / 2,
-        utils::seconds_per_day,
         utils::seconds_per_day,
 
         utils::seconds_per_day,
@@ -189,6 +241,12 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_day,
         utils::seconds_per_day,
         utils::seconds_per_hour,
+
+        utils::seconds_per_day,
+        utils::seconds_per_day,
+
+        utils::seconds_per_day,
+        utils::seconds_per_day
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -198,12 +256,15 @@ void scheduler::reset_aux(bool destructive) {
         now,
 
         now - utils::seconds_per_hour, 
-        now - utils::seconds_per_hour, 
+        now - utils::seconds_per_hour,
+        now - utils::seconds_per_hour,
+        now - utils::seconds_per_hour,
 
         now - utils::seconds_per_hour, 
         now - utils::seconds_per_hour, 
 
         now + 300 - utils::seconds_per_hour, // kicks off 5 minutes later
+        now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         now,
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
@@ -221,6 +282,12 @@ void scheduler::reset_aux(bool destructive) {
 
         now,
         now + 600 - utils::seconds_per_hour,
+        now,
+
+        now,
+        now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
+        
+        now,
         now
     };
 
@@ -243,11 +310,29 @@ void scheduler::reset_aux(bool destructive) {
         }
         i++;
     }
+
+    // Moon Operations
+    // All moon operations need to be preserved, so they need to be added/removed manually.
+    // use addmoonop
+    // example below
+    /**
+    cleos -u "https://test.hypha.earth" push action cycle.seeds addmoonop '{ 
+            "id":"inc.price",
+            "action":"incprice",
+            "contract":"tlosto.seeds",
+            "quarter_moon_cycles":"1",
+            "start_phase_name":"Full Moon"
+    }' -p cycle.seeds@active
+    */
+
 }
 
 
 ACTION scheduler::configop(name id, name action, name contract, uint64_t period, uint64_t starttime) {
     require_auth(_self);
+
+    auto mop_itr = moonops.find(id.value);
+    check(mop_itr == moonops.end(), "op must have unique name, op exists in moon operations table");
 
     auto itr = operations.find(id.value);
     
@@ -274,6 +359,75 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period,
             noperation.contract = contract;
             noperation.period = period;
             noperation.timestamp = start - period;
+        });
+    }
+}
+
+ACTION scheduler::addmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, string start_phase_name) {
+    require_auth(_self);
+
+    check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
+
+    check(start_phase_name == "New Moon" ||
+        start_phase_name == "First Quarter" ||
+        start_phase_name == "Last Quarter" ||
+        start_phase_name == "Full Moon", "start_phase_name must be one of New Moon, First Quarter, Last Quarter, Full Moon");
+
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+    uint64_t starttime = 0;
+
+    auto mitr = moonphases.upper_bound(now);
+    uint8_t count = 0;
+    while (mitr != moonphases.end() && count < 4) {
+        if (mitr->phase_name == start_phase_name) {
+            starttime = mitr->timestamp;
+            break;
+        }
+        mitr++;
+        count++;
+    }
+
+    check(starttime != 0, "Unable to find moon phase. Must be one of New Moon, First Quarter, Last Quarter, Full Moon");
+
+    configmoonop(id, action, contract, quarter_moon_cycles, starttime);
+}
+
+ACTION scheduler::configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime) {
+    require_auth(_self);
+
+    check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
+    
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    check(starttime >= now, "start time must be a valid moon phase in the future");
+
+    auto mitr = moonphases.find(starttime);
+    check(mitr != moonphases.end(), "start time must be a valid moon phase timestamp");
+
+
+
+    auto oitr = operations.find(id.value);
+    check(oitr == operations.end(), "moon op must have unique name, op exists in normal operations table");
+
+    auto mop_itr = moonops.find(id.value);
+
+    if (mop_itr != moonops.end()) {
+        moonops.modify(mop_itr, _self, [&](auto & op){
+            op.action = action;
+            op.contract = contract;
+            op.quarter_moon_cycles = quarter_moon_cycles;
+            op.start_time = starttime;
+            op.pause = 0;
+        });
+    } else {
+        moonops.emplace(_self, [&](auto & op){
+            op.id = id;
+            op.action = action;
+            op.contract = contract;
+            op.quarter_moon_cycles = quarter_moon_cycles;
+            op.start_time = starttime;
+            op.last_moon_cycle_id = 0;
+            op.pause = 0;
         });
     }
 }
@@ -306,41 +460,47 @@ ACTION scheduler::moonphase(uint64_t timestamp, string phase_name, string eclips
         });
     }
 
-        }
+}
 
 ACTION scheduler::removeop(name id) {
     require_auth(get_self());
 
     auto itr = operations.find(id.value);
-    check(itr != operations.end(), contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
+    if (itr != operations.end()) {
+        operations.erase(itr);
+        return;
+    }
 
-    operations.erase(itr);
+    auto mitr = moonops.find(id.value);
+    if (mitr != moonops.end()) {
+        moonops.erase(mitr);
+        return;
+    }
+
+    check(false, contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
 }
 
 ACTION scheduler::pauseop(name id, uint8_t pause) {
     require_auth(get_self());
 
     auto itr = operations.find(id.value);
-    check(itr != operations.end(), contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
+    if (itr != operations.end()) {
+        operations.modify(itr, _self, [&](auto & moperation) {
+            moperation.pause = pause;
+        });
+        return;
+    }
 
-    operations.modify(itr, _self, [&](auto & moperation) {
-        moperation.pause = pause;
-    });
+    auto mitr = moonops.find(id.value);
+    if (mitr != moonops.end()) {
+        moonops.modify(mitr, _self, [&](auto & moonop){
+            moonop.pause = pause;
+        });
+        return;
+    }
+
+    check(false, contracts::scheduler.to_string() + ": the operation " + id.to_string() + " does not exist");
 }
-
-ACTION scheduler::confirm(name operation) {
-    require_auth(get_self());
-
-    print("Confirm the execution of " + operation.to_string());
-
-    auto itr = operations.find(operation.value);
-    check(itr != operations.end(), "Operation does not exist");
-
-    operations.modify(itr, _self, [&](auto & moperation) {
-        moperation.timestamp = current_time_point().sec_since_epoch();
-    });
-}
-
 
 ACTION scheduler::execute() {
    // require_auth(_self);
@@ -386,18 +546,47 @@ ACTION scheduler::execute() {
     auto itr = ops_by_last_executed.begin();
     bool has_executed = false;
 
-    while(itr != ops_by_last_executed.end()) {
-        if(is_ready_to_execute(itr -> id)){
+    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
 
-            print("\nOperation to be executed: " + itr -> id.to_string());
+    while(itr != ops_by_last_executed.end()) {
+        if(is_ready_op(itr -> id, timestamp)){
+
+            print("\nOperation to be executed: " + itr -> id.to_string(), "\n");
 
             exec_op(itr->id, itr->contract, itr->operation);
+
+            ops_by_last_executed.modify(itr, _self, [&](auto & operation) {
+                operation.timestamp = timestamp;
+            });
 
             has_executed = true;
             
             break;
         }
         itr++;
+    }
+
+    if (!has_executed) {
+        auto moonops_by_last_cycle = moonops.get_index<"bylastcycle"_n>();
+        auto mitr = moonops_by_last_cycle.begin();
+        
+        while (mitr != moonops_by_last_cycle.end()) {
+            uint64_t used_timestamp = is_ready_moon_op(mitr->id, timestamp);
+            if (used_timestamp) {
+                print("\nMoon operation to be executed: " + mitr->id.to_string(), "\n");
+
+                exec_op(mitr->id, mitr->contract, mitr->action);
+
+                moonops_by_last_cycle.modify(mitr, _self, [&](auto & operation){
+                    operation.last_moon_cycle_id = used_timestamp;
+                });
+
+                has_executed = true;
+
+                break;
+            }
+            mitr++;
+        }
     }
 
     // =======================
@@ -472,10 +661,15 @@ ACTION scheduler::test2() {
 
 ACTION scheduler::testexec(name op) {
     require_auth(get_self());
-    auto operation = operations.get(op.value, "op not found");
-    exec_op(op, operation.contract, operation.operation);
-
+    auto oitr = operations.find(op.value);
+    if (oitr != operations.end()) {
+        exec_op(op, oitr->contract, oitr->operation);
+    } else {
+        auto moonop = moonops.get(op.value, "op not found");
+        exec_op(op, moonop.contract, moonop.action);
+    }
 }
+
 void scheduler::exec_op(name id, name contract, name operation) {
     
     action a = action(
@@ -491,16 +685,24 @@ void scheduler::exec_op(name id, name contract, name operation) {
     // txa.send(eosio::current_time_point().sec_since_epoch() + 20, _self);
 
     a.send();
+}
 
-    action c = action(
-        permission_level{get_self(), "active"_n},
-        get_self(),
-        "confirm"_n,
-        std::make_tuple(id)
-    );
+// not using this
+uint64_t scheduler::next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quarter_moon_cycles) {
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    uint64_t result = moon_cycle_id;
 
-    c.send();
+    if (now > result) {
+        auto mpitr = moonphases.find(result);
+        while(now > result && mpitr != moonphases.end()) {
+            std::advance(mpitr, quarter_moon_cycles);
+            result = mpitr->timestamp;
+        }
+    }
+    return moon_cycle_id;
 }
 
 
-EOSIO_DISPATCH(scheduler,(configop)(execute)(reset)(confirm)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops));
+EOSIO_DISPATCH(scheduler,
+    (configop)(configmoonop)(addmoonop)(execute)(reset)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+);

@@ -1,4 +1,3 @@
- 
 #include <seeds.accounts.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>
@@ -17,7 +16,35 @@ void accounts::reset() {
       vitr = vouch.erase(vitr);
     }
 
+    flag_points_tables flags(get_self(), uitr->account.value);
+    auto fitr = flags.begin();
+    while (fitr != flags.end()) {
+      fitr = flags.erase(fitr);
+    }
+
     uitr = users.erase(uitr);
+  }
+
+  flag_points_tables flags(get_self(), flag_total_scope.value);
+  auto fitr = flags.begin();
+  while (fitr != flags.end()) {
+    fitr = flags.erase(fitr);
+  }
+
+  flag_points_tables flagsremoved(get_self(), flag_remove_scope.value);
+  auto fritr = flagsremoved.begin();
+  while (fritr != flagsremoved.end()) {
+    fritr = flagsremoved.erase(fritr);
+  }
+
+  auto vitr = vouches.begin();
+  while (vitr != vouches.end()) {
+    vitr = vouches.erase(vitr);
+  }
+
+  auto vtitr = vouchtotals.begin();
+  while (vtitr != vouchtotals.end()) {
+    vtitr = vouchtotals.erase(vtitr);
   }
 
   auto refitr = refs.begin();
@@ -30,9 +57,21 @@ void accounts::reset() {
     cbsitr = cbs.erase(cbsitr);
   }
 
+  cbs_tables cbs_t(get_self(), organization_scope.value);
+  auto cbsitr_org = cbs_t.begin();
+  while (cbsitr_org != cbs_t.end()) {
+    cbsitr_org = cbs_t.erase(cbsitr_org);
+  }
+
   auto repitr = rep.begin();
   while (repitr != rep.end()) {
     repitr = rep.erase(repitr);
+  }
+
+  rep_tables rep_t(get_self(), organization_scope.value);
+  auto o_repitr = rep_t.begin();
+  while (o_repitr != rep_t.end()) {
+    o_repitr = rep_t.erase(o_repitr);
   }
 
   auto sitr = sizes.begin();
@@ -64,13 +103,14 @@ void accounts::adduser(name account, string nickname, name type)
   check(is_account(account), "no account");
 
   check(type == individual|| type == organization, "Invalid type: "+type.to_string()+" type must be either 'individual' or 'organisation'");
+  check(nickname.size() <= 64, "nickname must be less than 65 characters long");
 
   auto uitr = users.find(account.value);
   check(uitr == users.end(), "existing user");
 
   users.emplace(_self, [&](auto& user) {
       user.account = account;
-      user.status = name("visitor");
+      user.status = visitor;
       user.reputation = 0;
       user.type = type;
       user.nickname = nickname;
@@ -86,11 +126,11 @@ void accounts::vouch(name sponsor, name account) {
   check_user(sponsor);
   check_user(account);
 
-  vouch_tables vouch(get_self(), account.value);
-
-  auto vitr = vouch.find(sponsor.value);
-
-  check(vitr == vouch.end(), "already vouched");
+  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+  uint128_t sponsor_account_id = (uint128_t(sponsor.value) << 64) + account.value;
+  
+  auto vitr = vouches_by_sponsor_account.find(sponsor_account_id);
+  check(vitr == vouches_by_sponsor_account.end(), "already vouched");
 
   auto uitrs = users.find(sponsor.value);
   auto uitra = users.find(account.value);
@@ -98,7 +138,7 @@ void accounts::vouch(name sponsor, name account) {
   name sponsor_status = uitrs->status;
   name account_status = uitra->status;
 
-  check(sponsor_status == name("citizen") || sponsor_status == name("resident"), "sponsor must be a citizen or resident to vouch.");
+  check(sponsor_status == citizen || sponsor_status == resident, "sponsor must be a citizen or resident to vouch.");
   _vouch(sponsor, account);
 }
 
@@ -106,64 +146,133 @@ void accounts::vouch(name sponsor, name account) {
 * Internal vouch function
 */
 void accounts::_vouch(name sponsor, name account) {
-
   auto uitrs = users.find(sponsor.value);
-
-  if (uitrs == users.end()) {
-    return;
-  }
+  if (uitrs == users.end()) { return; }
 
   if (uitrs->type != individual) {
     return; // only individuals can vouch
   }
 
   check_user(account);
-  vouch_tables vouch(get_self(), account.value);
 
-  auto uitra = users.find(account.value);
+  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+  uint128_t id = (uint128_t(sponsor.value) << 64) + account.value;
+  auto vitr = vouches_by_sponsor_account.find(id);
+  
+  if (vitr == vouches_by_sponsor_account.end()) {
+    name sponsor_status = uitrs->status;
 
-  name sponsor_status = uitrs->status;
+    auto resident_basepoints = config_get(resident_vouch_points);
+    auto citizen_basepoints = config_get(citizen_vouch_points);
 
-  auto resident_basepoints = config_get(resident_vouch_points);
-  auto citizen_basepoints = config_get(citizen_vouch_points);
+    uint64_t vouch_points = 0;
 
-  uint64_t reps = 0;
-  if (sponsor_status == name("resident")) reps = resident_basepoints;
-  if (sponsor_status == name("citizen")) reps = citizen_basepoints;
+    if (sponsor_status == resident) vouch_points = resident_basepoints;
+    if (sponsor_status == citizen) vouch_points = citizen_basepoints;
 
-  reps = reps * utils::get_rep_multiplier(sponsor); // REPLACE with local function
+    vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
 
-  if (reps == 0) {
-    // this is called from invite accept - just no op
-    return;
+    if (vouch_points > 0) {
+      vouches.emplace(_self, [&](auto& item) {
+        item.id = vouches.available_primary_key();
+        item.sponsor = sponsor;
+        item.account = account;
+        item.vouch_points = vouch_points;
+      });
+    }
   }
 
-  // add up existing vouches
+  calc_vouch_rep(account); 
+}
+
+void accounts::pnishvouched (name sponsor, uint64_t start_account) {
+  require_auth(get_self());
+
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint128_t id = (uint128_t(sponsor.value) << 64) + start_account;
+
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
+  uint64_t count = 0;
+  uint64_t max_vouch = config_get(max_vouch_points);
+
+  auto vitr = vouches_by_sponsor_account.lower_bound(id);
+
+  while (vitr != vouches_by_sponsor_account.end() && vitr->sponsor == sponsor && count < batch_size) {
+
+    vouches_by_sponsor_account.modify(vitr, _self, [&](auto & item){
+      item.vouch_points = 0;
+    });
+
+    calc_vouch_rep(vitr->account);
+
+    vitr++;
+    count++;
+
+  }
+
+  if (vitr != vouches_by_sponsor_account.end() && vitr->sponsor == sponsor) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "pnishvouched"_n,
+      std::make_tuple(sponsor, (vitr->account).value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(sponsor.value, _self);
+  }
+}
+
+void accounts::calc_vouch_rep (name account) {
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t max_vouch = config_get(max_vouch_points);
   uint64_t total_vouch = 0;
-  auto vitr = vouch.begin();
-  while (vitr != vouch.end()) {
-    total_vouch += vitr->reps;
+  uint64_t total_rep = 0;
+
+  while (vitr != vouches_by_account.end() && vitr->account == account) {
+    total_vouch += vitr -> vouch_points;
     vitr++;
   }
 
-  auto maxvouch = config_get(max_vouch_points);
-  
-  check(total_vouch < maxvouch, "user is already fully vouched!");
-  if ( (total_vouch + reps) > maxvouch) {
-    reps = maxvouch - total_vouch; // limit to max vouch
+  auto vtitr = vouchtotals.find(account.value);
+  if (vtitr != vouchtotals.end()) { total_rep = vtitr->total_rep_points; }
+
+  uint64_t total_vouch_capped = std::min(total_vouch, max_vouch);
+  uint64_t delta = 0;
+
+  if (total_rep < total_vouch_capped) {
+    
+    delta = total_vouch_capped - total_rep;
+    send_addrep(account, delta);
+    total_rep += delta;
+
+  } else if (total_rep > total_vouch_capped) {
+
+    delta = total_rep - total_vouch_capped;
+    send_subrep(account, delta);
+    total_rep -= delta;
+
   }
 
-  // add vouching table entry
-  vouch.emplace(_self, [&](auto& item) {
-    item.sponsor = sponsor;
-    item.account = account;
-    item.reps = reps;
-  });
-
-  // add reputation to user
-  send_addrep(account, reps);
-  
+  if (vtitr == vouchtotals.end()) {
+    vouchtotals.emplace(_self, [&](auto & item){
+      item.account = account;
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_rep;
+    });
+  } else {
+    vouchtotals.modify(vtitr, _self, [&](auto & item){
+      item.total_vouch_points = total_vouch;
+      item.total_rep_points = total_rep;
+    });
+  }
 }
+
 
 void accounts::send_addrep(name user, uint64_t amount) {
     action(
@@ -181,51 +290,33 @@ void accounts::send_subrep(name user, uint64_t amount) {
   ).send();
 }
 
-void accounts::punish(name account) {
-  require_auth(get_self());
-  
-  check_user(account);
-
-  auto uitr = users.find(account.value);
-
-  users.modify(uitr, _self, [&](auto& item) {
-    item.status = "visitor"_n;
-  });
-
-  vouch_tables vouch(get_self(), account.value);
-
-  auto vitr = vouch.begin();
-
-  while (vitr != vouch.end()) {
-    auto sponsor = vitr->sponsor;
-    send_subrep(sponsor, 50);
-    vitr++;
-  }
-}
-
 void accounts::rewards(name account, name new_status) {
-  vouchreward(account);
+  vouchreward(account, new_status);
   refreward(account, new_status);
 }
 
-void accounts::vouchreward(name account) {
+void accounts::vouchreward(name account, name new_status) {
   check_user(account);
 
-  auto uitr = users.find(account.value);
-  name status = uitr->status;
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  
+  auto vitr = vouches_by_account.find(account.value);
 
-  // For adding community building points
-  bool is_citizen = status.value == name("citizen").value;
-  name vou_cbp_param = is_citizen ? vou_cbp_reward_citizen : vou_cbp_reward_resident;
-  int community_building_points = int(config_get(vou_cbp_param));
+  uint64_t points = 0;
 
-  vouch_tables vouch(get_self(), account.value);
-  auto vitr = vouch.begin();
+  if (new_status == resident) {
+    points = config_get("vouchrep.1"_n);
+  } else if (new_status == citizen) {
+    points = config_get("vouchrep.2"_n);
+  }
 
-  while (vitr != vouch.end()) {
+  if (points == 0) { 
+    return; 
+  }
+
+  while (vitr != vouches_by_account.end() && vitr -> account == account) {
     auto sponsor = vitr->sponsor;
-    send_addrep(sponsor, 1); // TODO: check if this has to be always 1
-    add_cbs(sponsor, community_building_points);
+    send_addrep(sponsor, points);     
     vitr++;
   }
 }
@@ -257,7 +348,7 @@ uint64_t calc_decaying_rewards(int num, int min, int max, int decay) {
 void accounts::refreward(name account, name new_status) {
   check_user(account);
 
-  bool is_citizen = new_status.value == name("citizen").value;
+  bool is_citizen = new_status.value == citizen.value;
     
   name referrer = find_referrer(account);
   if (referrer == not_found) {
@@ -267,6 +358,7 @@ void accounts::refreward(name account, name new_status) {
   // see if referrer is org or individual (or nobody)
   auto uitr = users.find(referrer.value);
   if (uitr != users.end()) {
+    uint64_t community_building_points = 0;
     auto user_type = uitr->type;
 
     // gets number of residents or citizens from the History size table
@@ -276,6 +368,7 @@ void accounts::refreward(name account, name new_status) {
 
     if (user_type == "organisation"_n) 
     {
+      community_building_points = is_citizen ? config_get("refcbp2.org"_n) : config_get("refcbp1.org"_n);
       name org_reward_param = is_citizen ? org_seeds_reward_citizen : org_seeds_reward_resident;
       name min_org_reward_param = is_citizen ? min_org_seeds_reward_citizen : min_org_seeds_reward_resident;
       name dec_org_reward_param = is_citizen ? dec_org_seeds_reward_citizen : dec_org_seeds_reward_resident;
@@ -310,6 +403,8 @@ void accounts::refreward(name account, name new_status) {
     } 
     else 
     {
+      community_building_points = is_citizen ? config_get("ref.cbp2.ind"_n) : config_get("ref.cbp1.ind"_n);
+
       // Add reputation point +1
       name reputation_reward_param = is_citizen ? reputation_reward_citizen : reputation_reward_resident;
       auto rep_points = config_get(reputation_reward_param);
@@ -328,6 +423,9 @@ void accounts::refreward(name account, name new_status) {
 
       send_reward(referrer, quantity);
     }
+
+    add_cbs(referrer, community_building_points); 
+
   }
 
 
@@ -336,19 +434,35 @@ void accounts::refreward(name account, name new_status) {
 }
 
 void accounts::add_cbs(name account, int points) {
-  auto citr = cbs.find(account.value);
-  if (citr != cbs.end()) {
-    cbs.modify(citr, _self, [&](auto& item) {
+
+  auto uitr = users.find(account.value);
+
+  name scope = get_scope(uitr->type);
+
+  cbs_tables cbs_t(get_self(), scope.value);
+
+  auto citr = cbs_t.find(account.value);
+  if (citr != cbs_t.end()) {
+    cbs_t.modify(citr, _self, [&](auto& item) {
       item.community_building_score += points;
     });
   } else {
-    cbs.emplace(_self, [&](auto& item) {
+    cbs_t.emplace(_self, [&](auto& item) {
       item.account = account;
       item.community_building_score = points;
       item.rank = 0;
     });
-    size_change("cbs.sz"_n, 1);
+    if (scope == individual_scope) {
+      size_change("cbs.sz"_n, 1);
+    } else if (scope == organization_scope) {
+      size_change("cbs.org.sz"_n, 1);
+    }
   }
+}
+
+ACTION accounts::addcbs (name account, int points) {
+  require_auth(get_self());
+  add_cbs(account, points);
 }
 
 void accounts::addref(name referrer, name invited)
@@ -381,15 +495,20 @@ void accounts::addrep(name user, uint64_t amount)
   check(amount > 0, "amount must be > 0");
 
   auto uitr = users.find(user.value);
+
   users.modify(uitr, _self, [&](auto& user) {
     user.reputation += amount;
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    add_rep_item(user, amount);
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    add_rep_item(user, amount, scope);
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rep += amount;
     });
   }
@@ -405,6 +524,7 @@ void accounts::subrep(name user, uint64_t amount)
 
   // modify user reputation - deprecated
   auto uitr = users.find(user.value);
+
   users.modify(uitr, _self, [&](auto& user) {
     if (user.reputation < amount) {
       user.reputation = 0;
@@ -413,18 +533,35 @@ void accounts::subrep(name user, uint64_t amount)
     }
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr != rep.end()) {
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr != rep_t.end()) {
     if (ritr->rep > amount) {
-      rep.modify(ritr, _self, [&](auto& item) {
+      rep_t.modify(ritr, _self, [&](auto& item) {
         item.rep -= amount;
       });
     } else {
-      rep.erase(ritr);
-      size_change("rep.sz"_n, -1);
+      rep_t.erase(ritr);
+      if (scope == individual_scope) {
+        size_change("rep.sz"_n, -1);
+      } else if (scope == organization_scope) {
+        size_change("rep.org.sz"_n, -1);
+      }
     }
   }
 
+}
+
+name accounts::get_scope (name type) {
+  if (type == "individual"_n) {
+    return individual_scope;
+  } else if (type == "organisation"_n) {
+    return organization_scope;
+  }
+  return not_found;
 }
 
 void accounts::update(name user, name type, string nickname, string image, string story, string roles, string skills, string interests)
@@ -436,6 +573,12 @@ void accounts::update(name user, name type, string nickname, string image, strin
     auto uitr = users.find(user.value);
 
     check(uitr->type == type, "Can't change type - create an org in the org contract.");
+    check(nickname.size() <= 64, "nickname must be less or equal to 64 characters long");
+    check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+    check(story.size() <= 7000, "story length must be less or equal to 7000 characters long");
+    check(roles.size() <= 512, "roles length must be less or equal to 512 characters long");
+    check(skills.size() <= 512, "skills must be less or equal to 512 characters long");
+    check(interests.size() <= 512, "interests must be less or equal to 512 characters long");
 
     users.modify(uitr, _self, [&](auto& user) {
       user.type = type;
@@ -504,7 +647,7 @@ void accounts::makeresident(name user)
 {
     check_can_make_resident(user);
 
-    auto new_status = name("resident");
+    auto new_status = resident;
 
     updatestatus(user, new_status);
 
@@ -516,7 +659,7 @@ void accounts::makeresident(name user)
 bool accounts::check_can_make_resident(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("visitor"), "user is not a visitor");
+    check(uitr->status == visitor, "user is not a visitor");
 
     auto bitr = balances.find(user.value);
 
@@ -551,7 +694,7 @@ void accounts::updatestatus(name user, name status)
     user.status = status;
   });
 
-  bool trust = status == name("citizen");
+  bool trust = status == citizen;
 
   action(
     permission_level{contracts::proposals, "active"_n},
@@ -570,6 +713,15 @@ uint64_t accounts::config_get(name key) {
   return citr->value;
 }
 
+double accounts::config_float_get (name key) {
+  auto fitr = configfloat.find(key.value);
+  if (fitr == configfloat.end()) { 
+    // only create the error message string in error case for efficiency
+    check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+  }
+  return fitr->value;
+}
+
 void accounts::cancitizen(name user) {
   check_can_make_citizen(user);
 }
@@ -578,7 +730,7 @@ void accounts::makecitizen(name user)
 {
     check_can_make_citizen(user);
     
-    auto new_status = name("citizen");
+    auto new_status = citizen;
 
     updatestatus(user, new_status);
 
@@ -594,7 +746,7 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == name("resident"), "user is not a resident");
+    check(uitr->status == resident, "user is not a resident");
 
     auto bitr = balances.find(user.value);
 
@@ -616,7 +768,7 @@ bool accounts::check_can_make_citizen(name user) {
       std::to_string(min_tx));
     check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
-    check(uitr->timestamp < eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
+    check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
 }
@@ -634,7 +786,7 @@ void accounts::testresident(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("resident");
+  auto new_status = resident;
   updatestatus(user, new_status);
 
   rewards(user, new_status);
@@ -646,7 +798,7 @@ void accounts::testvisitor(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("visitor");
+  auto new_status = visitor;
   updatestatus(user, new_status);
   
 }
@@ -655,7 +807,7 @@ void accounts::testcitizen(name user)
 {
   require_auth(_self);
 
-  auto new_status = name("citizen");
+  auto new_status = citizen;
 
   updatestatus(user, new_status);
 
@@ -678,23 +830,34 @@ uint32_t accounts::num_transactions(name account, uint32_t limit) {
 }
 
 void accounts::rankreps() {
-  rankrep(0, 0, 200);
+  rankrep(0, 0, 200, individual_scope);
 }
 
-void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void accounts::rankorgreps() {
+  rankrep(0, 0, 200, organization_scope);
+}
+
+void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope) {
   require_auth(_self);
 
-  uint64_t total = get_size("rep.sz"_n);
+  uint64_t total = 0;
+  if (scope == individual_scope) {
+    total = get_size("rep.sz"_n);
+  } else if (scope == organization_scope) {
+    total = get_size("rep.org.sz"_n);
+  }
   if (total == 0) return;
 
+  rep_tables rep_t(get_self(), scope.value);
+
   uint64_t current = chunk * chunksize;
-  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto rep_by_rep = rep_t.get_index<"byrep"_n>();
   auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
   uint64_t count = 0;
 
   while (ritr != rep_by_rep.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     rep_by_rep.modify(ritr, _self, [&](auto& item) {
       item.rank = rank;
@@ -714,7 +877,7 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "rankrep"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, scope)
     );
 
     transaction tx;
@@ -727,23 +890,35 @@ void accounts::rankrep(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 }
 
 void accounts::rankcbss() {
-  rankcbs(0, 0, 200);
+  rankcbs(0, 0, 200, individual_scope);
 }
 
-void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+void accounts::rankorgcbss() {
+  rankcbs(0, 0, 200, organization_scope);
+}
+
+void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize, name scope) {
   require_auth(_self);
 
-  uint64_t total = get_size("cbs.sz"_n);
+  uint64_t total = 0;
+
+  if (scope == individual_scope) {
+    total = get_size("cbs.sz"_n);
+  } else {
+    total = get_size("cbs.org.sz"_n);
+  }
   if (total == 0) return;
 
+  cbs_tables cbs_t(get_self(), scope.value);
+
   uint64_t current = chunk * chunksize;
-  auto cbs_by_cbs = cbs.get_index<"bycbs"_n>();
+  auto cbs_by_cbs = cbs_t.get_index<"bycbs"_n>();
   auto citr = start_val == 0 ? cbs_by_cbs.begin() : cbs_by_cbs.lower_bound(start_val);
   uint64_t count = 0;
 
   while (citr != cbs_by_cbs.end() && count < chunksize) {
 
-    uint64_t rank = utils::rank(current, total);
+    uint64_t rank = utils::spline_rank(current, total);
 
     cbs_by_cbs.modify(citr, _self, [&](auto& item) {
       item.rank = rank;
@@ -763,7 +938,7 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
         permission_level{get_self(), "active"_n},
         get_self(),
         "rankcbs"_n,
-        std::make_tuple(next_value, chunk + 1, chunksize)
+        std::make_tuple(next_value, chunk + 1, chunksize, scope)
     );
 
     transaction tx;
@@ -775,13 +950,21 @@ void accounts::rankcbs(uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
 
 }
 
-void accounts::add_rep_item(name account, uint64_t reputation) {
+void accounts::add_rep_item(name account, uint64_t reputation, name scope) {
   check(reputation > 0, "reputation must be > 0");
-  rep.emplace(_self, [&](auto& item) {
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  rep_t.emplace(_self, [&](auto& item) {
     item.account = account;
     item.rep = reputation;
   });
-  size_change("rep.sz"_n, 1);
+
+  if (scope == individual_scope) {
+    size_change("rep.sz"_n, 1);
+  } else if (scope == organization_scope) {
+    size_change("rep.org.sz"_n, 1);
+  }
 }
 
 void accounts::changesize(name id, int64_t delta) {
@@ -871,11 +1054,15 @@ void accounts::testsetrep(name user, uint64_t amount) {
     user.reputation = amount;
   });
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    add_rep_item(user, amount);
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    add_rep_item(user, amount, scope);
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rep = amount;
     });
   }
@@ -886,18 +1073,38 @@ void accounts::testsetrs(name user, uint64_t amount) {
 
   check(is_account(user), "non existing user");
 
-  auto ritr = rep.find(user.value);
-  if (ritr == rep.end()) {
-    rep.emplace(_self, [&](auto& item) {
+  auto uitr = users.find(user.value);
+  if (uitr == users.end()) { return; }
+
+  name scope = get_scope(uitr->type);
+
+  rep_tables rep_t(get_self(), scope.value);
+
+  auto ritr = rep_t.find(user.value);
+  if (ritr == rep_t.end()) {
+    rep_t.emplace(_self, [&](auto& item) {
       item.account = user;
       item.rank = amount;
     });
-    size_change("rep.sz"_n, 1);  
+    if (scope == individual_scope) {
+      size_change("rep.sz"_n, 1);
+    } else if (scope == organization_scope) {
+      size_change("rep.org.sz"_n, 1);
+    }
   } else {
-    rep.modify(ritr, _self, [&](auto& item) {
+    rep_t.modify(ritr, _self, [&](auto& item) {
       item.rank = amount;
     });
   }
+}
+
+void accounts::send_add_cbs_org (name user, uint64_t amount) {
+  action(
+    permission_level(contracts::organization, "active"_n),
+    contracts::organization,
+    "addcbpoints"_n,
+    std::make_tuple(user, amount)
+  ).send();
 }
 
 
@@ -907,29 +1114,27 @@ void accounts::testsetcbs(name user, uint64_t amount) {
   check(is_account(user), "non existing user");
 
   auto usritr = users.find(user.value);
+  
+  name scope = get_scope(usritr->type);
 
-  auto citr = cbs.find(user.value);
-  if (citr == cbs.end()) {
-    cbs.emplace(_self, [&](auto& item) {
+  cbs_tables cbs_t(get_self(), scope.value);
+
+  auto citr = cbs_t.find(user.value);
+  if (citr == cbs_t.end()) {
+    cbs_t.emplace(_self, [&](auto& item) {
       item.account = user;
       item.community_building_score = amount;
       item.rank = 0;
     });
-    size_change("cbs.sz"_n, 1);
+    if (scope == individual_scope) {
+      size_change("cbs.sz"_n, 1);
+    } else {
+      size_change("cbs.org.sz"_n, 1);
+    }
   } else {
-    cbs.modify(citr, _self, [&](auto& item) {
+    cbs_t.modify(citr, _self, [&](auto& item) {
       item.community_building_score = amount;
     });
-  }
-
-  if (usritr -> type == organization) {
-    // register cbs in the cbsorg table to rank orgs
-    action(
-      permission_level(contracts::organization, "active"_n),
-      contracts::organization,
-      "addcbpoints"_n,
-      std::make_tuple(user, amount)
-    ).send();
   }
 }
 
@@ -975,4 +1180,275 @@ uint64_t accounts::rep_score(name user)
     }
 
     return ritr->rank;
+}
+
+void accounts::send_punish (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "punish"_n,
+    std::make_tuple(account, points)
+  ).send();
+}
+
+void accounts::punish (name account, uint64_t points) {
+  require_auth(get_self());
+  check_user(account);
+  send_subrep(account, points);
+  pnishvouched(account, uint64_t(0));
+}
+
+void accounts::send_punish_vouchers (name account, uint64_t points) {
+  action(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "pnshvouchers"_n,
+    std::make_tuple(account, points, uint64_t(0))
+  ).send();
+}
+
+void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
+  require_auth(get_self());
+
+  auto vouches_by_account_sponsor = vouches.get_index<"byacctspnsor"_n>();
+  uint128_t id = (uint128_t(account.value) << 64) + start;
+
+  auto vitr = vouches_by_account_sponsor.lower_bound(id);
+  uint64_t count = 0;
+  uint64_t batch_size = config_get("batchsize"_n);
+  uint64_t lost_points = points * config_float_get("flag.vouch.p"_n);
+
+  while (vitr != vouches_by_account_sponsor.end() && vitr->account == account && count < batch_size) {
+    send_subrep(vitr -> sponsor, lost_points);
+    vitr++;
+    count++;
+  }
+
+  if (vitr != vouches_by_account_sponsor.end() && vitr->account == account) {
+    uint64_t next_value = (vitr -> sponsor).value;
+    
+    action next_execution(
+        permission_level{get_self(), "active"_n},
+        get_self(),
+        "pnshvouchers"_n,
+        std::make_tuple(account, points, next_value)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    // tx.delay_sec = 1;
+    tx.send(next_value, _self);
+  }
+}
+
+void accounts::flag (name from, name to) {
+  require_auth(from);
+
+  if (from == to) { return; }
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+  flag_points_tables removed_flags(get_self(), flag_remove_scope.value);
+
+  auto fitr = flags.find(from.value);
+  check(fitr == flags.end(), "a user can only flag another user once");
+
+  uint64_t points = 0;
+  uint64_t base_points = 0;
+  auto uitr = users.get(from.value, "user not found");
+
+  if (uitr.status == citizen) {
+    base_points = config_get("flag.base.c"_n);
+  } else if (uitr.status == resident) {
+    base_points = config_get("flag.base.r"_n);
+  } else {
+    check(false, "user must be a resident or a citizen");
+  }
+
+  auto ritr = rep.get(from.value, (from.to_string() + " needs reputation to flag others").c_str());
+  
+  points = base_points * utils::rep_multiplier_for_score(ritr.rank);
+
+  flags.emplace(_self, [&](auto & item){
+    item.account = from;
+    item.flag_points = points;
+  });
+
+  uint64_t total_flag_points = 0;
+  uint64_t removed_flag_points = 0;
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  if (total_flag_p_itr != total_flags.end()) { total_flag_points = total_flag_p_itr -> flag_points; }
+  total_flag_points += points;
+
+  auto removed_flag_p_itr = removed_flags.find(to.value);
+  if (removed_flag_p_itr != removed_flags.end()) { removed_flag_points = removed_flag_p_itr -> flag_points; }
+
+  uint64_t flag_threshold = config_get("flag.thresh"_n);
+
+  if (total_flag_points >= flag_threshold && removed_flag_points < total_flag_points) {
+
+    auto to_rep_itr = rep.find(to.value);
+    if (to_rep_itr != rep.end()) {
+      uint64_t punishment_points = total_flag_points - removed_flag_points;
+
+      send_punish(to, punishment_points);
+      send_eval_demote(to);
+      send_punish_vouchers(to, punishment_points);
+      
+      if (removed_flag_p_itr == removed_flags.end()) {
+        removed_flags.emplace(_self, [&](auto & item){
+          item.account = to;
+          item.flag_points = total_flag_points;
+        });
+      } else {
+        removed_flags.modify(removed_flag_p_itr, _self, [&](auto & item){
+          item.flag_points = total_flag_points;
+        });
+      }
+    }
+
+  }
+
+  if (total_flag_p_itr == total_flags.end()) {
+    total_flags.emplace(_self, [&](auto & item){
+      item.account = to;
+      item.flag_points = total_flag_points;
+    });
+  } else {
+    total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+      item.flag_points = total_flag_points;
+    });
+  }
+
+}
+
+void accounts::removeflag (name from, name to) {
+  require_auth(from);
+
+  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables total_flags(get_self(), flag_total_scope.value);
+
+  auto flag_itr = flags.find(from.value);
+  check(flag_itr != flags.end(), "flag not found");
+
+  auto total_flag_p_itr = total_flags.find(to.value);
+  check(total_flag_p_itr != flags.end(), to.to_string() + ", has not total flags entry");
+
+  total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
+    item.flag_points -= flag_itr -> flag_points;
+  });
+
+  flags.erase(flag_itr);
+}
+
+void accounts::send_eval_demote (name to) {
+  
+  uint64_t batch_size = config_get(name("batchsize"));
+
+  action next_execution(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "evaldemote"_n,
+    std::make_tuple(to, uint64_t(0), uint64_t(0), batch_size)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(to.value + 1, _self);
+
+}
+
+void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uritr = rep.find(to.value);
+  if (uritr == rep.end()) {
+    updatestatus(to, visitor);
+    return;
+  }
+
+  uint64_t total = get_size("rep.sz"_n);
+  if (total == 0) return;
+
+  uint64_t current = chunk * chunksize;
+  auto rep_by_rep = rep.get_index<"byrep"_n>();
+  auto ritr = start_val == 0 ? rep_by_rep.begin() : rep_by_rep.lower_bound(start_val);
+  uint64_t count = 0;
+  bool evaluated = false;
+
+  while (ritr != rep_by_rep.end() && count < chunksize) {
+
+    if (ritr->account == to) {
+      uint64_t rank = utils::spline_rank(current, total);
+
+      rep_by_rep.modify(ritr, _self, [&](auto& item) {
+        item.rank = rank;
+      });
+
+      auto uitr = users.find(ritr->account.value);
+
+      uint64_t min_rep_score_citizen = config_get("cit.rep.sc"_n);
+      uint64_t min_rep_score_resident = config_get("res.rep.pt"_n);
+
+      name current_rank = uitr->status;
+
+      if (rank < min_rep_score_resident) {
+        current_rank = visitor;
+      } else if (rank < min_rep_score_citizen) {
+        current_rank = resident;
+      } else {
+        current_rank = citizen;
+      }
+
+      if (uitr->status == citizen && current_rank != citizen) {
+        updatestatus(uitr->account, current_rank);
+      }
+      else if (uitr->status == resident && current_rank == visitor) {
+        updatestatus(uitr->account, visitor);
+      }
+
+      evaluated = true;
+      break;
+    }
+
+    current++;
+    count++;
+    ritr++;
+  }
+
+  if (!evaluated && ritr != rep_by_rep.end()) {
+    uint64_t next_value = ritr->by_rep();
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "evaldemote"_n,
+      std::make_tuple(to, next_value, chunk + 1, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(next_value + 1, _self); 
+  }
+
+}
+
+
+void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
+  require_auth(get_self());
+  vouch_tables vouch(get_self(), account.value);
+  auto vitr = vouch.find(sponsor.value);
+  if(vitr != vouch.end()) {
+    vouch.modify(vitr, _self, [&](auto & item){
+      item.reps = reps;
+    });
+  } else {
+    vouch.emplace(_self, [&](auto & item){
+      item.sponsor = sponsor;
+      item.account = account;
+      item.reps = reps;
+    });
+  }
 }

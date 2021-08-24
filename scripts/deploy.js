@@ -308,6 +308,39 @@ const addActorPermission = async (target, targetRole, actor, actorRole) => {
   }
 }
 
+const removeAllActorPermissions = async (target) => {
+  await removeActorPermission(target, "active")
+  await removeActorPermission(target, "owner")
+}
+
+const removeActorPermission = async (target, targetRole) => {
+  console.log("remove "+target + "@" + targetRole)
+  try {
+    const { parent, required_auth: { threshold, waits, keys, accounts } } =
+      (await eos.getAccount(target))
+        .permissions.find(p => p.perm_name == targetRole)
+
+    const permissions = {
+      account: target,
+      permission: targetRole,
+      parent,
+      auth: {
+        threshold,
+        waits,
+        accounts: [],
+        keys: [
+          ...keys
+        ]
+      }
+    }
+
+    await eos.updateauth(permissions, { authorization: `${target}@owner` })
+    console.log(`+ actor permissions removed on ${target}@${targetRole}`)
+  } catch (err) {
+    console.error(`failed permission update on ${target}\n* error: ` + err + `\n`)
+  }
+}
+
 const changeOwnerAndActivePermission = async (account, key) => {
   await changeExistingKeyPermission(account, "active", "owner", key)
   await changeExistingKeyPermission(account, "execute", "active", key)
@@ -361,20 +394,41 @@ const changeExistingKeyPermission = async (account, role, parentRole = 'active',
 const createCoins = async (token) => {
   const { account, issuer, supply } = token
 
-  const contract = await eos.contract(account)
-
   try {
-    await contract.create({
-      issuer: issuer,
-      initial_supply: supply
-    }, { authorization: `${account}@active` })
-
-    await contract.issue({
-      to: issuer,
-      quantity: supply,
-      memo: ''
-    }, { authorization: `${issuer}@active` })
-    
+    await eos.transaction({
+      actions: [
+        {
+          account,
+          name: 'create',
+          authorization: [{
+            actor: account,
+            permission: 'active'
+          }],
+          data: {
+            issuer,
+            initial_supply: supply
+          }
+        }
+      ]
+    })
+  
+    await eos.transaction({
+      actions: [
+        {
+          account,
+          name: 'issue',
+          authorization: [{
+            actor: issuer,
+            permission: 'active'
+          }],
+          data: {
+            to: issuer,
+            quantity: supply,
+            memo: ''
+          }
+        }
+      ]
+    })
     console.log(`coins successfully minted at ${account} with max supply of ${supply}`)
   } catch (err) {
     console.error(`coins already created at ${account}\n* error: ` + err + "\n")
@@ -382,19 +436,30 @@ const createCoins = async (token) => {
 }
 
 const transferCoins = async (token, recipient) => {
-  const contract = await eos.contract(token)
   try {
-    await contract.transfer({
-      from: token.issuer,
-      to: recipient.account,
-      quantity: recipient.quantity,
-      memo: ''
-    }, { authorization: `${token.issuer}@active` })
+
+    await eos.transaction({
+      actions: [
+        {
+          account: token.account,
+          name: 'transfer',
+          authorization: [{
+            actor: token.issuer,
+            permission: 'active'
+          }],
+          data: {
+            from: token.issuer,
+            to: recipient.account,
+            quantity: recipient.quantity,
+            memo: ''
+          }
+        }
+      ]
+    })
     
     console.log(`sent ${recipient.quantity} from ${token.issuer} to ${recipient.account}`)
 
     console.log("remaining balance for "+token.issuer +" "+ JSON.stringify(await getBalance(token.issuer), null, 2))
-
 
   } catch (err) {
     console.error(`cannot transfer from ${token.issuer} to ${recipient.account} (${recipient.quantity})\n* error: ` + err + `\n`)
@@ -408,12 +473,24 @@ const reset = async ({ account }) => {
     return
   }
 
-  const contract = await eos.contract(account)
-  
   try {
     console.log(`will reset contract ${account}`)
-    await contract.reset({ authorization: `${account}@active` })
+
+    await eos.transaction({
+      actions: [
+        {
+          account,
+          name: 'reset',
+          authorization: [{
+            actor: account,
+            permission: 'active'
+          }],
+          data: {}
+        }
+      ]
+    })
     console.log(`reset contract ${account}`)
+
   } catch (err) {
     console.error(`cannot reset contract ${account}\n* error: ` + err + `\n`)
 
@@ -519,9 +596,18 @@ const deployAllContracts = async () => {
     await sleep(1000)
   }
 
-  await updatePermissions()
+  if (isLocal()) {
+    await addActorPermission("cg.seeds", "active", "seedsuseraaa", "active")
+    await addActorPermission("cg.seeds", "active", "seedsuserbbb", "active")
+  }
   
+  await updatePermissions()
   await reset(accounts.settings)
 }
 
-module.exports = { deployAllContracts, updatePermissions, resetByName, changeOwnerAndActivePermission, changeExistingKeyPermission, createTestToken }
+module.exports = { 
+  source, deployAllContracts, updatePermissions, 
+  resetByName, changeOwnerAndActivePermission, 
+  changeExistingKeyPermission, addActorPermission, createTestToken,
+  removeAllActorPermissions
+}

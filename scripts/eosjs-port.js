@@ -1,24 +1,57 @@
 const eosjs = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const { TextEncoder, TextDecoder } = require('util')
-const ecc = require('eosjs/dist/eosjs-ecc-migration')
 const fetch = require('node-fetch')
 const { Exception } = require('handlebars')
 const { option } = require('commander')
 const { transactionHeader } = require('eosjs/dist/eosjs-serialize')
+const ecc = require('eosjs-ecc')
 
 const { Api, JsonRpc, Serialize } = eosjs
 
 let rpc
 let api
+let isUnitTest
 
-function sleep(ms) {
+function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// TODO: We need to only use nonce in testnet, not in mainnet. Mainnet its causing 
+// errors, and we don't need it. It's only for unit tests. 
+async function getNonce () {
+  try {
+    if (isUnitTest) {
+      await rpc.getRawAbi('policy.seeds')
+      const random = Math.random().toString(36).substring(4);
+      return [{
+        // this is a nonce action - prevents duplicate transaction errors - we borrow policy.seeds for this
+        account:"policy.seeds",
+        name:"create",
+        authorization: [
+          {
+            actor: 'policy.seeds',
+            permission: 'active'
+          }
+        ],
+        data:{
+          account:"policy.seeds",
+          backend_user_id: random,
+          device_id: random,
+          signature: "",
+          policy: ""
+        }
+      }]
+    }
+    return []
+  } catch (err) {
+    return []
+  }
 }
 
 class Eos {
 
-  constructor (config) {
+  constructor (config, isLocal=null) {
     const {
       keyProvider,
       httpEndpoint,
@@ -32,10 +65,12 @@ class Eos {
 
     this.api = api
 
+    isUnitTest = isLocal ? isLocal() : false
+
   }
 
   static getEcc () {
-    return ecc.ecc
+    return ecc
   }
 
   async getInfo () {
@@ -55,35 +90,39 @@ class Eos {
     for (let [key, action] of actions) {
       functions[action.name] = async function () {
 
+        let auth
         const { authorization } = arguments[arguments.length - 1]
-        let [actor, permission] = authorization.split('@')
+        if (Array.isArray(authorization)) {
+          auth = authorization
+        } else {
+          let [actor, permission] = authorization.split('@')
+          auth = [{
+            actor,
+            permission,
+          }]
+        }
 
         const data = {}
 
-        if (action.fields.length > 0 && arguments.length == 2 && typeof arguments[0] === 'object') {
-          for (let i = 0; i < action.fields.length; i++) {
-            const { name } = action.fields[i]
-            data[name] = arguments[0][name]
-          }
-        } else {
-          if ((action.fields.length + 1) != arguments.length) {
-            throw new Exception(`Not enough arguments to call ${action.name} action in ${accountName} contract`)
-          }
-          for (let i = 0; i < action.fields.length; i++) {
-            const { name } = action.fields[i]
-            data[name] = arguments[i]
-          }
+        if ((action.fields.length + 1) != arguments.length) {
+          throw new Exception(`Not enough arguments to call ${action.name} action in ${accountName} contract`)
+        }
+        for (let i = 0; i < action.fields.length; i++) {
+          const { name } = action.fields[i]
+          data[name] = arguments[i]
         }
 
-        const actions = [{
+        const nonce = await getNonce() 
+        const actions = [
+          {
           account: accountName,
           name: action.name,
-          authorization: [{
-            actor,
-            permission,
-          }],
-          data
-        }]
+          authorization: auth,
+            data
+          },
+          ...nonce
+        ]
+
         const trxConfig = {
           blocksBehind: 3,
           expireSeconds: 30,
@@ -105,6 +144,7 @@ class Eos {
               actions
             }, trxConfig)
           } else {
+            console.log("Error on actions: "+JSON.stringify(actions))
             throw err
           }
         }
