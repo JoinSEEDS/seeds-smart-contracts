@@ -4,6 +4,13 @@ See here: https://gitlab.com/seeds-project/seeds-contracts/issues/25
 
 # Setup
 
+### Git
+```
+git submodule init
+git submodule update
+```
+
+
 ### Environment
 
 The .env file contains the all-important keys for local, testnet, and potentially mainnet
