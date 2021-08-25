@@ -3,6 +3,8 @@
 #include "referendum_settings.hpp"
 #include "proposal_alliance.hpp"
 #include "proposal_campaign_invite.hpp"
+#include "proposal_milestone.hpp"
+#include "proposal_campaign_funding.hpp"
 
 
 class ProposalsFactory {
@@ -20,6 +22,12 @@ class ProposalsFactory {
 
       case ProposalsCommon::type_prop_campaign_invite.value:
         return new ProposalCampaignInvite(_contract);
+
+      case ProposalsCommon::type_prop_milestone.value:
+        return new ProposalMilestone(_contract);
+
+      case ProposalsCommon::type_prop_campaign_funding.value:
+        return new ProposalCampaignFunding(_contract);
       
       default:
         break;

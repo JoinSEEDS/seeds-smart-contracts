@@ -2,6 +2,7 @@
 #include <eosio/system.hpp>
 
 void ProposalCampaignInvite::create_impl (std::map<std::string, VariantValue> & args) {
+
   asset max_amount_per_invite = std::get<asset>(args["max_amount_per_invite"]);
   asset planted = std::get<asset>(args["planted"]);
   asset reward = std::get<asset>(args["reward"]);
@@ -9,6 +10,9 @@ void ProposalCampaignInvite::create_impl (std::map<std::string, VariantValue> & 
   utils::check_asset(max_amount_per_invite);
   utils::check_asset(planted);
   utils::check_asset(reward);
+
+  name reward_owner = std::get<name>(args["reward_owner"]);
+  check(is_account(reward_owner), "reward_owner is not a valid account: " + reward_owner.to_string());
 
   name fund_type = this->m_contract.get_fund_type(std::get<name>(args["fund"]));
   check(fund_type == this->m_contract.campaign_fund, "fund must be of type: " + this->m_contract.campaign_fund.to_string());
@@ -29,12 +33,14 @@ void ProposalCampaignInvite::create_impl (std::map<std::string, VariantValue> & 
     item.special_attributes.insert(std::make_pair("max_amount_per_invite", max_amount_per_invite));
     item.special_attributes.insert(std::make_pair("planted", planted));
     item.special_attributes.insert(std::make_pair("reward", reward));
-    item.special_attributes.insert(std::make_pair("recipient", std::get<name>(args["recipient"])));
+    item.special_attributes.insert(std::make_pair("reward_owner", reward_owner));
     item.special_attributes.insert(std::make_pair("executed", false));
   });
+
 }
 
 void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue> & args) {
+
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
@@ -62,7 +68,7 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
     std::make_tuple(contract_name, contracts::onboarding, payout_amount, "sponsor " + contract_name.to_string())
   );
 
-  name recipient = std::get<name>(paitr->special_attributes.at("recipient"));
+  name reward_owner = std::get<name>(paitr->special_attributes.at("reward_owner"));
   asset max_amount_per_invite = std::get<asset>(paitr->special_attributes.at("max_amount_per_invite"));
   asset planted = std::get<asset>(paitr->special_attributes.at("planted"));
   asset reward = std::get<asset>(paitr->special_attributes.at("reward"));
@@ -77,7 +83,7 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
       pitr->creator,
       max_amount_per_invite,
       planted,
-      recipient,
+      reward_owner,
       reward,
       payout_amount,
       proposal_id
@@ -97,9 +103,11 @@ void ProposalCampaignInvite::status_open_impl(std::map<std::string, VariantValue
     proposal_aux.special_attributes.at("current_payout") = current_payout + payout_amount;
     proposal_aux.special_attributes.at("executed") = true;
   });
+
 }
 
 void ProposalCampaignInvite::status_eval_impl(std::map<std::string, VariantValue> & args) {
+
   dao::proposal_tables proposals_t(contract_name, contract_name.value);
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
@@ -133,9 +141,11 @@ void ProposalCampaignInvite::status_eval_impl(std::map<std::string, VariantValue
       proposal_aux.special_attributes.at("executed") = true;
     });
   }
+
 }
 
 void ProposalCampaignInvite::status_rejected_impl(std::map<std::string, VariantValue> & args) {
+
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
   
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
@@ -149,10 +159,10 @@ void ProposalCampaignInvite::status_rejected_impl(std::map<std::string, VariantV
     "returnfunds"_n,
     std::make_tuple(campaign_id)
   );
+
 }
 
 void ProposalCampaignInvite::callback(std::map<std::string, VariantValue> & args) {
-  require_auth(contract_name);
 
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
@@ -164,6 +174,7 @@ void ProposalCampaignInvite::callback(std::map<std::string, VariantValue> & args
   propaux_t.modify(paitr, contract_name, [&](auto & proposal_aux){
     proposal_aux.special_attributes.insert(std::make_pair("campaign_id", campaign_id));
   });
+
 }
 
 name ProposalCampaignInvite::get_scope () {

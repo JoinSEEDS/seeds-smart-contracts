@@ -7,9 +7,12 @@ void ProposalAlliance::create_impl (std::map<std::string, VariantValue> & args) 
   dao::user_tables users_t(contracts::accounts, contracts::accounts.value);
 
   name creator = std::get<name>(args["creator"]);
+  name recipient = std::get<name>(args["recipient"]);
   name fund_type = this->m_contract.get_fund_type(std::get<name>(args["fund"]));
   check(fund_type == this->m_contract.alliance_fund, "fund must be of type: " + this->m_contract.alliance_fund.to_string());
 
+  check(is_account(recipient), "recipient is not a valid account: " + recipient.to_string());
+  
   auto uitr = users_t.require_find(creator.value, "no user");
   check(
     uitr->status == name("citizen") || 
@@ -21,20 +24,9 @@ void ProposalAlliance::create_impl (std::map<std::string, VariantValue> & args) 
     item.proposal_id = std::get<uint64_t>(args["proposal_id"]);
     item.special_attributes.insert(std::make_pair("current_payout", asset(0, utils::seeds_symbol)));
     item.special_attributes.insert(std::make_pair("passed_cycle", uint64_t(0)));
-    item.special_attributes.insert(std::make_pair("recipient", std::get<name>(args["recipient"])));
+    item.special_attributes.insert(std::make_pair("recipient", recipient));
     item.special_attributes.insert(std::make_pair("lock_id", uint64_t(0)));
   });
-
-}
-
-void ProposalAlliance::update_impl (std::map<std::string, VariantValue> & args) {
-
-  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
-
-  dao::proposal_tables proposals_t(contract_name, contract_name.value);
-
-  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-  check(pitr->type == ProposalsCommon::type_prop_alliance, "proposal has to be of type alliance");
 
 }
 
@@ -53,8 +45,6 @@ void ProposalAlliance::status_open_impl(std::map<std::string, VariantValue> & ar
 
   asset payout_amount = pitr->quantity;
   string memo = "proposal_id: " + std::to_string(proposal_id);
-
-  print("loook:", memo, "\n");
 
   this->m_contract.send_inline_action(
     permission_level(pitr->fund, "active"_n),
@@ -119,7 +109,6 @@ void ProposalAlliance::status_eval_impl(std::map<std::string, VariantValue> & ar
   this->m_contract.update_cycle_stats_from_proposal(proposal_id, prop_type, ProposalsCommon::status_evaluate);
 
 }
-
 
 void ProposalAlliance::status_rejected_impl(std::map<std::string, VariantValue> & args) {
 

@@ -1,11 +1,11 @@
 const { describe } = require('riteway')
-const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
+const { eos, names, getTableRows, initContracts, isLocal, getBalance } = require('../scripts/helper')
 const { should, assert } = require('chai')
 const { prop } = require('ramda')
 
 const { 
   dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
-  alliancesbank, campaignbank, escrow, onboarding
+  alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank
 } = names
 
 const scopes = ['alliance', proposals, 'milestone', referendums]
@@ -105,6 +105,61 @@ const createReferendum = async (contract, creator, settingName, newValue, title,
     { key: 'test_cycles', value: ['uint64', 1] },
     { key: 'eval_cycles', value: ['uint64', 3] }
   ])
+}
+
+
+async function resetContracts () {
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, onboarding })
+  console.log('reset dao')
+  await contracts.dao.reset({ authorization: `${dao}@active` })
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+  console.log('reset onboarding')
+  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+  
+  console.log('join users')
+  await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
+  await Promise.all(users.map(user => contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })))
+}
+
+async function getVoice (account) {
+  const voice = []
+  for (const s of scopes) {
+    const voiceTable = await getTableRows({
+      code: dao,
+      scope: s,
+      table: 'voice',
+      json: true,
+      lower_bound: account,
+      limit: 1
+    })
+    if (voiceTable.rows.length > 0) {
+      voice.push({
+        scope: s,
+        ...voiceTable.rows[0]
+      })
+    }
+  }
+  return voice
+}
+
+const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, options) => {
+  await contract.update([
+    { key: 'type', value: ['name', type] },
+    { key: 'creator', value: ['name', creator] },
+    { key: 'title', value: ['string', title] },
+    { key: 'summary', value: ['string', summary] },
+    { key: 'description', value: ['string', description] },
+    { key: 'image', value: ['string', image] },
+    { key: 'url', value: ['string', url] },
+    { key: 'fund', value: ['name', fund] },
+    ...options
+  ], { authorization: `${creator}@active` })
 }
 
 describe('Referendums Settings', async assert => {
@@ -662,46 +717,6 @@ describe('Referendums Settings', async assert => {
 
 })
 
-async function resetContracts () {
-  const users = [firstuser, seconduser, thirduser, fourthuser]
-  const contracts = await initContracts({ dao, token, settings, accounts, harvest, onboarding })
-  console.log('reset dao')
-  await contracts.dao.reset({ authorization: `${dao}@active` })
-  console.log('reset settings')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
-  console.log('reset accounts')
-  await contracts.accounts.reset({ authorization: `${accounts}@active` })
-  console.log('reset harvest')
-  await contracts.harvest.reset({ authorization: `${harvest}@active` })
-  console.log('reset onboarding')
-  await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
-  
-  console.log('join users')
-  await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
-  await Promise.all(users.map(user => contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })))
-}
-
-async function getVoice (account) {
-  const voice = []
-  for (const s of scopes) {
-    const voiceTable = await getTableRows({
-      code: dao,
-      scope: s,
-      table: 'voice',
-      json: true,
-      lower_bound: account,
-      limit: 1
-    })
-    if (voiceTable.rows.length > 0) {
-      voice.push({
-        scope: s,
-        ...voiceTable.rows[0]
-      })
-    }
-  }
-  return voice
-}
-
 describe('Participants and Actives', async assert => {
 
   if (!isLocal()) {
@@ -1121,21 +1136,7 @@ describe('Voice Delegation', async assert => {
 
 })
 
-const updateProp = async (contract, creator, type, title, summary, description, image, url, fund, options) => {
-  await contract.update([
-    { key: 'type', value: ['name', type] },
-    { key: 'creator', value: ['name', creator] },
-    { key: 'title', value: ['string', title] },
-    { key: 'summary', value: ['string', summary] },
-    { key: 'description', value: ['string', description] },
-    { key: 'image', value: ['string', image] },
-    { key: 'url', value: ['string', url] },
-    { key: 'fund', value: ['name', fund] },
-    ...options
-  ], { authorization: `${creator}@active` })
-}
-
-describe('Alliances', async assert => {
+describe('Alliance Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1417,7 +1418,7 @@ describe('Alliances', async assert => {
 
 })
 
-describe.only('Invite campaigns', async assert => {
+describe('Invite Campaign Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1854,4 +1855,254 @@ describe.only('Invite campaigns', async assert => {
     actual: !!campaignsTableAfter.rows[1],
     expected: false
   })
+})
+
+describe('Milestone Proposals', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create proposals')
+  await createProp(contracts.dao, firstuser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
+  await createProp(contracts.dao, seconduser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '55.7000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, dao, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(seconduser, dao, '555.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+
+  const hyphaBalanceBefore = await getBalance(hyphabank)
+
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.milestone',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: milestonebank,
+      quantity: '100.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      passed_cycle: 0,
+      recipient: hyphabank,
+      executed: 0
+    },
+    assert,
+    'prop created',
+    'have an entry in the props table'
+  )
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 0,
+      against: 0,
+      staked: '555.0000 SEEDS',
+      creator: seconduser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.milestone',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: milestonebank,
+      quantity: '55.7000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      passed_cycle: 0,
+      recipient: hyphabank,
+      executed: 0
+    },
+    assert,
+    'prop created',
+    'have an entry in the props table'
+  )
+
+  console.log('move proposals to active')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  console.log('approve proposal 1')
+  await contracts.dao.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
+
+  console.log('running on period')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 20,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'passed',
+      stage: 'done',
+      type: 'p.milestone',
+      last_ran_cycle: 2,
+      age: 0,
+      fund: milestonebank,
+      quantity: '100.0000 SEEDS',
+      current_payout: '100.0000 SEEDS',
+      passed_cycle: 2,
+      recipient: hyphabank,
+      executed: 1
+    },
+    assert,
+    'proposal approved',
+    'receive the funds'
+  )
+
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'rejected',
+      stage: 'done',
+      type: 'p.milestone',
+      last_ran_cycle: 2,
+      age: 0,
+      fund: milestonebank,
+      quantity: '55.7000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      passed_cycle: 2,
+      recipient: hyphabank,
+      executed: 0
+    },
+    assert,
+    'proposal approved',
+    'receive the funds'
+  )
+
+  const hyphaBalanceAfter = await getBalance(hyphabank)
+
+  assert({
+    given: 'milestone approved',
+    should: `send the funds to ${hyphabank}`,
+    actual: hyphaBalanceAfter - hyphaBalanceBefore,
+    expected: 100
+  })
+
+})
+
+describe.only('Funding Campaign Proposals', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create proposals')
+  await createProp(contracts.dao, firstuser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+  await createProp(contracts.dao, seconduser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '55.7000 SEEDS', [
+    { key: 'recipient', value: ['name', seconduser] },
+    { key: 'pay_percentages', value: ['string', '15,50,35'] }
+  ])
+
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: firstuser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.fnd',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '100.0000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      pay_percentages: '25,25,25,25',
+      passed_cycle: 0,
+      recipient: firstuser,
+      executed: 0
+    },
+    assert,
+    'proposal created',
+    'have the correct values'
+  )
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 0,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      creator: seconduser,
+      title: 'title',
+      summary: 'summary',
+      description: 'description',
+      image: 'image',
+      url: 'url',
+      status: 'open',
+      stage: 'staged',
+      type: 'p.camp.fnd',
+      last_ran_cycle: 0,
+      age: 0,
+      fund: campaignbank,
+      quantity: '55.7000 SEEDS',
+      current_payout: '0.0000 SEEDS',
+      pay_percentages: '15,50,35',
+      passed_cycle: 0,
+      recipient: seconduser,
+      executed: 0
+    },
+    assert,
+    'proposal created',
+    'have the correct values'
+  )
+
 })

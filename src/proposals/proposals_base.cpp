@@ -7,10 +7,13 @@ void Proposal::create (std::map<std::string, VariantValue> & args) {
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   uint64_t proposal_id = proposals_t.available_primary_key();
+  proposal_id = proposal_id > 0 ? proposal_id : 1;
 
   name creator = std::get<name>(args["creator"]);
   name fund = std::get<name>(args["fund"]);
   asset quantity = std::get<asset>(args["quantity"]);
+
+  check(is_account(fund), "fund is not a valid account: " + fund.to_string());
 
   proposals_t.emplace(contract_name, [&](auto & item) {
     item.proposal_id = proposal_id;
@@ -209,6 +212,7 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
         proposal.staked = asset(0, utils::seeds_symbol);
         proposal.status = ProposalsCommon::status_rejected;
         proposal.stage = ProposalsCommon::stage_done;
+        proposal.last_ran_cycle = propcycle;
       });
 
       propaux_t.modify(paitr, contract_name, [&](auto & propaux){

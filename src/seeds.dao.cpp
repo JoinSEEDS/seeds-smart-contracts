@@ -6,6 +6,8 @@
 #include "proposals/referendums_settings.cpp"
 #include "proposals/proposal_alliance.cpp"
 #include "proposals/proposal_campaign_invite.cpp"
+#include "proposals/proposal_milestone.cpp"
+#include "proposals/proposal_campaign_funding.cpp"
 
 #include "proposals/voice_management.cpp"
 
