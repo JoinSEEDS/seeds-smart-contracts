@@ -4,9 +4,6 @@
  */
 #pragma once
 
-#include <eosio/asset.hpp>
-#include <eosio/eosio.hpp>
-#include <eosio/transaction.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
