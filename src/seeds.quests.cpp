@@ -914,7 +914,7 @@ void quests::vote_aux (name & voter, const checksum256 & proposal_hash, int64_t 
   }
 
   action(
-    permission_level(contracts::proposals, "active"_n),
+    permission_level(contracts::proposals, "questvote"_n),
     contracts::proposals,
     "questvote"_n,
     std::make_tuple(voter, amount, true, contracts::proposals)
@@ -1214,7 +1214,7 @@ ACTION quests::rateapplcnt (checksum256 maker_hash, name opinion) {
     name applicant_account = maker_cw.getOrFail(FIXED_DETAILS, APPLICANT_ACCOUNT) -> getAs<name>();
     uint64_t rep = config_get(name("qst.rep.appl"));
     action(
-      permission_level{contracts::accounts, "active"_n},
+      permission_level{contracts::accounts, "questrep"_n},
       contracts::accounts, "addrep"_n,
       std::make_tuple(applicant_account, rep)
     ).send();
@@ -1247,7 +1247,7 @@ ACTION quests::ratequest (checksum256 quest_hash, name opinion) {
     name creator = quest_doc.getCreator();
     uint64_t rep = config_get(name("qst.rep.qst"));
     action(
-      permission_level{contracts::accounts, "active"_n},
+      permission_level{contracts::accounts, "questrep"_n},
       contracts::accounts, "addrep"_n,
       std::make_tuple(creator, rep)
     ).send();

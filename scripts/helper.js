@@ -28,7 +28,7 @@ const networkDisplayName = {
 const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
-  telosTestnet: 'https://test.hypha.earth',
+  telosTestnet: 'https://api-test.telosfoundation.io',
   telosMainnet: 'https://api.telosfoundation.io'
 }
 
@@ -653,18 +653,25 @@ var permissions = [{
   target: `${accounts.quests.account}@active`,
   actor: `${accounts.quests.account}@eosio.code`
 }, {
-  // TODO REVIEW
   target: `${accounts.campaignbank.account}@active`,
   actor: `${accounts.quests.account}@active`
 }, {
-  // TODO REVIEW: Make more specific
-  target: `${accounts.proposals.account}@active`,
-  actor: `${accounts.quests.account}@active`
+  target: `${accounts.proposals.account}@questvote`,
+  actor: `${accounts.quests.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
 }, {
-  // TODO REVIEW: Make more specific
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.quests.account}@active`
+  target: `${accounts.proposals.account}@questvote`,
+  action: 'questvote'
+}, { 
+  target: `${accounts.accounts.account}@questrep`,
+  actor: `${accounts.quests.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
 }, {
+  target: `${accounts.accounts.account}@questrep`,
+  action: 'addrep'
+}, { 
   target: `${accounts.accounts.account}@execute`,
   action: 'rankorgreps'
 }, {
