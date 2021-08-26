@@ -119,6 +119,14 @@ void startoken::transfer( const name&    from,
     add_balance( to, quantity, payer );
     
     update_stats( from, to, quantity );
+
+    if (
+      to == get_self() &&                       // received
+      quantity.symbol == stars_symbol           // STARS symbol
+    ) {
+      onstars(from, to, quantity, memo);
+    }
+
 }
 
 void startoken::sub_balance( const name& owner, const asset& value ) {

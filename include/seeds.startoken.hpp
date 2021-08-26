@@ -258,10 +258,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
 
       execute_action<startoken>(name(receiver), name(code), &startoken::onseeds);
 
-  } else if (action == name("transfer").value && code == "star.seeds"_n.value) {
-
-      execute_action<startoken>(name(receiver), name(code), &startoken::onstars);
-      
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(startoken, (create)(issue)(transfer)(open)(close)(retire)(burn)(reset) )
