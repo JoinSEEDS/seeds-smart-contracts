@@ -313,12 +313,12 @@ void startoken::reset() {
   
     asset max_supply = asset(-1 * 10000, stars_symbol);
 
-    // action(
-    //   permission_level{ get_self(), "active"_n },
-    //   get_self(), 
-    //   "create"_n,
-    //   std::make_tuple(get_self(), max_supply))
-    // .send();
+    action(
+      permission_level{ get_self(), "active"_n },
+      get_self(), 
+      "create"_n,
+      std::make_tuple(get_self(), max_supply))
+    .send();
 
     auto citr = config.begin();
     while (citr != config.end()){
