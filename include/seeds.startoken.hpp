@@ -2,12 +2,15 @@
  *  @file
  *  @copyright defined in eos/LICENSE.txt
  */
-#pragma once
-
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
 #include <tables/config_table.hpp>
 #include <eosio/singleton.hpp>
+#include <eosio/system.hpp>
+#include <eosio/symbol.hpp>
+#include <eosio/transaction.hpp>
 
 #include <string>
 
@@ -32,7 +35,8 @@ using std::string;
          using contract::contract;
          startoken(name receiver, name code, datastream<const char*> ds)
             :  contract(receiver, code, ds),
-               circulating(receiver, receiver.value)
+               circulating(receiver, receiver.value),
+               config(receiver, receiver.value)
                {}
          
          /**
@@ -44,13 +48,13 @@ using std::string;
           *
           * @pre Token symbol has to be valid,
           * @pre Token symbol must not be already created,
-          * @pre initial_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
+          * @pre max_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
           * @pre Initial supply must be positive;
           *
           * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
-         void create( const name&   issuer, const asset&  initial_supply );
+         void create( const name&   issuer, const asset&  max_supply );
          /**
           * Issue action.
           *
@@ -167,6 +171,10 @@ using std::string;
             return ac.balance;
          }
 
+         ACTION onstars(name from, name to, asset quantity, string memo);
+         ACTION onseeds(name from, name to, asset quantity, string memo);
+         ACTION reset();
+
          using create_action = eosio::action_wrapper<"create"_n, &startoken::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &startoken::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &startoken::retire>;
@@ -176,7 +184,8 @@ using std::string;
          using close_action = eosio::action_wrapper<"close"_n, &startoken::close>;
 
       private:
-          symbol stars_symbol = symbol("STARS", 4);
+         symbol stars_symbol = symbol("STARS", 4);
+         symbol seeds_symbol = symbol("SEEDS", 4);
 
          struct [[eosio::table]] account {
             asset    balance;
@@ -186,7 +195,7 @@ using std::string;
 
          struct [[eosio::table]] currency_stats {
             asset    supply;
-            asset    initial_supply;
+            asset    max_supply;
             name     issuer;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
@@ -226,10 +235,37 @@ using std::string;
             uint64_t primary_key()const { return id; }
          };
     
+      TABLE config_table { 
+         name key; 
+         double value; 
+        
+         uint64_t primary_key()const { return key.value; } 
+      }; 
+
          typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
          typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
+      
+      typedef eosio::multi_index<"config"_n, config_table> config_tables; 
 
-         circulating_supply_tables circulating;
+      circulating_supply_tables circulating;
+      config_tables config;
 
    };
+   
+extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+
+  if (action == name("transfer").value && code == contracts::token.value) {
+
+      execute_action<startoken>(name(receiver), name(code), &startoken::onseeds);
+
+  } else if (action == name("transfer").value && code == "star.seeds"_n.value) {
+
+      execute_action<startoken>(name(receiver), name(code), &startoken::onstars);
+      
+  } else if (code == receiver) {
+      switch (action) {
+          EOSIO_DISPATCH_HELPER(startoken, (create)(issue)(transfer)(open)(close)(retire)(burn)(reset) )
+      }
+  }
+}
    /** @}*/ // end of @defgroup eosiotoken eosio.token
