@@ -86,6 +86,18 @@ ACTION dao::reset () {
     msitr = minstake_t.erase(msitr);
   }
 
+  size_tables s_t(get_self(), get_self().value);
+  auto sitr = s_t.begin();
+  while (sitr != s_t.end()) {
+    sitr = s_t.erase(sitr);
+  }
+
+  size_tables sv_t(get_self(), ProposalsCommon::vote_scope.value);
+  auto svitr = sv_t.begin();
+  while (svitr != sv_t.end()) {
+    svitr = sv_t.erase(svitr);
+  }
+
   for (int i = 0; i < 30; i++) {
     voted_proposals_tables votedprops_t(get_self(), i);
     auto vitr = votedprops_t.begin();
@@ -324,16 +336,6 @@ ACTION dao::addactive (const name & account) {
   }
 }
 
-
-// ==================================================================== //
-
-
-
-
-
-// ==================================================================== //
-// PARTICIPANTS //
-
 ACTION dao::erasepartpts (const uint64_t & active_proposals) {
   uint64_t batch_size = config_get(name("batchsize"));
   uint64_t reward_points = config_get(name("voterep1.ind"));
@@ -365,16 +367,6 @@ ACTION dao::erasepartpts (const uint64_t & active_proposals) {
     );
   }
 }
-
-
-// ==================================================================== //
-
-
-
-
-
-// ==================================================================== //
-// VOICE //
 
 ACTION dao::favour (const name & voter, const uint64_t & proposal_id, const uint64_t & amount) {
   require_auth(voter);
@@ -504,13 +496,10 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
       participant.nonneutral = option != ProposalsCommon::neutral;
       participant.count = 1;
     });
-
   } else {
     participants_t.modify(paitr, _self, [&](auto & participant){
       participant.count += 1;
-      if (option != ProposalsCommon::neutral) { // here, I think this is a bug
-        participant.nonneutral = true;
-      }
+      participant.nonneutral = option != ProposalsCommon::neutral && participant.nonneutral;
     });
   }
 
@@ -618,9 +607,6 @@ void dao::send_mimic_delegatee_vote (const name & delegatee, const name & scope,
   }
 
 }
-
-
-// ==================================================================== //
 
 void dao::init_cycle_new_stats () {
 
@@ -811,8 +797,6 @@ void dao::send_deferred_transaction (
   const name & contract, 
   const name & action,  
   const std::tuple<T...> & data) {
-
-  // eosio::action(permission, contract, action, data).send();
 
   deferred_id_tables deferredids(get_self(), get_self().value);
   deferred_id_table d_s = deferredids.get_or_create(get_self(), deferred_id_table());

@@ -1,14 +1,15 @@
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal, getBalance } = require('../scripts/helper')
 const { should, assert } = require('chai')
-const { prop } = require('ramda')
+const { prop, ascend } = require('ramda')
 
 const { 
   dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
-  alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank
+  alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank, pool
 } = names
 
-const scopes = ['alliance', proposals, 'milestone', referendums]
+const scopes = ['alliance', 'campaign', 'milestone', 'referendum']
+const [allianceScope, campaignScope, milestoneScope, referendumsScope] = scopes
 
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
@@ -107,10 +108,9 @@ const createReferendum = async (contract, creator, settingName, newValue, title,
   ])
 }
 
-
 async function resetContracts () {
   const users = [firstuser, seconduser, thirduser, fourthuser]
-  const contracts = await initContracts({ dao, token, settings, accounts, harvest, onboarding })
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, onboarding, pool })
   console.log('reset dao')
   await contracts.dao.reset({ authorization: `${dao}@active` })
   console.log('reset settings')
@@ -121,6 +121,8 @@ async function resetContracts () {
   await contracts.harvest.reset({ authorization: `${harvest}@active` })
   console.log('reset onboarding')
   await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+  console.log('reset pool')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
   
   console.log('join users')
   await Promise.all(users.map(user => contracts.accounts.adduser(user, user, 'individual', { authorization: `${accounts}@active` })))
@@ -317,7 +319,7 @@ describe('Referendums Settings', async assert => {
 
   console.log('update referendum')
   await contracts.dao.update([
-    { key: 'proposal_id', value: ['uint64', 0] },
+    { key: 'proposal_id', value: ['uint64', 1] },
     { key: 'setting_name', value: ['name', testSetting] },
     { key: 'title', value: ['string', 'title updated'] },
     { key: 'summary', value: ['string', 'summary updated'] },
@@ -330,7 +332,7 @@ describe('Referendums Settings', async assert => {
   ], { authorization: `${firstuser}@active` })
 
   console.log('delete referendum')
-  await contracts.dao.cancel([{ key: 'proposal_id', value: ['uint64', 1] }], { authorization: `${firstuser}@active` })
+  await contracts.dao.cancel([{ key: 'proposal_id', value: ['uint64', 2] }], { authorization: `${firstuser}@active` })
 
   const refTables = await getTableRows({
     code: dao,
@@ -349,7 +351,7 @@ describe('Referendums Settings', async assert => {
     }),
     expected: [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         favour: 0,
         against: 0,
         staked: '0.0000 SEEDS',
@@ -368,7 +370,7 @@ describe('Referendums Settings', async assert => {
         quantity: '0.0000 SEEDS'
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         favour: 0,
         against: 0,
         staked: '0.0000 SEEDS',
@@ -393,17 +395,17 @@ describe('Referendums Settings', async assert => {
   await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   console.log('vote favour for first referendum')
-  await voteReferendum(0)
+  await voteReferendum(1)
 
   console.log('staking for second referendum')
-  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '2', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '3', { authorization: `${seconduser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -412,7 +414,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -421,7 +423,7 @@ describe('Referendums Settings', async assert => {
         age: 1,
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         favour: 0,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -431,7 +433,7 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
@@ -439,7 +441,7 @@ describe('Referendums Settings', async assert => {
         cycles_per_status: '1,1,4'
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
@@ -458,7 +460,7 @@ describe('Referendums Settings', async assert => {
   })
 
   console.log('vote favour for second referendum')
-  await voteReferendum(2, 3)
+  await voteReferendum(3, 3)
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -467,7 +469,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -476,7 +478,7 @@ describe('Referendums Settings', async assert => {
         age: 2,
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -486,7 +488,7 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
@@ -494,7 +496,7 @@ describe('Referendums Settings', async assert => {
         cycles_per_status: '1,1,4'
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
@@ -521,7 +523,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -530,7 +532,7 @@ describe('Referendums Settings', async assert => {
         age: 5,
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -540,7 +542,7 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
@@ -548,7 +550,7 @@ describe('Referendums Settings', async assert => {
         cycles_per_status: '1,1,4'
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
@@ -573,7 +575,7 @@ describe('Referendums Settings', async assert => {
   await checkReferendums(
     [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         favour: 8,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -582,7 +584,7 @@ describe('Referendums Settings', async assert => {
         age: 6,
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         favour: 6,
         against: 0,
         staked: `${minStake}.0000 SEEDS`,
@@ -592,7 +594,7 @@ describe('Referendums Settings', async assert => {
       }
     ], [
       {
-        proposal_id: 0,
+        proposal_id: 1,
         is_float: 0,
         new_value: testSettingNewValue,
         previous_value: testSettingPrevVal,
@@ -600,7 +602,7 @@ describe('Referendums Settings', async assert => {
         cycles_per_status: '1,1,4'
       },
       {
-        proposal_id: 2,
+        proposal_id: 3,
         is_float: 1,
         new_value: testSettingFloatNewValue,
         previous_value: testSettingFloatPrevVal,
@@ -610,6 +612,7 @@ describe('Referendums Settings', async assert => {
     ]
   )
 
+  console.log('===========================================================')
   console.log('failing referendums')
 
   console.log('create referendum')
@@ -619,26 +622,26 @@ describe('Referendums Settings', async assert => {
   await createReferendum(contracts.dao, thirduser, testSettingFloat, ['float64', 3.2], 'title 4', 'summary 4', 'description 4', 'image 4', 'url 4')
 
   console.log('staking for referendums')
-  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '3', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '4', { authorization: `${seconduser}@active` })
-  await contracts.token.transfer(thirduser, dao, `${minStake}.0000 SEEDS`, '5', { authorization: `${thirduser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '4', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '5', { authorization: `${seconduser}@active` })
   await contracts.token.transfer(thirduser, dao, `${minStake}.0000 SEEDS`, '6', { authorization: `${thirduser}@active` })
+  await contracts.token.transfer(thirduser, dao, `${minStake}.0000 SEEDS`, '7', { authorization: `${thirduser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
-  await voteReferendum(3)
   await voteReferendum(4)
-  await voteReferendum(5, 4, false)
-  await voteReferendum(6)
+  await voteReferendum(5)
+  await voteReferendum(6, 4, false)
+  await voteReferendum(7)
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   console.log('change trust for referendum 1')
-  await revertVote(4, 3)
+  await revertVote(5, 3)
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -665,8 +668,8 @@ describe('Referendums Settings', async assert => {
   })
 
   console.log('change trust for referendum 3 and 6')
-  await revertVote(3, 3)
-  await revertVote(6, 3)
+  await revertVote(4, 3)
+  await revertVote(7, 3)
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -683,7 +686,7 @@ describe('Referendums Settings', async assert => {
   assert({
     given: 'referendums failing',
     should: 'have the correct status',
-    actual: refTables2.rows.filter(r => r.proposal_id > 2).map(r => {
+    actual: refTables2.rows.filter(r => r.proposal_id > 3).map(r => {
       return {
         proposal_id: r.proposal_id,
         status: r.status,
@@ -692,7 +695,7 @@ describe('Referendums Settings', async assert => {
     }),
     expected: Array.from(Array(4).keys()).map(key => {
       return {
-        proposal_id: key + 3,
+        proposal_id: key + 4,
         status: 'rejected',
         stage: 'done'
       }
@@ -749,34 +752,70 @@ describe('Participants and Actives', async assert => {
     })
   }
 
+  const checkRep = async (expected) => {
+    const repTable = await getTableRows({
+      code: accounts,
+      scope: accounts,
+      table: 'rep',
+      json: true
+    })
+    const actual = repTable.rows.map(r => {
+      return {
+        account: r.account,
+        rep: r.rep
+      }
+    })
+    assert({
+      given: 'users voted',
+      should: 'have the correct reputation',
+      actual,
+      expected
+    })
+  }
+
   await contracts.settings.confwithdesc(testSetting, 1, 'test description 1', 'high', { authorization: `${settings}@active` })
 
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
-  console.log('create referendum')
+  console.log('create proposals')
   await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
   await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createProp(contracts.dao, seconduser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '10000.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
 
   console.log('changing minimum amount to stake')
   await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '3', { authorization: `${firstuser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
-  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
-  await contracts.dao.against(seconduser, 0, 5, { authorization: `${seconduser}@active` })
-  await contracts.dao.neutral(thirduser, 0, { authorization: `${thirduser}@active` })
+  console.log('voting for proposals')
+  await contracts.dao.favour(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(firstuser, 2, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(firstuser, 3, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.against(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 1, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(thirduser, 2, 10, { authorization: `${thirduser}@active` })
+  await contracts.dao.against(thirduser, 3, 10, { authorization: `${thirduser}@active` })
 
   await checkParticipants([
-    { account: firstuser, nonneutral: 1, count: 1 },
+    { account: firstuser, nonneutral: 1, count: 3 },
     { account: seconduser, nonneutral: 1, count: 1 },
-    { account: thirduser, nonneutral: 0, count: 1 }
+    { account: thirduser, nonneutral: 0, count: 3 }
+  ])
+
+  await checkRep([
+    { account: firstuser, rep: 1 },
+    { account: seconduser, rep: 1 },
+    { account: thirduser, rep: 1 }
   ])
 
   const activesTable = await getTableRows({
@@ -811,6 +850,12 @@ describe('Participants and Actives', async assert => {
 
   await checkParticipants([])
 
+  await checkRep([
+    { account: firstuser, rep: 6 },
+    { account: seconduser, rep: 1 },
+    { account: thirduser, rep: 1 }
+  ])
+
 })
 
 describe('Voting', async assert => {
@@ -834,23 +879,33 @@ describe('Voting', async assert => {
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
-  console.log('create referendum')
+  console.log('create proposals')
   await createReferendum(contracts.dao, firstuser, testSetting, ['uint64', 100], 'title', 'summary', 'description', 'image', 'url')
+  await createProp(contracts.dao, firstuser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+  await createProp(contracts.dao, seconduser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '55.7000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
 
   console.log('changing minimum amount to stake')
   await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '', { authorization: `${seconduser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   console.log('voting for proposal with scope referendums')
-  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
-  await contracts.dao.against(seconduser, 0, 5, { authorization: `${seconduser}@active` })
-  await contracts.dao.neutral(thirduser, 0, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.against(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 1, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(firstuser, 2, 5, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(firstuser, 3, 1, { authorization: `${firstuser}@active` })
 
   const actualVoices = []
   
@@ -858,22 +913,42 @@ describe('Voting', async assert => {
     const voices = await getVoice(user)
     actualVoices.push(voices)
   }
-  
+
   assert({
     given: 'vote done for a referendum',
     should: 'have the correct scope',
-    actual: actualVoices.map(av => av.filter(a => a.scope === referendums)),
+    actual: actualVoices,
     expected: [
-      [{ scope: 'rules.seeds', account: 'seedsuseraaa', balance: 89 }],
-      [{ scope: 'rules.seeds', account: 'seedsuserbbb', balance: 94 }],
-      [{ scope: 'rules.seeds', account: 'seedsuserccc', balance: 99 }],
-      [{ scope: 'rules.seeds', account: 'seedsuserxxx', balance: 99 }]
+      [
+        { scope: allianceScope, account: firstuser, balance: 99 },
+        { scope: campaignScope, account: firstuser, balance: 94 },
+        { scope: milestoneScope, account: firstuser, balance: 98 },
+        { scope: referendumsScope, account: firstuser, balance: 89 }
+      ],
+      [
+        { scope: allianceScope, account: seconduser, balance: 99 },
+        { scope: campaignScope, account: seconduser, balance: 99 }, 
+        { scope: milestoneScope, account: seconduser, balance: 99 },
+        { scope: referendumsScope, account: seconduser, balance: 94 }
+      ],
+      [
+        { scope: allianceScope, account: thirduser, balance: 99 },
+        { scope: campaignScope, account: thirduser, balance: 99 }, 
+        { scope: milestoneScope, account: thirduser, balance: 99 },
+        { scope: referendumsScope, account: thirduser, balance: 99 }
+      ],
+      [
+        { scope: allianceScope, account: fourthuser, balance: 99 },
+        { scope: campaignScope, account: fourthuser, balance: 99 }, 
+        { scope: milestoneScope, account: fourthuser, balance: 99 },
+        { scope: referendumsScope, account: fourthuser, balance: 99 }
+      ]
     ]
   })
 
-  const voiceTable = await getTableRows({
+  const votesTable = await getTableRows({
     code: dao,
-    scope: 0,
+    scope: 1,
     table: 'votes',
     json: true
   })
@@ -881,11 +956,11 @@ describe('Voting', async assert => {
   assert({
     given: 'vote done for a referendum',
     should: 'have the votes',
-    actual: voiceTable.rows,
+    actual: votesTable.rows,
     expected: [
-      { proposal_id: 0, account: firstuser, amount: 10, favour: 1 },
-      { proposal_id: 0, account: seconduser, amount: 5, favour: 0 },
-      { proposal_id: 0, account: thirduser, amount: 0, favour: 0 }
+      { proposal_id: 1, account: firstuser, amount: 10, favour: 1 },
+      { proposal_id: 1, account: seconduser, amount: 5, favour: 0 },
+      { proposal_id: 1, account: thirduser, amount: 0, favour: 0 }
     ]
   })
 
@@ -900,7 +975,7 @@ describe('Voting', async assert => {
     given: 'vote done for a referendum',
     should: 'have an entry in the voted proposal table',
     actual: votedProp.rows.map(v => v.proposal_id),
-    expected: [0]
+    expected: [1,2,3]
   })
 
 })
@@ -1041,7 +1116,7 @@ describe('Voice Delegation', async assert => {
     assert({
       given: 'voice delegated',
       should: 'have the correct balances after voting',
-      actual: actualVoices.map(av => av.filter(a => a.scope === referendums)[0]),
+      actual: actualVoices.map(av => av.filter(a => a.scope === referendumsScope)[0]),
       expected: expectedVoices
     })
 
@@ -1062,30 +1137,30 @@ describe('Voice Delegation', async assert => {
   await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
 
   console.log('running onperiod')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   console.log('delegate voice')
-  await contracts.dao.delegate(seconduser, firstuser, referendums, { authorization: `${seconduser}@active` })
-  await contracts.dao.delegate(thirduser, firstuser, referendums, { authorization: `${thirduser}@active` })
-  await contracts.dao.delegate(fourthuser, thirduser, referendums, { authorization: `${fourthuser}@active` })
+  await contracts.dao.delegate(seconduser, firstuser, referendumsScope, { authorization: `${seconduser}@active` })
+  await contracts.dao.delegate(thirduser, firstuser, referendumsScope, { authorization: `${thirduser}@active` })
+  await contracts.dao.delegate(fourthuser, thirduser, referendumsScope, { authorization: `${fourthuser}@active` })
 
   console.log('voting')
-  await contracts.dao.favour(firstuser, 0, 5, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(firstuser, 1, 5, { authorization: `${firstuser}@active` })
   await sleep(5000)
 
   await checkVoices([
-    { scope: referendums, account: firstuser, balance: 15 },
-    { scope: referendums, account: seconduser, balance: 30 },
-    { scope: referendums, account: thirduser, balance: 45 },
-    { scope: referendums, account: fourthuser, balance: 60 }
+    { scope: referendumsScope, account: firstuser, balance: 15 },
+    { scope: referendumsScope, account: seconduser, balance: 30 },
+    { scope: referendumsScope, account: thirduser, balance: 45 },
+    { scope: referendumsScope, account: fourthuser, balance: 60 }
   ])
 
   console.log('Undelegate voice')
-  await contracts.dao.undelegate(seconduser, referendums, { authorization: `${seconduser}@active` })
+  await contracts.dao.undelegate(seconduser, referendumsScope, { authorization: `${seconduser}@active` })
 
   console.log('change opinion, revert vote')
 
@@ -1106,14 +1181,14 @@ describe('Voice Delegation', async assert => {
     expected: [50, 0]
   })
 
-  await contracts.dao.revertvote(firstuser, 0, { authorization: `${firstuser}@active` })
+  await contracts.dao.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
   await sleep(5000)
 
   await checkVoices([
-    { scope: referendums, account: firstuser, balance: 15 },
-    { scope: referendums, account: seconduser, balance: 30 },
-    { scope: referendums, account: thirduser, balance: 45 },
-    { scope: referendums, account: fourthuser, balance: 60 }
+    { scope: referendumsScope, account: firstuser, balance: 15 },
+    { scope: referendumsScope, account: seconduser, balance: 30 },
+    { scope: referendumsScope, account: thirduser, balance: 45 },
+    { scope: referendumsScope, account: fourthuser, balance: 60 }
   ])
 
   const proposalsTable2 = await getTableRows({
@@ -1172,12 +1247,12 @@ describe('Alliance Proposals', async assert => {
   // await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(firstuser, dao, `${10000}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
-  await contracts.token.transfer(firstuser, dao, `${10000}.0000 SEEDS`, '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${10000}.0000 SEEDS`, '3', { authorization: `${firstuser}@active` })
 
   await contracts.dao.update([
-    { key: 'proposal_id', value: ['uint64', 1] },
+    { key: 'proposal_id', value: ['uint64', 2] },
     { key: 'title', value: ['string', 'title updated'] },
     { key: 'summary', value: ['string', 'summary updated'] },
     { key: 'description', value: ['string', 'description updated'] },
@@ -1187,7 +1262,7 @@ describe('Alliance Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 0,
       against: 0,
       staked: '555.0000 SEEDS',
@@ -1207,7 +1282,8 @@ describe('Alliance Proposals', async assert => {
       current_payout: '0.0000 SEEDS',
       lock_id: 0,
       passed_cycle: 0,
-      recipient: firstuser
+      recipient: firstuser,
+      executed: 0
     },
     assert,
     'prop alliance created',
@@ -1218,21 +1294,21 @@ describe('Alliance Proposals', async assert => {
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
-  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
-  await contracts.dao.favour(seconduser, 0, 10, { authorization: `${seconduser}@active` })
-  await contracts.dao.favour(thirduser, 0, 10, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
 
-  await contracts.dao.favour(firstuser, 1, 9, { authorization: `${firstuser}@active` })
-  await contracts.dao.favour(seconduser, 1, 9, { authorization: `${seconduser}@active` })
-  await contracts.dao.favour(thirduser, 1, 9, { authorization: `${thirduser}@active` })
-
-  await contracts.dao.against(firstuser, 2, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(firstuser, 2, 9, { authorization: `${firstuser}@active` })
   await contracts.dao.favour(seconduser, 2, 9, { authorization: `${seconduser}@active` })
-  await contracts.dao.neutral(thirduser, 2, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(thirduser, 2, 9, { authorization: `${thirduser}@active` })
+
+  await contracts.dao.against(firstuser, 3, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 3, 9, { authorization: `${seconduser}@active` })
+  await contracts.dao.neutral(thirduser, 3, { authorization: `${thirduser}@active` })
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 30,
       against: 0,
       staked: '555.0000 SEEDS',
@@ -1242,7 +1318,8 @@ describe('Alliance Proposals', async assert => {
       current_payout: '0.0000 SEEDS',
       lock_id: 0,
       passed_cycle: 0,
-      recipient: firstuser
+      recipient: firstuser,
+      executed: 0
     },
     assert,
     'on period ran',
@@ -1250,7 +1327,7 @@ describe('Alliance Proposals', async assert => {
   )
   await checkProp(
     {
-      proposal_id: 1,
+      proposal_id: 2,
       favour: 27,
       against: 0,
       staked: '10000.0000 SEEDS',
@@ -1260,7 +1337,8 @@ describe('Alliance Proposals', async assert => {
       current_payout: '0.0000 SEEDS',
       lock_id: 0,
       passed_cycle: 0,
-      recipient: firstuser
+      recipient: firstuser,
+      executed: 0
     },
     assert,
     'on period ran',
@@ -1273,25 +1351,32 @@ describe('Alliance Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 0,
-      favour: 0,
-      against: 0,
-      staked: '555.0000 SEEDS',
-      creator: 'seedsuseraaa',
+      proposal_id: 3,
+      favour: 9,
+      against: 10,
+      staked: '0.0000 SEEDS',
+      creator: seconduser,
       title: 'title',
       summary: 'summary',
       description: 'description',
       image: 'image',
       url: 'url',
-      status: 'open',
-      stage: 'staged',
+      status: 'rejected',
+      stage: 'done',
       type: 'p.alliance',
-      last_ran_cycle: 0,
+      last_ran_cycle: 2,
       age: 0,
       fund: 'allies.seeds',
-      quantity: '10000.0000 SEEDS'
+      quantity: '1000000.0000 SEEDS',
+      current_payout: "0.0000 SEEDS",
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: "seedsuseraaa",
+      executed: 0
     },
-    assert
+    assert,
+    'on period ran',
+    'reject proposal'
   )
 
   const escrowTable = await getTableRows({
@@ -1315,24 +1400,63 @@ describe('Alliance Proposals', async assert => {
         id: 0,
         lock_type: 'event',
         sponsor: 'allies.seeds',
-        beneficiary: 'seedsuseraaa',
+        beneficiary: firstuser,
         quantity: '10000.0000 SEEDS',
         trigger_event: 'golive',
         trigger_source: 'dao.hypha',
-        notes: 'proposal_id: 0'
+        notes: 'proposal_id: 1'
       },
       {
         id: 1,
         lock_type: 'event',
         sponsor: 'allies.seeds',
-        beneficiary: 'seedsuseraaa',
+        beneficiary: firstuser,
         quantity: '1000000.0000 SEEDS',
         trigger_event: 'golive',
         trigger_source: 'dao.hypha',
-        notes: 'proposal_id: 1'
+        notes: 'proposal_id: 2'
       }
     ]
   })
+
+  await checkProp(
+    {
+      proposal_id: 1,
+      favour: 30,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'evaluate',
+      stage: 'active',
+      quantity: '10000.0000 SEEDS',
+      current_payout: '10000.0000 SEEDS',
+      lock_id: 0,
+      passed_cycle: 2,
+      recipient: firstuser,
+      executed: 0
+    },
+    assert,
+    'on period ran',
+    'move prop to evaluate'
+  )
+  await checkProp(
+    {
+      proposal_id: 2,
+      favour: 27,
+      against: 0,
+      staked: '0.0000 SEEDS',
+      status: 'evaluate',
+      stage: 'active',
+      quantity: '1000000.0000 SEEDS',
+      current_payout: '1000000.0000 SEEDS',
+      lock_id: 1,
+      passed_cycle: 2,
+      recipient: firstuser,
+      executed: 0
+    },
+    assert,
+    'on period ran',
+    'move prop to evaluate'
+  )
 
   console.log('running onperiod more times...')
   for (let i = 0; i < 2; i++) {
@@ -1340,27 +1464,69 @@ describe('Alliance Proposals', async assert => {
     await sleep(2000)
   }
 
-  console.log('voting down for prop 1')
-  await contracts.dao.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
-  await contracts.dao.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+  console.log('voting down for prop 2')
+  await contracts.dao.revertvote(firstuser, 2, { authorization: `${firstuser}@active` })
+  await contracts.dao.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
 
+
+  console.log('triggering go live event')
+  const eventSource = 'dao.hypha'
+  const eventName = 'golive'
+
+  console.log('going live')
+  await contracts.escrow.resettrigger(eventSource, { authorization: `${escrow}@active` })
+  await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
+  await sleep(5000)
+
+  const poolBalances = await eos.getTableRows({
+    code: pool,
+    scope: pool,
+    table: 'balances',
+    json: true
+  })
+  
+  assert({
+    given: 'go live triggered',
+    should: 'have the correct pool balances',
+    actual: poolBalances.rows,
+    expected: [
+      { account: firstuser, balance: '10000.0000 SEEDS' }
+    ]
+  })
+
+  const escrowTableBefore = await getTableRows({
+    code: escrow,
+    scope: escrow,
+    table: 'locks',
+    json: true
+  })
+
+  assert({
+    given: 'go live triggered',
+    should: 'not mig the lock for the failing proposal',
+    actual: escrowTableBefore.rows.length,
+    expected: 1
+  })
+
+  console.log('running on period')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 30,
       against: 0,
       staked: '0.0000 SEEDS',
-      status: 'evaluate',
-      stage: 'active',
+      status: 'passed',
+      stage: 'done',
       quantity: '10000.0000 SEEDS',
-      last_ran_cycle: 5,
+      last_ran_cycle: 4,
       current_payout: '10000.0000 SEEDS',
       lock_id: 0,
       passed_cycle: 2,
-      recipient: firstuser
+      recipient: firstuser,
+      executed: 1
     },
     assert,
     'on period ran',
@@ -1368,18 +1534,19 @@ describe('Alliance Proposals', async assert => {
   )
   await checkProp(
     {
-      proposal_id: 1,
+      proposal_id: 2,
       favour: 9,
       against: 18,
       staked: '0.0000 SEEDS',
       status: 'rejected',
       stage: 'done',
       quantity: '1000000.0000 SEEDS',
-      last_ran_cycle: 4,
+      last_ran_cycle: 5,
       current_payout: '1000000.0000 SEEDS',
       lock_id: 1,
       passed_cycle: 2,
-      recipient: firstuser
+      recipient: firstuser,
+      executed: 0
     },
     assert,
     'on period ran',
@@ -1396,24 +1563,8 @@ describe('Alliance Proposals', async assert => {
   assert({
     given: 'proposal cancel',
     should: 'cancel lock',
-    actual: escrowTableAfter.rows.map(r => {
-      delete r.vesting_date
-      delete r.created_date
-      delete r.updated_date
-      return r
-    }),
-    expected:   [
-      {
-        id: 0,
-        lock_type: 'event',
-        sponsor: 'allies.seeds',
-        beneficiary: 'seedsuseraaa',
-        quantity: '10000.0000 SEEDS',
-        trigger_event: 'golive',
-        trigger_source: 'dao.hypha',
-        notes: 'proposal_id: 0'
-      }
-    ]
+    actual: escrowTableAfter.rows,
+    expected: []
   })
 
 })
@@ -1434,16 +1585,17 @@ describe('Invite Campaign Proposals', async assert => {
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
+  console.log('create prop')
   await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '1000.0000 SEEDS', [
     { key: 'max_amount_per_invite', value: ['asset', '20.0000 SEEDS'] },
     { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
     { key: 'reward', value: ['asset', '2.0000 SEEDS'] },
-    { key: 'recipient', value: ['name', seconduser] }
+    { key: 'reward_owner', value: ['name', seconduser] }
   ])
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 0,
       against: 0,
       staked: '0.0000 SEEDS',
@@ -1462,7 +1614,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '1000.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
       passed_cycle: 0,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1475,16 +1627,16 @@ describe('Invite Campaign Proposals', async assert => {
   )
 
   console.log('staking')
-  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '0', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${555}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
 
   console.log('update proposal')
   await updateProp(contracts.dao, firstuser, 'p.camp.inv', 'titleU', 'summaryU', 'descriptionU', 'imageU', 'urlU', campaignbank, [
-    { key: 'proposal_id', value: ['uint64', 0] }
+    { key: 'proposal_id', value: ['uint64', 1] }
   ])
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 0,
       against: 0,
       staked: '555.0000 SEEDS',
@@ -1503,7 +1655,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '1000.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
       passed_cycle: 0,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1519,13 +1671,13 @@ describe('Invite Campaign Proposals', async assert => {
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
-  await contracts.dao.favour(firstuser, 0, 10, { authorization: `${firstuser}@active` })
-  await contracts.dao.favour(seconduser, 0, 10, { authorization: `${seconduser}@active` })
-  await contracts.dao.favour(thirduser, 0, 10, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 30,
       against: 0,
       staked: '555.0000 SEEDS',
@@ -1544,7 +1696,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '1000.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
       passed_cycle: 0,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1562,7 +1714,7 @@ describe('Invite Campaign Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 30,
       against: 0,
       staked: '0.0000 SEEDS',
@@ -1581,7 +1733,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '1000.0000 SEEDS',
       current_payout: '1000.0000 SEEDS',
       passed_cycle: 2,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1601,7 +1753,7 @@ describe('Invite Campaign Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 0,
+      proposal_id: 1,
       favour: 30,
       against: 0,
       staked: '0.0000 SEEDS',
@@ -1620,7 +1772,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '1000.0000 SEEDS',
       current_payout: '1000.0000 SEEDS',
       passed_cycle: 2,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1633,17 +1785,17 @@ describe('Invite Campaign Proposals', async assert => {
     'update campaign votes'
   )
 
-  console.log('Use case - Create proposal but it will not voted so it will be deleted')
+  console.log('Use case - Create proposal but it will not voted so it will be rejected')
 
   await createProp(contracts.dao, firstuser, 'p.camp.inv', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
     { key: 'max_amount_per_invite', value: ['asset', '20.0000 SEEDS'] },
     { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
     { key: 'reward', value: ['asset', '2.0000 SEEDS'] },
-    { key: 'recipient', value: ['name', seconduser] }
+    { key: 'reward_owner', value: ['name', seconduser] }
   ])
 
   console.log('staking')
-  await contracts.token.transfer(seconduser, dao, `${555}.0000 SEEDS`, '1', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${555}.0000 SEEDS`, '2', { authorization: `${seconduser}@active` })
 
   for (let i = 0; i < 6; i++) {
     await contracts.dao.onperiod({ authorization: `${dao}@active` })
@@ -1652,7 +1804,7 @@ describe('Invite Campaign Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 1,
+      proposal_id: 2,
       favour: 0,
       against: 0,
       staked: '0.0000 SEEDS',
@@ -1665,13 +1817,13 @@ describe('Invite Campaign Proposals', async assert => {
       status: 'rejected',
       stage: 'done',
       type: 'p.camp.inv',
-      last_ran_cycle: 0,
+      last_ran_cycle: 10,
       age: 0,
       fund: campaignbank,
       quantity: '100.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
       passed_cycle: 10,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1689,23 +1841,23 @@ describe('Invite Campaign Proposals', async assert => {
     { key: 'max_amount_per_invite', value: ['asset', '20.0000 SEEDS'] },
     { key: 'planted', value: ['asset', '6.0000 SEEDS'] },
     { key: 'reward', value: ['asset', '2.0000 SEEDS'] },
-    { key: 'recipient', value: ['name', seconduser] }
+    { key: 'reward_owner', value: ['name', seconduser] }
   ])
 
   console.log('staking')
-  await contracts.token.transfer(seconduser, dao, `${555}.0000 SEEDS`, '2', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${555}.0000 SEEDS`, '3', { authorization: `${seconduser}@active` })
 
   console.log('on period')
   await contracts.dao.onperiod({ authorization: `${dao}@active` })
   await sleep(2000)
 
   console.log('favour voting')
-  await contracts.dao.favour(thirduser, 2, 10, { authorization: `${thirduser}@active` })
-  await contracts.dao.favour(seconduser, 2, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 3, 10, { authorization: `${thirduser}@active` })
+  await contracts.dao.favour(seconduser, 3, 10, { authorization: `${seconduser}@active` })
 
   await checkProp(
     {
-      proposal_id: 2,
+      proposal_id: 3,
       favour: 20,
       against: 0,
       staked: '555.0000 SEEDS',
@@ -1724,7 +1876,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
       passed_cycle: 0,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1742,7 +1894,7 @@ describe('Invite Campaign Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 2,
+      proposal_id: 3,
       favour: 20,
       against: 0,
       staked: '0.0000 SEEDS',
@@ -1761,7 +1913,7 @@ describe('Invite Campaign Proposals', async assert => {
       quantity: '100.0000 SEEDS',
       current_payout: '100.0000 SEEDS',
       passed_cycle: 16,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1775,8 +1927,8 @@ describe('Invite Campaign Proposals', async assert => {
   )
 
   console.log('rever votes');
-  await contracts.dao.revertvote(thirduser, 2, { authorization: `${thirduser}@active` })
-  await contracts.dao.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
+  await contracts.dao.revertvote(thirduser, 3, { authorization: `${thirduser}@active` })
+  await contracts.dao.revertvote(seconduser, 3, { authorization: `${seconduser}@active` })
 
   const campaignsTableBefore = await getTableRows({
     code: onboarding,
@@ -1810,7 +1962,7 @@ describe('Invite Campaign Proposals', async assert => {
 
   await checkProp(
     {
-      proposal_id: 2,
+      proposal_id: 3,
       favour: 0,
       against: 20,
       staked: '0.0000 SEEDS',
@@ -1823,13 +1975,13 @@ describe('Invite Campaign Proposals', async assert => {
       status: 'rejected',
       stage: 'done',
       type: 'p.camp.inv',
-      last_ran_cycle: 16,
+      last_ran_cycle: 17,
       age: 0,
       fund: campaignbank,
       quantity: '100.0000 SEEDS',
       current_payout: '100.0000 SEEDS',
       passed_cycle: 16,
-      recipient: seconduser,
+      reward_owner: seconduser,
       max_age: 6,
       max_amount_per_invite: "20.0000 SEEDS",
       planted: "6.0000 SEEDS",
@@ -1852,10 +2004,12 @@ describe('Invite Campaign Proposals', async assert => {
   assert({
     given: 'After proposal rejected on evaluate status',
     should: 'delete entry in campaings table',
-    actual: !!campaignsTableAfter.rows[1],
-    expected: false
+    actual: campaignsTableAfter.rows[1],
+    expected: undefined
   })
 })
+
+
 
 describe('Milestone Proposals', async assert => {
 
@@ -2021,7 +2175,7 @@ describe('Milestone Proposals', async assert => {
 
 })
 
-describe.only('Funding Campaign Proposals', async assert => {
+describe('Funding Campaign Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -2041,9 +2195,9 @@ describe.only('Funding Campaign Proposals', async assert => {
   await createProp(contracts.dao, firstuser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
     { key: 'recipient', value: ['name', firstuser] }
   ])
-  await createProp(contracts.dao, seconduser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '55.7000 SEEDS', [
+  await createProp(contracts.dao, seconduser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
     { key: 'recipient', value: ['name', seconduser] },
-    { key: 'pay_percentages', value: ['string', '15,50,35'] }
+    { key: 'pay_percentages', value: ['string', '15,50,25,10'] }
   ])
 
   await checkProp(
@@ -2093,9 +2247,9 @@ describe.only('Funding Campaign Proposals', async assert => {
       last_ran_cycle: 0,
       age: 0,
       fund: campaignbank,
-      quantity: '55.7000 SEEDS',
+      quantity: '100.0000 SEEDS',
       current_payout: '0.0000 SEEDS',
-      pay_percentages: '15,50,35',
+      pay_percentages: '15,50,25,10',
       passed_cycle: 0,
       recipient: seconduser,
       executed: 0
@@ -2103,6 +2257,97 @@ describe.only('Funding Campaign Proposals', async assert => {
     assert,
     'proposal created',
     'have the correct values'
+  )
+
+  console.log('deposit stake')
+  await contracts.token.transfer(firstuser, dao, '555.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, dao, '555.0000 SEEDS', '2', { authorization: `${seconduser}@active` })
+
+  console.log('move proposals to active')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  console.log('approve proposal 1')
+  await contracts.dao.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 1, 10, { authorization: `${thirduser}@active` })
+
+  await contracts.dao.favour(seconduser, 2, 10, { authorization: `${seconduser}@active` })
+  await contracts.dao.favour(thirduser, 2, 10, { authorization: `${thirduser}@active` })
+
+  const checkPayout = async (expected) => {
+
+    const balanceBefore1 = await getBalance(firstuser)
+    const balanceBefore2 = await getBalance(seconduser)
+
+    console.log('running on period')
+    await contracts.dao.onperiod({ authorization: `${dao}@active` })
+    await sleep(2000)
+  
+    const balanceAfter1 = await getBalance(firstuser)
+    const balanceAfter2 = await getBalance(seconduser)
+  
+    assert({
+      given: 'onperiod ran',
+      should: 'payout the first percentage',
+      actual: [
+        balanceAfter1 - balanceBefore1,
+        balanceAfter2 - balanceBefore2
+      ],
+      expected
+    })
+
+  }
+  await checkPayout([25 + 555, 15 + 555])
+  await checkPayout([25, 50])
+
+  console.log('voting down proposal 2')
+  await contracts.dao.revertvote(thirduser, 2, { authorization: `${thirduser}@active` })
+  await contracts.dao.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
+
+  await checkPayout([25, 0])
+  await checkPayout([25, 0])
+  await checkPayout([0, 0])
+
+  await checkProp(
+    {
+      proposal_id: 1,
+      status: 'passed',
+      stage: 'done',
+      type: 'p.camp.fnd',
+      last_ran_cycle: 5,
+      age: 3,
+      fund: campaignbank,
+      quantity: '100.0000 SEEDS',
+      current_payout: '100.0000 SEEDS',
+      pay_percentages: '25,25,25,25',
+      passed_cycle: 2,
+      recipient: firstuser,
+      executed: 1
+    },
+    assert,
+    'proposal ran',
+    'payout the correct values'
+  )
+
+  await checkProp(
+    {
+      proposal_id: 2,
+      status: 'rejected',
+      stage: 'done',
+      type: 'p.camp.fnd',
+      last_ran_cycle: 4,
+      age: 1,
+      fund: campaignbank,
+      quantity: '100.0000 SEEDS',
+      current_payout: '65.0000 SEEDS',
+      pay_percentages: '15,50,25,10',
+      passed_cycle: 2,
+      recipient: seconduser,
+      executed: 0
+    },
+    assert,
+    'proposal ran',
+    'payout the correct values'
   )
 
 })

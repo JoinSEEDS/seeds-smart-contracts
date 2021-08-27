@@ -137,6 +137,7 @@ void ProposalCampaignFunding::status_eval_impl (std::map<std::string, VariantVal
       name prop_type = this->m_contract.get_fund_type(pitr->fund);
       this->m_contract.update_cycle_stats_from_proposal(proposal_id, prop_type, ProposalsCommon::status_evaluate);
     }
+    item.last_ran_cycle = propcycle;
   });
 
   propaux_t.modify(paitr, contract_name, [&](auto & item){

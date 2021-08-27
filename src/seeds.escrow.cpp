@@ -99,6 +99,26 @@ void escrow::miglock (uint64_t lock_id) {
                     std::make_tuple(prop_id)
                 ).send();
             }
+
+            // this section is for dao.seeds
+            std::size_t memo = litr->notes.find(string("proposal_id: "));
+            if (memo != std::string::npos) {
+                string prop_id_string = litr->notes.substr(13, string::npos);
+                uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+
+                std::map<string, VariantValue> args = {
+                    { "proposal_id", prop_id },
+                    { "action", name("doneprop") }
+                };
+
+                action(
+                    permission_level(contracts::dao, "active"_n),
+                    contracts::dao,
+                    "callback"_n,
+                    std::make_tuple(args)
+                ).send();
+            }
+            // =================================
         }
 
         deduct_from_sponsor(litr->sponsor, litr->quantity);
@@ -286,6 +306,26 @@ void escrow::claim(name beneficiary) {
                     std::make_tuple(prop_id)
                 ).send();
             }
+
+            // this section is for dao.seeds
+            std::size_t memo = it->notes.find(string("proposal_id: "));
+            if (memo != std::string::npos) {
+                string prop_id_string = it->notes.substr(13, string::npos);
+                uint64_t prop_id = uint64_t(std::stoi(prop_id_string));
+
+                std::map<string, VariantValue> args = {
+                    { "proposal_id", prop_id },
+                    { "action", name("doneprop") }
+                };
+
+                action(
+                    permission_level(contracts::dao, "active"_n),
+                    contracts::dao,
+                    "callback"_n,
+                    std::make_tuple(args)
+                ).send();
+            }
+            // =================================
         }
 
         if (it->lock_type == "time"_n) {

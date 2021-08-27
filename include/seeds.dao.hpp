@@ -31,9 +31,9 @@ CONTRACT dao : public contract {
           {}
 
       name alliance_scope = "alliance"_n;
-      name campaign_scope = contracts::proposals;
+      name campaign_scope = "campaign"_n;
       name milestone_scope = "milestone"_n;
-      name referendums_scope = contracts::referendums;
+      name referendums_scope = "referendum"_n;
 
       std::vector<name> scopes = {
         alliance_scope,

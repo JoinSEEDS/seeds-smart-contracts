@@ -26,6 +26,7 @@ void ProposalAlliance::create_impl (std::map<std::string, VariantValue> & args) 
     item.special_attributes.insert(std::make_pair("passed_cycle", uint64_t(0)));
     item.special_attributes.insert(std::make_pair("recipient", recipient));
     item.special_attributes.insert(std::make_pair("lock_id", uint64_t(0)));
+    item.special_attributes.insert(std::make_pair("executed", false));
   });
 
 }
@@ -143,9 +144,29 @@ void ProposalAlliance::callback (std::map<std::string, VariantValue> & args) {
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
   auto paitr = propaux_t.require_find(proposal_id, "proposal not found");
 
-  propaux_t.modify(paitr, contract_name, [&](auto & propaux){
-    propaux.special_attributes.at("lock_id") = std::get<uint64_t>(args["lock_id"]);
-  });
+  auto action_itr = args.find("action");
+  if (action_itr != args.end()) {
+
+    dao::proposal_tables proposals_t(contract_name, contract_name.value);
+    auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
+
+    std::map<std::string, VariantValue> propm = { { "favour", pitr->favour }, { "against", pitr->against } };
+    check(check_prop_majority(propm), "proposal is not passing, lock can not be claimed");
+
+    proposals_t.modify(pitr, contract_name, [&](auto & item){
+      item.status = ProposalsCommon::status_passed;
+      item.stage = ProposalsCommon::stage_done;
+    });
+
+    propaux_t.modify(paitr, contract_name, [&](auto & item){
+      item.special_attributes.at("executed") = true;
+    });
+
+  } else {
+    propaux_t.modify(paitr, contract_name, [&](auto & propaux){
+      propaux.special_attributes.at("lock_id") = std::get<uint64_t>(args["lock_id"]);
+    });
+  }
 
 }
 

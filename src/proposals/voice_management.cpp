@@ -11,7 +11,6 @@ ACTION dao::updatevoice (const uint64_t & start) {
   
   DEFINE_CS_POINTS_TABLE
   DEFINE_CS_POINTS_TABLE_MULTI_INDEX
-  print("updating voices\n");
   
   uint64_t cutoff_date = active_cutoff_date();
   cs_points_tables cspoints_t(contracts::harvest, contracts::harvest.value);

@@ -101,6 +101,8 @@ CONTRACT proposals : public contract {
 
       ACTION undelegate(name delegator, name scope);
 
+      ACTION questvote(name user, uint64_t amount, bool reduce, name scope);
+
       ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
 
       ACTION checkprop(uint64_t proposal_id, string message);
@@ -456,6 +458,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
+        (questvote)
         (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (testperiod)(testevalprop)
