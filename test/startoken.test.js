@@ -63,27 +63,30 @@ describe.only('star token exchange', async assert => {
   const starsBalance0 = await getStarsBalanceFloat(firstuser)
   const seedsBalance0 = await getSeedsBalanceFloat(firstuser)
 
-  await contracts.token.transfer(firstuser, startoken, '100.0000 SEEDS', ``, { authorization: `${firstuser}@active` })
+  console.log('issue token')
+
+  try {
+    await contracts.startoken.create(startoken, '-1.0000 STARS', { authorization: `${startoken}@active` })
+  } catch (err) {
+
+  }
+  
+  await contracts.startoken.issue(startoken, '100.0000 STARS', "", { authorization: `${startoken}@active` })
+
+  await contracts.startoken.transfer(startoken, firstuser, '100.0000 STARS', ``, { authorization: `${startoken}@active` })
 
   const seedsBalance1 = await getSeedsBalanceFloat(firstuser)
   const starsBalance1 = await getStarsBalanceFloat(firstuser)
   const user2stars1 = await getStarsBalanceFloat(seconduser)
 
   assert({
-    given: 'exchange seeds to stars',
-    should: 'get stars for seeds',
+    given: 'issue stars',
+    should: 'get stars',
     actual: starsBalance1 - starsBalance0,
-    expected: 8.0137
+    expected: 100
   })
 
-  assert({
-    given: 'send seeds to stars',
-    should: 'have less seeds',
-    actual: seedsBalance1 - seedsBalance0,
-    expected: -100.0
-  })
-
-  console.log('transfer token')
+  console.log('transfer stars')
   await contracts.startoken.transfer(firstuser, seconduser, '8.0000 STARS', ``, { authorization: `${firstuser}@active` })
 
   const user2stars2 = await getStarsBalanceFloat(seconduser)
@@ -105,61 +108,6 @@ describe.only('star token exchange', async assert => {
     expected: -8.0
   })
 
-  console.log('transfer 2')
-
-  console.log('transfer token')
-  await contracts.startoken.transfer(seconduser, startoken, '8.0137 STARS', ``, { authorization: `${seconduser}@active` })
-
-  const user2stars3 = await getStarsBalanceFloat(seconduser)
-  const user2seeds3 = await getSeedsBalanceFloat(seconduser)
-
-  assert({
-    given: 'exchange stars for seeds',
-    should: 'have sent token',
-    actual: user2stars3 - user2stars2,
-    expected: -8.0137
-  })
-
-  assert({
-    given: 'exchange stars for seeds',
-    should: 'get seeds',
-    actual: user2seeds3 - user2seeds2 - 100.0 < 0.0000001,
-    expected: true
-  })
-
-  const stats = await getTableRows({
-    code: startoken,
-    scope: "STARS",
-    table: 'accounts',
-    json: true
-  })
-
-
-})
-
-describe('token.transfer', async assert => {
-
-  if (!isLocal()) {
-    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
-    return
-  }
-  const contracts = await initContracts({ startoken })
-
-
-  let limit = 20
-  const transfer = (n) => contracts.startoken.transfer(firstuser, seconduser, '1.0000 STARS', `x${n}`, { authorization: `${firstuser}@active` })
-
-  const balances = [await getBalance(firstuser)]
-
-
-    await contracts.token.transfer(firstuser, seconduser, '1.0000 STARS', limit + "x", { authorization: `${firstuser}@active` })
-  
-  assert({
-    given: 'token.transfer called',
-    should: 'decrease user balance',
-    actual: balances[1],
-    expected: balances[0] - 202
-  })
 
 })
 

@@ -4,9 +4,7 @@
  */
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
-#include <contracts.hpp>
 #include <tables.hpp>
-#include <tables/config_table.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/symbol.hpp>
@@ -35,8 +33,7 @@ using std::string;
          using contract::contract;
          startoken(name receiver, name code, datastream<const char*> ds)
             :  contract(receiver, code, ds),
-               circulating(receiver, receiver.value),
-               config(receiver, receiver.value)
+               circulating(receiver, receiver.value)
                {}
          
          /**
@@ -171,10 +168,6 @@ using std::string;
             return ac.balance;
          }
 
-         ACTION onstars(name from, name to, asset quantity, string memo);
-         ACTION onseeds(name from, name to, asset quantity, string memo);
-         ACTION reset();
-
          using create_action = eosio::action_wrapper<"create"_n, &startoken::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &startoken::issue>;
          using retire_action = eosio::action_wrapper<"retire"_n, &startoken::retire>;
@@ -226,7 +219,6 @@ using std::string;
 
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
-         void update_stats( const name& from, const name& to, const asset& quantity );
 
          TABLE circulating_supply_table {
             uint64_t id;
@@ -235,33 +227,12 @@ using std::string;
             uint64_t primary_key()const { return id; }
          };
     
-      TABLE config_table { 
-         name key; 
-         double value; 
-        
-         uint64_t primary_key()const { return key.value; } 
-      }; 
-
          typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
          typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
       
-      typedef eosio::multi_index<"config"_n, config_table> config_tables; 
-
       circulating_supply_tables circulating;
-      config_tables config;
 
    };
    
-extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
 
-  if (action == name("transfer").value && code == contracts::token.value) {
-
-      execute_action<startoken>(name(receiver), name(code), &startoken::onseeds);
-
-  } else if (code == receiver) {
-      switch (action) {
-          EOSIO_DISPATCH_HELPER(startoken, (create)(issue)(transfer)(open)(close)(retire)(burn)(reset) )
-      }
-  }
-}
-   /** @}*/ // end of @defgroup eosiotoken eosio.token
+EOSIO_DISPATCH(startoken, (create)(issue)(transfer)(open)(close)(retire)(burn) )
