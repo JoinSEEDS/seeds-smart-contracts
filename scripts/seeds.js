@@ -3,7 +3,7 @@
 const test = require('./test')
 const program = require('commander')
 const compile = require('./compile')
-const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAccountNames } = require('./helper')
+const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAccountNames, isTestnet } = require('./helper')
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
@@ -130,6 +130,14 @@ const updateSettingsAction = async () => {
   console.log(`reset settings`)
 
   await contract.reset({ authorization: `${settings}@active` })
+
+  if (isTestnet) {
+    timeSeconds = 300
+    console.log("ON TESTNET - setting citizen min account age to "+timeSeconds+" seconds")
+   // ACTION configure(name param, uint64_t value);
+    await contract.configure("cit.age", 300, { authorization: `${settings}@active` })
+
+  }
 
   console.log(`Success: Settings reset: ${settings}`)
 }
