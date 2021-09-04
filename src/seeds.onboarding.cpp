@@ -13,6 +13,8 @@ void onboarding::create_account(name account, string publicKey, name domain)
     domain = _self;
   }
 
+  //check(false, "invite contract is paused"); // REMOVE THIS AGAIN
+
   action(
       permission_level{domain, "owner"_n},
       "eosio"_n, "newaccount"_n,
@@ -339,6 +341,11 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
   checksum256 empty_checksum;
 
   uint64_t key = invites.available_primary_key();
+
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(sow_quantity.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted/10000.0));
+
+  print("sow "+std::to_string(sow_quantity.amount) + " >= " + std::to_string(min_planted));
 
   if (campaign_id != 0)
   {
@@ -704,7 +711,7 @@ ACTION onboarding::campinvite(uint64_t campaign_id, name authorizing_account, as
 
   require_auth(authorizing_account);
 
-  check(planted >= citr->planted, "the planted amount must be greater or equal than " + citr->planted.to_string());
+  check(planted >= citr->planted, "campaign: ``````````the planted amount must be greater or equal than " + citr->planted.to_string());
   check(quantity.amount > 0, "quantity should me greater than 0");
 
   _invite(citr->origin_account, citr->owner, quantity, planted, invite_hash, campaign_id);

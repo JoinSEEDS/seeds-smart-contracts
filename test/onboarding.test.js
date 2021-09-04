@@ -1033,122 +1033,200 @@ describe('Private campaign', async assert => {
 })
 
 
-describe("clean up unused invites", async assert => {
+// describe("clean up unused invites", async assert => {
+
+//     if (!isLocal()) {
+//         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+//         return
+//     }
+
+//     const transferQuantity = `10.0000 SEEDS`
+//     const sowQuantity = '5.0000 SEEDS'
+//     const totalQuantity = '15.0000 SEEDS'
+
+//     const newAccount = randomAccountName()
+//     const newAccount2 = randomAccountName()
+
+//     const keyPair = await createKeypair()
+//     const keyPair2 = await createKeypair()
+
+//     console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
+
+//     const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
+
+//     console.log(`reset ${settings}`)
+//     await contracts.settings.reset({ authorization: `${settings}@active` })
+
+//     console.log(`reset ${accounts}`)
+//     await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+//     console.log(`reset ${token}`)
+//     await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+//     console.log(`reset ${onboarding}`)
+//     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+//     console.log('join users')
+//     await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+//     await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+
+//     const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+
+//     const inviteSecret = await ramdom64ByteHexString()
+//     const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+//     const inviteSecret2 = await ramdom64ByteHexString()
+//     const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
+//     const inviteSecret3 = await ramdom64ByteHexString()
+//     const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
+
+//     const deposit = async (user, memo = '') => {
+//         console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
+//         await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })
+//     }
+
+//     const invite = async (user, inviteHash) => {
+//         console.log(`${onboarding}.invite from ${user}`)
+//         await contracts.onboarding.invite(user, transferQuantity, sowQuantity, inviteHash, { authorization: `${user}@active` })
+//     }
+
+//     const checkInvites = async (numberInvites, expectedTimestamps) => {
+//         const allInvites = await getTableRows({
+//             code: onboarding,
+//             scope: onboarding,
+//             table: 'invites',
+//             json: true
+//         })
+//         console.log(allInvites)
+
+//         assert({
+//             given: 'cleanup ran',
+//             should: 'have the correct number of invites',
+//             actual: allInvites.rows.length,
+//             expected: numberInvites
+//         })
+
+//         const timestamps = await getTableRows({
+//             code: onboarding,
+//             scope: onboarding,
+//             table: 'timestamps',
+//             json: true
+//         })
+//         console.log(timestamps)
+
+//         assert({
+//             given: 'cleanup ran',
+//             should: 'have the correct timestamp entries',
+//             actual: timestamps.rows.map(r => {
+//                 delete r.timestamp
+//                 return { ...r }
+//             }),
+//             expected: expectedTimestamps
+//         })
+//     }
+
+//     await deposit(firstuser)
+//     await invite(firstuser, inviteHash)
+//     await deposit(seconduser)
+//     await invite(seconduser, inviteHash2)
+//     await deposit(seconduser)
+//     await invite(seconduser, inviteHash3)
+
+//     await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
+//     await sleep(500)
+
+//     await checkInvites(3, [{ id: 0, invite_id: 2 }])
+
+//     await sleep(2000)
+
+//     await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+//     await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
+//     await sleep(4000)
+
+//     await checkInvites(1, [
+//         { id: 0, invite_id: 2 },
+//         { id: 1, invite_id: 2 }
+//     ])
+
+// })
+
+
+describe('Invite amounts', async assert => {
 
     if (!isLocal()) {
         console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
         return
     }
 
-    const transferQuantity = `10.0000 SEEDS`
+    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+
+    const transferQuantity = `0.0000 SEEDS`
     const sowQuantity = '5.0000 SEEDS'
-    const totalQuantity = '15.0000 SEEDS'
+    const totalQuantity = '5.0000 SEEDS'
 
     const newAccount = randomAccountName()
-    const newAccount2 = randomAccountName()
-
+    console.log("New account " + newAccount)
     const keyPair = await createKeypair()
-    const keyPair2 = await createKeypair()
-
     console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
-
-    const contracts = await initContracts({ onboarding, token, accounts, harvest, settings })
-
-    console.log(`reset ${settings}`)
-    await contracts.settings.reset({ authorization: `${settings}@active` })
+    const newAccountPublicKey = keyPair.public
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
 
     console.log(`reset ${accounts}`)
     await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-    console.log(`reset ${token}`)
-    await contracts.token.resetweekly({ authorization: `${token}@active` })
-
     console.log(`reset ${onboarding}`)
     await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
 
-    console.log('join users')
-    await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
-    await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+    console.log(`reset ${harvest}`)
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
 
-    const newAccountPublicKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+    await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })
 
-    const inviteSecret = await ramdom64ByteHexString()
-    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+    await contracts.token.transfer(firstuser, onboarding, '4.9999 SEEDS', '', { authorization: `${firstuser}@active` })
 
-    const inviteSecret2 = await ramdom64ByteHexString()
-    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
-
-    const inviteSecret3 = await ramdom64ByteHexString()
-    const inviteHash3 = sha256(fromHexString(inviteSecret3)).toString('hex')
-
-    const deposit = async (user, memo = '') => {
-        console.log(`${token}.transfer from ${user} to ${onboarding} (${totalQuantity})`)
-        await contracts.token.transfer(user, onboarding, totalQuantity, memo, { authorization: `${user}@active` })
+    var fail1 = false
+    try {
+        await contracts.onboarding.invite(firstuser, transferQuantity, '3.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+    } catch (err) {
+        fail1 = true
+        // expected
     }
 
-    const invite = async (user, inviteHash) => {
-        console.log(`${onboarding}.invite from ${user}`)
-        await contracts.onboarding.invite(user, transferQuantity, sowQuantity, inviteHash, { authorization: `${user}@active` })
+    var fail2 = false
+    try {
+        await contracts.onboarding.invite(firstuser, transferQuantity, '5.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
+    } catch (err) {
+        fail2 = true
+        // expected
     }
 
-    const checkInvites = async (numberInvites, expectedTimestamps) => {
-        const allInvites = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'invites',
-            json: true
-        })
-        console.log(allInvites)
+    console.log("increase balance")
+    await contracts.token.transfer(firstuser, onboarding, '0.0001 SEEDS', '', { authorization: `${firstuser}@active` })
+    
+    console.log("invite")
+    await contracts.onboarding.invite(firstuser, transferQuantity, '5.0000 SEEDS', inviteHash, { authorization: `${firstuser}@active` })
 
-        assert({
-            given: 'cleanup ran',
-            should: 'have the correct number of invites',
-            actual: allInvites.rows.length,
-            expected: numberInvites
-        })
+    succeed = true // if we get here...
 
-        const timestamps = await getTableRows({
-            code: onboarding,
-            scope: onboarding,
-            table: 'timestamps',
-            json: true
-        })
-        console.log(timestamps)
-
-        assert({
-            given: 'cleanup ran',
-            should: 'have the correct timestamp entries',
-            actual: timestamps.rows.map(r => {
-                delete r.timestamp
-                return { ...r }
-            }),
-            expected: expectedTimestamps
-        })
-    }
-
-    await deposit(firstuser)
-    await invite(firstuser, inviteHash)
-    await deposit(seconduser)
-    await invite(seconduser, inviteHash2)
-    await deposit(seconduser)
-    await invite(seconduser, inviteHash3)
-
-    await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
-    await sleep(500)
-
-    await checkInvites(3, [{ id: 0, invite_id: 2 }])
-
-    await sleep(2000)
-
-    await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
-
-    await contracts.onboarding.chkcleanup({ authorization: `${onboarding}@active` })
-    await sleep(4000)
-
-    await checkInvites(1, [
-        { id: 0, invite_id: 2 },
-        { id: 1, invite_id: 2 }
-    ])
-
+    assert({
+        given: 'too low sow',
+        should: 'fail to invite',
+        actual: fail1,
+        expected: true
+    })
+    assert({
+        given: 'too low balance',
+        should: 'fail to invite',
+        actual: fail2,
+        expected: true
+    })
+    assert({
+        given: 'enough sow',
+        should: 'succeed to invite',
+        actual: succeed,
+        expected: true
+    })
 })
-

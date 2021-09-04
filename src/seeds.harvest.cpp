@@ -135,14 +135,15 @@ void harvest::sub_planted(name account, asset quantity) {
 
   auto pitr = planted.find(account.value);
   check(pitr != planted.end(), "user has no balance");
-  if (pitr->planted.amount == quantity.amount) {
-    planted.erase(pitr);
-    size_change(planted_size, -1);
-  } else {
-    planted.modify(pitr, _self, [&](auto& item) {
-      item.planted -= quantity;
-    });
+
+  if (account != contracts::onboarding) {
+    uint64_t min_planted = config_get("inv.min.plnt"_n);
+    check(pitr->planted.amount - quantity.amount >= min_planted, "Can't unplant last Seeds " + std::to_string(min_planted/10000.0));
   }
+
+  planted.modify(pitr, _self, [&](auto& item) {
+    item.planted -= quantity;
+  });
   
   change_total(false, quantity);
 
