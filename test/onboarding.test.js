@@ -1230,3 +1230,59 @@ describe('Invite amounts', async assert => {
         expected: true
     })
 })
+
+describe('Ban', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+
+    const transferQuantity = `0.0000 SEEDS`
+    const sowQuantity = '5.0000 SEEDS'
+    const totalQuantity = '5.0000 SEEDS'
+
+    const newAccount = randomAccountName()
+    console.log("New account " + newAccount)
+    const keyPair = await createKeypair()
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
+    const newAccountPublicKey = keyPair.public
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+    console.log(`reset ${accounts}`)
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+    console.log(`reset ${onboarding}`)
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+
+    console.log(`reset ${harvest}`)
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+    await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })
+    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })
+    
+    console.log("invite")
+    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
+
+    await contracts.accounts.bantree(firstuser, false, { authorization: `${accounts}@active` })
+
+    console.log("accept new account from ban "+newAccount)
+
+    isBan = false
+    try {
+        await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
+    } catch (err) {
+        message = ""+err
+        isBan = message.indexOf("banned user") != -1
+    }
+
+    assert({
+        given: 'ban',
+        should: 'cant accept invite',
+        actual: isBan,
+        expected: true
+    })
+})

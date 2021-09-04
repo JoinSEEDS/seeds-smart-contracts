@@ -13,7 +13,7 @@ void onboarding::create_account(name account, string publicKey, name domain)
     domain = _self;
   }
 
-  //check(false, "invite contract is paused"); // REMOVE THIS AGAIN
+  check_paused();
 
   action(
       permission_level{domain, "owner"_n},
@@ -40,6 +40,17 @@ bool onboarding::is_seeds_user(name account)
   return uitr != users.end();
 }
 
+void onboarding::check_is_banned(name account)
+{
+  DEFINE_BAN_TABLE
+  DEFINE_BAN_TABLE_MULTI_INDEX
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  check(bitr == ban.end(), "banned user.");
+}
+
+
 void onboarding::add_user(name account, string fullname, name type)
 {
 
@@ -55,6 +66,10 @@ void onboarding::add_user(name account, string fullname, name type)
       .send();
 }
 
+void onboarding::check_paused() {
+    //check(false, "invite contract is paused, check back later"); // REMOVE THIS AGAIN
+}
+
 void onboarding::transfer_seeds(name account, asset quantity, string memo)
 {
 
@@ -62,6 +77,8 @@ void onboarding::transfer_seeds(name account, asset quantity, string memo)
   {
     return;
   }
+
+  check_is_banned(account);
 
   action(
       permission_level{_self, "active"_n},
@@ -146,6 +163,7 @@ void onboarding::accept_invite(
     referrer = refitr->referrer;
   }
 
+
   invites_byhash.modify(iitr, get_self(), [&](auto &invite)
                         {
                           invite.account = account;
@@ -166,6 +184,8 @@ void onboarding::accept_invite(
   {
     check(!is_existing_telos_user, "telos account already exists: " + account.to_string());
   }
+
+  check_is_banned(referrer);
 
   if (!is_existing_telos_user)
   {
@@ -201,6 +221,8 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
 {
   require_auth(get_self());
 
+  check_is_banned(sponsor);
+
   bool is_existing_telos_user = is_account(account);
   bool is_existing_seeds_user = is_seeds_user(account);
 
@@ -219,6 +241,8 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
 ACTION onboarding::createregion(name sponsor, name region, string publicKey)
 {
   require_auth(get_self());
+
+  check_is_banned(sponsor);
 
   bool is_existing_telos_user = is_account(region);
 
@@ -405,6 +429,8 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash)
 
 void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth)
 {
+
+  check_is_banned(sponsor);
 
   checksum256 empty_checksum;
 

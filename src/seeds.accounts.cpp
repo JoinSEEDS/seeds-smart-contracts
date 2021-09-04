@@ -79,6 +79,13 @@ void accounts::reset() {
     sitr = sizes.erase(sitr);
   }
 
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+  auto banitr = ban.begin();
+  while (banitr != ban.end()) {
+    banitr = ban.erase(banitr);
+  }
+
+
 }
 
 void accounts::history_add_resident(name account) {
@@ -1168,6 +1175,77 @@ uint64_t accounts::countrefs(name user, int check_num_residents)
     }
 
 
+}
+
+void accounts::send_bantree(name account) {
+  action send_ban(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "bantree"_n,
+    std::make_tuple(account, true)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(send_ban);
+  tx.delay_sec = 1;
+  tx.send(account.value, _self);
+
+}
+
+ACTION accounts::bantree(name account, bool recurse) 
+{
+    require_auth(get_self());
+
+    ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+    auto bitr = ban.find(account.value);
+    if (bitr == ban.end()) {
+      ban.emplace(_self, [&](auto & item){
+        item.account = account;
+      });
+    } 
+
+    auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
+
+    auto ritr = refs_by_referrer.lower_bound(account.value);
+    
+    while (ritr != refs_by_referrer.end() && ritr->referrer == account) {
+      name invited = ritr->invited;
+      if (recurse) {
+        send_bantree(invited);
+      } else {
+        print(" invited: "+invited.to_string());
+      }
+      ritr++;
+    }
+}
+
+ACTION accounts::refinfo(name account) 
+{
+    require_auth(get_self());
+
+    print("ref "+account.to_string());
+
+    auto ritr = refs.find(account.value);
+
+    check(ritr != refs.end(), "is root account: "+account.to_string());
+    
+    while (ritr != refs.end()) {
+      name referrer = ritr->referrer;
+      print(" <- "+referrer.to_string());
+      ritr = refs.find(referrer.value);
+    }
+}
+
+ACTION accounts::unban(name account) 
+{
+    require_auth(get_self());
+
+    ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+    auto bitr = ban.find(account.value);
+    check(bitr != ban.end(), "account not in ban table");
+    ban.erase(bitr);  
 }
 
 uint64_t accounts::rep_score(name user) 
