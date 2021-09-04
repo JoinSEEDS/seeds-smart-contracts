@@ -369,8 +369,6 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
   uint64_t min_planted = config_get("inv.min.plnt"_n);
   check(sow_quantity.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted/10000.0));
 
-  print("sow "+std::to_string(sow_quantity.amount) + " >= " + std::to_string(min_planted));
-
   if (campaign_id != 0)
   {
     auto citr = campaigns.find(campaign_id);
