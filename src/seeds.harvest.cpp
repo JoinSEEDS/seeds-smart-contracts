@@ -136,6 +136,7 @@ void harvest::sub_planted(name account, asset quantity) {
   auto pitr = planted.find(account.value);
   check(pitr != planted.end(), "user has no balance");
 
+  // enforce min plant, except for system contracts - onboarding uses "sow", which unplants
   if (account != contracts::onboarding) {
     uint64_t min_planted = config_get("inv.min.plnt"_n);
     check(pitr->planted.amount - quantity.amount >= min_planted, "Can't unplant last Seeds " + std::to_string(min_planted/10000.0));

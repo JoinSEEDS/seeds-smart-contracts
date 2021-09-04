@@ -1279,10 +1279,23 @@ describe('Ban', async assert => {
         isBan = message.indexOf("banned user") != -1
     }
 
+    await contracts.accounts.unban(firstuser, { authorization: `${accounts}@active` })
+
+    await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
+
+    accepted = true // if we get here...
+
     assert({
         given: 'ban',
         should: 'cant accept invite',
         actual: isBan,
+        expected: true
+    })
+
+    assert({
+        given: 'unban',
+        should: 'can accept invite',
+        actual: accepted,
         expected: true
     })
 })
