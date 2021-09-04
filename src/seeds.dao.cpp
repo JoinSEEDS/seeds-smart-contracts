@@ -106,6 +106,24 @@ ACTION dao::reset () {
     }
   }
 
+  dho_tables dho_t(get_self(), get_self().value);
+  auto dhoitr = dho_t.begin();
+  while (dhoitr != dho_t.end()) {
+    dhoitr = dho_t.erase(dhoitr);
+  }
+
+  dho_vote_tables dho_vote_t(get_self(), get_self().value);
+  auto dhovitr = dho_vote_t.begin();
+  while (dhovitr != dho_vote_t.end()) {
+    dhovitr = dho_vote_t.erase(dhovitr);
+  }
+
+  dho_share_tables dho_share_t(get_self(), get_self().value);
+  auto dhositr = dho_share_t.begin();
+  while (dhositr != dho_share_t.end()) {
+    dhositr = dho_share_t.erase(dhositr);
+  }
+
   cycle_tables cycle_t(get_self(), get_self().value);
   cycle_t.remove();
 }
@@ -420,6 +438,244 @@ ACTION dao::revertvote (const name & voter, const uint64_t & proposal_id) {
   }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+ACTION dao::createdho (const name & organization) {
+
+  require_auth(organization);
+
+  organization_tables org_t(contracts::organization, contracts::organization.value);
+  auto oitr = org_t.require_find(organization.value, "organization not found");
+
+  dho_tables dhos_t(get_self(), get_self().value);
+  auto ditr = dhos_t.find(organization.value);
+
+  if (ditr == dhos_t.end()) {
+    dhos_t.emplace(_self, [&](auto & item){
+      item.org_name = organization;
+      item.points = 0;
+    });
+  }
+
+}
+
+ACTION dao::removedho (const name & organization) {
+
+  require_auth(get_self());
+
+  dho_tables dhos_t(get_self(), get_self().value);
+  auto ditr = dhos_t.find(organization.value);
+
+  if (ditr != dhos_t.end()) {
+
+    size_change(dhos_vote_size, -1 * int64_t(ditr->points));
+
+    // trigger removal of the votes?
+
+    dhos_t.erase(ditr);
+    
+  }
+
+}
+
+ACTION dao::votedhos (const name & account, std::vector<DhoVote> votes) {
+  
+  auto authority = has_auth(account) ? account : get_self();
+  require_auth(authority);
+
+  check_citizen(account);
+
+  dho_tables dho_t(get_self(), get_self().value);
+
+  dho_vote_tables voted_t(get_self(), get_self().value);
+  auto voted_by_account = voted_t.get_index<"byacctid"_n>();
+  auto vitr = voted_by_account.lower_bound(uint128_t(account.value) << 64);
+
+  int64_t total_old = 0;
+
+  while (vitr != voted_by_account.end() && vitr->account == account) {
+
+    auto ditr = dho_t.find(vitr->dho.value);
+
+    if (ditr != dho_t.end()) {
+      dho_t.modify(ditr, _self, [&](auto & item){
+        item.points -= vitr->points;
+      });
+    }
+
+    total_old = vitr->points;
+    vitr = voted_by_account.erase(vitr);
+
+  }
+
+  int64_t total_new = 0;
+  uint64_t total_percentage = 0;
+  uint64_t now = current_time_point().sec_since_epoch();
+
+  cs_points_tables cs_t(contracts::harvest, contracts::harvest.value);
+  auto csitr = cs_t.require_find(account.value, "contribution score not found");
+
+  // using the rank so the percentages don't get cancelled due to low percentage and low rep multiplier
+  uint64_t multiplier = csitr->rank;
+
+  for (auto & vote : votes) {
+
+    uint64_t new_points = vote.points * multiplier;
+
+    auto ditr = dho_t.require_find(vote.dho.value, ("dho " + vote.dho.to_string() + " not found").c_str());
+
+    dho_t.modify(ditr, _self, [&](auto & item){
+      item.points += new_points;
+    });
+    
+    voted_t.emplace(_self, [&](auto & item){
+      item.vote_id = voted_t.available_primary_key();
+      item.account = account;
+      item.dho = vote.dho;
+      item.points = new_points;
+      item.timestamp = now;
+    });
+    
+    total_new += new_points;
+    total_percentage += vote.points;
+
+  }
+
+  check(total_percentage == 100, "the total votes have to sum up to 100%");
+
+  size_change(dhos_vote_size, total_new - total_old);
+
+  delegate_trust_tables deltrust_t(get_self(), dhos_scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
+  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(uint128_t(account.value) << 64);
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == account) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhomimicvote"_n,
+      std::make_tuple(account, uint64_t(0), votes, config_get("batchsize"_n))
+    );
+  }
+
+  // trigger percentages calculation for dhos?
+
+}
+
+
+// for cleaning the votes older than 3 cycles
+ACTION dao::dhocleanvts () {
+
+  require_auth(get_self());
+  dhocleanvote(config_get("batchsize"_n));
+
+}
+
+ACTION dao::dhocleanvote (const uint64_t & chunksize) {
+
+  require_auth(get_self());
+
+  dho_vote_tables votes_t(get_self(), get_self().value);
+  auto votes_by_timestamp = votes_t.get_index<"bytimeid"_n>();
+  auto vitr = votes_by_timestamp.begin();
+
+  uint64_t cutoff = current_time_point().sec_since_epoch() - utils::moon_cycle * 3;
+  uint64_t count = 0;
+
+  while (vitr != votes_by_timestamp.end() && cutoff > vitr->timestamp && count < chunksize) {
+    vitr = votes_by_timestamp.erase(vitr);
+    count++;
+  }
+
+  if (vitr != votes_by_timestamp.end() && cutoff > vitr->timestamp) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhocleanvote"_n,
+      std::make_tuple(chunksize)
+    );
+  }
+
+}
+
+// for calculating the distribution that each dho receives
+// at least 10% is required for receiving a share
+ACTION dao::dhocalcdists () {
+
+  require_auth(get_self());
+
+  dho_tables dho_t(get_self(), get_self().value);
+  auto dhos_by_points = dho_t.get_index<"bypointsname"_n>();
+
+  auto ditr = dhos_by_points.rbegin();
+  uint64_t min_percentage = config_get("dho.min.per"_n);
+  uint64_t total_points = get_size(dhos_vote_size);
+
+  std::vector<DhoVote> valid_dhos;
+  uint64_t total_valid_points = 0;
+
+  check(total_points > 0, "total points must be greater than zero");
+
+  while (ditr != dhos_by_points.rend() && ((ditr->points * 100) / total_points) >= min_percentage) {
+
+    DhoVote valid_dho;
+    valid_dho.dho = ditr->org_name;
+    valid_dho.points = ditr->points;
+
+    valid_dhos.push_back(valid_dho);
+    total_valid_points += ditr->points;
+
+    ditr++;
+  }
+
+  if (total_valid_points == 0) return;
+
+  dho_share_tables shares_t(get_self(), get_self().value);
+  
+  auto sitr = shares_t.begin();
+  while (sitr != shares_t.end()) {
+    sitr = shares_t.erase(sitr);
+  }
+
+  for (auto & valid_dho : valid_dhos) {
+    shares_t.emplace(_self, [&](auto & item){
+      item.dho = valid_dho.dho;
+      item.total_percentage = (valid_dho.points * 100.0) / total_points;
+      item.dist_percentage = (valid_dho.points * 100.0) / total_valid_points;
+    });
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint64_t & amount, const name & option, const bool & is_delegated) {
 

@@ -103,6 +103,7 @@ CONTRACT harvest : public contract {
     ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstdhos(uint64_t start, uint64_t chunksize, asset total_amount);
 
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
@@ -371,6 +372,16 @@ CONTRACT harvest : public contract {
 
     DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
+    TABLE dho_share_table {
+      name dho;
+      double total_percentage;
+      double dist_percentage;
+
+      uint64_t primary_key () const { return dho.value; }
+    };
+    typedef eosio::multi_index<"dhoshares"_n, dho_share_table> dho_share_tables;
+
+
     // Contract Tables
     balance_tables balances;
     planted_tables planted;
@@ -413,7 +424,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
-          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)(disthvstdhos)
         )
       }
   }

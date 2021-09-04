@@ -300,6 +300,40 @@ ACTION dao::mimicrevert (const name & delegatee, const uint64_t & delegator, con
 
 }
 
+ACTION dao::dhomimicvote (const name & delegatee, const uint64_t & start, std::vector<DhoVote> votes, const uint64_t & chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrust_t(get_self(), dhos_scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
+
+  auto ditr = deltrusts_by_delegatee_delegator.lower_bound((uint128_t(delegatee.value) << 64) + start);
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee && count < chunksize) {
+
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "votedhos"_n,
+      std::make_tuple(ditr->delegator, votes)
+    );
+
+    ditr++;
+    count+=2;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhomimicvote"_n,
+      std::make_tuple(delegatee, ditr->delegator.value, votes, chunksize)
+    );
+  }
+
+}
+
 ACTION dao::testsetvoice (const name & account, const uint64_t & amount) {
   require_auth(get_self());
   set_voice(account, amount, "all"_n);

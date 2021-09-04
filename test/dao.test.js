@@ -4,8 +4,8 @@ const { should, assert } = require('chai')
 const { prop, ascend } = require('ramda')
 
 const { 
-  dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser,
-  alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank, pool
+  dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser, fifthuser,
+  alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank, pool, organization
 } = names
 
 const scopes = ['alliance', 'campaign', 'milestone', 'referendum']
@@ -2349,5 +2349,97 @@ describe('Funding Campaign Proposals', async assert => {
     'proposal ran',
     'payout the correct values'
   )
+
+})
+
+
+describe.only('Streaming Funding', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow, organization })
+  await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, 10 * index, { authorization: `${harvest}@active` })))
+
+  const csTable = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'cspoints',
+    json: true
+  })
+
+  console.log(csTable)
+
+  console.log('reset orgs')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create organizations')
+  const eosDevKey = 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+  
+  let orgs = ['org1', 'org2', 'org3', 'org4', 'org5', 'orgt']
+  
+  await contracts.token.transfer(firstuser, organization, `${200 * orgs.length}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
+  await Promise.all(orgs.map(org => contracts.organization.create(firstuser, org, org, eosDevKey, { authorization: `${firstuser}@active` })))
+
+  console.log('add dhos')
+  await Promise.all(orgs.map(org => contracts.dao.createdho(org, { authorization: `${org}@active` })))
+
+  console.log('remove dho 6')
+  await contracts.dao.removedho(orgs[5], { authorization: `${dao}@active` })
+  
+  orgs = orgs.slice(0, 5)
+  const [org1, org2, org3, org4, org5] = orgs
+
+  console.log('vote for dhos')
+  await contracts.dao.votedhos(seconduser, [
+    { dho: org1, points: 100 }
+  ], { authorization: `${seconduser}@active` })
+
+  await contracts.dao.votedhos(thirduser, [
+    { dho: org1, points: 50 },
+    { dho: org2, points: 50 }
+  ], { authorization: `${thirduser}@active` })
+
+  await contracts.dao.votedhos(fourthuser, [
+    { dho: org1, points: 55 },
+    { dho: org2, points: 20 },
+    { dho: org3, points: 20 },
+    { dho: org4, points: 5 },
+  ], { authorization: `${fourthuser}@active` })
+
+  const dhosTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'dhos',
+    json: true
+  })
+  console.log(dhosTable)
+
+  const dhovotesTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'dhovotes',
+    json: true
+  })
+  console.log(dhovotesTable)
+
+  console.log('calc dho distribution')
+  await contracts.dao.dhocalcdists({ authorization: `${dao}@active` })
+
+  const dhosharesTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'dhoshares',
+    json: true
+  })
+  console.log(dhosharesTable)
 
 })

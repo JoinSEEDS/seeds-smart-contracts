@@ -1242,8 +1242,7 @@ void harvest::runharvest() {
   send_distribute_harvest("disthvstusrs"_n, asset(quantity.amount * users_percentage, test_symbol));
   send_distribute_harvest("disthvstrgns"_n, asset(quantity.amount * rgns_percentage, test_symbol));
   send_distribute_harvest("disthvstorgs"_n, asset(quantity.amount * orgs_percentage, test_symbol));
-
-  withdraw_aux(get_self(), bankaccts::globaldho, asset(quantity.amount * global_percentage, test_symbol), "harvest");
+  send_distribute_harvest("disthvstdhos"_n, asset(quantity.amount * global_percentage, test_symbol));
 
 }
 
@@ -1374,6 +1373,23 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
     tx.send(sum_rank_orgs.value, _self);
+  }
+}
+
+
+// is chunksize needed?
+// if the minimum percentage is 10% there will be at most 10 dhos,
+// even if it were 1% it will be at most 100 dhos
+
+void harvest::disthvstdhos (uint64_t start, uint64_t chunksize, asset total_amount) {
+  require_auth(get_self());
+
+  dho_share_tables dho_share_t (get_self(), get_self().value);
+  auto ditr = dho_share_t.begin();
+
+  while (ditr != dho_share_t.end()) {
+    withdraw_aux(get_self(), ditr->dho, (ditr->dist_percentage / 100.0) * total_amount, "harvest");
+    ditr++;
   }
 }
 

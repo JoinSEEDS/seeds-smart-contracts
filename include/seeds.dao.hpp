@@ -13,6 +13,7 @@
 #include <tables/proposals_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/cspoints_table.hpp>
+#include <tables/organization_table.hpp>
 #include <cmath>
 
 using namespace eosio;
@@ -34,12 +35,14 @@ CONTRACT dao : public contract {
       name campaign_scope = "campaign"_n;
       name milestone_scope = "milestone"_n;
       name referendums_scope = "referendum"_n;
+      name dhos_scope = "dhos"_n;
 
       std::vector<name> scopes = {
         alliance_scope,
         campaign_scope,
         milestone_scope,
-        referendums_scope
+        referendums_scope,
+        dhos_scope
       };
 
       name alliance_fund = "alliance"_n;
@@ -53,10 +56,17 @@ CONTRACT dao : public contract {
       };
 
       const name prop_active_size = "prop.act.sz"_n;
-      const name user_active_size = "user.act.sz"_n; 
-      const name cycle_vote_power_size = "votepow.sz"_n; 
+      const name user_active_size = "user.act.sz"_n;
+      const name cycle_vote_power_size = "votepow.sz"_n;
+      const name dhos_vote_size = "dho.vote.sz"_n; 
       const name linear_payout = "linear"_n;
       const name stepped_payout = "step"_n;
+
+      typedef struct dhovote {
+        name dho;
+        uint64_t points;
+      } DhoVote;
+
 
       ACTION reset();
 
@@ -110,6 +120,20 @@ CONTRACT dao : public contract {
 
       ACTION erasepartpts(const uint64_t & active_proposals);
 
+      ACTION createdho(const name & organization);
+
+      ACTION removedho(const name & organization);
+
+      ACTION votedhos(const name & account, std::vector<DhoVote> votes);
+
+      ACTION dhomimicvote(const name & delegatee, const uint64_t & start, std::vector<DhoVote> votes, const uint64_t & chunksize);
+
+      ACTION dhocleanvts();
+
+      ACTION dhocleanvote(const uint64_t & chunksize);
+
+      ACTION dhocalcdists();
+
 
       ACTION testsetvoice(const name & account, const uint64_t & amount);
 
@@ -149,6 +173,12 @@ CONTRACT dao : public contract {
 
       DEFINE_USER_TABLE
       DEFINE_USER_TABLE_MULTI_INDEX
+
+      DEFINE_CS_POINTS_TABLE
+      DEFINE_CS_POINTS_TABLE_MULTI_INDEX
+
+      DEFINE_ORGANIZATION_TABLE
+      DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
       TABLE deferred_id_table {
         uint64_t id;
@@ -274,6 +304,45 @@ CONTRACT dao : public contract {
       };
       typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
 
+      TABLE dho_table {
+        name org_name;
+        uint64_t points;
+
+        uint64_t primary_key () const { return org_name.value; }
+        uint128_t by_points_name () const { return (uint128_t(points) << 64) + org_name.value; }
+      };
+      typedef eosio::multi_index<"dhos"_n, dho_table,
+        indexed_by<"bypointsname"_n,
+        const_mem_fun<dho_table, uint128_t, &dho_table::by_points_name>>
+      > dho_tables;
+
+      TABLE dho_vote_table {
+        uint64_t vote_id;
+        name account;
+        name dho;
+        uint64_t points;
+        uint64_t timestamp;
+
+        uint64_t primary_key () const { return vote_id; }
+        uint128_t by_timestamp_id () const { return (uint128_t(timestamp) << 64) + vote_id; }
+        uint128_t by_account_id () const { return (uint128_t(account.value) << 64) + vote_id; }
+      };
+      typedef eosio::multi_index<"dhovotes"_n, dho_vote_table,
+        indexed_by<"bytimeid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_timestamp_id>>,
+        indexed_by<"byacctid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_account_id>>
+      > dho_vote_tables;
+
+      TABLE dho_share_table {
+        name dho;
+        double total_percentage;
+        double dist_percentage;
+
+        uint64_t primary_key () const { return dho.value; }
+      };
+      typedef eosio::multi_index<"dhoshares"_n, dho_share_table> dho_share_tables;
+
 
       config_tables config;
       size_tables sizes;
@@ -323,6 +392,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (decayvoices)(decayvoice)
           (updatevoices)(updatevoice)
           (erasepartpts)
+          (createdho)(removedho)(votedhos)(dhomimicvote)(dhocleanvts)(dhocleanvote)(dhocalcdists)
           (testsetvoice)
         )
       }

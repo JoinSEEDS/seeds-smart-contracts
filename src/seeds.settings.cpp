@@ -352,6 +352,12 @@ void settings::reset() {
   confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
   confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
 
+  // =====================================
+  // dhos
+  // =====================================
+  confwithdesc(name("dho.min.per"), 10, "Minimum percentage a DHO needs to receive its part of the harvest", medium_impact);
+
+
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
   setcontract(name("harvest"), "harvst.seeds"_n);
