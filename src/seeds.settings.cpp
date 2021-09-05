@@ -349,7 +349,7 @@ void settings::reset() {
   // =====================================
   // onboarding/invite
   // =====================================
-  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.max.rwrd"), 1111 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
   confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
 
   // contracts
