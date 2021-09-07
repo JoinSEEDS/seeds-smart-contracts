@@ -928,7 +928,7 @@ void proposals::create_aux (
 
   require_auth(creator);
 
-  check(false, "contract is paused");
+  // check(false, "contract is paused");
 
   // For the time being, organizations are allowed to create alliance type proposals
   check_resident(creator, campaign_type == alliance_type );
@@ -1231,7 +1231,7 @@ void proposals::cancel(uint64_t id) {
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
 
-  check(false, "contract is paused");
+  // check(false, "contract is paused");
 
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
@@ -1306,7 +1306,7 @@ void proposals::erasepartpts(uint64_t active_proposals) {
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
 
-  check(false, "contract is paused");
+  // check(false, "contract is paused");
 
   auto pitr = props.find(id);
   check(pitr != props.end(), "Proposal not found");
@@ -2414,6 +2414,15 @@ void proposals::check_values(
 // rewind to in case there was an error
 void proposals::rewind(uint64_t round) {
 
+        // 214,
+        // 217,
+        // 218,
+        // 220,
+        // 221,
+        // 222,
+        // 225
+//>> restoring 214restoring 217restoring 218restoring 220restoring 221restoring 222restoring 225update cycle table 38
+
   // 1 - get active props from cyclestats round 38
   auto citr = cyclestats.find(round);
 
@@ -2425,24 +2434,24 @@ void proposals::rewind(uint64_t round) {
 
     auto pitr = props.find(prop_id);
 
-    // props.modify(pitr, _self, [&](auto & item){
-    //   item.executed = false;
-    //   // 2 - set them to open/active
-    //   item.status = status_open;
-    //   item.stage = stage_active;
-    //   // 3 set passed cycle to 0
-    //   item.passed_cycle = 0;
-    // });
+    props.modify(pitr, _self, [&](auto & item){
+      item.executed = false;
+      // 2 - set them to open/active
+      item.status = status_open;
+      item.stage = stage_active;
+      // 3 set passed cycle to 0
+      item.passed_cycle = 0;
+    });
 
   }
 
   // update cycle
 
-    print("update cycle table "+std::to_string(round));
+  print("update cycle table "+std::to_string(round));
 
-  // cycle_table c = cycle.get_or_create(get_self(), cycle_table());
-  // c.propcycle = round;
-  // cycle.set(c, get_self());
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  c.propcycle = round;
+  cycle.set(c, get_self());
 
   // delete cycle stats
   // citr++;
