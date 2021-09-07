@@ -1106,17 +1106,8 @@ async function testHarvest (assert, dSeeds) {
 
   let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-  const contracts = await Promise.all([
-    eos.contract(token),
-    eos.contract(accounts),
-    eos.contract(harvest),
-    eos.contract(settings),
-    eos.contract(history),
-    eos.contract(organization),
-    eos.contract(region)
-  ]).then(([token, accounts, harvest, settings, history, organization, region]) => ({
-    token, accounts, harvest, settings, history, organization, region
-  }))
+  console.log("init contracts...")
+  const contracts = await initContracts({ token, accounts, harvest, settings, history, organization, region })
 
   const day = getBeginningOfDayInSeconds()
   const secondsPerDay =  86400
@@ -1505,9 +1496,14 @@ describe('Mint Rate and Harvest, dSeeds > 0', async assert => {
   console.log('trigger event golive')
   await contracts.escrow.resettrigger(hyphadao, { authorization: `${escrow}@active` })
   await contracts.escrow.triggertest(hyphadao, golive, 'event notes', { authorization: `${escrow}@active` })
+
+  console.log('trigger done...')
+
   await sleep(2000)
 
   const mintedSeeds = await testHarvest(assert, 60000)
+
+  console.log('mintedSeeds...')
 
   const poolBalanceTable = await getTableRows({
     code: pool,
@@ -1515,12 +1511,15 @@ describe('Mint Rate and Harvest, dSeeds > 0', async assert => {
     table: 'balances',
     json: true
   })
-  console.log(poolBalanceTable)
+
+  console.log("poolBalanceTable "+JSON.stringify(poolBalanceTable))
+
 
   const expectedBalances = users.slice(1).map((user, index) => {
     const userBalance = 10000 * (index + 1)
     return userBalance - (mintedSeeds * (userBalance / 60000))
   })
+
   const actual = poolBalanceTable.rows.map((r, index) => {
     const actualBalance = asset(r.balance).amount
     return Math.abs(actualBalance - expectedBalances[index]) <= 0.0001
@@ -1669,3 +1668,96 @@ describe('regions contribution score', async assert => {
 })
 
 
+
+describe("harvest unplant protection", async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'first user', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'second user', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('plant seeds')
+  await contracts.token.transfer(firstuser, harvest, '100.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, harvest, '5.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  // const planted = await eos.getTableRows({
+  //   code: harvest,
+  //   scope: harvest,
+  //   table: 'planted',
+  //   json: true,
+  // })
+  // console.log("planted: "+JSON.stringify(planted, null, 2))
+
+  var overdraw1 = false
+  try {
+    await contracts.harvest.unplant(firstuser, '95.0001 SEEDS', { authorization: `${firstuser}@active` })
+    overdraw1 = true
+  } catch (err) {
+    // expected
+  }
+
+  var overdraw2 = false
+  try {
+    await contracts.harvest.sow(seconduser, firstuser, '1.0000 SEEDS', { authorization: `${seconduser}@active` })
+    overdraw2 = true
+  } catch (err) {
+    // expected
+  }
+
+  var unplantOk = true
+  try {
+    await contracts.harvest.unplant(firstuser, '95.0000 SEEDS', { authorization: `${firstuser}@active` })
+  } catch (err) {
+    var unplantOk = false
+  }
+
+  // const planted2 = await eos.getTableRows({
+  //   code: harvest,
+  //   scope: harvest,
+  //   table: 'planted',
+  //   json: true,
+  // })
+  // console.log("planted 2: "+JSON.stringify(planted2, null, 2))
+
+  assert({
+    given: 'overdraw1',
+    should: 'be false',
+    actual: overdraw1,
+    expected: false
+  })
+  
+  assert({
+    given: 'overdraw2',
+    should: 'be false',
+    actual: overdraw2,
+    expected: false
+  })
+
+  assert({
+    given: 'unplantOk',
+    should: 'be true',
+    actual: unplantOk,
+    expected: true
+  })
+
+})

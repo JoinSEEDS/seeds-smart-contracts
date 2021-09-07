@@ -6,6 +6,7 @@
 #include <tables.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
+#include <tables/ban_table.hpp>
 
 using namespace eosio;
 using abieos::authority;
@@ -75,6 +76,8 @@ private:
   void send_campaign_reward(uint64_t campaign_id);
   void send_return_funds_aux(uint64_t campaign_id);
   void _cancel(name sponsor, checksum256 invite_hash, bool check_auth);
+  void check_paused();
+  void check_is_banned(name account);
 
   TABLE invite_table
   {
