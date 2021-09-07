@@ -2262,21 +2262,23 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
       if (is_alliance_type) {
         payout_amount = pitr->quantity;
         send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-      }
-      if (is_milestone_type) {
-        payout_amount = pitr->quantity;
-        withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-      } 
-      else {
-        payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-        if (pitr->campaign_type == campaign_invite_type) {
-          withdraw(get_self(), payout_amount, pitr->fund, "invites");
-          withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
-          send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
-        } else {
-          withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+      } else {
+        if (is_milestone_type) {
+          payout_amount = pitr->quantity;
+          withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+        } 
+        else {
+          payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+          if (pitr->campaign_type == campaign_invite_type) {
+            withdraw(get_self(), payout_amount, pitr->fund, "invites");
+            withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+            send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+          } else {
+            withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+          }
         }
       }
+
 
       uint64_t num_cycles = pitr->pay_percentages.size() - 1;
 
