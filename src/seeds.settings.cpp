@@ -363,6 +363,13 @@ void settings::reset() {
   setcontract(name("policy"), "policy.seeds"_n);
   setcontract(name("token"), "token.seeds"_n);
   setcontract(name("acctcreator"), "free.seeds"_n);
+
+  // =====================================
+  // onboarding/invite
+  // =====================================
+
+  confwithdesc(name("tempsetting"), uint64_t(0), "A capture-all setting for referendums which do not directly impact settings.", high_impact); 
+
 }
 
 void settings::configure(name param, uint64_t value) {
