@@ -176,6 +176,7 @@ CONTRACT accounts : public contract {
       name get_scope(name type);
       void send_add_cbs_org(name user, uint64_t amount);
       void send_bantree(name account);
+      void check_is_banned(name account);
 
       DEFINE_USER_TABLE
 

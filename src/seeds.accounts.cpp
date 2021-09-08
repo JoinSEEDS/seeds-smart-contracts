@@ -133,6 +133,9 @@ void accounts::vouch(name sponsor, name account) {
   check_user(sponsor);
   check_user(account);
 
+  check_is_banned(sponsor);
+  check_is_banned(account);
+
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
   uint128_t sponsor_account_id = (uint128_t(sponsor.value) << 64) + account.value;
   
@@ -1322,6 +1325,8 @@ void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
 void accounts::flag (name from, name to) {
   require_auth(from);
 
+  check_is_banned(from);
+
   if (from == to) { return; }
 
   flag_points_tables flags(get_self(), to.value);
@@ -1418,6 +1423,14 @@ void accounts::removeflag (name from, name to) {
   });
 
   flags.erase(flag_itr);
+}
+
+void accounts::check_is_banned(name account)
+{
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  check(bitr == ban.end(), "banned user.");
 }
 
 void accounts::send_eval_demote (name to) {
