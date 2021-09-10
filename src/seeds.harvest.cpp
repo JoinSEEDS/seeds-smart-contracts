@@ -3,7 +3,7 @@
 #include <seeds.harvest.hpp>
 
 void harvest::reset() {
-  require_auth(_self);
+  require_auth(_self);print("");
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {

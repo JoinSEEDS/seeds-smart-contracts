@@ -3,8 +3,8 @@
 #include <seeds.dao.hpp>
 
 namespace ProposalsCommon {
-  constexpr name type_ref_setting = name("r.setting");
-  constexpr name type_ref_code = name("r.code");
+  constexpr name type_ref_setting = name("ref.setting");
+  constexpr name type_ref_code = name("ref.code");
   constexpr name type_prop_alliance = name("p.alliance");
   constexpr name type_prop_campaign_invite = name("p.camp.inv");
   constexpr name type_prop_milestone = name("p.milestone");

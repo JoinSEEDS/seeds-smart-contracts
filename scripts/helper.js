@@ -664,13 +664,10 @@ var permissions = [{
   target: `${accounts.proposals.account}@questvote`,
   action: 'questvote'
 }, { 
-  target: `${accounts.accounts.account}@questrep`,
+  target: `${accounts.accounts.account}@addrep`,
   actor: `${accounts.quests.account}@eosio.code`,
-  parent: 'active',
+  parent: 'api',
   type: 'createActorPermission'
-}, {
-  target: `${accounts.accounts.account}@questrep`,
-  action: 'addrep'
 }, { 
   target: `${accounts.accounts.account}@execute`,
   action: 'rankorgreps'
@@ -744,9 +741,7 @@ var permissions = [{
   actor: `${accounts.dao.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@addrep`,
-  actor: `${accounts.dao.account}@eosio.code`,
-  parent: 'api',
-  type: 'createActorPermission'
+  actor: `${accounts.dao.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@addrep`,
   action: 'addrep'

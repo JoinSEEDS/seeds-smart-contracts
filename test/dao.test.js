@@ -100,7 +100,7 @@ const checkProp = async (expectedProp, assert, given, should) => {
 }
 
 const createReferendum = async (contract, creator, settingName, newValue, title, summary, description, image, url) => {
-  await createProp(contract, creator, 'r.setting', title, summary, description, image, url, creator, '0.0000 SEEDS', [
+  await createProp(contract, creator, 'ref.setting', title, summary, description, image, url, creator, '0.0000 SEEDS', [
     { key: 'setting_name', value: ['name', settingName] },
     { key: 'new_value', value: newValue },
     { key: 'test_cycles', value: ['uint64', 1] },
@@ -343,7 +343,7 @@ describe('Referendums Settings', async assert => {
   })
 
   assert({
-    given: 'referendums crated',
+    given: 'referendums created',
     should: 'have the correct entries',
     actual: refTables.rows.map(r => {
       delete r.created_at
@@ -363,7 +363,7 @@ describe('Referendums Settings', async assert => {
         url: 'url updated',
         status: 'open',
         stage: 'staged',
-        type: 'r.setting',
+        type: 'ref.setting',
         last_ran_cycle: 0,
         age: 0,
         fund: firstuser,
@@ -382,7 +382,7 @@ describe('Referendums Settings', async assert => {
         url: 'url 2',
         status: 'open',
         stage: 'staged',
-        type: 'r.setting',
+        type: 'ref.setting',
         last_ran_cycle: 0,
         age: 0,
         fund: seconduser,
