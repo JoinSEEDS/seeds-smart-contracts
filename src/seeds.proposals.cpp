@@ -928,6 +928,8 @@ void proposals::create_aux (
 
   require_auth(creator);
 
+  // check(false, "contract is paused");
+
   // For the time being, organizations are allowed to create alliance type proposals
   check_resident(creator, campaign_type == alliance_type );
   
@@ -1228,6 +1230,9 @@ void proposals::cancel(uint64_t id) {
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
+
+  // check(false, "contract is paused");
+
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
@@ -1300,6 +1305,8 @@ void proposals::erasepartpts(uint64_t active_proposals) {
 
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
+
+  // check(false, "contract is paused");
 
   auto pitr = props.find(id);
   check(pitr != props.end(), "Proposal not found");
@@ -1672,7 +1679,6 @@ void proposals::change_rep(name beneficiary, bool passed) {
       contracts::accounts, "addrep"_n,
       std::make_tuple(beneficiary, reward_points)
     ).send();
-
   }
 
 }
@@ -2256,21 +2262,23 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
       if (is_alliance_type) {
         payout_amount = pitr->quantity;
         send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-      }
-      if (is_milestone_type) {
-        payout_amount = pitr->quantity;
-        withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-      } 
-      else {
-        payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-        if (pitr->campaign_type == campaign_invite_type) {
-          withdraw(get_self(), payout_amount, pitr->fund, "invites");
-          withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
-          send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
-        } else {
-          withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+      } else {
+        if (is_milestone_type) {
+          payout_amount = pitr->quantity;
+          withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+        } 
+        else {
+          payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+          if (pitr->campaign_type == campaign_invite_type) {
+            withdraw(get_self(), payout_amount, pitr->fund, "invites");
+            withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+            send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+          } else {
+            withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+          }
         }
       }
+
 
       uint64_t num_cycles = pitr->pay_percentages.size() - 1;
 
@@ -2403,4 +2411,66 @@ void proposals::check_values(
 
   // URL
   check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
+
+// rewind to in case there was an error
+void proposals::rewind(uint64_t round) {
+
+        // 214,
+        // 217,
+        // 218,
+        // 220,
+        // 221,
+        // 222,
+        // 225
+//>> restoring 214restoring 217restoring 218restoring 220restoring 221restoring 222restoring 225update cycle table 38
+
+  // 1 - get active props from cyclestats round 38
+  auto citr = cyclestats.find(round);
+
+  auto active_props = citr -> active_props;
+
+  for(std::size_t i = 0; i < active_props.size(); ++i) {
+    uint64_t prop_id = active_props[i];
+    print("restoring "+std::to_string(prop_id));
+
+    auto pitr = props.find(prop_id);
+
+    props.modify(pitr, _self, [&](auto & item){
+      item.executed = false;
+      // 2 - set them to open/active
+      item.status = status_open;
+      item.stage = stage_active;
+      // 3 set passed cycle to 0
+      item.passed_cycle = 0;
+    });
+
+  }
+
+  // update cycle
+
+  print("update cycle table "+std::to_string(round));
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  c.propcycle = round;
+  cycle.set(c, get_self());
+
+  // delete cycle stats
+  // citr++;
+  // if (citr != cyclestats.end()) {
+  //   cyclestats.erase(citr);
+  // }
+}
+// rewind to in case there was an error
+void proposals::fixcycstat(uint64_t delete_round) {
+
+  // 1 - get active props from cyclestats round 38
+  auto citr = cyclestats.find(delete_round);
+
+  // delete cycle stats
+  if (citr != cyclestats.end()) {
+    cyclestats.erase(citr);
+  }
+
+
 }

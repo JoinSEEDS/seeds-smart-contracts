@@ -349,7 +349,7 @@ void settings::reset() {
   // =====================================
   // onboarding/invite
   // =====================================
-  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.max.rwrd"), 1111 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
   confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
 
   // =====================================
@@ -371,6 +371,13 @@ void settings::reset() {
   setcontract(name("policy"), "policy.seeds"_n);
   setcontract(name("token"), "token.seeds"_n);
   setcontract(name("acctcreator"), "free.seeds"_n);
+
+  // =====================================
+  // onboarding/invite
+  // =====================================
+
+  confwithdesc(name("tempsetting"), uint64_t(0), "A capture-all setting for referendums which do not directly impact settings.", high_impact); 
+
 }
 
 void settings::configure(name param, uint64_t value) {

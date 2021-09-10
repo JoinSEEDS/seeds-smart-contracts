@@ -121,6 +121,9 @@ CONTRACT proposals : public contract {
       ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
       ACTION migalliances(uint64_t start, uint64_t chunksize);
 
+      ACTION rewind(uint64_t round);
+      ACTION fixcycstat(uint64_t delete_round);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -467,6 +470,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (testalliance)(migalliances)
         (fixdesc)(applyfixprop)(backfixprop)
         (revertvote)(mimicrevert)
+        (rewind)(fixcycstat)
         )
       }
   }

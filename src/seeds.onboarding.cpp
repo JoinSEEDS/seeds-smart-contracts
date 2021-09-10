@@ -15,6 +15,8 @@ void onboarding::create_account(name account, string publicKey, name domain)
     domain = _self;
   }
 
+  check_paused();
+
   action(
       permission_level{domain, "owner"_n},
       "eosio"_n, "newaccount"_n,
@@ -24,7 +26,7 @@ void onboarding::create_account(name account, string publicKey, name domain)
   action(
       permission_level{_self, "owner"_n},
       "eosio"_n, "buyram"_n,
-      make_tuple(_self, account, asset(21000, network_symbol)))
+      make_tuple(_self, account, asset(5000, network_symbol)))
       .send();
 
   action(
@@ -39,6 +41,17 @@ bool onboarding::is_seeds_user(name account)
   auto uitr = users.find(account.value);
   return uitr != users.end();
 }
+
+void onboarding::check_is_banned(name account)
+{
+  DEFINE_BAN_TABLE
+  DEFINE_BAN_TABLE_MULTI_INDEX
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  check(bitr == ban.end(), "banned user.");
+}
+
 
 void onboarding::add_user(name account, string fullname, name type)
 {
@@ -55,6 +68,10 @@ void onboarding::add_user(name account, string fullname, name type)
       .send();
 }
 
+void onboarding::check_paused() {
+    //check(false, "invite contract is paused, check back later"); // REMOVE THIS AGAIN
+}
+
 void onboarding::transfer_seeds(name account, asset quantity, string memo)
 {
 
@@ -62,6 +79,8 @@ void onboarding::transfer_seeds(name account, asset quantity, string memo)
   {
     return;
   }
+
+  check_is_banned(account);
 
   action(
       permission_level{_self, "active"_n},
@@ -146,6 +165,7 @@ void onboarding::accept_invite(
     referrer = refitr->referrer;
   }
 
+
   invites_byhash.modify(iitr, get_self(), [&](auto &invite)
                         {
                           invite.account = account;
@@ -166,6 +186,8 @@ void onboarding::accept_invite(
   {
     check(!is_existing_telos_user, "telos account already exists: " + account.to_string());
   }
+
+  check_is_banned(referrer);
 
   if (!is_existing_telos_user)
   {
@@ -201,6 +223,8 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
 {
   require_auth(get_self());
 
+  check_is_banned(sponsor);
+
   bool is_existing_telos_user = is_account(account);
   bool is_existing_seeds_user = is_seeds_user(account);
 
@@ -219,6 +243,8 @@ ACTION onboarding::onboardorg(name sponsor, name account, string fullname, strin
 ACTION onboarding::createregion(name sponsor, name region, string publicKey)
 {
   require_auth(get_self());
+
+  check_is_banned(sponsor);
 
   bool is_existing_telos_user = is_account(region);
 
@@ -342,6 +368,9 @@ void onboarding::_invite(name sponsor, name referrer, asset transfer_quantity, a
 
   uint64_t key = invites.available_primary_key();
 
+  uint64_t min_planted = config_get("inv.min.plnt"_n);
+  check(sow_quantity.amount >= min_planted, "the planted amount must be greater or equal than " + std::to_string(min_planted/10000.0));
+
   if (campaign_id != 0)
   {
     auto citr = campaigns.find(campaign_id);
@@ -400,6 +429,8 @@ void onboarding::cancel(name sponsor, checksum256 invite_hash)
 
 void onboarding::_cancel(name sponsor, checksum256 invite_hash, bool check_auth)
 {
+
+  check_is_banned(sponsor);
 
   checksum256 empty_checksum;
 
@@ -721,7 +752,7 @@ ACTION onboarding::campinvite(uint64_t campaign_id, name authorizing_account, as
 
   require_auth(authorizing_account);
 
-  check(planted >= citr->planted, "the planted amount must be greater or equal than " + citr->planted.to_string());
+  check(planted >= citr->planted, "campaign: ``````````the planted amount must be greater or equal than " + citr->planted.to_string());
   check(quantity.amount > 0, "quantity should me greater than 0");
 
   _invite(citr->origin_account, citr->owner, quantity, planted, invite_hash, campaign_id);
