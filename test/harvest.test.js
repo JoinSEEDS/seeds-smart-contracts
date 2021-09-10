@@ -1106,17 +1106,8 @@ async function testHarvest (assert, dSeeds) {
 
   let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-  const contracts = await Promise.all([
-    eos.contract(token),
-    eos.contract(accounts),
-    eos.contract(harvest),
-    eos.contract(settings),
-    eos.contract(history),
-    eos.contract(organization),
-    eos.contract(region)
-  ]).then(([token, accounts, harvest, settings, history, organization, region]) => ({
-    token, accounts, harvest, settings, history, organization, region
-  }))
+  console.log("init contracts...")
+  const contracts = await initContracts({ token, accounts, harvest, settings, history, organization, region })
 
   const day = getBeginningOfDayInSeconds()
   const secondsPerDay =  86400
@@ -1505,9 +1496,14 @@ describe('Mint Rate and Harvest, dSeeds > 0', async assert => {
   console.log('trigger event golive')
   await contracts.escrow.resettrigger(hyphadao, { authorization: `${escrow}@active` })
   await contracts.escrow.triggertest(hyphadao, golive, 'event notes', { authorization: `${escrow}@active` })
+
+  console.log('trigger done...')
+
   await sleep(2000)
 
   const mintedSeeds = await testHarvest(assert, 60000)
+
+  console.log('mintedSeeds...')
 
   const poolBalanceTable = await getTableRows({
     code: pool,
@@ -1515,12 +1511,15 @@ describe('Mint Rate and Harvest, dSeeds > 0', async assert => {
     table: 'balances',
     json: true
   })
-  console.log(poolBalanceTable)
+
+  console.log("poolBalanceTable "+JSON.stringify(poolBalanceTable))
+
 
   const expectedBalances = users.slice(1).map((user, index) => {
     const userBalance = 10000 * (index + 1)
     return userBalance - (mintedSeeds * (userBalance / 60000))
   })
+
   const actual = poolBalanceTable.rows.map((r, index) => {
     const actualBalance = asset(r.balance).amount
     return Math.abs(actualBalance - expectedBalances[index]) <= 0.0001

@@ -28,7 +28,7 @@ const networkDisplayName = {
 const endpoints = {
   local: 'http://127.0.0.1:8888',
   kylin: 'http://kylin.fn.eosbixin.com',
-  telosTestnet: 'https://test.hypha.earth',
+  telosTestnet: 'https://api-test.telosfoundation.io',
   telosMainnet: 'https://api.telosfoundation.io'
 }
 
@@ -182,7 +182,10 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -220,7 +223,10 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -266,7 +272,10 @@ const accountsMetadata = (network) => {
       gratitude: contract('gratz.seeds', 'gratitude'),
       pouch: contract('pouch.seeds', 'pouch'),
       service: contract('hello.seeds', 'service'),
-      pool: contract('pool.seeds', 'pool')
+      quests: contract('quests.seeds', 'quests'),
+      pool: contract('pool.seeds', 'pool'),
+      dao: contract('dao.seeds', 'dao'),
+      startoken: contract('star.seeds', 'startoken'),
     }
   } else if (network == networks.kylin) {
     throw new Error('Kylin deployment currently disabled')
@@ -369,9 +378,6 @@ var permissions = [{
   target: `${accounts.exchange.account}@update`,
   key: exchangePublicKey,
   parent: 'active'
-}, {
-  target: `${accounts.accounts.account}@api`,
-  action: 'addrep'
 }, {
   target: `${accounts.accounts.account}@api`,
   action: 'subrep'
@@ -643,7 +649,29 @@ var permissions = [{
 }, {
   target: `${accounts.service.account}@invite`,
   action: 'createinvite'
+},{
+  target: `${accounts.quests.account}@active`,
+  actor: `${accounts.quests.account}@eosio.code`
 }, {
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.quests.account}@active`
+}, {
+  target: `${accounts.proposals.account}@questvote`,
+  actor: `${accounts.quests.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.proposals.account}@questvote`,
+  action: 'questvote'
+}, { 
+  target: `${accounts.accounts.account}@questrep`,
+  actor: `${accounts.quests.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@questrep`,
+  action: 'addrep'
+}, { 
   target: `${accounts.accounts.account}@execute`,
   action: 'rankorgreps'
 }, {
@@ -711,8 +739,29 @@ var permissions = [{
 }, {
   target: `${accounts.history.account}@execute`,
   action: 'cleanptrxs'
-}
-]
+}, {
+  target: `${accounts.dao.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'api',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.accounts.account}@addrep`,
+  action: 'addrep'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  actor: `${accounts.dao.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  target: `${accounts.settings.account}@referendum`,
+  action: 'configure'
+},{
+  target: `${accounts.settings.account}@referendum`,
+  action: 'conffloat'
+}]
 
 const isTestnet = chainId == networks.telosTestnet
 const isLocalNet = chainId == networks.local
@@ -854,6 +903,5 @@ module.exports = {
   keyProvider, httpEndpoint,
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset, isTestnet
 }
-

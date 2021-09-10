@@ -7,6 +7,7 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/ban_table.hpp>
 #include <tables/config_float_table.hpp>
 #include <utils.hpp>
 
@@ -79,6 +80,9 @@ CONTRACT accounts : public contract {
       ACTION punish(name account, uint64_t points);
       ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
       ACTION evaldemote(name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION bantree(name account, bool recurse);
+      ACTION refinfo(name account);
+      ACTION unban(name account);
 
       ACTION testresident(name user);
       ACTION testcitizen(name user);
@@ -171,6 +175,8 @@ CONTRACT accounts : public contract {
       void calc_vouch_rep(name account);
       name get_scope(name type);
       void send_add_cbs_org(name user, uint64_t amount);
+      void send_bantree(name account);
+      void check_is_banned(name account);
 
       DEFINE_USER_TABLE
 
@@ -187,6 +193,9 @@ CONTRACT accounts : public contract {
       DEFINE_CBS_TABLE
 
       DEFINE_CBS_TABLE_MULTI_INDEX
+
+      DEFINE_BAN_TABLE
+      DEFINE_BAN_TABLE_MULTI_INDEX
 
       TABLE ref_table {
         name referrer;
@@ -370,7 +379,8 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
-(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
+(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)
+(refinfo)(unban)
 (testmvouch)
 (addcbs)
 );

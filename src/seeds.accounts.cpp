@@ -79,6 +79,13 @@ void accounts::reset() {
     sitr = sizes.erase(sitr);
   }
 
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+  auto banitr = ban.begin();
+  while (banitr != ban.end()) {
+    banitr = ban.erase(banitr);
+  }
+
+
 }
 
 void accounts::history_add_resident(name account) {
@@ -125,6 +132,9 @@ void accounts::vouch(name sponsor, name account) {
   require_auth(sponsor);
   check_user(sponsor);
   check_user(account);
+
+  check_is_banned(sponsor);
+  check_is_banned(account);
 
   auto vouches_by_sponsor_account = vouches.get_index<"byspnsoracct"_n>();
   uint128_t sponsor_account_id = (uint128_t(sponsor.value) << 64) + account.value;
@@ -1170,6 +1180,77 @@ uint64_t accounts::countrefs(name user, int check_num_residents)
 
 }
 
+void accounts::send_bantree(name account) {
+  action send_ban(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "bantree"_n,
+    std::make_tuple(account, true)
+  );
+
+  transaction tx;
+  tx.actions.emplace_back(send_ban);
+  tx.delay_sec = 1;
+  tx.send(account.value, _self);
+
+}
+
+ACTION accounts::bantree(name account, bool recurse) 
+{
+    require_auth(get_self());
+
+    ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+    auto bitr = ban.find(account.value);
+    if (bitr == ban.end()) {
+      ban.emplace(_self, [&](auto & item){
+        item.account = account;
+      });
+    } 
+
+    auto refs_by_referrer = refs.get_index<"byreferrer"_n>();
+
+    auto ritr = refs_by_referrer.lower_bound(account.value);
+    
+    while (ritr != refs_by_referrer.end() && ritr->referrer == account) {
+      name invited = ritr->invited;
+      if (recurse) {
+        send_bantree(invited);
+      } else {
+        print(" invited: "+invited.to_string());
+      }
+      ritr++;
+    }
+}
+
+ACTION accounts::refinfo(name account) 
+{
+    require_auth(get_self());
+
+    print("ref "+account.to_string());
+
+    auto ritr = refs.find(account.value);
+
+    check(ritr != refs.end(), "is root account: "+account.to_string());
+    
+    while (ritr != refs.end()) {
+      name referrer = ritr->referrer;
+      print(" <- "+referrer.to_string());
+      ritr = refs.find(referrer.value);
+    }
+}
+
+ACTION accounts::unban(name account) 
+{
+    require_auth(get_self());
+
+    ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+    auto bitr = ban.find(account.value);
+    check(bitr != ban.end(), "account not in ban table");
+    ban.erase(bitr);  
+}
+
 uint64_t accounts::rep_score(name user) 
 {
 
@@ -1243,6 +1324,8 @@ void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
 
 void accounts::flag (name from, name to) {
   require_auth(from);
+
+  check_is_banned(from);
 
   if (from == to) { return; }
 
@@ -1340,6 +1423,14 @@ void accounts::removeflag (name from, name to) {
   });
 
   flags.erase(flag_itr);
+}
+
+void accounts::check_is_banned(name account)
+{
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  check(bitr == ban.end(), "banned user.");
 }
 
 void accounts::send_eval_demote (name to) {

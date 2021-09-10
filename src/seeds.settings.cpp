@@ -37,6 +37,10 @@ void settings::reset() {
   confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
 
+  confwithdesc(name("refmintest"), 1, "Minimum number of cycles a referendum must be in test state", high_impact);
+  confwithdesc(name("refmineval"), 3, "Minimum number of cycles a referendum must be in evaluate/trial state", high_impact);
+  
+
   confwithdesc(name("quorum.base"), 100, "Quorum base percentage = 90% / number of proposals.", high_impact);
   confwithdesc(name("quor.min.pct"), 7, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
   confwithdesc(name("quor.max.pct"), 40, "Quorum percentage upper cap- quorum required between 5% and 20%", high_impact);
@@ -326,6 +330,15 @@ void settings::reset() {
   confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
+  // quests
+  // =====================================
+  confwithdesc(name("prop.q.mjrty"), 90, "Majority quest proposals threshold", high_impact);
+  confwithdesc(name("qst.exp.appl"), 1209600, "Number of seconds to wait before the applicant can be expired", high_impact);
+  confwithdesc(name("qst.rep.appl"), 3, "Reputation for the quest maker once the owner has reated the applicant", high_impact);
+  confwithdesc(name("qst.rep.qst"), 3, "Reputation for the quest owner once the applicant has rated the quest", high_impact);
+  confwithdesc(name("quest.quorum"), 20, "Quorum required for the quest to be executed", high_impact);
+
+  // =====================================
   // gratitude 
   // =====================================
   confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
@@ -336,7 +349,7 @@ void settings::reset() {
   // =====================================
   // onboarding/invite
   // =====================================
-  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.max.rwrd"), 1111 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
   confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
 
   // contracts
@@ -350,6 +363,13 @@ void settings::reset() {
   setcontract(name("policy"), "policy.seeds"_n);
   setcontract(name("token"), "token.seeds"_n);
   setcontract(name("acctcreator"), "free.seeds"_n);
+
+  // =====================================
+  // onboarding/invite
+  // =====================================
+
+  confwithdesc(name("tempsetting"), uint64_t(0), "A capture-all setting for referendums which do not directly impact settings.", high_impact); 
+
 }
 
 void settings::configure(name param, uint64_t value) {

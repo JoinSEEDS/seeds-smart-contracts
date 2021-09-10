@@ -101,6 +101,8 @@ CONTRACT proposals : public contract {
 
       ACTION undelegate(name delegator, name scope);
 
+      ACTION questvote(name user, uint64_t amount, bool reduce, name scope);
+
       ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
 
       ACTION checkprop(uint64_t proposal_id, string message);
@@ -118,6 +120,9 @@ CONTRACT proposals : public contract {
 
       ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
       ACTION migalliances(uint64_t start, uint64_t chunksize);
+
+      ACTION rewind(uint64_t round);
+      ACTION fixcycstat(uint64_t delete_round);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -456,6 +461,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
+        (questvote)
         (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (testperiod)(testevalprop)
@@ -464,6 +470,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (testalliance)(migalliances)
         (fixdesc)(applyfixprop)(backfixprop)
         (revertvote)(mimicrevert)
+        (rewind)(fixcycstat)
         )
       }
   }
