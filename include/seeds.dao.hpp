@@ -14,6 +14,7 @@
 #include <tables/size_table.hpp>
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
+#include <tables/dho_share_table.hpp>
 #include <cmath>
 
 using namespace eosio;
@@ -124,13 +125,15 @@ CONTRACT dao : public contract {
 
       ACTION removedho(const name & organization);
 
+      ACTION removedhovts(const name & organization, const uint64_t & start, const uint64_t & chunksize, const bool & remove_size);
+
       ACTION votedhos(const name & account, std::vector<DhoVote> votes);
 
       ACTION dhomimicvote(const name & delegatee, const uint64_t & start, std::vector<DhoVote> votes, const uint64_t & chunksize);
 
       ACTION dhocleanvts();
 
-      ACTION dhocleanvote(const uint64_t & chunksize);
+      ACTION dhocleanvote(const uint64_t & cutoff, const uint64_t & chunksize);
 
       ACTION dhocalcdists();
 
@@ -326,23 +329,20 @@ CONTRACT dao : public contract {
         uint64_t primary_key () const { return vote_id; }
         uint128_t by_timestamp_id () const { return (uint128_t(timestamp) << 64) + vote_id; }
         uint128_t by_account_id () const { return (uint128_t(account.value) << 64) + vote_id; }
+        uint128_t by_dho_id () const { return (uint128_t(dho.value) << 64) + vote_id; }
       };
       typedef eosio::multi_index<"dhovotes"_n, dho_vote_table,
         indexed_by<"bytimeid"_n,
         const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_timestamp_id>>,
         indexed_by<"byacctid"_n,
-        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_account_id>>
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_account_id>>,
+        indexed_by<"bydhoid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_dho_id>>
       > dho_vote_tables;
 
-      TABLE dho_share_table {
-        name dho;
-        double total_percentage;
-        double dist_percentage;
-
-        uint64_t primary_key () const { return dho.value; }
-      };
-      typedef eosio::multi_index<"dhoshares"_n, dho_share_table> dho_share_tables;
-
+      DEFINE_DHO_SHARE_TABLE
+      DEFINE_DHO_SHARE_TABLE_MULTI_INDEX
+      
 
       config_tables config;
       size_tables sizes;
@@ -392,7 +392,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (decayvoices)(decayvoice)
           (updatevoices)(updatevoice)
           (erasepartpts)
-          (createdho)(removedho)(votedhos)(dhomimicvote)(dhocleanvts)(dhocleanvote)(dhocalcdists)
+          (createdho)(removedho)(removedhovts)(votedhos)(dhomimicvote)(dhocleanvts)(dhocleanvote)(dhocalcdists)
           (testsetvoice)
         )
       }

@@ -785,6 +785,17 @@ var permissions = [{
 },{
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.dao.account}@execute`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+},{
+  target: `${accounts.dao.account}@execute`,
+  action: 'dhocleanvts'
+},{
+  target: `${accounts.dao.account}@execute`,
+  action: 'dhocalcdists'
 }]
 
 const isTestnet = chainId == networks.telosTestnet

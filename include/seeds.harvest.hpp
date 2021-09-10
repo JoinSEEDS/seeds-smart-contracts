@@ -17,6 +17,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
+#include <tables/dho_share_table.hpp>
 #include <cmath> 
 
 using namespace eosio;
@@ -372,14 +373,9 @@ CONTRACT harvest : public contract {
 
     DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
-    TABLE dho_share_table {
-      name dho;
-      double total_percentage;
-      double dist_percentage;
 
-      uint64_t primary_key () const { return dho.value; }
-    };
-    typedef eosio::multi_index<"dhoshares"_n, dho_share_table> dho_share_tables;
+    DEFINE_DHO_SHARE_TABLE
+    DEFINE_DHO_SHARE_TABLE_MULTI_INDEX
 
 
     // Contract Tables

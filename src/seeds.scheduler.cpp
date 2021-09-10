@@ -129,7 +129,10 @@ void scheduler::reset_aux(bool destructive) {
         name("org.rankapps"),
 
         name("onbrd.clean"),
-        name("hstry.ptrxs")
+        name("hstry.ptrxs"),
+
+        name("dao.cleanvts"),
+        name("dao.calcdist")
     };
     
     std::vector<name> operations_v = {
@@ -168,7 +171,10 @@ void scheduler::reset_aux(bool destructive) {
         name("rankappuses"),
 
         name("chkcleanup"),
-        name("cleanptrxs")
+        name("cleanptrxs"),
+
+        name("dhocleanvts"),
+        name("dhocalcdists")
     };
 
     std::vector<name> contracts_v = {
@@ -207,7 +213,10 @@ void scheduler::reset_aux(bool destructive) {
         contracts::organization,
 
         contracts::onboarding,
-        contracts::history
+        contracts::history,
+
+        contracts::dao,
+        contracts::dao
     };
 
     std::vector<uint64_t> delay_v = {
@@ -246,7 +255,10 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_day,
 
         utils::seconds_per_day,
-        utils::seconds_per_day
+        utils::seconds_per_day,
+
+        utils::seconds_per_day,
+        utils::seconds_per_hour
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -287,6 +299,9 @@ void scheduler::reset_aux(bool destructive) {
         now,
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         
+        now,
+        now,
+
         now,
         now
     };

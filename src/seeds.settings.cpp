@@ -356,6 +356,8 @@ void settings::reset() {
   // dhos
   // =====================================
   confwithdesc(name("dho.min.per"), 10, "Minimum percentage a DHO needs to receive its part of the harvest", medium_impact);
+  confwithdesc(name("dho.v.recast"), utils::moon_cycle * 3, "Number of cycles a vote for a dho is valid", medium_impact);
+  
 
 
   // contracts

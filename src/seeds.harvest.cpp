@@ -1172,10 +1172,12 @@ void harvest::send_distribute_harvest (name key, asset amount) {
     std::make_tuple(uint64_t(0), uint64_t(20), amount)
   );
 
-  transaction tx;
-  tx.actions.emplace_back(next_execution);
-  tx.delay_sec = 1;
-  tx.send(key.value, _self);
+  next_execution.send();
+
+  // transaction tx;
+  // tx.actions.emplace_back(next_execution);
+  // tx.delay_sec = 1;
+  // tx.send(key.value, _self);
 
 }
 
@@ -1376,20 +1378,38 @@ void harvest::disthvstorgs (uint64_t start, uint64_t chunksize, asset total_amou
   }
 }
 
-
-// is chunksize needed?
-// if the minimum percentage is 10% there will be at most 10 dhos,
-// even if it were 1% it will be at most 100 dhos
-
 void harvest::disthvstdhos (uint64_t start, uint64_t chunksize, asset total_amount) {
   require_auth(get_self());
 
-  dho_share_tables dho_share_t (get_self(), get_self().value);
-  auto ditr = dho_share_t.begin();
+  dho_share_tables dho_share_t (contracts::dao, contracts::dao.value);
 
-  while (ditr != dho_share_t.end()) {
-    withdraw_aux(get_self(), ditr->dho, (ditr->dist_percentage / 100.0) * total_amount, "harvest");
-    ditr++;
+  if (dho_share_t.begin() == dho_share_t.end()) {
+    withdraw_aux(get_self(), bankaccts::globaldho, total_amount, "harvest");
+    return;
   }
+
+  auto ditr = dho_share_t.lower_bound(start);
+  uint64_t count = 0;
+
+  while (ditr != dho_share_t.end() && count < chunksize) {
+    withdraw_aux(get_self(), ditr->dho, asset(ditr->dist_percentage * total_amount.amount, test_symbol), "harvest");
+    ditr++;
+    count++;
+  }
+
+  if (ditr != dho_share_t.end()) {
+    action next_execution(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "disthvstdhos"_n,
+      std::make_tuple(ditr->dho.value, chunksize, total_amount)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(name("disthvstdhos").value, _self);
+  }
+
 }
 

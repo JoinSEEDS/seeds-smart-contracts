@@ -8,8 +8,8 @@ const {
   alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank, pool, organization
 } = names
 
-const scopes = ['alliance', 'campaign', 'milestone', 'referendum']
-const [allianceScope, campaignScope, milestoneScope, referendumsScope] = scopes
+const scopes = ['alliance', 'campaign', 'milestone', 'referendum', 'dhos']
+const [allianceScope, campaignScope, milestoneScope, referendumsScope, dhosScope] = scopes
 
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
@@ -923,25 +923,29 @@ describe('Voting', async assert => {
         { scope: allianceScope, account: firstuser, balance: 99 },
         { scope: campaignScope, account: firstuser, balance: 94 },
         { scope: milestoneScope, account: firstuser, balance: 98 },
-        { scope: referendumsScope, account: firstuser, balance: 89 }
+        { scope: referendumsScope, account: firstuser, balance: 89 },
+        { scope: 'dhos', account: firstuser, balance: 99 }
       ],
       [
         { scope: allianceScope, account: seconduser, balance: 99 },
         { scope: campaignScope, account: seconduser, balance: 99 }, 
         { scope: milestoneScope, account: seconduser, balance: 99 },
-        { scope: referendumsScope, account: seconduser, balance: 94 }
+        { scope: referendumsScope, account: seconduser, balance: 94 },
+        { scope: 'dhos', account: seconduser, balance: 99 }
       ],
       [
         { scope: allianceScope, account: thirduser, balance: 99 },
         { scope: campaignScope, account: thirduser, balance: 99 }, 
         { scope: milestoneScope, account: thirduser, balance: 99 },
-        { scope: referendumsScope, account: thirduser, balance: 99 }
+        { scope: referendumsScope, account: thirduser, balance: 99 },
+        { scope: 'dhos', account: thirduser, balance: 99 }
       ],
       [
         { scope: allianceScope, account: fourthuser, balance: 99 },
         { scope: campaignScope, account: fourthuser, balance: 99 }, 
         { scope: milestoneScope, account: fourthuser, balance: 99 },
-        { scope: referendumsScope, account: fourthuser, balance: 99 }
+        { scope: referendumsScope, account: fourthuser, balance: 99 },
+        { scope: 'dhos', account: fourthuser, balance: 99 }
       ]
     ]
   })
@@ -2353,7 +2357,7 @@ describe('Funding Campaign Proposals', async assert => {
 })
 
 
-describe.only('Streaming Funding', async assert => {
+describe('Streaming Funding', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -2365,6 +2369,7 @@ describe.only('Streaming Funding', async assert => {
   const users = [firstuser, seconduser, thirduser, fourthuser]
   const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow, organization })
   await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, 10 * index, { authorization: `${harvest}@active` })))
+  await Promise.all(users.map(user => contracts.dao.changetrust(user, true, { authorization: `${dao}@active` })))
 
   const csTable = await getTableRows({
     code: harvest,
@@ -2378,6 +2383,9 @@ describe.only('Streaming Funding', async assert => {
   console.log('reset orgs')
   await contracts.organization.reset({ authorization: `${organization}@active` })
 
+  console.log('change batch size to 1')
+  await contracts.settings.configure('batchsize', 1, { authorization: `${settings}@active` })
+
   console.log('init propcycle')
   await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
 
@@ -2388,6 +2396,85 @@ describe.only('Streaming Funding', async assert => {
   
   await contracts.token.transfer(firstuser, organization, `${200 * orgs.length}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
   await Promise.all(orgs.map(org => contracts.organization.create(firstuser, org, org, eosDevKey, { authorization: `${firstuser}@active` })))
+
+
+  const checkDhos = async ({ expected, should, given }) => {
+
+    const dhosTable = await getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'dhos',
+      json: true
+    })
+    
+    const totalSize = expected.map(e => e.points).reduce((acc, curr) => acc + curr)
+
+    const sizesTable = await getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'sizes',
+      json: true
+    })
+
+    assert({
+      given,
+      should,
+      expected,
+      actual: dhosTable.rows
+    })
+
+    assert({
+      given: 'users voted for dhos',
+      should: 'have the correct size',
+      expected: totalSize,
+      actual: (sizesTable.rows.filter(r => r.id === 'dho.vote.sz')[0]).size
+    })
+
+  }
+
+  const checkDhoVotes = async ({ expected, given, should }) => {
+
+    const dhovotesTable = await getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'dhovotes',
+      json: true
+    })
+
+    const actual = dhovotesTable.rows.map(r => {
+      delete r.timestamp
+      return r
+    })
+
+    assert({
+      given,
+      should,
+      expected,
+      actual: actual
+    })
+
+  }
+
+  const checkDhoShares = async ({ expected, given, should }) => {
+
+    const dhosharesTable = await getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'dhoshares',
+      json: true
+    })
+
+    console.log(dhosharesTable)
+
+    assert({
+      given,
+      should,
+      expected,
+      actual: dhosharesTable.rows
+    })
+
+  }
+
 
   console.log('add dhos')
   await Promise.all(orgs.map(org => contracts.dao.createdho(org, { authorization: `${org}@active` })))
@@ -2415,31 +2502,296 @@ describe.only('Streaming Funding', async assert => {
     { dho: org4, points: 5 },
   ], { authorization: `${fourthuser}@active` })
 
-  const dhosTable = await getTableRows({
+
+  await checkDhos({
+    given: 'users voted for dhos',
+    should: 'have the correct votes',
+    expected: [
+      { org_name: org1, points: 3650 },
+      { org_name: org2, points: 1600 },
+      { org_name: org3, points: 600 },
+      { org_name: org4, points: 150 },
+      { org_name: org5, points: 0 } 
+    ]
+  })
+
+  await checkDhoVotes({
+    given: 'users voted for dhos',
+    should: 'have the correct entries in the dho votes table',
+    expected: [
+      { vote_id: 0, account: seconduser, dho: org1, points: 1000 },
+      { vote_id: 1, account: thirduser, dho: org1, points: 1000 },
+      { vote_id: 2, account: thirduser, dho: org2, points: 1000 },
+      { vote_id: 3, account: fourthuser, dho: org1, points: 1650 },
+      { vote_id: 4, account: fourthuser, dho: org2, points: 600 },
+      { vote_id: 5, account: fourthuser, dho: org3, points: 600 },
+      { vote_id: 6, account: fourthuser, dho: org4, points: 150 }
+    ]
+  })
+
+  console.log('calc dho distribution')
+  await contracts.dao.dhocalcdists({ authorization: `${dao}@active` })
+
+  await checkDhoShares({
+    given: 'distribution calculated',
+    should: 'have the correct distribution entries',
+    expected: [
+      {
+        dho: 'org1',
+        total_percentage: '0.60833333333333328',
+        dist_percentage: '0.62393162393162394'
+      },
+      {
+        dho: 'org2',
+        total_percentage: '0.26666666666666666',
+        dist_percentage: '0.27350427350427353'
+      },
+      {
+        dho: 'org3',
+        total_percentage: '0.10000000000000001',
+        dist_percentage: '0.10256410256410256'
+      }
+    ]
+  })
+
+  console.log('---------- recasting votes ----------')
+  console.log('configure the voice recasting period to be 3 seconds')
+
+  await contracts.settings.configure('dho.v.recast', 3, { authorization: `${settings}@active` })
+  await sleep(4000)
+
+  console.log('recast the votes before getting deleted')
+  await contracts.dao.votedhos(thirduser, [
+    { dho: org1, points: 25 },
+    { dho: org2, points: 75 }
+  ], { authorization: `${thirduser}@active` })
+
+  console.log('clean the old votes')
+  await contracts.dao.dhocleanvts({ authorization: `${dao}@active` })
+  await sleep(5000)
+
+  await checkDhos({
+    given: 'votes cleaned',
+    should: 'leave only the ones that are not old enough',
+    expected: [
+      { org_name: org1, points: 500 },
+      { org_name: org2, points: 1500 },
+      { org_name: org3, points: 0 },
+      { org_name: org4, points: 0 },
+      { org_name: org5, points: 0 }
+    ]
+  })
+
+  await checkDhoVotes({
+    given: 'votes cleaned',
+    should: 'only leave the votes that are not old enough',
+    expected: [
+      { vote_id: 7, account: thirduser, dho: org1, points: 500 },
+      { vote_id: 8, account: thirduser, dho: org2, points: 1500 }
+    ]
+  })
+
+  console.log('calc dho distribution')
+  await contracts.dao.dhocalcdists({ authorization: `${dao}@active` })
+
+  await checkDhoShares({
+    given: 'votes cleaned',
+    should: 'recalculate the sharings table',
+    expected: [
+      {
+        dho: 'org1',
+        total_percentage: '0.25000000000000000',
+        dist_percentage: '0.25000000000000000'
+      },
+      {
+        dho: 'org2',
+        total_percentage: '0.75000000000000000',
+        dist_percentage: '0.75000000000000000'
+      }
+    ]
+  })
+
+  console.log('---------- remove organization ----------')
+  
+  console.log('vote for dhos')
+  await contracts.dao.votedhos(seconduser, [
+    { dho: org1, points: 100 }
+  ], { authorization: `${seconduser}@active` })
+
+  await contracts.dao.votedhos(fourthuser, [
+    { dho: org1, points: 55 },
+    { dho: org2, points: 20 },
+    { dho: org3, points: 20 },
+    { dho: org4, points: 5 },
+  ], { authorization: `${fourthuser}@active` })
+
+  console.log('remove org 1')
+  await contracts.dao.removedho(org1, { authorization: `${dao}@active` })
+  await sleep(5000)
+
+  await checkDhos({
+    given: 'dho removed',
+    should: 'have the correct entries in the dho table',
+    expected: [
+      { org_name: org2, points: 2100 },
+      { org_name: org3, points: 600 },
+      { org_name: org4, points: 150 },
+      { org_name: org5, points: 0 }
+    ]
+  })
+
+  await checkDhoVotes({
+    given: 'dho removed',
+    should: 'have the votes removed as well',
+    expected: [
+      { vote_id: 8, account: thirduser, dho: org2, points: 1500 },
+      { vote_id: 11, account: fourthuser, dho: org2, points: 600 },
+      { vote_id: 12, account: fourthuser, dho: org3, points: 600 },
+      { vote_id: 13, account: fourthuser, dho: org4, points: 150 }
+    ]
+  })
+
+  await checkDhoShares({
+    given: 'dho removed',
+    should: 'remove the dho from the shares tables',
+    expected: [
+      {
+        dho: 'org2',
+        total_percentage: '0.73684210526315785',
+        dist_percentage: '0.77777777777777779'
+      },
+      {
+        dho: 'org3',
+        total_percentage: '0.21052631578947367',
+        dist_percentage: '0.22222222222222221'
+      }
+    ]
+  })
+
+  console.log('---------- DHO vote delegation ----------')
+  
+  console.log('delegate vote')
+  await contracts.dao.delegate(seconduser, thirduser, dhosScope, { authorization: `${seconduser}@active` })
+  await contracts.dao.delegate(thirduser, fourthuser, dhosScope, { authorization: `${thirduser}@active` })
+
+  console.log('vote for org5')
+  await contracts.dao.votedhos(fourthuser, [
+    { dho: org5, points: 100 }
+  ], { authorization: `${fourthuser}@active` })
+  await sleep(5000)
+
+  let cannotVoteWhenVoiceDelegated = true
+  try {
+    await contracts.dao.votedhos(seconduser, [
+      { dho: org1, points: 100 }
+    ], { authorization: `${seconduser}@active` })
+    cannotVoteWhenVoiceDelegated = false
+  } catch (error) {
+    console.log('can not vote when voice is delegated (expected)')
+  }
+
+  await checkDhos({
+    given: 'vote delegated',
+    should: 'distribute the vote properly',
+    expected: [
+      { org_name: org2, points: 0 },
+      { org_name: org3, points: 0 },
+      { org_name: org4, points: 0 },
+      { org_name: org5, points: 6000 }
+    ]
+  })
+
+  await checkDhoVotes({
+    given: 'vote delegated',
+    should: 'have the correct entries in the dho votes table',
+    expected: [
+      {
+        vote_id: 9,
+        account: fourthuser,
+        dho: org5,
+        points: 3000
+      },
+      {
+        vote_id: 10,
+        account: thirduser,
+        dho: org5,
+        points: 2000
+      },
+      {
+        vote_id: 11,
+        account: seconduser,
+        dho: org5,
+        points: 1000
+      }
+    ]
+  })
+
+  assert({
+    given: 'voice delegated',
+    should: 'not be able to vote on their own',
+    actual: cannotVoteWhenVoiceDelegated,
+    expected: true
+  })
+
+  console.log('undelegate voice')
+  await contracts.dao.undelegate(thirduser, dhosScope, { authorization: `${thirduser}@active` })
+
+  console.log('vote for org2')
+  await contracts.dao.votedhos(fourthuser, [
+    { dho: org2, points: 100 }
+  ], { authorization: `${fourthuser}@active` })
+  await sleep(3000)
+
+  await checkDhos({
+    given: 'vote undelegated',
+    should: 'distribute the vote properly',
+    expected: [
+      { org_name: org2, points: 3000 },
+      { org_name: org3, points: 0 },
+      { org_name: org4, points: 0 },
+      { org_name: org5, points: 3000 }
+    ]
+  })
+
+  await checkDhoVotes({
+    given: 'vote undelegated',
+    should: 'have the correct entries in the dhos vote table',
+    expected: [
+      {
+        vote_id: 10,
+        account: thirduser,
+        dho: 'org5',
+        points: 2000
+      },
+      {
+        vote_id: 11,
+        account: seconduser,
+        dho: 'org5',
+        points: 1000
+      },
+      {
+        vote_id: 12,
+        account: fourthuser,
+        dho: 'org2',
+        points: 3000
+      }
+    ]
+  })
+
+  const dhosTable5 = await getTableRows({
     code: dao,
     scope: dao,
     table: 'dhos',
     json: true
   })
-  console.log(dhosTable)
+  console.log(dhosTable5)
 
-  const dhovotesTable = await getTableRows({
+  const dhovotesTable5 = await getTableRows({
     code: dao,
     scope: dao,
     table: 'dhovotes',
     json: true
   })
-  console.log(dhovotesTable)
-
-  console.log('calc dho distribution')
-  await contracts.dao.dhocalcdists({ authorization: `${dao}@active` })
-
-  const dhosharesTable = await getTableRows({
-    code: dao,
-    scope: dao,
-    table: 'dhoshares',
-    json: true
-  })
-  console.log(dhosharesTable)
+  console.log(dhovotesTable5)
 
 })
