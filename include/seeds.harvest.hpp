@@ -17,11 +17,14 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
-#include <cmath> 
+#include <cmath>
+#include <variant>
 
 using namespace eosio;
 using namespace utils;
 using std::string;
+using std::vector;
+typedef std::map<name, std::variant<asset, uint64_t, double, int64_t, string>> logmap;
 
 CONTRACT harvest : public contract {
   public:
@@ -104,6 +107,16 @@ CONTRACT harvest : public contract {
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount);
 
+    ACTION resetlgroups(uint64_t chunksize);
+    ACTION resetlogs(uint64_t log_group, uint64_t chunksize);
+    ACTION logaction(uint64_t log_group, name action, string log);
+    ACTION lgcalcmqevs(logmap log_map);
+    ACTION lgrunhrvst(logmap log_map);
+    ACTION lgcalmntrte(logmap log_map);
+    ACTION ldsthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
+    ACTION ldsthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
+    ACTION ldsthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount, uint64_t log_group);
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol test_symbol = symbol("TESTS", 4);
@@ -148,6 +161,7 @@ CONTRACT harvest : public contract {
     void send_distribute_harvest (name key, asset amount);
     void withdraw_aux(name sender, name beneficiary, asset quantity, string memo);
     void send_pool_payout(asset quantity);
+    void log_send_distribute_harvest (name key, asset amount, uint64_t log_group, uint64_t batch_size);
 
     // Contract Tables
 
@@ -203,6 +217,44 @@ CONTRACT harvest : public contract {
       indexed_by<"bypoints"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_points>>,
       indexed_by<"byrank"_n,const_mem_fun<tx_points_table, uint64_t, &tx_points_table::by_rank>>
     > tx_points_tables;
+
+    TABLE logs_table {
+      uint64_t id;
+      uint64_t log_group;
+      name action;
+      string log;
+      
+      uint64_t primary_key() const { return id; }
+      uint128_t by_action_id() const { return (uint128_t(action.value) << 64) + id; }
+    };
+
+    typedef eosio::multi_index<"logs"_n, logs_table,
+      indexed_by<"byactionid"_n,const_mem_fun<logs_table, uint128_t, &logs_table::by_action_id>>
+    > logs_tables;
+
+    TABLE log_rewards_table {
+      name account;
+      name account_type;
+      asset reward;
+      string notes;
+
+      uint64_t primary_key() const { return account.value; }
+      uint128_t by_type_account() const { return (uint128_t(account_type.value) << 64) + account.value; }
+    };
+
+    typedef eosio::multi_index<"logsrewards"_n, log_rewards_table,
+      indexed_by<"bytypeacct"_n,const_mem_fun<log_rewards_table, uint128_t, &log_rewards_table::by_type_account>>
+    > lrewards_tables;
+
+    TABLE log_group_table {
+      uint64_t log_group;
+      name action;
+      uint64_t creation_date;
+
+      uint64_t primary_key() const { return log_group; }
+    };
+
+    typedef eosio::multi_index<"lgroups"_n, log_group_table> lgroup_tables;
 
     DEFINE_CS_POINTS_TABLE
 
@@ -414,6 +466,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
           (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
+          (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)(resetlgroups)
+          (ldsthvstusrs)(ldsthvstorgs)(ldsthvstrgns)
         )
       }
   }

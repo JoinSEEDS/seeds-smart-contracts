@@ -1668,6 +1668,200 @@ describe('regions contribution score', async assert => {
 })
 
 
+describe('Log harvest', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  await sleep(2000)
+
+  let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
+
+  const contracts = await Promise.all([
+    eos.contract(token),
+    eos.contract(accounts),
+    eos.contract(harvest),
+    eos.contract(settings),
+    eos.contract(history),
+    eos.contract(organization),
+    eos.contract(region)
+  ]).then(([token, accounts, harvest, settings, history, organization, region]) => ({
+    token, accounts, harvest, settings, history, organization, region
+  }))
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset rgns')
+  await contracts.region.reset({ authorization: `${region}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('reset settings')
+  await contracts.organization.reset({ authorization: `${organization}@active` })
+
+  const day = getBeginningOfDayInSeconds()
+
+  console.log('reset history')
+  await contracts.history.reset(history, { authorization: `${history}@active` })
+  await contracts.history.deldailytrx(day, { authorization: `${history}@active` })
+  
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('update circulaing supply')
+  await contracts.token.updatecirc({ authorization: `${token}@active` })
+
+
+  await contracts.history.testtotalqev(120, 100 * 10000, { authorization: `${history}@active` })
+  await contracts.harvest.calcmqevs({ authorization: `${harvest}@active` })
+
+  const secondsPerDay =  86400
+  const moonCycle = secondsPerDay * 29 + parseInt(secondsPerDay / 2)
+  const previousDay = (new Date((day - 3 * moonCycle) * 1000).setUTCHours(0,0,0,0)) / 1000
+
+  const mqevsBefore = await getTableRows({
+    code: harvest,
+    scope: harvest,
+    table: 'monthlyqevs',
+    json: true,
+  })
+  console.log(mqevsBefore)
+
+  const currentCirculatingSupply = mqevsBefore.rows[0].circulating_supply
+
+  const pastCirculatingSupply = currentCirculatingSupply - 5000 * 10000
+
+  await contracts.harvest.testcalcmqev(previousDay, 2500 * 10000, pastCirculatingSupply, { authorization: `${harvest}@active` })
+
+  await contracts.harvest.lgcalcmqevs([
+    {
+      "key": "mooncycle",
+      "value": ["uint64", 999990]
+    }
+  ], { authorization: `${harvest}@active` })
+
+
+  await contracts.harvest.lgcalmntrte([], { authorization: `${harvest}@active` })
+
+  await contracts.harvest.lgcalmntrte([
+    {
+      key: 'pqevqvol',
+      value: ['uint64', 1000]
+    },
+    {
+      key: 'cqevqvol',
+      value: ['uint64', 2000]
+    },
+    {
+      key: 'pcsupply',
+      value: ['uint64', 50000]
+    },
+    {
+      key: 'ccsupply',
+      value: ['uint64', 60000]
+    },
+    {
+      key: 'inflrate',
+      value: ['float64', 0.1]
+    }
+  ], { authorization: `${harvest}@active` })
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const orgs = ['orgaaa', 'orgbbb', 'orgccc', 'orgddd']
+
+  console.log('configure - rgn.cit')
+  await contracts.settings.configure("rgn.cit", 1, { authorization: `${settings}@active` })
+
+  console.log('add users')
+  for (let index = 0; index < users.length; index++) {
+    const user = users[index]
+    await contracts.accounts.adduser(user, index+' user', 'individual', { authorization: `${accounts}@active` })
+    await contracts.harvest.testcspoints(user, (index+1) * 33, { authorization: `${harvest}@active` })
+  }
+  await sleep(100)
+
+  console.log('add orgs')
+  for (let index = 0; index < orgs.length; index++) {
+    const org = orgs[index]
+    await contracts.token.transfer(firstuser, organization, '200.0000 SEEDS', 'initial supply', { authorization: `${firstuser}@active` })
+    await contracts.organization.create(firstuser, org, `${org} name`, eosDevKey, { authorization: `${firstuser}@active` })
+    await contracts.organization.teststatus(org, index, { authorization: `${organization}@active` })
+    await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
+  }
+
+  console.log('add regions')
+  const keypair = await createKeypair();
+  await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
+  const rgns = ['rgn1.rgn', 'rgn2.rgn']
+  for (let index = 0; index < rgns.length; index++) {
+    const rgn = rgns[index]
+    await contracts.token.transfer(users[index], region, "1.0000 SEEDS", "Initial supply", { authorization: `${users[index]}@active` })
+    await contracts.region.create(
+      users[index], 
+      rgn, 
+      'test rgn region',
+      '{lat:0.0111,lon:1.3232}', 
+      1.1, 
+      1.23,  
+      { authorization: `${users[index]}@active` })
+  }
+
+  await contracts.harvest.rankcss({ authorization: `${harvest}@active` })
+  await contracts.harvest.rankorgcss({ authorization: `${harvest}@active` })
+  await sleep(2000)
+
+
+  await contracts.harvest.calcmintrate({ authorization: `${harvest}@active` }) 
+
+  await contracts.harvest.lgrunhrvst([], { authorization: `${harvest}@active` })
+  await sleep(2000)
+
+  await contracts.harvest.lgrunhrvst([
+    {
+      key: 'batchsize',
+      value: ['uint64', 1]
+    },
+    {
+      key: 'poolbsize',
+      value: ['uint64', 30]
+    },
+    {
+      key: 'mintrate',
+      value: ['int64', 100]
+    },
+    {
+      key: 'usrsperc',
+      value: ['float64', 0.1]
+    },
+    {
+      key: 'rgnsperc',
+      value: ['float64', 0.2]
+    },
+    {
+      key: 'orgsperc',
+      value: ['float64', 0.3]
+    },
+    {
+      key: 'globperc',
+      value: ['float64', 0.4]
+    },
+  ], { authorization: `${harvest}@active` })
+
+
+
+  // await contracts.harvest.resetlgroups(20, { authorization: `${harvest}@active` })
+
+})
 
 describe("harvest unplant protection", async assert => {
 
