@@ -2464,13 +2464,27 @@ void proposals::rewind(uint64_t round) {
 // rewind to in case there was an error
 void proposals::fixcycstat(uint64_t delete_round) {
 
-  // 1 - get active props from cyclestats round 38
+  // 1 - delete cycle stats
   auto citr = cyclestats.find(delete_round);
 
-  // delete cycle stats
   if (citr != cyclestats.end()) {
     cyclestats.erase(citr);
   }
 
+  // 2 - delete from support table
+  std::vector<name> support_scopes = {
+        alliance_type,
+        campaign_type,
+        milestone_type,
+        referendum_type,
+    };
+
+  for (auto & s : support_scopes) {
+    support_level_tables support(get_self(), s.value);
+    auto sitr = support.find(delete_round);
+    if (sitr != support.end()) {
+      support.erase(sitr);
+    }
+  }
 
 }
