@@ -141,13 +141,13 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
-// quorum as integer % value - e.g. 90 == 90%
-uint64_t proposals::get_quorum(uint64_t total_proposals) {
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
+// quorum as % value - e.g. 90.0 == 90%
+double proposals::get_quorum(uint64_t total_proposals) {
+  double base_quorum = config_get("quorum.base"_n);
+  double quorum_min = config_get("quor.min.pct"_n);
+  double quorum_max = config_get("quor.max.pct"_n);
 
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  double quorum = total_proposals ? (double)base_quorum / (double)total_proposals : 0;
   quorum = std::max(quorum_min, quorum);
   return std::min(quorum_max, quorum);
 }

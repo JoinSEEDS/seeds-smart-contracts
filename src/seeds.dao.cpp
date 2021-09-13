@@ -839,16 +839,15 @@ uint64_t dao::calc_voice_needed (const uint64_t & total_voice, const uint64_t & 
   return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
 }
 
-uint64_t dao::get_quorum (const uint64_t & total_proposals) {
+// quorum as % value - e.g. 90.0 == 90%
+double dao::get_quorum(const uint64_t total_proposals) {
+  double base_quorum = config_get("quorum.base"_n);
+  double quorum_min = config_get("quor.min.pct"_n);
+  double quorum_max = config_get("quor.max.pct"_n);
 
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
-
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  double quorum = total_proposals ? (double)base_quorum / (double)total_proposals : 0;
   quorum = std::max(quorum_min, quorum);
   return std::min(quorum_max, quorum);
-
 }
 
 

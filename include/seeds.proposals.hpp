@@ -193,7 +193,7 @@ CONTRACT proposals : public contract {
       void size_change(name id, int64_t delta);
       void size_set(name id, int64_t value);
 
-      uint64_t get_quorum(uint64_t total_proposals);
+      double get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
