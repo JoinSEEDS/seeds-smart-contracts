@@ -285,7 +285,15 @@ void proposals::add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type) {
 }
 
 uint64_t proposals::calc_voice_needed(uint64_t total_voice, uint64_t num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
+  // note the factor -0.000000001 at the end is needed because ceil() for a perfectly even number like 20.0 will return the 
+  // number + 1, like 21 in this case. This is a weirdness of ceil().
+  return ceil( total_voice * (get_quorum(num_proposals) / 100.0) - 0.000000001);
+}
+
+void proposals::testvn(uint64_t total_voice, uint64_t num_proposals) {
+  require_auth(_self);
+  uint64_t res = calc_voice_needed(total_voice, num_proposals);
+  print(res);
 }
 
 void proposals::add_num_prop(uint64_t cycle, uint64_t num_prop, name type) {

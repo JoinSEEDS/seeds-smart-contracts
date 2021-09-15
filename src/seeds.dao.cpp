@@ -836,7 +836,7 @@ void dao::add_voice_cast (const uint64_t & cycle, const uint64_t & voice_cast, c
 }
 
 uint64_t dao::calc_voice_needed (const uint64_t & total_voice, const uint64_t & num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
+  return ceil( total_voice * (get_quorum(num_proposals) / 100.0) - 0.000000001);
 }
 
 // quorum as % value - e.g. 90.0 == 90%

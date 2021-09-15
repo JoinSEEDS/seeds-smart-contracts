@@ -1280,7 +1280,7 @@ describe('Proposals Quorum And Support Levels', async assert => {
     json: true
   })
 
-  // console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
+  console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
   // console.log("supportForAlliances "+JSON.stringify(supportForAlliances, null, 2))
 
   console.log('execute proposals')
@@ -1304,7 +1304,7 @@ describe('Proposals Quorum And Support Levels', async assert => {
       assert({
         given: 'get quorum called',
         should: 'give the correct quorum threshold',
-        expected: `assertion failure with message: ${expectedValue}`,
+        expected: `assertion failure with message: ${expectedValue}.000000`,
         actual: err.json.error.details[0].message
       })
     }

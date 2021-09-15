@@ -87,6 +87,7 @@ CONTRACT proposals : public contract {
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
       ACTION testquorum(uint64_t total_proposals);
+      ACTION testvn(uint64_t total_voice, uint64_t num_proposals);
 
       ACTION testvdecay(uint64_t timestamp);
 
@@ -471,6 +472,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (fixdesc)(applyfixprop)(backfixprop)
         (revertvote)(mimicrevert)
         (rewind)(fixcycstat)
+        (testvn)
         )
       }
   }
