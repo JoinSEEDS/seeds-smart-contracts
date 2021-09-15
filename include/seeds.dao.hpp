@@ -248,7 +248,7 @@ CONTRACT dao : public contract {
     void increase_voice_cast(const uint64_t & amount, const name & option, const name & prop_type);
     void add_voice_cast(const uint64_t & cycle, const uint64_t & voice_cast, const name & type);
     uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
-    uint64_t get_quorum(const uint64_t & total_proposals);
+    double get_quorum(const uint64_t total_proposals);
 
     void check_citizen(const name & account);
     void vote_aux(const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_delegated);
