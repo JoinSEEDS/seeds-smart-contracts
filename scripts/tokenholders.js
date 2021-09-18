@@ -100,8 +100,9 @@ const addBalances = async (balances, accounts) => {
       balances.push(res)
     }
   });
-
 }
+
+
 const getTokenHolders = async () => {
   var more = true
   var lower_bound = ''
@@ -113,7 +114,7 @@ const getTokenHolders = async () => {
       code: "token.seeds",
       table: "accounts",
       lower_bound: lower_bound,
-      limit: 1000
+      limit: 2000
     })
     
     //console.log("result: "+JSON.stringify(res, null, 2))
@@ -137,22 +138,34 @@ const getTokenHolders = async () => {
   var fileText = ""
   var errorAccounts = []
 
+  var batchAccounts = []
+  const batchSize = 100
+
+  // var old = accounts
+  // accounts = []
+  // for(var i=0; i<200; i++) {
+  //   accounts[i] = old[i]
+  // }
+
+  console.log("accts: "+accounts.length)
+
   for(var i = 0; i<accounts.length; i++) {
     const account = accounts[i]
-    const balance = await getBalance(account)
-    if (balance != null) {
-      balances.push({
-        account: account,
-        balance: balance,
-        date: new Date().toISOString()
-      })
-      console.log("adding balance "+JSON.stringify(balances[balances.length-1], null, 2))
-      fileText = fileText + account +","+balance+ "\n"  
-    } else {
-      console.log("error: "+account);
-      errorAccounts.push(account)
+
+    batchAccounts.push(account)
+
+    if (i == accounts.length - 1 || batchAccounts.length == batchSize) {
+      console.log("adding "+i+ " length "+batchAccounts.length)
+      await addBalances(balances, batchAccounts)
+      batchAccounts = []
     }
   }
+
+  balances.forEach((b) => {
+    fileText = fileText + b.account + "," +b.balance+ "," +b.date+ "\n" 
+  })
+      
+
 
   //console.log("balances: "+JSON.stringify(balances, null, 2))
   console.log("found "+accounts.length + " accounts" )
@@ -161,7 +174,7 @@ const getTokenHolders = async () => {
   fs.writeFileSync('seeds_accounts_balances.json', JSON.stringify(balances, null, 2))
   fs.writeFileSync('seeds_accounts_balances.csv', fileText)
   
-  console.log("balances found: "+JSON.stringify(balances, null, 2))
+  //console.log("balances found: "+JSON.stringify(balances, null, 2))
   console.log("balances saved: "+balances.length)
 
   
