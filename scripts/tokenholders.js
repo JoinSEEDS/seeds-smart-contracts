@@ -43,6 +43,77 @@ const getBalance = async (user) => {
   //console.log("balance: "+JSON.stringify(balance))
 }
 
+const getPlanteBalances = async (lower_bound) => {
+
+
+  console.log("getting planted "+lower_bound)
+
+  const params = {
+    "json": "true",
+    "code": 'harvst.seeds',
+    "scope": 'harvst.seeds',
+    "table": 'planted',
+    'lower_bound': lower_bound,
+    "limit": 1000,
+    
+}
+
+  const url = host + "/v1/chain/get_table_rows"
+  const rawResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+
+  //console.log("res: "+JSON.stringify(res, null, 2))
+
+  return res
+}
+
+function timeStampString() {
+  var date = new Date()
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+  var month = date.getMonth()+1;
+  minutes = minutes < 10 ? '0'+minutes : minutes;
+  month = month < 10 ? '0'+month : month;
+  var strTime = hours + '_' + minutes;
+  return date.getFullYear() + "-" + month + "-" + date.getDate() + "_" + strTime;
+}
+
+const allPlanted = async () => {
+  var more = true
+  var lower_bound = 0
+
+  var planteds = []
+
+console.log(timeStampString() )
+
+  while (more) {
+    const res = await getPlanteBalances(lower_bound)
+    
+    console.log("result: "+JSON.stringify(res, null, 2))
+
+    res.rows.forEach(item => { 
+      planteds.push(item)
+    });
+
+    lower_bound = parseInt(res.next_key) 
+    
+    more = res.more != "false" && res.more != ""
+
+    console.log("planteds: "+planteds.length  + " next "+lower_bound)
+
+  }
+
+  fs.writeFileSync('planted_balances_'+ timeStampString() +'.json', JSON.stringify(planteds, null, 2))
+
+}
+
     /** Raw call to `/v1/chain/get_table_by_scope` */
  const get_table_by_scope = async ({
       code,
@@ -100,6 +171,7 @@ const addBalances = async (balances, accounts) => {
       balances.push(res)
     }
   });
+  
 }
 
 
@@ -170,9 +242,9 @@ const getTokenHolders = async () => {
   //console.log("balances: "+JSON.stringify(balances, null, 2))
   console.log("found "+accounts.length + " accounts" )
 
-  fs.writeFileSync('seeds_errors.json', JSON.stringify(errorAccounts, null, 2))
-  fs.writeFileSync('seeds_accounts_balances.json', JSON.stringify(balances, null, 2))
-  fs.writeFileSync('seeds_accounts_balances.csv', fileText)
+  fs.writeFileSync(`seeds_errors_${timeStampString()}.json`, JSON.stringify(errorAccounts, null, 2))
+  fs.writeFileSync(`seeds_accounts_balances_${timeStampString()}.json`, JSON.stringify(balances, null, 2))
+  fs.writeFileSync(`seeds_accounts_balances_${timeStampString()}.csv`, fileText)
   
   //console.log("balances found: "+JSON.stringify(balances, null, 2))
   console.log("balances saved: "+balances.length)
@@ -182,11 +254,19 @@ const getTokenHolders = async () => {
 }
 
 program
-  .arguments('balances')
+  .command('balances')
   .description('Get SEEDS balances for all accounts')
   .action(async function () {
     console.log("getting balances");
     await getTokenHolders()
+  })
+
+program
+  .command('planted')
+  .description('Get Planted balances for all accounts')
+  .action(async function () {
+    console.log("getting planted");
+    await allPlanted()
   })
 
 program.parse(process.argv)
