@@ -1174,12 +1174,10 @@ void harvest::send_distribute_harvest (name key, asset amount) {
     std::make_tuple(uint64_t(0), uint64_t(20), amount)
   );
 
-  next_execution.send();
-
-  // transaction tx;
-  // tx.actions.emplace_back(next_execution);
-  // tx.delay_sec = 1;
-  // tx.send(key.value, _self);
+  transaction tx;
+  tx.actions.emplace_back(next_execution);
+  tx.delay_sec = 1;
+  tx.send(key.value, _self);
 
 }
 
