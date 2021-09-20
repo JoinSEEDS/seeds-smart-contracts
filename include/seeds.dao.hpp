@@ -372,7 +372,7 @@ CONTRACT dao : public contract {
     
     void init_cycle_new_stats();
     uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
-    uint64_t get_quorum(const uint64_t & total_proposals);
+    double get_quorum(uint64_t total_proposals);
 
 };
 

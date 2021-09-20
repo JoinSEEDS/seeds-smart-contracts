@@ -995,20 +995,6 @@ void dao::init_cycle_new_stats () {
 
 }
 
-uint64_t dao::calc_voice_needed (const uint64_t & total_voice, const uint64_t & num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
-}
-
-uint64_t dao::get_quorum (const uint64_t & total_proposals) {
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
-
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
-  quorum = std::max(quorum_min, quorum);
-  return std::min(quorum_max, quorum);
-}
-
 uint64_t dao::active_cutoff_date () {
   uint64_t now = current_time_point().sec_since_epoch();
   uint64_t prop_cycle_sec = config_get(name("propcyclesec"));
