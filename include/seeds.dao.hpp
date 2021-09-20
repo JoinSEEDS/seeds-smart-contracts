@@ -58,7 +58,6 @@ CONTRACT dao : public contract {
 
       const name prop_active_size = "prop.act.sz"_n;
       const name user_active_size = "user.act.sz"_n;
-      const name cycle_vote_power_size = "votepow.sz"_n;
       const name dhos_vote_size = "dho.vote.sz"_n; 
       const name linear_payout = "linear"_n;
       const name stepped_payout = "step"_n;

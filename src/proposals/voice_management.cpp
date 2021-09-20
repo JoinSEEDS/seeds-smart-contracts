@@ -17,7 +17,6 @@ ACTION dao::updatevoice (const uint64_t & start) {
   voice_tables voices_t(get_self(), campaign_scope.value);
   auto vitr = start == 0 ? voices_t.begin() : voices_t.find(start);
   if (start == 0) {
-      size_set(cycle_vote_power_size, 0);
       size_set(user_active_size, 0);
   }
   uint64_t batch_size = config_get(name("batchsize"));
@@ -41,7 +40,6 @@ ACTION dao::updatevoice (const uint64_t & start) {
       count++;
   }
   
-  size_change(cycle_vote_power_size, vote_power);
   size_change(user_active_size, active_users);
   if (vitr != voices_t.end()) {
     send_deferred_transaction(
@@ -462,7 +460,6 @@ void dao::recover_voice (const name & account) {
   }
 
   set_voice(account, voice_amount, "all"_n);
-  size_change(cycle_vote_power_size, voice_amount);
 
 }
 
