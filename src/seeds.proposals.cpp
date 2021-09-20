@@ -141,13 +141,13 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
-// quorum as integer % value - e.g. 90 == 90%
-uint64_t proposals::get_quorum(uint64_t total_proposals) {
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
+// quorum as % value - e.g. 90.0 == 90%
+double proposals::get_quorum(uint64_t total_proposals) {
+  double base_quorum = config_get("quorum.base"_n);
+  double quorum_min = config_get("quor.min.pct"_n);
+  double quorum_max = config_get("quor.max.pct"_n);
 
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  double quorum = total_proposals ? (double)base_quorum / (double)total_proposals : 0;
   quorum = std::max(quorum_min, quorum);
   return std::min(quorum_max, quorum);
 }
@@ -285,7 +285,15 @@ void proposals::add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type) {
 }
 
 uint64_t proposals::calc_voice_needed(uint64_t total_voice, uint64_t num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
+  // note the factor -0.000000001 at the end is needed because ceil() for a perfectly even number like 20.0 will return the 
+  // number + 1, like 21 in this case. This is a weirdness of ceil().
+  return ceil( total_voice * (get_quorum(num_proposals) / 100.0) - 0.000000001);
+}
+
+void proposals::testvn(uint64_t total_voice, uint64_t num_proposals) {
+  require_auth(_self);
+  uint64_t res = calc_voice_needed(total_voice, num_proposals);
+  print(res);
 }
 
 void proposals::add_num_prop(uint64_t cycle, uint64_t num_prop, name type) {
@@ -2464,13 +2472,27 @@ void proposals::rewind(uint64_t round) {
 // rewind to in case there was an error
 void proposals::fixcycstat(uint64_t delete_round) {
 
-  // 1 - get active props from cyclestats round 38
+  // 1 - delete cycle stats
   auto citr = cyclestats.find(delete_round);
 
-  // delete cycle stats
   if (citr != cyclestats.end()) {
     cyclestats.erase(citr);
   }
 
+  // 2 - delete from support table
+  std::vector<name> support_scopes = {
+        alliance_type,
+        campaign_type,
+        milestone_type,
+        referendum_type,
+    };
+
+  for (auto & s : support_scopes) {
+    support_level_tables support(get_self(), s.value);
+    auto sitr = support.find(delete_round);
+    if (sitr != support.end()) {
+      support.erase(sitr);
+    }
+  }
 
 }

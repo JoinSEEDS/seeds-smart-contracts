@@ -2,12 +2,13 @@
  *  @file
  *  @copyright defined in eos/LICENSE.txt
  */
-#pragma once
-
-#include <contracts.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
 #include <tables.hpp>
-#include <tables/config_table.hpp>
 #include <eosio/singleton.hpp>
+#include <eosio/system.hpp>
+#include <eosio/symbol.hpp>
+#include <eosio/transaction.hpp>
 
 #include <string>
 
@@ -44,13 +45,13 @@ using std::string;
           *
           * @pre Token symbol has to be valid,
           * @pre Token symbol must not be already created,
-          * @pre initial_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
+          * @pre max_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
           * @pre Initial supply must be positive;
           *
           * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
-         void create( const name&   issuer, const asset&  initial_supply );
+         void create( const name&   issuer, const asset&  max_supply );
          /**
           * Issue action.
           *
@@ -176,7 +177,8 @@ using std::string;
          using close_action = eosio::action_wrapper<"close"_n, &startoken::close>;
 
       private:
-          symbol stars_symbol = symbol("STARS", 4);
+         symbol stars_symbol = symbol("STARS", 4);
+         symbol seeds_symbol = symbol("SEEDS", 4);
 
          struct [[eosio::table]] account {
             asset    balance;
@@ -186,7 +188,7 @@ using std::string;
 
          struct [[eosio::table]] currency_stats {
             asset    supply;
-            asset    initial_supply;
+            asset    max_supply;
             name     issuer;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
@@ -217,7 +219,6 @@ using std::string;
 
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
-         void update_stats( const name& from, const name& to, const asset& quantity );
 
          TABLE circulating_supply_table {
             uint64_t id;
@@ -228,8 +229,10 @@ using std::string;
     
          typedef singleton<"circulating"_n, circulating_supply_table> circulating_supply_tables;
          typedef eosio::multi_index<"circulating"_n, circulating_supply_table> dump_for_circulating;
-
-         circulating_supply_tables circulating;
+      
+      circulating_supply_tables circulating;
 
    };
-   /** @}*/ // end of @defgroup eosiotoken eosio.token
+   
+
+EOSIO_DISPATCH(startoken, (create)(issue)(transfer)(open)(close)(retire)(burn) )

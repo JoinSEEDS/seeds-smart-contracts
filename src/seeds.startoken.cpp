@@ -6,22 +6,22 @@
 #include <../include/seeds.startoken.hpp>
 
 void startoken::create( const name&   issuer,
-                    const asset&  initial_supply )
+                    const asset&  max_supply )
 {
     require_auth( get_self() );
 
-    auto sym = initial_supply.symbol;
-    check( sym.is_valid(), "seeds: invalid symbol name" );
-    check( initial_supply.is_valid(), "seeds: invalid supply");
-    check( initial_supply.amount > 0, "seeds: max-supply must be positive");
+    auto sym = max_supply.symbol;
+    check( sym.is_valid(), "stars: invalid symbol name" );
+    check( max_supply.is_valid(), "stars: invalid supply");
+    //check( max_supply.amount > 0, "stars: max-supply must be positive");
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing == statstable.end(), "seeds: token with symbol already exists" );
+    check( existing == statstable.end(), "stars: token with symbol already exists" );
 
     statstable.emplace( get_self(), [&]( auto& s ) {
-       s.supply.symbol = initial_supply.symbol;
-       s.initial_supply  = initial_supply;
+       s.supply.symbol = max_supply.symbol;
+       s.max_supply  = max_supply;
        s.issuer        = issuer;
     });
 }
@@ -30,20 +30,20 @@ void startoken::create( const name&   issuer,
 void startoken::issue( const name& to, const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
-    check( sym.is_valid(), "seeds: invalid symbol name" );
-    check( memo.size() <= 256, "seeds: memo has more than 256 bytes" );
+    check( sym.is_valid(), "stars: invalid symbol name" );
+    check( memo.size() <= 256, "stars: memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing != statstable.end(), "seeds: token with symbol does not exist, create token before issue" );
+    check( existing != statstable.end(), "stars: token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
-    check( to == st.issuer, "seeds: tokens can only be issued to issuer account" );
+    check( to == st.issuer, "stars: tokens can only be issued to issuer account" );
 
     require_auth( st.issuer );
-    check( quantity.is_valid(), "seeds: invalid quantity" );
-    check( quantity.amount > 0, "seeds: must issue positive quantity" );
+    check( quantity.is_valid(), "stars: invalid quantity" );
+    check( quantity.amount > 0, "stars: must issue positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
+    check( quantity.symbol == st.supply.symbol, "stars: symbol precision mismatch" );
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply += quantity;
@@ -55,19 +55,19 @@ void startoken::issue( const name& to, const asset& quantity, const string& memo
 void startoken::retire( const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
-    check( sym.is_valid(), "seeds: invalid symbol name" );
-    check( memo.size() <= 256, "seeds: memo has more than 256 bytes" );
+    check( sym.is_valid(), "stars: invalid symbol name" );
+    check( memo.size() <= 256, "stars: memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
-    check( existing != statstable.end(), "seeds: token with symbol does not exist" );
+    check( existing != statstable.end(), "stars: token with symbol does not exist" );
     const auto& st = *existing;
 
     require_auth( st.issuer );
-    check( quantity.is_valid(), "seeds: invalid quantity" );
-    check( quantity.amount > 0, "seeds: must retire positive quantity" );
+    check( quantity.is_valid(), "stars: invalid quantity" );
+    check( quantity.amount > 0, "stars: must retire positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "seeds: symbol precision mismatch" );
+    check( quantity.symbol == st.supply.symbol, "stars: symbol precision mismatch" );
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
@@ -81,7 +81,7 @@ void startoken::burn( const name& from, const asset& quantity )
   require_auth(from);
 
   auto sym = quantity.symbol;
-  check(sym.is_valid(), "seeds: invalid symbol name");
+  check(sym.is_valid(), "stars: invalid symbol name");
 
   stats statstable(get_self(), sym.code().raw());
   auto sitr = statstable.find(sym.code().raw());
@@ -118,7 +118,6 @@ void startoken::transfer( const name&    from,
     sub_balance( from, quantity );
     add_balance( to, quantity, payer );
     
-    update_stats( from, to, quantity );
 }
 
 void startoken::sub_balance( const name& owner, const asset& value ) {
@@ -146,55 +145,6 @@ void startoken::add_balance( const name& owner, const asset& value, const name& 
         a.balance += value;
       });
    }
-}
-
-void startoken::update_stats( const name& from, const name& to, const asset& quantity ) {
-    user_tables users(contracts::accounts, contracts::accounts.value);
-
-    auto fromuser = users.find(from.value);
-    auto touser = users.find(to.value);
-    
-    if (fromuser == users.end() || touser == users.end()) {
-      return;
-    }
-
-    auto sym_code_raw = quantity.symbol.code().raw();
-    transaction_tables transactions(get_self(), sym_code_raw);
-
-    auto fromitr = transactions.find(from.value);
-    auto toitr = transactions.find(to.value);
-
-    if (fromitr == transactions.end()) {
-      transactions.emplace(get_self(), [&](auto& user) {
-        user.account = from;
-        user.transactions_volume = quantity;
-        user.total_transactions = 1;
-        user.incoming_transactions = 0;
-        user.outgoing_transactions = 1;
-      });
-    } else {
-      transactions.modify(fromitr, get_self(), [&](auto& user) {
-          user.transactions_volume += quantity;
-          user.outgoing_transactions += 1;
-          user.total_transactions += 1;
-      });
-    }
-
-    if (toitr == transactions.end()) {
-      transactions.emplace(get_self(), [&](auto& user) {
-        user.account = to;
-        user.transactions_volume = quantity;
-        user.total_transactions = 1;
-        user.incoming_transactions = 1;
-        user.outgoing_transactions = 0;
-      });
-    } else {
-      transactions.modify(toitr, get_self(), [&](auto& user) {
-        user.transactions_volume += quantity;
-        user.total_transactions += 1;
-        user.incoming_transactions += 1;
-      });
-    }
 }
 
 void startoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
@@ -225,5 +175,3 @@ void startoken::close( const name& owner, const symbol& symbol )
    check( it->balance.amount == 0, "Cannot close because the balance is not zero." );
    acnts.erase( it );
 }
-
-EOSIO_DISPATCH( startoken, (create)(issue)(transfer)(open)(close)(retire)(burn) )

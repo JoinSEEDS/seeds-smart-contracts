@@ -880,6 +880,47 @@ void dao::add_voice_cast (const uint64_t & cycle, const uint64_t & voice_cast, c
 
 }
 
+uint64_t dao::calc_voice_needed (const uint64_t & total_voice, const uint64_t & num_proposals) {
+  return ceil( total_voice * (get_quorum(num_proposals) / 100.0) - 0.000000001);
+}
+
+// quorum as % value - e.g. 90.0 == 90%
+double dao::get_quorum(const uint64_t total_proposals) {
+  double base_quorum = config_get("quorum.base"_n);
+  double quorum_min = config_get("quor.min.pct"_n);
+  double quorum_max = config_get("quor.max.pct"_n);
+
+  double quorum = total_proposals ? (double)base_quorum / (double)total_proposals : 0;
+  quorum = std::max(quorum_min, quorum);
+  return std::min(quorum_max, quorum);
+}
+
+
+bool dao::revert_vote (const name & voter, const uint64_t & proposal_id) {
+
+  proposal_tables proposals_t(get_self(), get_self().value);
+  auto ritr = proposals_t.require_find(proposal_id, "referendum not found");
+
+  votes_tables votes_t(get_self(), proposal_id);
+  auto vitr = votes_t.find(voter.value);
+
+  if (vitr != votes_t.end()) {
+    check(ritr->stage == ProposalsCommon::stage_active, "referendum is not active");
+    check(vitr->favour == true && vitr->amount > 0, "only trust votes can be changed");
+
+    proposals_t.modify(ritr, _self, [&](auto & item){
+      item.favour -= vitr->amount;
+    });
+
+    votes_t.erase(vitr);
+
+    return true;
+  }
+
+  return false;
+
+}
+
 bool dao::is_trust_delegated (const name & account, const name & scope) {
   delegate_trust_tables deltrust_t(get_self(), scope.value);
   auto ditr = deltrust_t.find(account.value);
