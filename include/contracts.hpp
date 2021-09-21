@@ -28,6 +28,7 @@ namespace contracts {
   name quests = "quests.seeds"_n;
   name pool = "pool.seeds"_n;
   name msig = "msig.seeds"_n;
+  name dao = "dao.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;

@@ -4,7 +4,7 @@ const { equals } = require("ramda")
 const { parse } = require("commander")
 const moment = require('moment')
 
-const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, region, globaldho, fifthuser, escrow, pool } = names
+const { accounts, harvest, token, firstuser, seconduser, thirduser, bank, settings, history, fourthuser, proposals, organization, region, globaldho, fifthuser, escrow, pool, dao } = names
 
 function getBeginningOfDayInSeconds () {
   const now = new Date()
@@ -1107,7 +1107,7 @@ async function testHarvest (assert, dSeeds) {
   let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
   console.log("init contracts...")
-  const contracts = await initContracts({ token, accounts, harvest, settings, history, organization, region })
+  const contracts = await initContracts({ token, accounts, harvest, settings, history, organization, region, dao })
 
   const day = getBeginningOfDayInSeconds()
   const secondsPerDay =  86400
@@ -1149,6 +1149,10 @@ async function testHarvest (assert, dSeeds) {
 
   console.log('reset weekly')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset dao')
+  await contracts.dao.reset({ authorization: `${dao}@active` })
+  
 
   console.log('configure percentages')
   const percentageForUsers = 0.3
@@ -1259,6 +1263,13 @@ async function testHarvest (assert, dSeeds) {
     await contracts.harvest.testcspoints(org, (index+1) * 50, { authorization: `${harvest}@active` })
   }
 
+  console.log('add dhos')
+  const dhos = [orgs[0], orgs[1]]
+  for (let index = 0; index < dhos.length; index++) {
+    const dho = dhos[index]
+    await contracts.dao.createdho(dho, { authorization: `${dho}@active` })
+  }
+
   console.log('add regions')
   const keypair = await createKeypair();
   await contracts.settings.configure("region.fee", 10000 * 1, { authorization: `${settings}@active` })
@@ -1276,9 +1287,22 @@ async function testHarvest (assert, dSeeds) {
       { authorization: `${users[index]}@active` })
   }
 
+  console.log('rank users and orgs')
   await contracts.harvest.rankcss({ authorization: `${harvest}@active` })
   await contracts.harvest.rankorgcss({ authorization: `${harvest}@active` })
   await sleep(2000)
+
+
+  console.log('vote for dhos')
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  const dhoExpectedRanks = [25, 75]
+  await contracts.dao.votedhos(seconduser, [
+    { dho: dhos[0], points: dhoExpectedRanks[0] },
+    { dho: dhos[1], points: dhoExpectedRanks[1] }
+  ], { authorization: `${seconduser}@active` })
+
+  console.log('calculate distribution for dhos')
+  await contracts.dao.dhocalcdists({ authorization: `${dao}@active` })
 
   // ----------------------------------------- //
   const csTable = await getTableRows({
@@ -1351,7 +1375,7 @@ async function testHarvest (assert, dSeeds) {
   const userBalancesBefore = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesBefore = await Promise.all(orgs.map(org => getTestBalance(org)))
   const rgnBalancesBefore = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
-  const globalBalanceBefore = await getTestBalance(globaldho)
+  const dhoBalancesBefore = await Promise.all(dhos.map(dho => getTestBalance(dho)))
 
   console.log('run harvest')
   await contracts.harvest.runharvest({ authorization: `${harvest}@active` })
@@ -1362,17 +1386,17 @@ async function testHarvest (assert, dSeeds) {
   const userBalancesAfter = await Promise.all(users.map(user => getTestBalance(user)))
   const orgBalancesAfter = await Promise.all(orgs.map(org => getTestBalance(org)))
   const rgnBalancesAfter = await Promise.all(rgns.map(rgn => getHarvestBalance(rgn)))
-  const globalBalanceAfter = await getTestBalance(globaldho)
+  const dhoBalancesAfter = await Promise.all(dhos.map(dho => getTestBalance(dho)))
 
   const userHarvest = userBalancesAfter.map((seeds, index) => seeds - userBalancesBefore[index])
-  const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index])
   const rgnsHarvest = rgnBalancesAfter.map((seeds, index) => seeds - rgnBalancesBefore[index])
-  const globalHarvest = globalBalanceAfter - globalBalanceBefore
+  const dhosHarvest = dhoBalancesAfter.map((seeds, index) => seeds - dhoBalancesBefore[index])
+  const orgsHarvest = orgBalancesAfter.map((seeds, index) => seeds - orgBalancesBefore[index] - (dhosHarvest[index] ? dhosHarvest[index] : 0) )
 
   console.log('users:', userHarvest)
   console.log('orgs:', orgsHarvest)
   console.log('rgns:', rgnsHarvest)
-  console.log('global:', globalHarvest)
+  console.log('dhos:', dhosHarvest)
 
   const organizationsTable = await getTableRows({
     code: organization,
@@ -1389,7 +1413,7 @@ async function testHarvest (assert, dSeeds) {
   checkHarvestValues('users', csTable.rows.filter(row => users.includes(row.account)).map(row => row.rank), mintedSeeds * percentageForUsers, userHarvest)
   checkHarvestValues('orgs', csOrgTable.rows.map(row => { return { rank:row.rank, status: orgStatus[row.account] } }), mintedSeeds * percentageForOrgs, orgsHarvest)
   checkHarvestValues('rgns', new Array(rgns.length).fill(1), mintedSeeds * percentageForrgns, rgnsHarvest)
-  checkHarvestValues('global', [1], mintedSeeds * percentageForGlobal, [globalHarvest])
+  checkHarvestValues('dhos', dhoExpectedRanks, mintedSeeds * percentageForGlobal, dhosHarvest)
 
   const stats = await getTableRows({
     code: token,

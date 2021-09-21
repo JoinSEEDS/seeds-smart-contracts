@@ -17,6 +17,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
 #include <eosio/singleton.hpp>
+#include <tables/dho_share_table.hpp>
 #include <cmath>
 #include <variant>
 
@@ -106,6 +107,7 @@ CONTRACT harvest : public contract {
     ACTION disthvstusrs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstorgs(uint64_t start, uint64_t chunksize, asset total_amount);
     ACTION disthvstrgns(uint64_t start, uint64_t chunksize, asset total_amount);
+    ACTION disthvstdhos(uint64_t start, uint64_t chunksize, asset total_amount);
 
     ACTION resetlgroups(uint64_t chunksize);
     ACTION resetlogs(uint64_t log_group, uint64_t chunksize);
@@ -423,6 +425,11 @@ CONTRACT harvest : public contract {
 
     DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
+
+    DEFINE_DHO_SHARE_TABLE
+    DEFINE_DHO_SHARE_TABLE_MULTI_INDEX
+
+
     // Contract Tables
     balance_tables balances;
     planted_tables planted;
@@ -465,7 +472,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (setorgtxpt)
           (testclaim)(testupdatecs)(testcalcmqev)(testcspoints)
           (calcmqevs)(calcmintrate)
-          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)
+          (runharvest)(disthvstusrs)(disthvstorgs)(disthvstrgns)(disthvstdhos)
           (logaction)(lgcalcmqevs)(lgrunhrvst)(lgcalmntrte)(resetlogs)(resetlgroups)
           (ldsthvstusrs)(ldsthvstorgs)(ldsthvstrgns)
         )

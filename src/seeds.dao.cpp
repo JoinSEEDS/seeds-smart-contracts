@@ -1,7 +1,15 @@
 #include <seeds.dao.hpp>
+
 #include <proposals/proposals_factory.hpp>
 
+#include "proposals/proposals_base.cpp"
 #include "proposals/referendums_settings.cpp"
+#include "proposals/proposal_alliance.cpp"
+#include "proposals/proposal_campaign_invite.cpp"
+#include "proposals/proposal_milestone.cpp"
+#include "proposals/proposal_campaign_funding.cpp"
+
+#include "proposals/voice_management.cpp"
 
 
 ACTION dao::reset () {
@@ -24,6 +32,96 @@ ACTION dao::reset () {
   auto raitr = propaux_t.begin();
   while (raitr != propaux_t.end()) {
     raitr = propaux_t.erase(raitr);
+  }
+
+  for (auto & s : scopes) {
+    voice_tables voice_t(get_self(), s.value);
+    auto vitr = voice_t.begin();
+    while (vitr != voice_t.end()) {
+      vitr = voice_t.erase(vitr);
+    }
+
+    delegate_trust_tables delegate_t(get_self(), s.value);
+    auto ditr = delegate_t.begin();
+    while (ditr != delegate_t.end()) {
+      ditr = delegate_t.erase(ditr);
+    }
+  }
+
+  for (auto & fund_type : fund_types) {
+    support_level_tables support_t(get_self(), fund_type.value);
+    auto fitr = support_t.begin();
+    while (fitr != support_t.end()) {
+      fitr = support_t.erase(fitr);
+    }
+  }
+
+  active_tables actives_t(get_self(), get_self().value);
+  auto aitr = actives_t.begin();
+  while (aitr != actives_t.end()) {
+    aitr = actives_t.erase(aitr);
+  }
+
+  participant_tables participants_t(get_self(), get_self().value);
+  auto pitr = participants_t.begin();
+  while (pitr != participants_t.end()) {
+    pitr = participants_t.erase(pitr);
+  }
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+  auto citr = cyclestats_t.begin();
+  while (citr != cyclestats_t.end()) {
+    citr = cyclestats_t.erase(citr);
+  }
+
+  last_proposal_tables lastprop_t(get_self(), get_self().value);
+  auto litr = lastprop_t.begin();
+  while (litr != lastprop_t.end()) {
+    litr = lastprop_t.erase(litr);
+  }
+
+  min_stake_tables minstake_t(get_self(), get_self().value);
+  auto msitr = minstake_t.begin();
+  while (msitr != minstake_t.end()) {
+    msitr = minstake_t.erase(msitr);
+  }
+
+  size_tables s_t(get_self(), get_self().value);
+  auto sitr = s_t.begin();
+  while (sitr != s_t.end()) {
+    sitr = s_t.erase(sitr);
+  }
+
+  size_tables sv_t(get_self(), ProposalsCommon::vote_scope.value);
+  auto svitr = sv_t.begin();
+  while (svitr != sv_t.end()) {
+    svitr = sv_t.erase(svitr);
+  }
+
+  for (int i = 0; i < 30; i++) {
+    voted_proposals_tables votedprops_t(get_self(), i);
+    auto vitr = votedprops_t.begin();
+    while (vitr != votedprops_t.end()) {
+      vitr = votedprops_t.erase(vitr);
+    }
+  }
+
+  dho_tables dho_t(get_self(), get_self().value);
+  auto dhoitr = dho_t.begin();
+  while (dhoitr != dho_t.end()) {
+    dhoitr = dho_t.erase(dhoitr);
+  }
+
+  dho_vote_tables dho_vote_t(get_self(), get_self().value);
+  auto dhovitr = dho_vote_t.begin();
+  while (dhovitr != dho_vote_t.end()) {
+    dhovitr = dho_vote_t.erase(dhovitr);
+  }
+
+  dho_share_tables dho_share_t(get_self(), get_self().value);
+  auto dhositr = dho_share_t.begin();
+  while (dhositr != dho_share_t.end()) {
+    dhositr = dho_share_t.erase(dhositr);
   }
 
   cycle_tables cycle_t(get_self(), get_self().value);
@@ -67,12 +165,11 @@ ACTION dao::create (std::map<std::string, VariantValue> & args) {
   name type = std::get<name>(args["type"]);
 
   require_auth(creator);
-  check_citizen(creator);
   check_attributes(args);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, type));
 
-  ref->create(args);
+  prop->create(args);
 
 }
 
@@ -86,9 +183,9 @@ ACTION dao::update (std::map<std::string, VariantValue> & args) {
   require_auth(ritr->creator);
   check_attributes(args);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
 
-  ref->update(args);
+  prop->update(args);
 
 }
 
@@ -97,38 +194,71 @@ ACTION dao::cancel (std::map<std::string, VariantValue> & args) {
   uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
 
   proposal_tables proposals_t(get_self(), get_self().value);
-  auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
+  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
 
-  require_auth(ritr->creator);
+  require_auth(pitr->creator);
 
-  std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
 
-  ref->cancel(args);
+  prop->cancel(args);
+
+}
+
+ACTION dao::callback (std::map<std::string, VariantValue> & args) {
+
+  require_auth(get_self());
+
+  uint64_t proposal_id = std::get<uint64_t>(args["proposal_id"]);
+
+  proposal_tables proposals_t(get_self(), get_self().value);
+  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
+
+  std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
+
+  prop->callback(args);
 
 }
 
 ACTION dao::stake (const name & from, const name & to, const asset & quantity, const string & memo) {
-
   if ( get_first_receiver() == contracts::token && 
        to == get_self() && 
        quantity.symbol == utils::seeds_symbol ) {
       
+    // these ones should be overwriten
+    if (from == contracts::onboarding) { return; }
+    if (from == bankaccts::campaigns) { return; }
+
     utils::check_asset(quantity);
 
-    uint64_t proposal_id = std::stoi(memo);
+    uint64_t proposal_id = 0;
+
+    if (memo.empty()) {
+      last_proposal_tables lastprop_t(get_self(), get_self().value);
+
+      auto litr = lastprop_t.require_find(from.value, "no proposals");
+      proposal_id = litr->proposal_id;
+    } else {
+      proposal_id = std::stoi(memo);
+    }
 
     proposal_tables proposals_t(get_self(), get_self().value);
-    auto ritr = proposals_t.require_find(proposal_id, "proposal not found");
+    auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
 
-    proposals_t.modify(ritr, _self, [&](auto & item){
-      item.staked += quantity;
-    });
+    std::unique_ptr<Proposal> prop = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, pitr->type));
+
+    std::map<std::string, VariantValue> args = {
+      { "from", from },
+      { "quantity", quantity },
+      { "proposal_id", proposal_id }
+    };
+
+    prop->stake(args);
 
   }
 
 }
 
-ACTION dao::evaluate (const uint64_t & proposal_id) {
+ACTION dao::evaluate (const uint64_t & proposal_id, const uint64_t & propcycle) {
 
   require_auth(get_self());
 
@@ -138,7 +268,8 @@ ACTION dao::evaluate (const uint64_t & proposal_id) {
   std::unique_ptr<Proposal> ref = std::unique_ptr<Proposal>(ProposalsFactory::Factory(*this, ritr->type));
 
   std::map<string, VariantValue> args = {
-    { string("proposal_id"), proposal_id }
+    { string("proposal_id"), proposal_id },
+    { string("propcycle"), propcycle }
   };
 
   ref->evaluate(args);
@@ -149,6 +280,9 @@ ACTION dao::onperiod () {
 
   require_auth(get_self());
 
+  cycle_tables cycle_t(get_self(), get_self().value);
+  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
+
   proposal_tables proposals_t(get_self(), get_self().value);
   auto referendums_by_stage_id = proposals_t.get_index<"bystageid"_n>();
 
@@ -158,7 +292,7 @@ ACTION dao::onperiod () {
       permission_level(get_self(), "active"_n),
       get_self(),
       "evaluate"_n,
-      std::make_tuple(staged_itr->proposal_id)
+      std::make_tuple(staged_itr->proposal_id, c.propcycle)
     );
     staged_itr++;
   }
@@ -169,10 +303,32 @@ ACTION dao::onperiod () {
       permission_level(get_self(), "active"_n),
       get_self(),
       "evaluate"_n,
-      std::make_tuple(active_itr->proposal_id)
+      std::make_tuple(active_itr->proposal_id, c.propcycle)
     );
     active_itr++;
   }
+
+  c.propcycle += 1;
+  c.t_onperiod = current_time_point().sec_since_epoch();
+  cycle_t.set(c, get_self());
+
+  init_cycle_new_stats();
+
+  send_deferred_transaction(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "updatevoices"_n,
+    std::make_tuple()
+  );
+
+  uint64_t number_active_proposals = get_size(prop_active_size);
+
+  send_deferred_transaction(
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "erasepartpts"_n,
+    std::make_tuple(number_active_proposals)
+  );
 
 }
 
@@ -198,86 +354,34 @@ ACTION dao::addactive (const name & account) {
   }
 }
 
+ACTION dao::erasepartpts (const uint64_t & active_proposals) {
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t reward_points = config_get(name("voterep1.ind"));
 
-// ==================================================================== //
+  uint64_t counter = 0;
 
+  participant_tables participants_t(get_self(), get_self().value);
+  auto pitr = participants_t.begin();
 
-
-
-
-// ==================================================================== //
-// PARTICIPANTS //
-
-
-
-
-
-// ==================================================================== //
-
-
-
-
-
-// ==================================================================== //
-// VOICE //
-
-ACTION dao::decayvoices () {
-  require_auth(get_self());
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-
-  uint64_t now = current_time_point().sec_since_epoch();
-  uint64_t decay_time = config_get(name("decaytime"));
-  uint64_t decay_sec = config_get(name("propdecaysec"));
-
-  if ((c.t_onperiod < now)
-      && (now - c.t_onperiod >= decay_time)
-      && (now - c.t_voicedecay >= decay_sec)
-  ) {
-    c.t_voicedecay = now;
-    cycle_t.set(c, get_self());
-    uint64_t batch_size = config_get(name("batchsize"));
-    decayvoice(0, batch_size);
-  }
-}
-
-ACTION dao::decayvoice (const uint64_t & start, const uint64_t & chunksize) {
-  require_auth(get_self());
-
-  voice_tables voices(get_self(), campaign_scope.value);
-
-  uint64_t percentage_decay = config_get(name("vdecayprntge"));
-  check(percentage_decay <= 100, "Voice decay parameter can not be more than 100%.");
-  
-  auto vitr = voices.lower_bound(start);
-  uint64_t count = 0;
-
-  double multiplier = (100.0 - (double)percentage_decay) / 100.0;
-
-  while (vitr != voices.end() && count < chunksize) {
-
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto voice_itr = voice_t.find(vitr->account.value);
-
-      if (voice_itr != voice_t.end()) {
-        voice_t.modify(vitr, _self, [&](auto & v){
-          v.balance *= multiplier;
-        });
-      }
+  while (pitr != participants_t.end() && counter < batch_size) {
+    if (pitr->count == active_proposals && pitr->nonneutral) {
+      send_inline_action(
+        permission_level(contracts::accounts, "addrep"_n),
+        contracts::accounts, 
+        "addrep"_n,
+        std::make_tuple(pitr->account, reward_points)
+      );
     }
-
-    vitr++;
-    count += 2;
+    counter += 1;
+    pitr = participants_t.erase(pitr);
   }
 
-  if (vitr != voices.end()) {
+  if (pitr != participants_t.end()) {
     send_deferred_transaction(
       permission_level(get_self(), "active"_n),
       get_self(),
-      "decayvoice"_n,
-      std::make_tuple(vitr->account.value, chunksize)
+      "erasepartpts"_n,
+      std::make_tuple(active_proposals)
     );
   }
 }
@@ -298,7 +402,8 @@ ACTION dao::neutral (const name & voter, const uint64_t & proposal_id) {
 }
 
 ACTION dao::revertvote (const name & voter, const uint64_t & proposal_id) {
-  require_auth(voter);
+
+  require_auth( has_auth(voter) ? voter : get_self() );
   
   proposal_tables proposals_t(get_self(), get_self().value);
   auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
@@ -334,338 +439,284 @@ ACTION dao::revertvote (const name & voter, const uint64_t & proposal_id) {
 
 }
 
-ACTION dao::voteonbehalf (const name & voter, const uint64_t & proposal_id, const uint64_t & amount, const name & option) {
-  require_auth(get_self());
-  vote_aux(voter, proposal_id, amount, option, true);
-}
+ACTION dao::createdho (const name & organization) {
 
-ACTION dao::changetrust (const name & user, const bool & trust) {
-  require_auth(get_self());
+  require_auth(organization);
 
-  voice_tables voice_t(get_self(), campaign_scope.value);
-  auto vitr = voice_t.find(user.value);
+  organization_tables org_t(contracts::organization, contracts::organization.value);
+  auto oitr = org_t.require_find(organization.value, "organization not found");
 
-  if (vitr == voice_t.end() && trust) {
-    recover_voice(user);
-  } else if (vitr != voice_t.end() && !trust) {
-    erase_voice(user);
-  }
-}
+  dho_tables dhos_t(get_self(), get_self().value);
+  auto ditr = dhos_t.find(organization.value);
 
-ACTION dao::delegate (const name & delegator, const name & delegatee, const name & scope) {
-
-  require_auth(delegator);
-
-  voice_tables voice(get_self(), scope.value);
-  voice.get(delegator.value, "delegator does not have voice");
-  voice.get(delegatee.value, "delegatee does not have voice");
-
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto ditr = deltrust_t.find(delegator.value);
-
-  name current = delegatee;
-  bool no_cycles = false;
-  uint64_t max_depth = config_get("dlegate.dpth"_n);
-
-  for (int i = 0; i < max_depth; i++) {
-    auto dditr = deltrust_t.find(current.value);
-    if (dditr != deltrust_t.end()) {
-      current = dditr -> delegatee;
-      if (current == delegator) {
-        break;
-      }
-    } else {
-      no_cycles = true;
-      break;
-    }
-  }
-
-  check(no_cycles, "can not add delegatee, cycles are not allowed");
-
-  if (ditr != deltrust_t.end()) {
-    deltrust_t.modify(ditr, _self, [&](auto & item){
-      item.delegatee = delegatee;
-      item.weight = 1.0;
-      item.timestamp = eosio::current_time_point().sec_since_epoch();
-    });
-  } else {
-    deltrust_t.emplace(_self, [&](auto & item){
-      item.delegator = delegator;
-      item.delegatee = delegatee;
-      item.weight = 1.0;
-      item.timestamp = eosio::current_time_point().sec_since_epoch();
+  if (ditr == dhos_t.end()) {
+    dhos_t.emplace(_self, [&](auto & item){
+      item.org_name = organization;
+      item.points = 0;
     });
   }
 
 }
 
-ACTION dao::undelegate (const name & delegator, const name & scope) {
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto ditr = deltrust_t.find(delegator.value);
-
-  check(ditr != deltrust_t.end(), "delegator not found");
-
-  if (!has_auth(ditr->delegatee)) {
-    require_auth(delegator);
-  } else {
-    require_auth(ditr->delegatee);
-  }
-
-  deltrust_t.erase(ditr);
-}
-
-ACTION dao::mimicvote (
-  const name & delegatee, 
-  const name & delegator, 
-  const name & scope, 
-  const uint64_t & proposal_id, 
-  const double & percentage_used, 
-  const name & option, 
-  const uint64_t chunksize) {
+ACTION dao::removedho (const name & organization) {
 
   require_auth(get_self());
 
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
+  dho_tables dhos_t(get_self(), get_self().value);
+  auto ditr = dhos_t.find(organization.value);
 
-  voice_tables voices(get_self(), scope.value);
+  if (ditr != dhos_t.end()) {
 
-  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator.value;
+    size_change(dhos_vote_size, -1 * int64_t(ditr->points));
 
-  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(id);
-  uint64_t count = 0;
-
-  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee && count < chunksize) {
-
-    name voter = ditr->delegator;
-
-    auto vitr = voices.find(voter.value);
-    if (vitr != voices.end()) {
-      send_deferred_transaction(
-        permission_level(get_self(), "active"_n),
-        get_self(),
-        "voteonbehalf"_n,
-        std::make_tuple(voter, proposal_id, vitr->balance * percentage_used, option)
-      );
+    dho_share_tables shares_t(get_self(), get_self().value);
+    auto sitr = shares_t.find(organization.value);
+    if (sitr != shares_t.end()) {
+      shares_t.erase(sitr);
     }
 
-    ditr++;
-    count++;
-  }
-
-  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
-    send_deferred_transaction(
-      permission_level{get_self(), "active"_n},
-      get_self(),
-      "mimicvote"_n,
-      std::make_tuple(delegatee, ditr->delegator, scope, proposal_id, percentage_used, option, chunksize)
-    );
-  }
-
-}
-
-ACTION dao::mimicrevert (const name & delegatee, const uint64_t & delegator, const name & scope, const uint64_t & proposal_id, const uint64_t & chunksize) {
-
-  require_auth(get_self());
-
-  proposal_tables proposals_t(get_self(), get_self().value);
-  auto pitr = proposals_t.require_find(proposal_id, "proposal not found");
-  check(pitr->stage == ProposalsCommon::stage_active, "proposal stage is not active");
-
-  votes_tables votes_t(get_self(), proposal_id);
-
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
-
-  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
-
-  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
-
-  uint64_t count = 0;
-
-  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee && count < chunksize) {
-
-    auto vitr = votes_t.find(ditr->delegator.value);
-
-    if (vitr != votes_t.end()) {
-      uint64_t amount = vitr->amount;
-
-      if (vitr->favour == true && amount > 0) {
-        votes_t.modify(vitr, _self, [&](auto& item) {
-          item.favour = false;
-        });
-
-        proposals_t.modify(pitr, _self, [&](auto& proposal) {
-          proposal.against += amount;
-          proposal.favour -= amount;
-        });
-      }
-    }
-
-    ditr++;
-    count++;
-  }
-
-  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == delegatee) {
     send_deferred_transaction(
       permission_level(get_self(), "active"_n),
       get_self(),
-      "mimicrevert"_n,
-      std::make_tuple(delegatee, ditr->delegator.value, scope, proposal_id, chunksize)
+      "removedhovts"_n,
+      std::make_tuple(ditr->org_name, uint64_t(0), config_get("batchsize"_n), false)
+    );
+
+    dhos_t.erase(ditr);
+    
+  }
+
+}
+
+ACTION dao::removedhovts (const name & organization, const uint64_t & start, const uint64_t & chunksize, const bool & remove_size) {
+
+  require_auth(get_self());
+
+  dho_vote_tables voted_t(get_self(), get_self().value);
+  auto voted_by_dho = voted_t.get_index<"bydhoid"_n>();
+  auto vitr = voted_by_dho.lower_bound((uint128_t(organization.value) << 64) + start);
+
+  uint64_t count = 0;
+  uint64_t total_removed = 0;
+
+  while (vitr != voted_by_dho.end() && vitr->dho == organization && count < chunksize) {
+
+    total_removed += vitr->points;
+    vitr = voted_by_dho.erase(vitr);
+    
+    count+=2;
+  }
+
+  if (remove_size) {
+    size_change(dhos_vote_size, -1 * total_removed);
+  }
+
+  if (vitr != voted_by_dho.end() && vitr->dho == organization) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "removedhovts"_n,
+      std::make_tuple(organization, vitr->vote_id, chunksize, remove_size)
+    );
+  } else {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhocalcdists"_n,
+      std::make_tuple()
     );
   }
 
 }
 
-ACTION dao::testsetvoice (const name & account, const uint64_t & amount) {
-  require_auth(get_self());
-  set_voice(account, amount, "all"_n);
-}
-
-
-void dao::set_voice (const name & user, const uint64_t & amount, const name & scope) {
-  if (scope == "all"_n) {
-
-    bool increase_size = true;
-
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto vitr = voice_t.find(user.value);
-
-      if (vitr == voice_t.end()) {
-        voice_t.emplace(_self, [&](auto & voice){
-          voice.account = user;
-          voice.balance = amount;
-        });
-      }
-      else {
-        increase_size = false;
-        voice_t.modify(vitr, _self, [&](auto & voice){
-          voice.balance = amount;
-        });
-      }
-    }
-
-    if (increase_size) {
-      size_change("voice.sz"_n, 1);
-    }
-
+ACTION dao::votedhos (const name & account, std::vector<DhoVote> votes) {
+  
+  if (has_auth(account)) {
+    require_auth(account);
+    check(!is_trust_delegated(account, dhos_scope), "voice is delegated, user can not vote by him/herself");
   } else {
-    voice_tables voice_t(get_self(), scope.value);
-    auto vitr = voice_t.find(user.value);
+    require_auth(get_self());
+  }
 
-    if (vitr == voice_t.end()) {
-      voice_t.emplace(_self, [&](auto & voice){
-        voice.account = user;
-        voice.balance = amount;
-      });
-    } else {
-      voice_t.modify(vitr, _self, [&](auto & voice){
-        voice.balance = amount;
+  check_citizen(account);
+
+  dho_tables dho_t(get_self(), get_self().value);
+
+  dho_vote_tables voted_t(get_self(), get_self().value);
+  auto voted_by_account = voted_t.get_index<"byacctid"_n>();
+  auto vitr = voted_by_account.lower_bound(uint128_t(account.value) << 64);
+
+  int64_t total_old = 0;
+
+  while (vitr != voted_by_account.end() && vitr->account == account) {
+
+    auto ditr = dho_t.find(vitr->dho.value);
+
+    if (ditr != dho_t.end()) {
+      dho_t.modify(ditr, _self, [&](auto & item){
+        item.points -= vitr->points;
       });
     }
+
+    print("erasing vote for dho: ", vitr->dho, ", points: ", vitr->points, "\n");
+
+    total_old += vitr->points;
+    vitr = voted_by_account.erase(vitr);
+
   }
+
+  int64_t total_new = 0;
+  uint64_t total_percentage = 0;
+  uint64_t now = current_time_point().sec_since_epoch();
+
+  cs_points_tables cs_t(contracts::harvest, contracts::harvest.value);
+  auto csitr = cs_t.require_find(account.value, "contribution score not found");
+
+  // using the rank so the percentages don't get canceled due to low percentage and low rep multiplier
+  uint64_t multiplier = csitr->rank;
+
+  for (auto & vote : votes) {
+
+    uint64_t new_points = vote.points * multiplier;
+
+    auto ditr = dho_t.require_find(vote.dho.value, ("dho " + vote.dho.to_string() + " not found").c_str());
+
+    dho_t.modify(ditr, _self, [&](auto & item){
+      item.points += new_points;
+    });
+    
+    voted_t.emplace(_self, [&](auto & item){
+      item.vote_id = voted_t.available_primary_key();
+      item.account = account;
+      item.dho = vote.dho;
+      item.points = new_points;
+      item.timestamp = now;
+    });
+    
+    total_new += new_points;
+    total_percentage += vote.points;
+
+  }
+
+  check(total_percentage == 100, "the total votes have to sum up to 100%");
+
+  print("updating size:\n");
+  print("total old: ", total_old, "\n");
+  print("total new: ", total_new, "\n");
+
+  size_change(dhos_vote_size, total_new - total_old);
+
+  delegate_trust_tables deltrust_t(get_self(), dhos_scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrust_t.get_index<"byddelegator"_n>();
+  auto ditr = deltrusts_by_delegatee_delegator.lower_bound(uint128_t(account.value) << 64);
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr->delegatee == account) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhomimicvote"_n,
+      std::make_tuple(account, uint64_t(0), votes, config_get("batchsize"_n))
+    );
+  }
+
 }
 
-double dao::voice_change (const name & user, const uint64_t & amount, const bool & reduce, const name & scope) {
-  double percentage_used = 0.0;
+ACTION dao::dhocleanvts () {
 
-  if (scope == "all"_n) {
+  require_auth(get_self());
 
-    for (auto & s : scopes) {
-      voice_tables voice_t(get_self(), s.value);
-      auto vitr = voice_t.find(user.value);
+  uint64_t cutoff = current_time_point().sec_since_epoch() - config_get("dho.v.recast"_n);
+  dhocleanvote(cutoff, config_get("batchsize"_n));
 
-      if (vitr != voice_t.end()) {
-        if (reduce) {
-          check(amount <= vitr->balance, s.to_string() + " voice balance exceeded");
-        }
-        voice_t.modify(vitr, _self, [&](auto & voice){
-          if (reduce) {
-            voice.balance -= amount;
-          } else {
-            voice.balance += amount;
-          }
-        });
-      }
+}
+
+ACTION dao::dhocleanvote (const uint64_t & cutoff, const uint64_t & chunksize) {
+
+  require_auth(get_self());
+
+  dho_vote_tables votes_t(get_self(), get_self().value);
+  auto votes_by_timestamp = votes_t.get_index<"bytimeid"_n>();
+  auto vitr = votes_by_timestamp.begin();
+
+  uint64_t count = 0;
+  int64_t total_removed = 0;
+
+  dho_tables dho_t(get_self(), get_self().value);
+
+  while (vitr != votes_by_timestamp.end() && cutoff > vitr->timestamp && count < chunksize) {
+
+    total_removed += vitr->points;
+
+    auto ditr = dho_t.find(vitr->dho.value);
+    if (ditr != dho_t.end()) {
+      dho_t.modify(ditr, _self, [&](auto & item){
+        item.points -= vitr->points;
+      });
     }
 
-  } else {    
-    voice_tables voice_t(get_self(), scope.value);
-    auto vitr = voice_t.require_find(user.value, "user does not have voice");
+    vitr = votes_by_timestamp.erase(vitr);
+    count++;
+  }
 
-    if (reduce) {
-      check(amount <= vitr->balance, "voice balance exceeded");
-      percentage_used = amount / double(vitr -> balance);
-    }
-    voice_t.modify(vitr, _self, [&](auto & voice){
-      if (reduce) {
-        voice.balance -= amount;
-      } else {
-        voice.balance += amount;
-      }
+  size_change(dhos_vote_size, -1 * total_removed);
+
+  if (vitr != votes_by_timestamp.end() && cutoff > vitr->timestamp) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "dhocleanvote"_n,
+      std::make_tuple(cutoff, chunksize)
+    );
+  }
+
+}
+
+ACTION dao::dhocalcdists () {
+
+  require_auth(get_self());
+
+  dho_tables dho_t(get_self(), get_self().value);
+  auto dhos_by_points = dho_t.get_index<"bypointsname"_n>();
+
+  auto ditr = dhos_by_points.rbegin();
+  uint64_t min_percentage = config_get("dho.min.per"_n);
+  uint64_t total_points = get_size(dhos_vote_size);
+
+  print("total points:", total_points, "\n");
+
+  std::vector<DhoVote> valid_dhos;
+  uint64_t total_valid_points = 0;
+
+  if (total_points <= 0) return;
+
+  while (ditr != dhos_by_points.rend() && ((ditr->points * 100) / total_points) >= min_percentage) {
+
+    DhoVote valid_dho;
+    valid_dho.dho = ditr->org_name;
+    valid_dho.points = ditr->points;
+
+    valid_dhos.push_back(valid_dho);
+    total_valid_points += ditr->points;
+
+    ditr++;
+  }
+
+  if (total_valid_points == 0) return;
+
+  dho_share_tables shares_t(get_self(), get_self().value);
+  
+  auto sitr = shares_t.begin();
+  while (sitr != shares_t.end()) {
+    sitr = shares_t.erase(sitr);
+  }
+
+  for (auto & valid_dho : valid_dhos) {
+    shares_t.emplace(_self, [&](auto & item){
+      item.dho = valid_dho.dho;
+      item.total_percentage = double(valid_dho.points) / total_points;
+      item.dist_percentage = double(valid_dho.points) / total_valid_points;
     });
   }
-
-  return percentage_used;
-}
-
-void dao::erase_voice (const name & user) {
-  require_auth(get_self());
-
-  for (auto & s : scopes) {
-    voice_tables voice_t(get_self(), s.value);
-    auto vitr = voice_t.find(user.value);
-    voice_t.erase(vitr);
-  }
-  
-  size_change("voice.sz"_n, -1);
-
-  active_tables actives_t(get_self(), get_self().value); 
-  auto aitr = actives_t.find(user.value);
-
-  if (aitr != actives_t.end()) {
-    actives_t.erase(aitr);
-    size_change(user_active_size, -1);
-  }
-}
-
-void dao::recover_voice (const name & account) {
-
-  DEFINE_CS_POINTS_TABLE
-  DEFINE_CS_POINTS_TABLE_MULTI_INDEX
-  
-  cs_points_tables cspoints_t(contracts::harvest, contracts::harvest.value);
-
-  auto csitr = cspoints_t.find(account.value);
-  uint64_t voice_amount = 0;
-
-  if (csitr != cspoints_t.end()) {
-    voice_amount = calculate_decay(csitr->rank);
-  }
-
-  set_voice(account, voice_amount, "all"_n);
-  size_change(cycle_vote_power_size, voice_amount);
-
-}
-
-uint64_t dao::calculate_decay (const uint64_t & voice_amount) {
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-  
-  uint64_t decay_percentage = config_get(name("vdecayprntge"));
-  uint64_t decay_time = config_get(name("decaytime"));
-  uint64_t decay_sec = config_get(name("propdecaysec"));
-  uint64_t temp = c.t_onperiod + decay_time;
-
-  check(decay_percentage <= 100, "The decay percentage could not be grater than 100%");
-
-  if (temp >= c.t_voicedecay) { return voice_amount; }
-  uint64_t n = ((c.t_voicedecay - temp) / decay_sec) + 1;
-  
-  double multiplier = 1.0 - (decay_percentage / 100.0);
-  return voice_amount * pow(multiplier, n);
 
 }
 
@@ -729,11 +780,15 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
 
   if (paitr == participants_t.end()) {
     // add reputation for entering in the table
-    send_inline_action(
-      permission_level(contracts::accounts, "addrep"_n),
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(voter, uint64_t(rep * rep_multiplier))
-    );
+    uint64_t rep_amount = uint64_t(rep * rep_multiplier);
+
+    if (rep_amount > 0) {
+      send_inline_action(
+        permission_level(contracts::accounts, "addrep"_n),
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(voter, rep_amount)
+      );
+    }
     // add the voter to the table
     participants_t.emplace(_self, [&](auto & participant){
       participant.account = voter;
@@ -743,9 +798,7 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
   } else {
     participants_t.modify(paitr, _self, [&](auto & participant){
       participant.count += 1;
-      if (option != ProposalsCommon::neutral) { // here, I think this is a bug
-        participant.nonneutral = true;
-      }
+      participant.nonneutral = option != ProposalsCommon::neutral && participant.nonneutral;
     });
   }
 
@@ -769,30 +822,6 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
   // because not all proposals increase the voice cast, currently only the ones that are funded
   // have an entry in the support table
   increase_voice_cast(amount, option, prop->get_fund_type());
-
-}
-
-bool dao::has_delegates (const name & voter, const name & scope) {
-  delegate_trust_tables deltrust_t(get_self(), scope.value);
-  auto deltrusts_by_delegatee = deltrust_t.get_index<"bydelegatee"_n>();
-  auto ditr = deltrusts_by_delegatee.find(voter.value);
-  return ditr != deltrusts_by_delegatee.end();
-}
-
-void dao::add_voted_proposal (const uint64_t & proposal_id) {
-
-  cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
-
-  voted_proposals_tables votedprops_t(get_self(), c.propcycle);
-  auto vpitr = votedprops_t.find(proposal_id);
-
-  if (vpitr == votedprops_t.end()) {
-    votedprops_t.emplace(_self, [&](auto & prop){
-      prop.proposal_id = proposal_id;
-    });
-  }
-
 }
 
 void dao::increase_voice_cast (const uint64_t & amount, const name & option, const name & prop_type) {
@@ -800,9 +829,10 @@ void dao::increase_voice_cast (const uint64_t & amount, const name & option, con
   if (prop_type == ProposalsCommon::fund_type_none) { return; }
 
   cycle_tables cycle_t(get_self(), get_self().value);
-  cycle_table c = cycle_t.get_or_create(get_self(), cycle_table());
+  cycle_table c = cycle_t.get();
 
   cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+
   auto citr = cyclestats_t.find(c.propcycle);
 
   if (citr != cyclestats_t.end()) {
@@ -816,8 +846,23 @@ void dao::increase_voice_cast (const uint64_t & amount, const name & option, con
       item.num_votes += 1;
     });
   }
-
   add_voice_cast(c.propcycle, amount, prop_type);
+
+}
+
+void dao::add_voted_proposal (const uint64_t & proposal_id) {
+
+  cycle_tables cycle_t(get_self(), get_self().value);
+  cycle_table c = cycle_t.get();
+
+  voted_proposals_tables votedprops_t(get_self(), c.propcycle);
+  auto vpitr = votedprops_t.find(proposal_id);
+
+  if (vpitr == votedprops_t.end()) {
+    votedprops_t.emplace(_self, [&](auto & prop){
+      prop.proposal_id = proposal_id;
+    });
+  }
 
 }
 
@@ -903,8 +948,52 @@ void dao::send_mimic_delegatee_vote (const name & delegatee, const name & scope,
 
 }
 
+void dao::init_cycle_new_stats () {
 
-// ==================================================================== //
+  cycle_tables cycle_t(get_self(), get_self().value);
+  cycle_table c_t = cycle_t.get();
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+
+  cyclestats_t.emplace(_self, [&](auto & item){
+    item.propcycle = c_t.propcycle;
+    item.start_time = c_t.t_onperiod;
+    item.end_time = c_t.t_onperiod + config_get("propcyclesec"_n);
+    // item.num_proposals = 0;
+    item.num_votes = 0;
+    item.total_voice_cast = 0;
+    item.total_favour = 0;
+    item.total_against = 0;
+    item.total_citizens = get_size("voice.sz"_n);
+    // item.quorum_vote_base = 0;
+    // item.quorum_votes_needed = 0;
+    item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
+    item.total_eligible_voters = 0;
+  });
+
+  for (auto & fund_type : fund_types) {
+    uint64_t votes_needed = calc_voice_needed(0, 0);
+
+    support_level_tables support_t(get_self(), fund_type.value);
+    auto sitr = support_t.find(c_t.propcycle);
+
+    if (sitr != support_t.end()) {
+      support_t.modify(sitr, _self, [&](auto & item){
+        item.num_proposals = 0;
+        item.total_voice_cast = 0;
+        item.voice_needed = votes_needed;
+      });
+    } else {
+      support_t.emplace(_self, [&](auto & item){
+        item.propcycle = c_t.propcycle;
+        item.num_proposals = 0;
+        item.total_voice_cast = 0;
+        item.voice_needed = votes_needed;
+      });
+    }
+  }
+
+}
 
 uint64_t dao::active_cutoff_date () {
   uint64_t now = current_time_point().sec_since_epoch();
@@ -914,8 +1003,6 @@ uint64_t dao::active_cutoff_date () {
 }
 
 void dao::check_citizen (const name & account) {
-  DEFINE_USER_TABLE;
-  DEFINE_USER_TABLE_MULTI_INDEX;
   user_tables users(contracts::accounts, contracts::accounts.value);
 
   auto uitr = users.find(account.value);
@@ -943,6 +1030,80 @@ void dao::check_attributes (const std::map<std::string, VariantValue> & args) {
 
   check(url.size() <= 512, "url must be less or equal to 512 characters long");
   
+}
+
+name dao::get_fund_type (const name & fund) {
+  if (fund == bankaccts::alliances) {
+    return alliance_fund;
+  } 
+  else if (fund == bankaccts::campaigns) {
+    return campaign_fund;
+  } 
+  else if (fund == bankaccts::milestone) {
+    return milestone_fund;
+  }
+  return "none"_n;
+}
+
+uint64_t dao::calc_quorum_base (const uint64_t & propcycle) {
+
+  uint64_t num_cycles = config_get("prop.cyc.qb"_n);
+  uint64_t total = 0;
+  uint64_t count = 0;
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+  auto citr = cyclestats_t.find(propcycle);
+
+  if (citr == cyclestats_t.end()) {
+    // in case there is no information for this propcycle
+    return get_size(user_active_size) * 50 / 2;
+  }
+
+  while (count < num_cycles) {
+
+    total += citr->total_voice_cast;
+    // total += citr -> num_votes; // uncomment to make it count number of voters
+    count++;
+
+    if (citr == cyclestats_t.begin()) {
+      break;
+    } else {
+      citr--;
+    }
+
+  }
+
+  return count > 0 ? total / count : 0;
+}
+
+void dao::update_cycle_stats_from_proposal (const uint64_t & proposal_id, const name & type, const name & array) {
+  
+  cycle_tables cycle_t(get_self(), get_self().value);
+  cycle_table c_t = cycle_t.get_or_create(get_self(), cycle_table());
+
+  uint64_t quorum_vote_base = calc_quorum_base(c_t.propcycle - 1);
+
+  cycle_stats_tables cyclestats_t(get_self(), get_self().value);
+
+  auto citr = cyclestats_t.find(c_t.propcycle);
+
+  cyclestats_t.modify(citr, _self, [&](auto & item){
+    if (array == ProposalsCommon::stage_active) {
+      item.active_props.push_back(proposal_id);
+    } else if (array == ProposalsCommon::status_evaluate) {
+      item.eval_props.push_back(proposal_id);
+    }
+  });
+
+  if (array == ProposalsCommon::stage_active) {
+    support_level_tables support_t(get_self(), type.value);
+    auto sitr = support_t.find(c_t.propcycle);
+    check(sitr != support_t.end(), "cycle not found " + std::to_string(c_t.propcycle));
+    support_t.modify(sitr, _self, [&](auto & item){
+      item.num_proposals += 1;
+    });
+  }
+
 }
 
 template <typename... T>

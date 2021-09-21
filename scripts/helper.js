@@ -664,13 +664,10 @@ var permissions = [{
   target: `${accounts.proposals.account}@questvote`,
   action: 'questvote'
 }, { 
-  target: `${accounts.accounts.account}@questrep`,
+  target: `${accounts.accounts.account}@addrep`,
   actor: `${accounts.quests.account}@eosio.code`,
-  parent: 'active',
+  parent: 'api',
   type: 'createActorPermission'
-}, {
-  target: `${accounts.accounts.account}@questrep`,
-  action: 'addrep'
 }, { 
   target: `${accounts.accounts.account}@execute`,
   action: 'rankorgreps'
@@ -744,9 +741,7 @@ var permissions = [{
   actor: `${accounts.dao.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@addrep`,
-  actor: `${accounts.dao.account}@eosio.code`,
-  parent: 'api',
-  type: 'createActorPermission'
+  actor: `${accounts.dao.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@addrep`,
   action: 'addrep'
@@ -761,6 +756,41 @@ var permissions = [{
 },{
   target: `${accounts.settings.account}@referendum`,
   action: 'conffloat'
+},{
+  target: `${accounts.campaignbank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.milestonebank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+}, {
+  target: `${accounts.alliancesbank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.bank.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.escrow.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.dao.account}@active`,
+  actor: `${accounts.escrow.account}@eosio.code`
+},{
+  target: `${accounts.dao.account}@active`,
+  actor: `${accounts.onboarding.account}@eosio.code`
+},{
+  target: `${accounts.onboarding.account}@active`,
+  actor: `${accounts.dao.account}@eosio.code`
+},{
+  target: `${accounts.dao.account}@execute`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+},{
+  target: `${accounts.dao.account}@execute`,
+  action: 'dhocleanvts'
+},{
+  target: `${accounts.dao.account}@execute`,
+  action: 'dhocalcdists'
 }]
 
 const isTestnet = chainId == networks.telosTestnet

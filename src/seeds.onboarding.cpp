@@ -1,6 +1,8 @@
 #include <seeds.onboarding.hpp>
 #include <eosio/transaction.hpp>
 
+typedef std::variant<std::monostate, uint64_t, int64_t, double, name, asset, string, bool, eosio::time_point> VariantValue; 
+
 void onboarding::create_account(name account, string publicKey, name domain)
 {
   if (is_account(account))
@@ -697,6 +699,21 @@ ACTION onboarding::createcampg(
         "addcampaign"_n,
         std::make_tuple(proposal_id, key))
         .send();
+  }
+
+  if (origin_account == contracts::dao)
+  {
+    std::map<std::string, VariantValue> args;
+    args.insert(std::make_tuple("campaign_id", key));
+    args.insert(std::make_tuple("proposal_id", proposal_id));
+
+    type = invite_campaign;
+    action(
+      permission_level(contracts::dao, "active"_n),
+      contracts::dao,
+      "callback"_n,
+      std::make_tuple(args)
+    ).send();
   }
 
   campaigns.emplace(_self, [&](auto &item)

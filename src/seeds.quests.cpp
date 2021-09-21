@@ -1214,7 +1214,7 @@ ACTION quests::rateapplcnt (checksum256 maker_hash, name opinion) {
     name applicant_account = maker_cw.getOrFail(FIXED_DETAILS, APPLICANT_ACCOUNT) -> getAs<name>();
     uint64_t rep = config_get(name("qst.rep.appl"));
     action(
-      permission_level{contracts::accounts, "questrep"_n},
+      permission_level{contracts::accounts, "addrep"_n},
       contracts::accounts, "addrep"_n,
       std::make_tuple(applicant_account, rep)
     ).send();
@@ -1247,7 +1247,7 @@ ACTION quests::ratequest (checksum256 quest_hash, name opinion) {
     name creator = quest_doc.getCreator();
     uint64_t rep = config_get(name("qst.rep.qst"));
     action(
-      permission_level{contracts::accounts, "questrep"_n},
+      permission_level{contracts::accounts, "addrep"_n},
       contracts::accounts, "addrep"_n,
       std::make_tuple(creator, rep)
     ).send();

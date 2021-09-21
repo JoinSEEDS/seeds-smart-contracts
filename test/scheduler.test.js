@@ -2,7 +2,7 @@ const { describe } = require('riteway')
 const { eos, names, isLocal, getTableRows, initContracts } = require('../scripts/helper')
 const { equals, init } = require('ramda')
 
-const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, onboarding, history } = names
+const { scheduler, settings, organization, harvest, accounts, firstuser, token, forum, onboarding, history, dao } = names
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -514,6 +514,23 @@ describe('scheduler, onboarding', async assert => {
             id: 'onbrd.clean',
             operation: 'chkcleanup',
             contract: onboarding
+        }
+    ], assert)
+
+})
+
+describe('scheduler, dao', async assert => {
+
+    await testOperations([
+        {
+            id: 'dao.cleanvts',
+            operation: 'dhocleanvts',
+            contract: dao
+        },
+        {
+            id: 'dao.calcdist',
+            operation: 'dhocalcdists',
+            contract: dao
         }
     ], assert)
 

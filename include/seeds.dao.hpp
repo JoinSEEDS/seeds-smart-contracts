@@ -13,6 +13,8 @@
 #include <tables/proposals_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/cspoints_table.hpp>
+#include <tables/organization_table.hpp>
+#include <tables/dho_share_table.hpp>
 #include <cmath>
 
 using namespace eosio;
@@ -31,16 +33,40 @@ CONTRACT dao : public contract {
           {}
 
       name alliance_scope = "alliance"_n;
-      name campaign_scope = contracts::proposals;
+      name campaign_scope = "campaign"_n;
       name milestone_scope = "milestone"_n;
-      name referendums_scope = contracts::referendums;
+      name referendums_scope = "referendum"_n;
+      name dhos_scope = "dhos"_n;
 
       std::vector<name> scopes = {
         alliance_scope,
         campaign_scope,
         milestone_scope,
-        referendums_scope
+        referendums_scope,
+        dhos_scope
       };
+
+      name alliance_fund = "alliance"_n;
+      name campaign_fund = "campaign"_n;
+      name milestone_fund = "milestone"_n;
+
+      std::vector<name> fund_types = {
+        alliance_fund,
+        campaign_fund,
+        milestone_fund
+      };
+
+      const name prop_active_size = "prop.act.sz"_n;
+      const name user_active_size = "user.act.sz"_n;
+      const name dhos_vote_size = "dho.vote.sz"_n; 
+      const name linear_payout = "linear"_n;
+      const name stepped_payout = "step"_n;
+
+      typedef struct dhovote {
+        name dho;
+        uint64_t points;
+      } DhoVote;
+
 
       ACTION reset();
 
@@ -56,9 +82,11 @@ CONTRACT dao : public contract {
 
       ACTION cancel(std::map<std::string, VariantValue> & args);
 
+      ACTION callback(std::map<std::string, VariantValue> & args);
+
       ACTION onperiod();
 
-      ACTION evaluate(const uint64_t & proposal_id);
+      ACTION evaluate(const uint64_t & proposal_id, const uint64_t & propcycle);
 
       ACTION favour(const name & voter, const uint64_t & proposal_id, const uint64_t & amount);
 
@@ -86,9 +114,37 @@ CONTRACT dao : public contract {
 
       ACTION mimicrevert(const name & delegatee, const uint64_t & delegator, const name & scope, const uint64_t & proposal_id, const uint64_t & chunksize);
 
+      ACTION updatevoices();
+
+      ACTION updatevoice(const uint64_t & start);
+
+      ACTION erasepartpts(const uint64_t & active_proposals);
+
+      ACTION createdho(const name & organization);
+
+      ACTION removedho(const name & organization);
+
+      ACTION removedhovts(const name & organization, const uint64_t & start, const uint64_t & chunksize, const bool & remove_size);
+
+      ACTION votedhos(const name & account, std::vector<DhoVote> votes);
+
+      ACTION dhomimicvote(const name & delegatee, const uint64_t & start, std::vector<DhoVote> votes, const uint64_t & chunksize);
+
+      ACTION dhocleanvts();
+
+      ACTION dhocleanvote(const uint64_t & cutoff, const uint64_t & chunksize);
+
+      ACTION dhocalcdists();
+
 
       ACTION testsetvoice(const name & account, const uint64_t & amount);
 
+
+
+      name get_fund_type(const name & fund);
+
+      uint64_t calc_quorum_base(const uint64_t & propcycle);
+      void update_cycle_stats_from_proposal(const uint64_t & proposal_id, const name & type, const name & array);
 
 
       template <typename... T>
@@ -116,6 +172,15 @@ CONTRACT dao : public contract {
       DEFINE_SIZE_CHANGE
       DEFINE_SIZE_SET
       DEFINE_SIZE_GET
+
+      DEFINE_USER_TABLE
+      DEFINE_USER_TABLE_MULTI_INDEX
+
+      DEFINE_CS_POINTS_TABLE
+      DEFINE_CS_POINTS_TABLE_MULTI_INDEX
+
+      DEFINE_ORGANIZATION_TABLE
+      DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
 
       TABLE deferred_id_table {
         uint64_t id;
@@ -224,18 +289,67 @@ CONTRACT dao : public contract {
       };
       typedef eosio::multi_index<"support"_n, support_level_table> support_level_tables;
 
+      TABLE last_proposal_table {
+        name account;
+        uint64_t proposal_id;
+
+        uint64_t primary_key()const { return account.value; }
+      };
+      typedef eosio::multi_index<"lastprops"_n, last_proposal_table> last_proposal_tables;
+
+
+      TABLE min_stake_table {
+          uint64_t prop_id;
+          uint64_t min_stake;
+          
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"minstake"_n, min_stake_table> min_stake_tables;
+
+      TABLE dho_table {
+        name org_name;
+        uint64_t points;
+
+        uint64_t primary_key () const { return org_name.value; }
+        uint128_t by_points_name () const { return (uint128_t(points) << 64) + org_name.value; }
+      };
+      typedef eosio::multi_index<"dhos"_n, dho_table,
+        indexed_by<"bypointsname"_n,
+        const_mem_fun<dho_table, uint128_t, &dho_table::by_points_name>>
+      > dho_tables;
+
+      TABLE dho_vote_table {
+        uint64_t vote_id;
+        name account;
+        name dho;
+        uint64_t points;
+        uint64_t timestamp;
+
+        uint64_t primary_key () const { return vote_id; }
+        uint128_t by_timestamp_id () const { return (uint128_t(timestamp) << 64) + vote_id; }
+        uint128_t by_account_id () const { return (uint128_t(account.value) << 64) + vote_id; }
+        uint128_t by_dho_id () const { return (uint128_t(dho.value) << 64) + vote_id; }
+      };
+      typedef eosio::multi_index<"dhovotes"_n, dho_vote_table,
+        indexed_by<"bytimeid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_timestamp_id>>,
+        indexed_by<"byacctid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_account_id>>,
+        indexed_by<"bydhoid"_n,
+        const_mem_fun<dho_vote_table, uint128_t, &dho_vote_table::by_dho_id>>
+      > dho_vote_tables;
+
+      DEFINE_DHO_SHARE_TABLE
+      DEFINE_DHO_SHARE_TABLE_MULTI_INDEX
+      
+
       config_tables config;
       size_tables sizes;
-
+    
+    void check_citizen(const name & account);
+    void check_attributes(const std::map<std::string, VariantValue> & args);
 
   private:
-
-    const name prop_active_size = "prop.act.sz"_n;
-    const name user_active_size = "user.act.sz"_n; 
-    const name cycle_vote_power_size = "votepow.sz"_n; 
-    const name linear_payout = "linear"_n;
-    const name stepped_payout = "step"_n;
-
 
     void set_voice(const name & user, const uint64_t & amount, const name & scope);
     double voice_change(const name & user, const uint64_t & amount, const bool & reduce, const name & scope);
@@ -247,15 +361,18 @@ CONTRACT dao : public contract {
     void add_voted_proposal(const uint64_t & proposal_id);
     void increase_voice_cast(const uint64_t & amount, const name & option, const name & prop_type);
     void add_voice_cast(const uint64_t & cycle, const uint64_t & voice_cast, const name & type);
-    uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
-    double get_quorum(const uint64_t total_proposals);
 
-    void check_citizen(const name & account);
+    // void check_citizen(const name & account);
     void vote_aux(const name & voter, const uint64_t & referendum_id, const uint64_t & amount, const name & option, const bool & is_delegated);
     bool revert_vote(const name & voter, const uint64_t & referendum_id);
-    void check_attributes(const std::map<std::string, VariantValue> & args);
+    // void check_attributes(const std::map<std::string, VariantValue> & args);
     uint64_t active_cutoff_date();
     bool has_delegates(const name & voter, const name & scope);
+    bool is_active(const name & account, const uint64_t & cutoff_date);
+    
+    void init_cycle_new_stats();
+    uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
+    double get_quorum(uint64_t total_proposals);
 
 };
 
@@ -267,11 +384,14 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(dao, 
           (reset)(initcycle)
-          (create)(update)(cancel)(onperiod)(evaluate)
+          (create)(update)(cancel)(onperiod)(evaluate)(callback)
           (changetrust)(addactive)
           (favour)(against)(neutral)(revertvote)(voteonbehalf)
           (delegate)(undelegate)(mimicvote)(mimicrevert)
           (decayvoices)(decayvoice)
+          (updatevoices)(updatevoice)
+          (erasepartpts)
+          (createdho)(removedho)(removedhovts)(votedhos)(dhomimicvote)(dhocleanvts)(dhocleanvote)(dhocalcdists)
           (testsetvoice)
         )
       }

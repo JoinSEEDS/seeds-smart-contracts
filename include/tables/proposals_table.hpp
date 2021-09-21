@@ -23,8 +23,10 @@ typedef std::variant<std::monostate, uint64_t, int64_t, double, name, asset, str
       name type; \
       uint64_t last_ran_cycle; \
       uint64_t age; \
+      name fund; \
+      asset quantity; \
       EOSLIB_SERIALIZE(proposal_table, (proposal_id)(favour)(against)(staked)(creator)(title) \
-        (summary)(description)(image)(url)(created_at)(status)(stage)(type)(last_ran_cycle)(age)) \
+        (summary)(description)(image)(url)(created_at)(status)(stage)(type)(last_ran_cycle)(age)(fund)(quantity)) \
       \
       uint64_t primary_key() const { return proposal_id; } \
       uint128_t by_stage_id() const { return (uint128_t(stage.value) << 64) + proposal_id; } \
