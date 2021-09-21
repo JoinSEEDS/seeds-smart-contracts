@@ -74,6 +74,40 @@ const getPlanteBalances = async (lower_bound) => {
   return res
 }
 
+const getPayments = async (lower_bound) => {
+
+  console.log("getting purchases "+lower_bound)
+
+  const params = {
+    "json": true,
+    "code": "tlosto.seeds",
+    "scope": "tlosto.seeds",
+    "table": "payhistory",
+    "table_key": "",
+    "lower_bound": lower_bound,
+    "upper_bound": "",
+    "limit": 1000,
+    "key_type": "",
+    "index_position": "",
+    "encode_type": "dec",
+    "reverse": false,
+    "show_payer": false
+}
+
+  const url = host + "/v1/chain/get_table_rows"
+  const rawResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+  return res
+}
+
+
 function timeStampString() {
   var date = new Date()
   var hours = date.getHours();
@@ -91,7 +125,7 @@ const allPlanted = async () => {
 
   var planteds = []
 
-console.log(timeStampString() )
+  console.log(timeStampString() )
 
   while (more) {
     const res = await getPlanteBalances(lower_bound)
@@ -111,6 +145,90 @@ console.log(timeStampString() )
   }
 
   fs.writeFileSync('planted_balances_'+ timeStampString() +'.json', JSON.stringify(planteds, null, 2))
+
+}
+const allPayments = async () => {
+  var more = true
+  var lower_bound = 0
+
+  var payments = []
+  var paymentsCSV = ""
+  var totalsMap = {}
+  var uniqueAccounts = []
+
+  console.log(timeStampString() )
+
+  while (more) {
+    const res = await getPayments(lower_bound)
+    
+    //console.log("result: "+JSON.stringify(res, null, 2))
+
+    res.rows.forEach(item => { 
+      var usdValue = item.multipliedUsdValue / 10000.0
+      var usdPerSeeds = 0.01
+      var seedsPerUSD = 100 // store both values to prevent rounding errors
+      var seedsValue = (seedsPerUSD * usdValue)
+      var account = item.recipientAccount
+
+      payments.push(item)
+      // "id": 0,
+      // "recipientAccount": "illumination",
+      // "paymentSymbol": "EOS",
+      // "paymentId": "f415d689c0bc0b3d83ea8f25af8dd22e30fe7fa2848e0254a4c5b87682670384",
+      // "multipliedUsdValue": 2
+      item["usdPerSeeds"] = usdPerSeeds
+      item["seedsPerUSD"] = seedsPerUSD
+      item["usdValue"] = usdValue.toFixed(2)
+      item["seedsValue"] = seedsValue
+      item["seeds"] = seedsValue.toFixed(4) + " SEEDS"
+
+      paymentsCSV = paymentsCSV 
+        + item.id + "," 
+        + account + ","
+        + usdValue.toFixed(2) + ","
+        + item.seedsPerUSD + ","
+        + item.seeds + ","
+        + item.paymentSymbol + "," 
+        + item.paymentId  +"\n"
+
+      mapEntry = totalsMap[account]
+
+      if (mapEntry) {
+        mapEntry.items.push(item)
+        mapEntry.total += seedsValue
+        mapEntry.totalSeeds = mapEntry.total.toFixed(4) + " SEEDS"
+      } else {
+        uniqueAccounts.push(account)
+        totalsMap[account] = {
+          items: [item],
+          total: seedsValue,
+          totalSeeds: seedsValue.toFixed(4) + " SEEDS"
+        }
+      }
+
+    });
+
+    lower_bound = res.next_key 
+    
+    more = res.more != "false" && res.more != ""
+
+    console.log("payments: "+payments.length  + " next "+lower_bound)
+
+  }
+
+
+
+  totalCSVString = ""
+  uniqueAccounts.forEach((account) => {
+    item = totalsMap[account]
+    totalCSVString = totalCSVString + account + "," + item.total + "," + item.totalSeeds + "\n"
+  })
+
+
+  fs.writeFileSync('03_payments_'+ timeStampString() +'.json', JSON.stringify(payments, null, 2))
+  fs.writeFileSync('03_payments_'+ timeStampString() +'.csv', paymentsCSV)
+  fs.writeFileSync('03_payments_totals_'+ timeStampString() +'.json', JSON.stringify(totalsMap, null, 2))
+  fs.writeFileSync('03_payments_totals_'+ timeStampString() +'.csv', totalCSVString)
 
 }
 
@@ -267,6 +385,14 @@ program
   .action(async function () {
     console.log("getting planted");
     await allPlanted()
+  })
+
+program
+  .command('payments')
+  .description('Get all payments')
+  .action(async function () {
+    console.log("getting planted");
+    await allPayments()
   })
 
 program.parse(process.argv)
