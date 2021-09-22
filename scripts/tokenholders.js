@@ -181,6 +181,43 @@ const getTokenHolders = async () => {
   
 }
 
+const getPlanted = async () => {
+  // const balance = await eos.getCurrencyBalance("token.seeds", user, 'SEEDS')
+
+  var lower_bound = ''
+  
+  const params = {
+    "code": 'harvst.seeds',
+    "scope": 'harvst.seeds',
+    "table": 'planted',
+    'lower_bound': lower_bound,
+    "limit": 1000,
+    "json": "true",
+}
+
+  const url = host + "/v1/chain/get_table_rows"
+  const rawResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+  //console.log("res: "+JSON.stringify(res, null, 2))
+  // res: {"rows":[{"balance":"22465.0000 SEEDS"}],"more":false,"next_key":""}
+  if (res.rows != null && res.rows.length > 0 && res.rows[0].balance != null) {
+    const balance = res.rows[0].balance
+    return balance
+  } else {
+    console.log("account "+user+" is invalid "+JSON.stringify(res, null, 2))
+    return null
+  }
+
+  //console.log("balance: "+JSON.stringify(balance))
+}
+
 program
   .arguments('balances')
   .description('Get SEEDS balances for all accounts')
