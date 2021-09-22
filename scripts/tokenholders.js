@@ -111,21 +111,6 @@ const getPayments = async (lower_bound) => {
   return res
 }
 
-// const timeStampString = () => {
-//   var date = Date()
-//   var hours = date.getHours()
-//   var minutes = date.getMinutes()
-//   var month = date.getMonth()+1
-//   var day = date.getDate()
-//   hours = hours < 10 ? '0'+hours : hours;
-//   minutes = minutes < 10 ? '0'+minutes : minutes;
-//   month = month < 10 ? '0'+month : month;
-//   day = day < 10 ? '0'+day : day;
-//   const res = date.getUTCFullYear() + month + day + hours + minutes;
-//   console.log("timesp "+res)
-//   return res
-// }
-
 function timeStampString() {
   var date = new Date()
   var hours = date.getHours();
