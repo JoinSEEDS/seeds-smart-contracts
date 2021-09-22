@@ -7,6 +7,9 @@ const host = "https://node.hypha.earth"
 
 const { eos, getTableRows } = require("./helper")
 
+const snapshotDir = "snapshots"
+const snapshotDirPath = "snapshots/"
+
 const getBalance = async (user) => {
   // const balance = await eos.getCurrencyBalance("token.seeds", user, 'SEEDS')
 
@@ -120,6 +123,9 @@ function timeStampString() {
 }
 
 const allPlanted = async () => {
+
+  initDir()
+
   var more = true
   var lower_bound = 0
 
@@ -144,9 +150,10 @@ const allPlanted = async () => {
 
   }
 
-  fs.writeFileSync('planted_balances_'+ timeStampString() +'.json', JSON.stringify(planteds, null, 2))
+  fs.writeFileSync(snapshotDirPath + 'planted_balances_'+ timeStampString() +'.json', JSON.stringify(planteds, null, 2))
 
 }
+
 const allPayments = async () => {
   var more = true
   var lower_bound = 0
@@ -157,6 +164,8 @@ const allPayments = async () => {
   var uniqueAccounts = []
 
   console.log(timeStampString() )
+
+  initDir()
 
   while (more) {
     const res = await getPayments(lower_bound)
@@ -225,10 +234,10 @@ const allPayments = async () => {
   })
 
 
-  fs.writeFileSync('03_payments_'+ timeStampString() +'.json', JSON.stringify(payments, null, 2))
-  fs.writeFileSync('03_payments_'+ timeStampString() +'.csv', paymentsCSV)
-  fs.writeFileSync('03_payments_totals_'+ timeStampString() +'.json', JSON.stringify(totalsMap, null, 2))
-  fs.writeFileSync('03_payments_totals_'+ timeStampString() +'.csv', totalCSVString)
+  fs.writeFileSync(snapshotDirPath + '03_payments_'+ timeStampString() +'.json', JSON.stringify(payments, null, 2))
+  fs.writeFileSync(snapshotDirPath + '03_payments_'+ timeStampString() +'.csv', paymentsCSV)
+  fs.writeFileSync(snapshotDirPath + '03_payments_totals_'+ timeStampString() +'.json', JSON.stringify(totalsMap, null, 2))
+  fs.writeFileSync(snapshotDirPath + '03_payments_totals_'+ timeStampString() +'.csv', totalCSVString)
 
 }
 
@@ -292,10 +301,16 @@ const addBalances = async (balances, accounts) => {
   
 }
 
+const initDir = () => {
+  if (!fs.existsSync(snapshotDir)) {
+    fs.mkdirSync(snapshotDir)
+  }
+}
 
 const getTokenHolders = async () => {
   var more = true
   var lower_bound = ''
+
 
   var accounts = []
 
@@ -360,15 +375,13 @@ const getTokenHolders = async () => {
   //console.log("balances: "+JSON.stringify(balances, null, 2))
   console.log("found "+accounts.length + " accounts" )
 
-  fs.writeFileSync(`seeds_errors_${timeStampString()}.json`, JSON.stringify(errorAccounts, null, 2))
-  fs.writeFileSync(`seeds_accounts_balances_${timeStampString()}.json`, JSON.stringify(balances, null, 2))
-  fs.writeFileSync(`seeds_accounts_balances_${timeStampString()}.csv`, fileText)
+  fs.writeFileSync(snapshotDirPath + `seeds_errors_${timeStampString()}.json`, JSON.stringify(errorAccounts, null, 2))
+  fs.writeFileSync(snapshotDirPath + `seeds_accounts_balances_${timeStampString()}.json`, JSON.stringify(balances, null, 2))
+  fs.writeFileSync(snapshotDirPath + `seeds_accounts_balances_${timeStampString()}.csv`, fileText)
   
   //console.log("balances found: "+JSON.stringify(balances, null, 2))
   console.log("balances saved: "+balances.length)
 
-  
-  
 }
 
 program
