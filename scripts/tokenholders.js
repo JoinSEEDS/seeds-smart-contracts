@@ -5,7 +5,8 @@ const fs = require('fs')
 
 const host = "https://node.hypha.earth"
 
-const { eos, getTableRows } = require("./helper")
+const { eos, getTableRows } = require("./helper");
+const { min } = require("ramda");
 
 const snapshotDir = "snapshots"
 const snapshotDirPath = "snapshots/"
@@ -110,16 +111,36 @@ const getPayments = async (lower_bound) => {
   return res
 }
 
+// const timeStampString = () => {
+//   var date = Date()
+//   var hours = date.getHours()
+//   var minutes = date.getMinutes()
+//   var month = date.getMonth()+1
+//   var day = date.getDate()
+//   hours = hours < 10 ? '0'+hours : hours;
+//   minutes = minutes < 10 ? '0'+minutes : minutes;
+//   month = month < 10 ? '0'+month : month;
+//   day = day < 10 ? '0'+day : day;
+//   const res = date.getUTCFullYear() + month + day + hours + minutes;
+//   console.log("timesp "+res)
+//   return res
+// }
 
 function timeStampString() {
   var date = new Date()
   var hours = date.getHours();
   var minutes = date.getMinutes();
   var month = date.getMonth()+1;
+  var day = date.getDate()
+
+  hours = hours < 10 ? '0'+hours : hours;
   minutes = minutes < 10 ? '0'+minutes : minutes;
+  day = day < 10 ? '0'+day : day;
   month = month < 10 ? '0'+month : month;
-  var strTime = hours + '_' + minutes;
-  return date.getFullYear() + "-" + month + "-" + date.getDate() + "_" + strTime;
+
+  res = date.getFullYear() + month + day + hours + minutes;
+
+  return res
 }
 
 const allPlanted = async () => {
@@ -400,12 +421,18 @@ program
     await allPlanted()
   })
 
-program
+  program
   .command('payments')
   .description('Get all payments')
   .action(async function () {
     console.log("getting planted");
     await allPayments()
+  })
+  program
+  .command('time')
+  .action(async function () {
+    console.log("getting time");
+    await timeStampString()
   })
 
 program.parse(process.argv)
