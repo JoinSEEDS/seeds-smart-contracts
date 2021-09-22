@@ -1299,3 +1299,129 @@ describe('Ban', async assert => {
         expected: true
     })
 })
+
+describe('Cancel invites', async assert => {
+
+    if (!isLocal()) {
+        console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+        return
+    }
+
+    const contracts = await initContracts({ onboarding, token, accounts, harvest })
+
+    const transferQuantity = `0.0000 SEEDS`
+    const sowQuantity = '5.0000 SEEDS'
+    const totalQuantity = '5.0000 SEEDS'
+
+    const newAccount = randomAccountName()
+    const newAccount2 = randomAccountName()
+    console.log("New account " + newAccount)
+    const keyPair = await createKeypair()
+    console.log("new account keys: " + JSON.stringify(keyPair, null, 2))
+    const newAccountPublicKey = keyPair.public
+
+    const inviteSecret = await ramdom64ByteHexString()
+    const inviteHash = sha256(fromHexString(inviteSecret)).toString('hex')
+
+    const inviteSecret2 = await ramdom64ByteHexString()
+    const inviteHash2 = sha256(fromHexString(inviteSecret2)).toString('hex')
+
+    console.log(`reset ${accounts}`)
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
+    console.log(`reset ${onboarding}`)
+    await contracts.onboarding.reset({ authorization: `${onboarding}@active` })
+    console.log(`reset ${harvest}`)
+    await contracts.harvest.reset({ authorization: `${harvest}@active` })
+    console.log("add user")
+    await contracts.accounts.adduser(firstuser, "", "individual", { authorization: `${accounts}@active` })
+    
+    //// 
+    //// Cancel then accept
+    ////
+    console.log("Cancel then accept")
+
+    var balanceBefore1 = await getBalance(firstuser)
+    console.log("balance: "+balanceBefore1)
+
+    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })
+    
+    var balance2 = await getBalance(firstuser)
+    console.log("balance2: "+balance2)
+
+    console.log("invite")
+    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash, { authorization: `${firstuser}@active` })
+
+    console.log("cancel")
+    await contracts.onboarding.cancel(firstuser, inviteHash, { authorization: `${firstuser}@active` })
+
+    console.log("accept new account "+newAccount)
+    isAccept = true
+    try {
+        await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@active` })
+    } catch (err) {
+        console.log("expected error: "+err)
+        isAccept = false
+    }
+    var balanceAfterCancel1 = await getBalance(firstuser)
+    console.log("balance2: "+balanceAfterCancel1)
+
+    //// 
+    //// Accept then cancel
+    ////
+
+    console.log("Accept then cancel")
+
+    var balanceBefore2 = await getBalance(firstuser)
+    console.log("balanceBefore2: "+balanceBefore2)
+
+    await contracts.token.transfer(firstuser, onboarding, totalQuantity, '', { authorization: `${firstuser}@active` })
+    
+    var balance22 = await getBalance(firstuser)
+    console.log("balance22: "+balance22)
+
+    console.log("invite 2")
+    await contracts.onboarding.invite(firstuser, transferQuantity, sowQuantity, inviteHash2, { authorization: `${firstuser}@active` })
+
+    console.log("accept 2 - should work")
+    await contracts.onboarding.accept(newAccount2, inviteSecret2, newAccountPublicKey, { authorization: `${onboarding}@active` })
+
+    isCancel = true
+    try {
+        console.log("cancel 2")
+        await contracts.onboarding.cancel(firstuser, inviteHash2, { authorization: `${firstuser}@active` })
+        } catch (err) {
+        console.log("expected error: "+err)
+        isCancel = false
+    }
+    var balanceAfterCancel2 = await getBalance(firstuser)
+    console.log("balanceAfterCancel2: "+balanceAfterCancel2)
+
+    assert({
+        given: 'invite was cancelled',
+        should: 'cannot accept invite',
+        actual: isAccept,
+        expected: false
+    })
+
+    assert({
+        given: 'invite was cancelled',
+        should: 'return money',
+        actual: balanceBefore1,
+        expected: balanceAfterCancel1
+    })
+
+    assert({
+        given: 'invite was accepted',
+        should: 'cannot cancel invite',
+        actual: isCancel,
+        expected: false
+    })
+
+    assert({
+        given: 'invite was accepted',
+        should: 'do not return money',
+        actual: balanceAfterCancel2,
+        expected: balanceBefore2 - 5
+    })
+
+})
