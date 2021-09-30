@@ -7,20 +7,25 @@ const host = "https://node.hypha.earth"
 
 const { eos, getTableRows } = require("./helper");
 const { min } = require("ramda");
+const { parse } = require("path");
 
 const snapshotDir = "snapshots"
 const snapshotDirPath = "snapshots/"
 
-const getBalance = async (user) => {
+const getBalance = async ({
+  user,
+  code = 'token.seeds',
+  symbol = 'SEEDS',
+}) => {
   // const balance = await eos.getCurrencyBalance("token.seeds", user, 'SEEDS')
 
   const params = {
     "json": "true",
-    "code": 'token.seeds',
+    "code": code,
     "scope": user,
     "table": 'accounts',
-    'lower_bound': 'SEEDS',
-    'upper_bound': 'SEEDS',
+    'lower_bound': symbol,
+    'upper_bound': symbol,
     "limit": 10,
 }
 
@@ -280,8 +285,12 @@ const allPayments = async () => {
   }
 
 
-const getBalanceObjectFor = async (account) => {
-  const balance = await getBalance(account)
+const getBalanceObjectFor = async (account, code, symbol) => {
+  const balance = await getBalance({
+    user: account,
+    code: code,
+    symbol: symbol
+  })
   if (balance != null) {
     return{
       account: account,
@@ -293,9 +302,9 @@ const getBalanceObjectFor = async (account) => {
   }
 }
 
-const addBalances = async (balances, accounts) => {
+const addBalances = async (balances, accounts, contract, symbol) => {
   var futures = []
-  accounts.forEach((acct) => futures.push(getBalanceObjectFor(acct)))
+  accounts.forEach((acct) => futures.push(getBalanceObjectFor(acct, contract, symbol)))
   var results = await Promise.all(futures)
 
   results.forEach(res => {
@@ -367,10 +376,12 @@ const getTokenHolders = async () => {
 
     if (i == accounts.length - 1 || batchAccounts.length == batchSize) {
       console.log("adding "+i+ " length "+batchAccounts.length)
-      await addBalances(balances, batchAccounts)
+      await addBalances(balances, batchAccounts, "token.seeds", "SEEDS")
       batchAccounts = []
     }
   }
+
+  balances.sort((a, b) => parseFloat(a.balance) - parseFloat(b.balance))
 
   balances.forEach((b) => {
     fileText = fileText + b.account + "," +b.balance+ "," +b.date+ "\n" 
@@ -390,6 +401,98 @@ const getTokenHolders = async () => {
 
 }
 
+const getAnyTokenHolders = async ({
+  contract = "token.seeds",
+  symbol = "SEEDS",
+  prefix = "seeds_"
+}) => {
+  var more = true
+  var lower_bound = ''
+
+
+  var accounts = []
+
+  while (more) {
+    const res = await get_table_by_scope({
+      code: contract,
+      table: "accounts",
+      lower_bound: lower_bound,
+      limit: 2000
+    })
+    
+    //console.log("result: "+JSON.stringify(res, null, 2))
+    
+    if (res.rows && res.rows.length > 0) {
+      var accts = res.rows.map((item) => item.scope)
+      accts.forEach(item => { // JS concat driving me mad..
+        accounts.push(item)
+      });
+    }
+    lower_bound = res.more
+    
+    more = res.more != "false" && res.more != ""
+    //more = false // debug
+
+    console.log(prefix + "accounts: "+accounts.length)
+
+  }
+
+  var balances = []
+  var fileText = ""
+  var errorAccounts = []
+
+  var batchAccounts = []
+  const batchSize = 100
+
+  // var old = accounts
+  // accounts = []
+  // for(var i=0; i<200; i++) {
+  //   accounts[i] = old[i]
+  // }
+
+  console.log("accts: "+accounts.length)
+
+  for(var i = 0; i<accounts.length; i++) {
+    const account = accounts[i]
+
+    batchAccounts.push(account)
+
+    if (i == accounts.length - 1 || batchAccounts.length == batchSize) {
+      console.log("adding "+i+ " length "+batchAccounts.length)
+      await addBalances(balances, batchAccounts, contract, symbol)
+      batchAccounts = []
+    }
+  }
+
+  // sort high to low descending
+  balances.sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance))
+
+  total = 0.0
+  balances.forEach((b) => {
+    total += parseFloat(b.balance)
+  })
+
+
+  fileText = "account,amount,%,balance,date\n"
+
+  balances.forEach((b) => {
+    percent = (parseFloat(b.balance) * 100 / total).toFixed(2)
+    fileText = fileText + b.account + "," +parseFloat(b.balance) + ',' + percent + "," +b.balance+ "," +b.date+ "\n" 
+  })
+      
+
+
+  //console.log("balances: "+JSON.stringify(balances, null, 2))
+  console.log("found "+accounts.length + " accounts" )
+
+  fs.writeFileSync(snapshotDirPath + prefix + `errors_${timeStampString()}.json`, JSON.stringify(errorAccounts, null, 2))
+  fs.writeFileSync(snapshotDirPath + prefix + `accounts_balances_${timeStampString()}.json`, JSON.stringify(balances, null, 2))
+  fs.writeFileSync(snapshotDirPath + prefix + `accounts_balances_${timeStampString()}.csv`, fileText)
+  
+  //console.log("balances found: "+JSON.stringify(balances, null, 2))
+  console.log(prefix +"balances saved: "+balances.length)
+
+}
 program
   .command('balances')
   .description('Get SEEDS balances for all accounts')
@@ -406,18 +509,43 @@ program
     await allPlanted()
   })
 
-  program
+program
   .command('payments')
   .description('Get all payments')
   .action(async function () {
     console.log("getting planted");
     await allPayments()
   })
-  program
+
+program
   .command('time')
   .action(async function () {
     console.log("getting time");
     await timeStampString()
+  })
+
+program
+  .command('hvoice')
+  .description('Get HVOICE balances for all accounts')
+  .action(async function () {
+    console.log("getting HVOICE balances");
+    await getAnyTokenHolders({
+      contract: "voice.hypha",
+      symbol: "HVOICE",
+      prefix: "HVOICE_"
+    })
+  })
+
+program
+  .command('hypha')
+  .description('Get HYPHA balances for all accounts')
+  .action(async function () {
+    console.log("getting HYPHA balances");
+    await getAnyTokenHolders({
+      contract: "token.hypha",
+      symbol: "HYPHA",
+      prefix: "HYPHA_"
+    })
   })
 
 program.parse(process.argv)
