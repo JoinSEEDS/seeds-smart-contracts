@@ -1215,6 +1215,119 @@ describe('Voice Delegation', async assert => {
 
 })
 
+describe('Voice Erase', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest })
+  
+  await Promise.all(users.map((user, index) => contracts.harvest.testupdatecs(user, (index + 1) * 20, { authorization: `${harvest}@active` })))
+  await Promise.all(users.map(user => contracts.dao.changetrust(user, true, { authorization: `${dao}@active` })))
+  
+  console.log('change batch size')
+  await contracts.settings.configure('batchsize', 2, { authorization: `${settings}@active` })
+
+  await contracts.dao.updatevoices({ authorization: `${dao}@active` })
+  await sleep(2000)
+  
+  await contracts.dao.deletescope(0, allianceScope, { authorization: `${dao}@active` })
+  await sleep(2000)
+
+  const actualVoices = []
+  
+  for (const user of users) {
+    const voices = await getVoice(user)
+    actualVoices.push(voices)
+  }
+
+  assert({
+    given: 'erase voices from alliance',
+    should: 'have no points for alliance',
+    actual: actualVoices,
+    expected: [
+      [
+        { scope: campaignScope, account: firstuser, balance: 20 },
+        { scope: milestoneScope, account: firstuser, balance: 20 },
+        { scope: referendumsScope, account: firstuser, balance: 20 },
+        { scope: dhosScope, account: firstuser, balance: 20}
+      ],
+      [
+        { scope: campaignScope, account: seconduser, balance: 40 }, 
+        { scope: milestoneScope, account: seconduser, balance: 40 },
+        { scope: referendumsScope, account: seconduser, balance: 40 },
+        { scope: dhosScope, account: seconduser, balance: 40}
+      ],
+      [
+        { scope: campaignScope, account: thirduser, balance: 60 }, 
+        { scope: milestoneScope, account: thirduser, balance: 60 },
+        { scope: referendumsScope, account: thirduser, balance: 60 },
+        { scope: dhosScope, account: thirduser, balance: 60}
+      ],
+      [
+        { scope: campaignScope, account: fourthuser, balance: 80 }, 
+        { scope: milestoneScope, account: fourthuser, balance: 80 },
+        { scope: referendumsScope, account: fourthuser, balance: 80 },
+        { scope: dhosScope, account: fourthuser, balance: 80}
+      ]
+    ]
+  })
+
+  console.log('Add alliance voices');
+
+  await contracts.dao.addvoice(0, allianceScope, { authorization: `${dao}@active` })
+  await sleep(2000)
+
+  const newVoices = []
+  
+  for (const user of users) {
+    const voices = await getVoice(user)
+    newVoices.push(voices)
+  }
+
+  assert({
+    given: 'add voice alliance',
+    should: 'add alliance scope',
+    actual: newVoices,
+    expected: [
+      [
+        { scope: allianceScope, account: firstuser, balance: 20},
+        { scope: campaignScope, account: firstuser, balance: 20 },
+        { scope: milestoneScope, account: firstuser, balance: 20 },
+        { scope: referendumsScope, account: firstuser, balance: 20 },
+        { scope: dhosScope, account: firstuser, balance: 20}
+      ],
+      [
+        { scope: allianceScope, account: seconduser, balance: 40},
+        { scope: campaignScope, account: seconduser, balance: 40 }, 
+        { scope: milestoneScope, account: seconduser, balance: 40 },
+        { scope: referendumsScope, account: seconduser, balance: 40 },
+        { scope: dhosScope, account: seconduser, balance: 40}
+      ],
+      [
+        { scope: allianceScope, account: thirduser, balance: 60},
+        { scope: campaignScope, account: thirduser, balance: 60 }, 
+        { scope: milestoneScope, account: thirduser, balance: 60 },
+        { scope: referendumsScope, account: thirduser, balance: 60 },
+        { scope: dhosScope, account: thirduser, balance: 60}
+      ],
+      [
+        { scope: allianceScope, account: fourthuser, balance: 80},
+        { scope: campaignScope, account: fourthuser, balance: 80 }, 
+        { scope: milestoneScope, account: fourthuser, balance: 80 },
+        { scope: referendumsScope, account: fourthuser, balance: 80 },
+        { scope: dhosScope, account: fourthuser, balance: 80}
+      ]
+    ]
+
+  })
+
+})
+
 describe('Alliance Proposals', async assert => {
 
   if (!isLocal()) {

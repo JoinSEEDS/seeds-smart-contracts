@@ -116,7 +116,7 @@ CONTRACT dao : public contract {
 
       ACTION updatevoices();
 
-      ACTION updatevoice(const uint64_t & start);
+      ACTION updatevoice(const uint64_t & start, const name & scope);
 
       ACTION erasepartpts(const uint64_t & active_proposals);
 
@@ -135,6 +135,10 @@ CONTRACT dao : public contract {
       ACTION dhocleanvote(const uint64_t & cutoff, const uint64_t & chunksize);
 
       ACTION dhocalcdists();
+
+      ACTION deletescope(const uint64_t & start, const name & scope); 
+
+      ACTION addvoice(const uint64_t & start, const name & scope);
 
 
       ACTION testsetvoice(const name & account, const uint64_t & amount);
@@ -392,7 +396,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (updatevoices)(updatevoice)
           (erasepartpts)
           (createdho)(removedho)(removedhovts)(votedhos)(dhomimicvote)(dhocleanvts)(dhocleanvote)(dhocalcdists)
-          (testsetvoice)
+          (testsetvoice)(deletescope)(addvoice)
         )
       }
   }
