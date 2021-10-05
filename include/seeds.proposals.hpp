@@ -215,7 +215,6 @@ CONTRACT proposals : public contract {
       void send_vote_on_behalf(name voter, uint64_t id, uint64_t amount, name option);
 
       void increase_voice_cast(uint64_t amount, name option, name prop_type);
-      uint64_t calc_quorum_base(uint64_t propcycle);
       void add_voted_proposal(uint64_t proposal_id);
       void create_aux(name creator, name recipient, asset quantity, string title, string summary, string description, string image, string url, 
         name fund, name subtype, std::vector<uint64_t> pay_percentages, asset max_amount_per_invite, asset planted, asset reward);

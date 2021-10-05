@@ -273,6 +273,7 @@ void proposals::set_support_level(uint64_t cycle, uint64_t num_proposals, uint64
   }
 }
 
+// only invoked on positive vote
 void proposals::add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type) {
   support_level_tables support(get_self(), type.value);
   auto sitr = support.find(cycle);
@@ -362,8 +363,6 @@ void proposals::send_cancel_lock (name fromfund, uint64_t campaign_id, asset qua
 
 void proposals::update_cycle_stats_from_proposal (uint64_t proposal_id, name type, name array) {
   cycle_table c = cycle.get();
-
-  uint64_t quorum_vote_base = calc_quorum_base(c.propcycle - 1);
 
   auto citr = cyclestats.find(c.propcycle);
 
@@ -903,7 +902,6 @@ void proposals::init_cycle_new_stats () {
     item.total_favour = 0;
     item.total_against = 0;
     item.total_citizens = get_size("voice.sz"_n);
-    // item.quorum_vote_base = 0;
     // item.quorum_votes_needed = 0;;
     item.unity_needed = double(config_get("propmajority"_n)) / 100.0;
     item.total_eligible_voters = 0;
@@ -2125,40 +2123,14 @@ void proposals::increase_voice_cast (uint64_t amount, name option, name prop_typ
       item.num_votes += 1;
     });
   }
-  add_voice_cast(c.propcycle, amount, prop_type);
+
+  // as support level is concerned, only positive votes are counted
+  if (option == trust) {
+    add_voice_cast(c.propcycle, amount, prop_type);
+  }
 
 }
 
-uint64_t proposals::calc_quorum_base (uint64_t propcycle) {
-
-  uint64_t num_cycles = config_get("prop.cyc.qb"_n);
-  uint64_t total = 0;
-  uint64_t count = 0;
-
-  auto citr = cyclestats.find(propcycle);
-
-  if (citr == cyclestats.end()) {
-    // in case there is no information for this propcycle
-    return get_size(user_active_size) * 50 / 2;
-  }
-
-  while (count < num_cycles) {
-
-    total += citr -> total_voice_cast;
-    // total += citr -> num_votes; // uncomment to make it count number of voters
-    count++;
-
-    if (citr == cyclestats.begin()) {
-      break;
-    } else {
-      citr--;
-    }
-
-  }
-
-  return count > 0 ? total / count : 0;
-
-}
 
 void proposals::add_voted_proposal (uint64_t proposal_id) {
 
