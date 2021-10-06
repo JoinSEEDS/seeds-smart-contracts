@@ -2395,6 +2395,7 @@ void proposals::check_values(
 
 // rewind to in case there was an error
 void proposals::rewind(uint64_t round) {
+  require_auth(get_self());
 
         // 214,
         // 217,
@@ -2443,6 +2444,7 @@ void proposals::rewind(uint64_t round) {
 }
 // rewind to in case there was an error
 void proposals::fixcycstat(uint64_t delete_round) {
+  require_auth(get_self());
 
   // 1 - delete cycle stats
   auto citr = cyclestats.find(delete_round);
@@ -2466,5 +2468,80 @@ void proposals::fixcycstat(uint64_t delete_round) {
       support.erase(sitr);
     }
   }
+
+}
+
+// fix support levels
+void proposals::fixsupport(uint64_t round) {
+  require_auth(get_self());
+
+  // 1 - get all active proposals
+  auto csitr = cyclestats.find(round);
+
+  auto active_proposal_ids = csitr->active_props;
+
+  uint64_t total_a = 0;
+  uint64_t total_c = 0;
+  uint64_t total_m = 0;
+  
+  uint64_t favour_a = 0;
+  uint64_t favour_c = 0;
+  uint64_t favour_m = 0;
+
+  uint64_t num_a = 0;
+  uint64_t num_c = 0;
+  uint64_t num_m = 0;
+
+  for (auto & p : active_proposal_ids) {
+    print(" " + std::to_string(p));
+
+    auto pitr = props.find(p);
+
+    name prop_type = get_type(pitr->fund);
+
+    if (prop_type == alliance_type) {
+      total_a += pitr->total;
+      favour_a += pitr->favour;
+      num_a++;
+    } else if (prop_type == campaign_type) {
+      total_c += pitr->total;
+      favour_c += pitr->favour;
+      num_c++;
+    } else if (prop_type == milestone_type) {
+      total_m += pitr->total;
+      favour_m += pitr->favour;
+      num_m++;
+    }
+  }
+
+  // 2 - print results and verify
+  
+  print(" alliance_type: " + std::to_string(total_a) + 
+    " fav: "+std::to_string(favour_a) + 
+    " num: "+std::to_string(num_a) + 
+    " needed before: " + std::to_string(calc_voice_needed(total_a, num_a)) + 
+    " needed after: " + std::to_string(calc_voice_needed(favour_a, num_a))
+    );
+
+  print(" campaign_type: " + std::to_string(total_c) + 
+  " fav: "+std::to_string(favour_c) + 
+  " num: "+std::to_string(num_c) + 
+    " needed before: " + std::to_string(calc_voice_needed(total_c, num_c)) + 
+    " needed after: " + std::to_string(calc_voice_needed(favour_c, num_c))
+  );
+  print(" milestone_type: " + std::to_string(total_m) + 
+  " fav: "+std::to_string(favour_m)+ 
+  " num: "+std::to_string(num_m) + 
+    " needed before: " + std::to_string(calc_voice_needed(total_m, num_m)) + 
+    " needed after: " + std::to_string(calc_voice_needed(favour_m, num_m))
+  );
+
+  // 3 - update support tables
+
+  set_support_level(round, num_a, favour_a, alliance_type);
+  set_support_level(round, num_c, favour_c, campaign_type);
+  set_support_level(round, num_m, favour_m, milestone_type);
+
+
 
 }

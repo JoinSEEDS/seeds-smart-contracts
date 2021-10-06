@@ -125,6 +125,8 @@ CONTRACT proposals : public contract {
       ACTION rewind(uint64_t round);
       ACTION fixcycstat(uint64_t delete_round);
 
+      ACTION fixsupport(uint64_t round);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -472,6 +474,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (revertvote)(mimicrevert)
         (rewind)(fixcycstat)
         (testvn)
+        (fixsupport)
         )
       }
   }
