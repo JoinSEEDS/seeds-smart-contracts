@@ -675,7 +675,8 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
         " prop ID " + std::to_string(pitr->id) +
         " vp favor " + std::to_string(votes_in_favor) +
         " needed: " + std::to_string(quorum_votes_needed) +
-        " valid: " + ( valid_quorum ? "YES " : "NO ") 
+        " quorum: " + ( valid_quorum ? "YES " : "NO ") +
+        " unity: " + ( passed ? "YES " : "NO ") 
       );
     }
 
@@ -698,15 +699,12 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 }
 
 void proposals::send_test_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
-  transaction trx{};
-  trx.actions.emplace_back(
+  action(
     permission_level(get_self(), "active"_n),
     get_self(),
     "testevalprop"_n,
     std::make_tuple(proposal_id, prop_cycle)
-  );
-  // trx.delay_sec = 1;
-  trx.send(proposal_id, _self);
+  ).send();
 }
 
 void proposals::testperiod() {

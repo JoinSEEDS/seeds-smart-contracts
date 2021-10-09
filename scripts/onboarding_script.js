@@ -398,15 +398,17 @@ const invite = async (sponsor, totalAmount, debug = false, depositFunds = false)
 
 }
 
-const accept = async (newAccount, inviteSecret) => {
+const accept = async (newAccount, inviteSecret, newAccountPublicKey = null) => {
 
     const contracts = await initContracts({ onboarding, token, accounts, harvest })
-    const keyPair = await createKeypair()
-    console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
-    const newAccountPublicKey = keyPair.public
+
+    if (newAccountPublicKey == null) {
+      const keyPair = await createKeypair()
+      console.log("new account keys: "+JSON.stringify(keyPair, null, 2))
+      newAccountPublicKey = keyPair.public  
+    }
 
     console.log("Onboarding: " + JSON.stringify(onboarding))
-
 
     const accept = async () => {
         try {
@@ -594,15 +596,15 @@ program
   })
 
   program
-  .command('test <sponsor> <newAccount>')
+  .command('test <sponsor> <newAccount> <newPublicKey>')
   .description('test invite process')
-  .action(async function (sponsor, newAccount) {
+  .action(async function (sponsor, newAccount, newPublicKey) {
       
     console.log("invite from " + sponsor)
     let result = await invite(sponsor, 5, true, true) // always 20 seeds
 
-    console.log("accept invite with " + newAccount + " secret: " + result.secret)
-    await accept(newAccount, result.secret)
+    console.log("accept invite with " + newAccount + " secret: " + result.secret + " pub: " + newPublicKey)
+    await accept(newAccount, result.secret, newPublicKey)
   })
 
   program
