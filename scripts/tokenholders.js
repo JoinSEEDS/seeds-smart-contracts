@@ -3,7 +3,7 @@ const fetch = require("node-fetch");
 const program = require('commander')
 const fs = require('fs')
 
-const host = "https://node.hypha.earth"
+const host = "https://api.telosfoundation.io"
 
 const { eos, getTableRows } = require("./helper");
 const { min } = require("ramda");
@@ -253,7 +253,7 @@ const allPayments = async () => {
 }
 
     /** Raw call to `/v1/chain/get_table_by_scope` */
- const get_table_by_scope = async ({
+    const get_table_by_scope = async ({
       code,
       table,
       lower_bound = '',
@@ -283,6 +283,86 @@ const allPayments = async () => {
     return res
 
   }
+
+const get_history_tx = async (
+    skip,
+    limit,
+) => {
+
+  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha&act.name=transfer`
+
+  const rawResponse = await fetch(url, {
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      //body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+  return res
+
+}
+
+const getAllHistory = async () => {
+
+  items = []
+  skip = 0
+  limit = 100
+  hasMoreData = true
+
+  transfers = ""
+
+  while (hasMoreData) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_history_tx(skip, limit)
+    newItems = newItems.actions
+    console.log("got items "+JSON.stringify(newItems, null, 2))
+    newItems.forEach(item => {
+      items.push(item)
+      act = item.act
+      data = act.data
+      // "data": {
+      //   "from": "dao.hypha",
+      //   "to": "luigicarlini",
+      //   "amount": "263.25000000000000000",
+      //   "symbol": "HYPHA",
+      //   "quantity": "263.25 HYPHA",
+      //   "memo": "one-time payment on proposal: c3f28cee3618c5338ef23180c49457ce97f4c934255f45fc1c63151b2c5262d1"
+      // },
+
+      if (
+        act.account == "token.hypha" &&
+        act.name == "transfer" &&
+        data.from == "dao.hypha") {
+          line = item.global_sequence + "," +item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          console.log("line: "+line)
+        }
+    });
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+
+
+  }
+
+  console.log("=========================================================================")
+  console.log("all transfers: ")
+  console.log(transfers)
+
+  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+
+}
 
 
 const getBalanceObjectFor = async (account, code, symbol) => {
@@ -547,6 +627,15 @@ program
       prefix: "HYPHA_"
     })
   })
+
+program
+  .command('history')
+  .description('Get HYPHA token history')
+  .action(async function () {
+    console.log("getting HYPHA token history");
+    await getAllHistory()
+  })
+
 
 program.parse(process.argv)
 
