@@ -25,8 +25,9 @@ void onboarding::create_account(name account, string publicKey, name domain)
 
   action(
       permission_level{_self, "owner"_n},
-      "eosio"_n, "buyram"_n,
-      make_tuple(_self, account, asset(2000, network_symbol)))
+      "eosio"_n, 
+      "buyrambytes"_n,
+      make_tuple(_self, account, 2777)) // 2000 RAM is used by Telos free.tf
       .send();
 
   action(
