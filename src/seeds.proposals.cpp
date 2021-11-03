@@ -528,8 +528,13 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
       }
 
     } else {
+
+      asset stackToBurn = valid_quorum ?  pitr->staked : asset(pitr->staked.amount * 0.05, seeds_symbol);
+      stackToBurn = passed ? stackToBurn : pitr->staked;
+
       if (pitr->status != status_evaluate) {
-        burn(pitr->staked);
+        burn(stackToBurn);
+        
       } else {
         send_punish(pitr->creator);
 
@@ -547,7 +552,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
             proposal.passed_cycle = prop_cycle;
           }
           proposal.executed = false;
-          proposal.staked = asset(0, seeds_symbol);
+          proposal.staked = asset(pitr->staked.amount - stackToBurn.amount, seeds_symbol);
           proposal.status = status_rejected;
           proposal.stage = stage_done;
       });
