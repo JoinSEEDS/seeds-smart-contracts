@@ -2,7 +2,6 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64ByteHexString, fromHexString, sha256 } = require('../scripts/helper');
 const { expect } = require('chai');
-const { stat } = require('fs-extra');
 
 const { 
   harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
@@ -3039,7 +3038,7 @@ describe('Hypha proposals', async assert => {
 
 })
 
-describe.only('Check Banned', async assert => {
+describe('Check Banned', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
