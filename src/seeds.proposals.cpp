@@ -454,6 +454,11 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
       valid_quorum = votes_in_favor >= quorum_votes_needed;
     }
 
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
+
     if (passed && valid_quorum) {
 
       if (pitr -> status == status_open) {
@@ -664,6 +669,11 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     bool is_campaign_type = prop_type == campaign_type;
 
     bool valid_quorum = false;
+
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
 
     if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
       valid_quorum = true;
@@ -2247,6 +2257,11 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
     valid_quorum = votes_in_favor >= quorum_votes_needed;
 
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
+
     print(" re-eval "+std::to_string(proposal_id) + 
       " passed:  " + (passed ? "YES" : "NO") + 
       " quorum: " + (valid_quorum ? "YES" : "NO") +
@@ -2417,6 +2432,20 @@ void proposals::check_values(
 
   // URL
   check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
+
+bool proposals::is_banned(name account)
+{
+  DEFINE_BAN_TABLE
+  DEFINE_BAN_TABLE_MULTI_INDEX
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  return bitr != ban.end();
+}
+
+void proposals::testisbanned(name account) {
+  print("Banned "+account.to_string() + ": "+std::to_string(is_banned(account)));
 }
 
 // rewind to in case there was an error

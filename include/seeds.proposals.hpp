@@ -8,6 +8,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/ban_table.hpp>
 #include <vector>
 #include <cmath>
 
@@ -124,6 +125,7 @@ CONTRACT proposals : public contract {
 
       ACTION rewind(uint64_t round);
       ACTION fixcycstat(uint64_t delete_round);
+      ACTION testisbanned(name account);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -236,6 +238,7 @@ CONTRACT proposals : public contract {
       void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
       uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
       void check_values(string title, string summary, string description, string image, string url);
+      bool is_banned(name account);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -473,6 +476,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (revertvote)(mimicrevert)
         (rewind)(fixcycstat)
         (testvn)
+        (testisbanned)
         )
       }
   }
