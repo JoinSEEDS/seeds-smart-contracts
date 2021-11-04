@@ -2,6 +2,7 @@ const { describe } = require('riteway')
 const R = require('ramda')
 const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64ByteHexString, fromHexString, sha256 } = require('../scripts/helper');
 const { expect } = require('chai');
+const { stat } = require('fs-extra');
 
 const { 
   harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
@@ -3035,5 +3036,87 @@ describe('Hypha proposals', async assert => {
       }
     ]
   })
+
+})
+
+describe.only('Check Banned', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ token, harvest, accounts, proposals })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  // proposal.recipient = recipient;
+
+  console.log('create proposal '+milestonebank)
+
+  await contracts.proposals.createx(seconduser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+
+  console.log('deposit stake')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 90, { authorization: `${harvest}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await contracts.proposals.favour(firstuser, 1, 30, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 30, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 1, 30, { authorization: `${thirduser}@active` })
+
+  console.log('ban user')
+  await contracts.accounts.bantree(firstuser, true, { authorization: `${accounts}@active` })
+
+  console.log('eval proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log('props '+JSON.stringify(props, null, 2))
+
+  var status = props.rows[0].status
+
+  //console.log('status '+status)
+
+  assert({
+    given: 'recepient banned but proposal passed',
+    should: 'proposal failed',
+    actual: status,
+    expected: "rejected"
+  })
+
+
+  // console.log('test 1')
+  // tx = await contracts.proposals.testisbanned(firstuser, { authorization: `${proposals}@active` })
+  // console.log(JSON.stringify(tx, null, 2))
+  // console.log('test 2')
+  // tx2 = await contracts.proposals.testisbanned(seconduser, { authorization: `${proposals}@active` })
+  // console.log(JSON.stringify(tx2, null, 2))
 
 })
