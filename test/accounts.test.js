@@ -1743,6 +1743,135 @@ describe('Punishment', async assert => {
 
 })
 
+describe('Delegate flagging', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, settings })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('change flag threshold')
+  await contracts.settings.configure('flag.thresh', 40, { authorization: `${settings}@active` })
+
+  console.log('change resident threshold')
+  await contracts.settings.configure('res.rep.pt', 2, { authorization: `${settings}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, `user`, 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fifthuser, `user`, 'individual', { authorization: `${accounts}@active` })
+
+  console.log('make residents')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  console.log('make citizens')
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
+  console.log('add rep')
+  await contracts.accounts.addrep(firstuser, 40, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(seconduser, 100, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(thirduser, 200, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(fourthuser, 300, { authorization: `${accounts}@active` })
+  await contracts.accounts.addrep(fifthuser, 20, { authorization: `${accounts}@active` })
+
+  console.log('manipulating the ranking')
+  await contracts.accounts.testsetrs(firstuser, 10, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(seconduser, 33, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(thirduser, 60, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(fourthuser, 99, { authorization: `${accounts}@active` })
+  
+  console.log('delegate flagging')
+  await contracts.accounts.delegateflag(seconduser, firstuser, { authorization: `${seconduser}@active` })
+  await contracts.accounts.delegateflag(thirduser, firstuser, { authorization: `${thirduser}@active` })
+  await contracts.accounts.delegateflag(fourthuser, thirduser, { authorization: `${fourthuser}@active` })
+  await contracts.accounts.delegateflag(fifthuser, fourthuser, { authorization: `${fifthuser}@active` })
+
+  let cyclesNotAllowed = true
+  try {
+    await contracts.accounts.delegateflag(thirduser, fifthuser, { authorization: `${thirduser}@active` })
+    cyclesNotAllowed = false
+  } catch (err) {
+    console.log('cycles are not allowed (expected)')
+  }
+  assert({ given: 'flag delegated', should: 'avoid having cycles', expected: true, actual: cyclesNotAllowed })
+
+  let hasMaxDepth = true
+  try {
+    console.log('change flag max depth')
+    await contracts.settings.configure('dlegate.dpth', 2, { authorization: `${settings}@active` })
+    await contracts.accounts.delegateflag(seconduser, fourthuser, { authorization: `${seconduser}@active` })
+    hasMaxDepth = false
+  } catch (err) {
+    console.log('max depth reached (expected)')
+    await contracts.settings.configure('dlegate.dpth', 20, { authorization: `${settings}@active` })
+  }
+  assert({ given: 'depth reached', should: 'throw an error', expected: true, actual: hasMaxDepth })
+
+  console.log('flag an user')
+  await contracts.accounts.flag(firstuser, fifthuser, { authorization: `${firstuser}@active` })
+  await sleep(4000)
+
+  const flagPoints = await getTableRows({
+    code: accounts,
+    scope: fifthuser,
+    table: 'flagpts',
+    json: true
+  })
+  console.log(JSON.stringify(flagPoints, null, 4))
+
+  assert({
+    given: 'flag delegated',
+    should: 'trigger flagging in the whole tree',
+    expected: [firstuser, seconduser, thirduser, fourthuser],
+    actual: flagPoints.rows.map(r => r.account)
+  })
+
+  const delegatorsTable = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'delegators',
+    json: true
+  })
+  console.log(JSON.stringify(delegatorsTable, null, 4))
+
+  assert({
+    given: 'flag delegated',
+    should: 'have the correct entries in the delegators table',
+    actual: delegatorsTable.rows,
+    expected: [
+      {
+          delegator: seconduser,
+          delegatee: firstuser
+      },
+      {
+          delegator: thirduser,
+          delegatee: firstuser
+      },
+      {
+          delegator: fourthuser,
+          delegatee: thirduser
+      },
+      {
+          delegator: fifthuser,
+          delegatee: fourthuser
+      }
+    ]
+  })
+
+})
+
 describe('Enforce accounts', async assert => {
 
   if (!isLocal()) {

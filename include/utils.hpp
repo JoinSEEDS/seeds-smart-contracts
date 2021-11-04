@@ -1,11 +1,13 @@
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
 #include <eosio/system.hpp>
+#include <eosio/transaction.hpp>
 #include <tables/rep_table.hpp>
 #include <tables/size_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/deferred_id_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -225,6 +227,51 @@ namespace utils {
     auto date = eosio::time_point_sec(sec / 86400 * 86400);
     return date.utc_seconds;
   }
+
+  template <typename T>
+  void delete_table (const name & code, const name & scope) {
+
+    T table(code, scope.value);
+    auto itr = table.begin();
+
+    while (itr != table.end()) {
+      itr = table.erase(itr);
+    }
+
+  }
+
+  template <typename... T>
+  void send_deferred_transaction (
+    const name & code,
+    const permission_level & permission,
+    const name & contract, 
+    const name & action,  
+    const std::tuple<T...> & data) {
+
+    DEFINE_DEFERRED_ID_TABLE
+    DEFINE_DEFERRED_ID_SINGLETON
+
+    deferred_id_tables deferredids(code, code.value);
+    deferred_id_table d_s = deferredids.get_or_create(code, deferred_id_table());
+
+    d_s.id += 1;
+
+    deferredids.set(d_s, code);
+
+    transaction trx{};
+
+    trx.actions.emplace_back(
+      permission,
+      contract,
+      action,
+      data
+    );
+
+    trx.delay_sec = 1;
+    trx.send(d_s.id, code);
+
+  }
+
 
 }
 
