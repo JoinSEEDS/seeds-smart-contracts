@@ -3146,7 +3146,7 @@ describe('Stake burn in rejected proposals', async assert => {
     json: true
   })
 
-  await testStake(['1.9000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
 
   await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
 
