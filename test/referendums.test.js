@@ -565,14 +565,12 @@ describe('Refund Stake', async assert => {
   await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.adduser(seconduser, '1', 'individual', { authorization: `${accounts}@active` })
   await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
-  await contracts.referendums.addvoice(firstuser, 10, { authorization: `${referendums}@active` })
 
   const initialSeeds = await getSeedsBalance(firstuser)
 
   console.log(`stake`)
   await contracts.token.transfer(firstuser, referendums, "22.0000 SEEDS", '', { authorization: `${firstuser}@active` })
   await contracts.token.transfer(seconduser, referendums, "100.0000 SEEDS", '', { authorization: `${seconduser}@active` })
-  console.log(`create referendum`)
 
   bal = await getBalance(firstuser)
 
