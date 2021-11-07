@@ -1,3 +1,4 @@
+const { over } = require('ramda')
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 
@@ -524,5 +525,126 @@ describe('Referendums Keys', async assert => {
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
 
   await checkRefs([0, 0, 0, 2, 0])
+
+})
+
+describe.only('Refund Stake', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ referendums, token, settings, accounts })
+
+
+  const getBalance = async (user) => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: referendums,
+      table: 'balances',
+      json: true
+    })
+
+    bal = Number.parseInt(referendumsTable.rows[0].stake)
+    console.log("balance = "+bal)
+    return bal
+  }
+  const getSeedsBalance = async (user) => {
+    const balance = await eos.getCurrencyBalance(token, user, 'SEEDS')
+    return Number.parseInt(balance[0]) || 0
+  }
+
+
+  console.log('referendums reset')
+  await contracts.referendums.reset({ authorization: `${referendums}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users, make citizens')
+  await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.referendums.addvoice(firstuser, 10, { authorization: `${referendums}@active` })
+
+  const initialSeeds = await getSeedsBalance(firstuser)
+
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "22.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, referendums, "100.0000 SEEDS", '', { authorization: `${seconduser}@active` })
+  console.log(`create referendum`)
+
+  bal = await getBalance(firstuser)
+
+  assert({
+    given: 'sent Seeds to proposals contract',
+    should: 'have balance',
+    actual: bal,
+    expected: 22
+  })
+  
+  seedsBefore = await getSeedsBalance(firstuser)
+
+  console.log(`seedsBefore: ` + seedsBefore)
+
+  console.log(`refund`)
+  await contracts.referendums.refundstake(firstuser, "11.0000 SEEDS", { authorization: `${firstuser}@active` })
+
+  seedsAfter = await getSeedsBalance(firstuser)
+
+  console.log(`seedsAfter: ` + seedsAfter)
+
+  bal = await getBalance(firstuser)
+
+  assert({
+    given: 'refund Seeds from proposals contract',
+    should: 'have new balance',
+    actual: bal,
+    expected: 11
+  })
+
+  assert({
+    given: 'seeds before' + seedsBefore,
+    should: 'have new balance',
+    actual: seedsAfter,
+    expected: seedsBefore + 11
+  })
+
+  console.log(`overdraw`)
+
+  var overdraw = false
+  try {
+    await contracts.referendums.refundstake(firstuser, "12.0000 SEEDS", { authorization: `${firstuser}@active` })
+    overdraw = true
+  } catch(e) {
+    console.log("expected error: "+e)
+  }
+
+  assert({
+    given: 'try to overdraw refund',
+    should: 'throw error',
+    actual: overdraw,
+    expected: false
+  })
+
+  console.log(`withdraw rest`)
+  await contracts.referendums.refundstake(firstuser, "11.0000 SEEDS", { authorization: `${firstuser}@active` })
+
+  assert({
+    given: 'refund all',
+    should: 'have same as before',
+    actual: await getSeedsBalance(firstuser),
+    expected: initialSeeds
+  })
+
+  bal = await getBalance(firstuser)
+
+  assert({
+    given: 'refund all seeds',
+    should: 'have zero left',
+    actual: bal,
+    expected: 0
+  })
 
 })
