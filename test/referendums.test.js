@@ -1,4 +1,3 @@
-const { over } = require('ramda')
 const { describe } = require('riteway')
 const { eos, names, getTableRows, initContracts, isLocal } = require('../scripts/helper')
 
