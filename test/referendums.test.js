@@ -377,7 +377,7 @@ console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting'
     expected: {
       account: firstuser,
       stake: '0.0000 SEEDS',
-      voice: 0
+      voice: 90
     }
   })
 })
@@ -469,7 +469,7 @@ describe('Referendums Keys', async assert => {
   await addVoice2(20)
 
   console.log('set quorum to 80 for high impact')
-  await contracts.settings.configure('quorum.high', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.high', 60, { authorization: `${settings}@active` })
   console.log('set stake price to 1')
   await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
 
@@ -502,9 +502,9 @@ describe('Referendums Keys', async assert => {
   console.log(`execute referendum - move to passed, active`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
   
-  // const r1 = await getRefs()
+  const r1 = await getRefs()
 
-  // console.log("refs "+JSON.stringify(r1, null, 2))
+  console.log("refs "+JSON.stringify(r1, null, 2))
 
   await checkRefs([0, 1, 1, 0, 0])
 
