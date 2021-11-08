@@ -530,9 +530,9 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
     } else {
 
       asset stakeToBurn = asset(0, seeds_symbol);
-
-      if ( passed ) {
-        // if passed, it's not enough quorum
+      
+      if ( !valid_quorum && passed ){
+        // unity with invaild quorum          
         stakeToBurn = asset(pitr->staked.amount * 0.05, seeds_symbol);
         refund_staked(pitr->creator, asset(pitr->staked.amount - stakeToBurn.amount, seeds_symbol) );
 
@@ -540,6 +540,8 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
 
         stakeToBurn = pitr->staked;
       }
+      
+      eosio::print(stakeToBurn);
 
       if (pitr->status != status_evaluate) {
         burn(stakeToBurn);
