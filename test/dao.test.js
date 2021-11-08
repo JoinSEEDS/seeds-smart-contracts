@@ -1215,6 +1215,104 @@ describe('Voice Delegation', async assert => {
 
 })
 
+describe.only('Stake burn in rejected proposals', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  const printProps = async () => {
+    const proposalsTable = await eos.getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'proposals',
+      json: true,
+    })
+
+    console.log(proposalsTable)
+  }
+  
+  await resetContracts()
+
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  const minStake = 1111
+
+  console.log('changing minimum amount to stake')
+  await contracts.settings.configure('refsnewprice', minStake * 10000, { authorization: `${settings}@active` })
+
+  await contracts.settings.configure("propquorum", 33, { authorization: `${settings}@active` }) 
+  await contracts.settings.configure("propmajority", 50, { authorization: `${settings}@active` })
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('create proposal')
+
+    await createProp(contracts.dao, firstuser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
+  await createProp(contracts.dao, seconduser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '55.7000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
+
+  await createProp(contracts.dao, seconduser, 'p.milestone', 'title', 'summary', 'description', 'image', 'url', milestonebank, '55.7000 SEEDS', [
+    { key: 'recipient', value: ['name', hyphabank] }
+  ])
+
+  await printProps();
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '2', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '3', { authorization: `${seconduser}@active` })
+
+  const testStake = async (expectedValues) => {
+    const proposalsTable = await eos.getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'proposals',
+      json: true,
+    })
+    assert({
+      given: 'onperiod ran',
+      should: 'have correct stake amount',
+      actual: proposalsTable.rows.map(r => r.staked),
+      expected: expectedValues
+    })    
+  }
+
+  await testStake([`${minStake}.0000 SEEDS`, `${minStake}.0000 SEEDS`, `${minStake}.0000 SEEDS` ])
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+
+  await printProps();
+  
+  console.log('voting for proposal with scope referendums')
+  await contracts.dao.favour(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.dao.against(seconduser, 1, 5, { authorization: `${seconduser}@active` })
+  await contracts.dao.against(thirduser, 1, 5, { authorization: `${thirduser}@active` })
+
+  await contracts.dao.favour(firstuser, 2, 5, { authorization: `${firstuser}@active` })
+
+  await contracts.dao.against(firstuser, 3, 1, { authorization: `${firstuser}@active` })
+
+  console.log('running onperiod')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(2000)
+  await sleep(2000)
+
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+
+  await printProps();
+
+})
+
 describe('Alliance Proposals', async assert => {
 
   if (!isLocal()) {

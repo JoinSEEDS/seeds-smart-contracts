@@ -190,12 +190,31 @@ void Proposal::evaluate (std::map<std::string, VariantValue> & args) {
 
     } else {
 
+      asset stakeToBurn = asset(0, utils::seeds_symbol);
+
+      if ( !valid_quorum && passed ){
+        // unity with invaild quorum          
+        stakeToBurn = asset(pitr->staked.amount * 0.05, utils::seeds_symbol);
+
+        //refound
+        this->m_contract.send_inline_action(
+          permission_level(contracts::bank, "active"_n),
+          contracts::token,
+          "transfer"_n,
+          std::make_tuple(contracts::bank, pitr->creator, asset(pitr->staked.amount - stakeToBurn.amount, utils::seeds_symbol), string(""))
+        );
+        
+      } else {
+
+        stakeToBurn = pitr->staked;
+      }
+
       if (current_status != ProposalsCommon::status_evaluate) {
         this->m_contract.send_inline_action(
           permission_level(contracts::bank, "active"_n),
           contracts::token,
           "burn"_n,
-          std::make_tuple(contracts::bank, pitr->staked)
+          std::make_tuple(contracts::bank, stakeToBurn)
         );
       } else {
         this->m_contract.send_inline_action(
