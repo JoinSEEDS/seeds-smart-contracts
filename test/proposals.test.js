@@ -3073,10 +3073,10 @@ describe('Stake burn in rejected proposals', async assert => {
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
   await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
 
-  await contracts.proposals.createx(firstuser, firstuser, '2.0000 SEEDS', '0', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(firstuser, firstuser, '2.5000 SEEDS', '1', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
-  await contracts.proposals.createx(seconduser, seconduser, '1.4000 SEEDS', '2', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
-  await contracts.proposals.createx(seconduser, seconduser, '1.7777 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '200.0000 SEEDS', '0', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '250.0000 SEEDS', '1', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '140.0000 SEEDS', '2', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '177.7777 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
 
   const testStake = async (expectedValues) => {
     const proposalsTable = await eos.getTableRows({
@@ -3095,14 +3095,21 @@ describe('Stake burn in rejected proposals', async assert => {
 
   await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
 
+  const firstBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
   console.log('deposit stake (memo 1)')
-  await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
   console.log('deposit stake (memo 2)')
-  await contracts.token.transfer(firstuser, proposals, '2.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
   console.log('deposit stake 3')
-  await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, proposals, '100.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
   console.log('deposit stake 4')
-  await contracts.token.transfer(seconduser, proposals, '2.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, proposals, '100.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
 
   let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
   for (i = 0; i<users.length; i++ ) {
@@ -3111,7 +3118,14 @@ describe('Stake burn in rejected proposals', async assert => {
     await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
   }
 
-  await testStake(['2.0000 SEEDS', '2.0000 SEEDS', '2.0000 SEEDS', '2.0000 SEEDS' ])
+  await testStake(['100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS' ])
+
+  const stakeBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
 
   console.log('move proposals to active')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -3148,6 +3162,13 @@ describe('Stake burn in rejected proposals', async assert => {
 
   await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
 
+  const finalBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
   await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
 
   const proposalsInit = await eos.getTableRows({
@@ -3155,6 +3176,20 @@ describe('Stake burn in rejected proposals', async assert => {
     scope: proposals,
     table: 'props',
     json: true,
+  })
+
+  assert({
+    given: 'firstuser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[0] - stakeBalances[0],
+    expected: 200
+  })
+
+  assert({
+    given: 'seconduser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[1] - stakeBalances[1],
+    expected: 200
   })
 
   assert({
@@ -3169,6 +3204,20 @@ describe('Stake burn in rejected proposals', async assert => {
     should: 'be rejected',
     actual: props.rows[1].status,
     expected: "rejected"
+  })
+
+  assert({
+    given: 'unity met with invalid quorum',
+    should: 'return 0.95 of stake',
+    actual: finalBalances[0] - stakeBalances[0],
+    expected: 95
+  })
+
+  assert({
+    given: 'unity not met',
+    should: 'burn stake',
+    actual: finalBalances[1] - stakeBalances[1],
+    expected: 0
   })
 
 })
