@@ -377,7 +377,7 @@ console.log("testing: "+JSON.stringify(table('testing:executeReferendumsTesting'
     expected: {
       account: firstuser,
       stake: '0.0000 SEEDS',
-      voice: 0
+      voice: 90
     }
   })
 })
@@ -469,7 +469,7 @@ describe('Referendums Keys', async assert => {
   await addVoice2(20)
 
   console.log('set quorum to 80 for high impact')
-  await contracts.settings.configure('quorum.high', 80, { authorization: `${settings}@active` })
+  await contracts.settings.configure('quorum.high', 60, { authorization: `${settings}@active` })
   console.log('set stake price to 1')
   await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
 
@@ -502,9 +502,9 @@ describe('Referendums Keys', async assert => {
   console.log(`execute referendum - move to passed, active`)
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
   
-  // const r1 = await getRefs()
+  const r1 = await getRefs()
 
-  // console.log("refs "+JSON.stringify(r1, null, 2))
+  console.log("refs "+JSON.stringify(r1, null, 2))
 
   await checkRefs([0, 1, 1, 0, 0])
 
@@ -524,5 +524,88 @@ describe('Referendums Keys', async assert => {
   await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
 
   await checkRefs([0, 0, 0, 2, 0])
+
+})
+
+describe('Refund Stake', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ referendums, token, settings, accounts })
+
+
+  const getBalance = async (user) => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: referendums,
+      table: 'balances',
+      json: true
+    })
+
+    bal = Number.parseInt(referendumsTable.rows[0].stake)
+    console.log("balance = "+bal)
+    return bal
+  }
+  const getSeedsBalance = async (user) => {
+    const balance = await eos.getCurrencyBalance(token, user, 'SEEDS')
+    return Number.parseInt(balance[0]) || 0
+  }
+
+
+  console.log('referendums reset')
+  await contracts.referendums.reset({ authorization: `${referendums}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('add users, make citizens')
+  await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  const initialSeeds = await getSeedsBalance(firstuser)
+
+  console.log(`stake`)
+  await contracts.token.transfer(firstuser, referendums, "22.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, referendums, "100.0000 SEEDS", '', { authorization: `${seconduser}@active` })
+
+  bal = await getBalance(firstuser)
+
+  assert({
+    given: 'sent Seeds to proposals contract',
+    should: 'have balance',
+    actual: bal,
+    expected: 22
+  })
+  
+  seedsBefore = await getSeedsBalance(firstuser)
+
+  console.log(`seedsBefore: ` + seedsBefore)
+
+  console.log(`refund`)
+  await contracts.referendums.refundstake(firstuser, { authorization: `${firstuser}@active` })
+
+  seedsAfter = await getSeedsBalance(firstuser)
+
+  console.log(`seedsAfter: ` + seedsAfter)
+
+  bal = await getBalance(firstuser)
+
+  assert({
+    given: 'refund Seeds from proposals contract',
+    should: 'have new balance',
+    actual: bal,
+    expected: 0
+  })
+
+  assert({
+    given: 'seeds before' + seedsBefore,
+    should: 'have new balance',
+    actual: seedsAfter,
+    expected: seedsBefore + 22
+  })
 
 })

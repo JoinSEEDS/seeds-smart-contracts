@@ -32,18 +32,6 @@ void referendums::send_onperiod() {
   ).send();
 }
 
-void referendums::give_voice() {
-  auto bitr = balances.begin();
-
-  while (bitr != balances.end()) {
-    balances.modify(bitr, get_self(), [&](auto& item) {
-      item.voice = 10;
-    });
-
-    bitr++;
-  }
-}
-
 uint64_t referendums::get_quorum(const name & setting) {
   auto citr = config.find(setting.value);
   if (citr == config.end()) {
@@ -128,9 +116,19 @@ void referendums::run_active() {
 
     voter_tables voters(get_self(), aitr->referendum_id);
     uint64_t voters_number = distance(voters.begin(), voters.end());
+    uint64_t citizens_number = distance(balances.begin(), balances.end());
     
     bool valid_majority = utils::is_valid_majority(aitr->favour, aitr->against, majority);
-    bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, distance(balances.begin(), balances.end()));
+    bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, citizens_number);
+
+// useful for debugging why a proposal failed
+// print(" eval " + std::to_string(aitr->referendum_id));
+// print(" valid_majority " + std::to_string(valid_majority));
+// print(" valid_quorum " + std::to_string(valid_quorum));
+// print(" voters_number " + std::to_string(voters_number));
+// print(" quorum " + std::to_string(quorum));
+// print(" citizens_number " + std::to_string(citizens_number));
+
     bool referendum_passed = valid_majority && valid_quorum;
 
     if (referendum_passed) {
@@ -169,6 +167,9 @@ void referendums::run_staged() {
 }
 
 void referendums::onperiod() {
+
+  require_auth(get_self());
+
   run_testing();
   run_active();
   run_staged();
@@ -177,7 +178,28 @@ void referendums::onperiod() {
 
 }
 
+void referendums::refundstake(name sponsor) {
+
+  require_auth(sponsor);
+
+  auto bitr = balances.find(sponsor.value);
+  check(bitr != balances.end(), "user has no balance");
+  check(bitr->stake.amount > 0, "user has no balance");
+
+  asset quantity = bitr->stake; 
+
+  balances.modify(bitr, get_self(), [&](auto& balance) {
+    balance.stake -= quantity;
+  });
+
+  send_refund_stake(sponsor, quantity);
+
+}
+
 void referendums::reset() {
+
+  require_auth(get_self());
+
   auto bitr = balances.begin();
 
   while (bitr != balances.end()) {
@@ -248,6 +270,8 @@ void referendums::reset() {
 }
 
 void referendums::addvoice(name account, uint64_t amount) {
+  require_auth(get_self());
+
   auto bitr = balances.find(account.value);
 
   if (bitr == balances.end()) {
@@ -458,6 +482,8 @@ void referendums::update(
 }
 
 void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
+  require_auth(voter);
+
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
   check(bitr->voice >= amount, "not enough voice");
@@ -556,120 +582,3 @@ void referendums::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
-void referendums::fixtitle(uint64_t id, string title) 
-{
-  require_auth(get_self());
-  referendum_tables refs(get_self(), name("active").value);
-
-  auto ritr = refs.find(id);
-  check(ritr != refs.end(), "referendum id not found");
-  refs.modify(ritr, _self, [&](auto& item) {
-    item.title = title;
-  });
-}
-
-void referendums::fixdesc(uint64_t id, string description) {
-  require_auth(get_self());
-  referendum_tables staged(get_self(), name("staged").value);
-
-  referendum_tables refs(get_self(), name("active").value);
-  auto ritr = refs.find(id);
-  check(ritr != refs.end(), "referendum not found");
-
-  // make backup - only the first time
-  back_refs_tables backrefs(get_self(), get_self().value);
-  auto bitr = backrefs.find(id);
-  if (bitr == backrefs.end()) {
-    backrefs.emplace(_self, [&](auto & item){
-      item.ref_id = id;
-      item.description = ritr->description;
-    });
-  } 
-
-  fix_refs_tables fixrefs(get_self(), get_self().value);
-
-  auto fix_itr = fixrefs.find(id);
-
-  if (fix_itr == fixrefs.end()) {
-    fixrefs.emplace(_self, [&](auto & item){
-      item.ref_id = id;
-      item.description = description;
-    });
-  } else {
-    fixrefs.modify(fix_itr, _self, [&](auto& item) {
-      item.description = description;
-    });
-  }
-
-}
-
-void referendums::fixid() 
-{
-  require_auth(get_self());
-  referendum_tables active(get_self(), name("active").value);
-
-  auto ritr = active.find(0);
-  check(ritr != active.end(), "referendum 0 not found");
-
-  auto ritr_1 = active.find(1);
-  check(ritr_1 == active.end(), "referendum 1 already exists");
-
-  active.emplace(get_self(), [&](auto& item) {
-    item.referendum_id = 1;
-    item.favour = ritr->favour;
-    item.against = ritr->against;
-    item.staked = ritr->staked;
-    item.creator = ritr->creator;
-    item.setting_name = ritr->setting_name;
-    item.setting_value = ritr->setting_value;
-    item.title = ritr->title;
-    item.summary = ritr->summary;
-    item.description = ritr->description;
-    item.image = ritr->image;
-    item.url = ritr->url;
-    item.created_at = ritr->created_at;
-  });
-
-  active.erase(ritr);
-
-}
-
-void referendums::applyfixref() {
-  require_auth(get_self());
-
-  referendum_tables refs(get_self(), name("active").value);
-
-  fix_refs_tables fixrefs(get_self(), get_self().value);
-  auto fitr = fixrefs.begin();
-  while(fitr != fixrefs.end()) {
-    print(" processing "+std::to_string(fitr->ref_id));
-    auto ritr = refs.find(fitr->ref_id);
-    if (ritr != refs.end()) {
-      print(" replace id "+std::to_string(fitr->ref_id));
-      refs.modify(ritr, _self, [&](auto& item) {
-        item.description = fitr->description;
-      });
-    } 
-    fitr++;
-  }
-}
-
-void referendums::backfixref() {
-  require_auth(get_self());
-
-  referendum_tables refs(get_self(), name("active").value);
-
-  back_refs_tables backrefs(get_self(), get_self().value);
-  auto bitr = backrefs.begin();
-  while(bitr != backrefs.end()) {
-    print(" b processing "+std::to_string(bitr->ref_id));
-    auto ritr = refs.find(bitr->ref_id);
-    if (ritr != refs.end()) {
-      print(" restore id "+std::to_string(bitr->ref_id));
-      refs.modify(ritr, _self, [&](auto& item) {
-        item.description = bitr->description;
-      });
-    } 
-    bitr++;
-  }
-}

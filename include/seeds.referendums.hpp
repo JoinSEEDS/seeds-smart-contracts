@@ -68,6 +68,8 @@ CONTRACT referendums : public contract {
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
+      ACTION refundstake(name sponsor);
+
       ACTION addvoice(name account, uint64_t amount);
 
       ACTION updatevoice(uint64_t start, uint64_t batchsize);
@@ -76,12 +78,6 @@ CONTRACT referendums : public contract {
 
       ACTION onperiod();
 
-      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
-      ACTION fixid(); // fix id issue
-      ACTION fixtitle(uint64_t id, string title); // temp for fixing title
-      ACTION applyfixref(); // temp for fixing description
-      ACTION backfixref(); // revert fixing description
-
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -89,7 +85,6 @@ CONTRACT referendums : public contract {
     static constexpr name medium_impact = "med"_n;
     static constexpr name low_impact = "low"_n;
 
-    void give_voice();
     void run_testing();
     void run_active();
     void run_staged();
@@ -175,8 +170,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice)
-        (fixdesc)(applyfixref)(backfixref)(fixtitle)(fixid)
+        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice)(refundstake)
         )
       }
   }
