@@ -68,7 +68,7 @@ CONTRACT referendums : public contract {
 
       ACTION stake(name from, name to, asset quantity, string memo);
 
-      ACTION refundstake(name sponsor, asset quantity);
+      ACTION refundstake(name sponsor);
 
       ACTION addvoice(name account, uint64_t amount);
 

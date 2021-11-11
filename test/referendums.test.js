@@ -586,7 +586,7 @@ describe('Refund Stake', async assert => {
   console.log(`seedsBefore: ` + seedsBefore)
 
   console.log(`refund`)
-  await contracts.referendums.refundstake(firstuser, "11.0000 SEEDS", { authorization: `${firstuser}@active` })
+  await contracts.referendums.refundstake(firstuser, { authorization: `${firstuser}@active` })
 
   seedsAfter = await getSeedsBalance(firstuser)
 
@@ -598,50 +598,14 @@ describe('Refund Stake', async assert => {
     given: 'refund Seeds from proposals contract',
     should: 'have new balance',
     actual: bal,
-    expected: 11
+    expected: 0
   })
 
   assert({
     given: 'seeds before' + seedsBefore,
     should: 'have new balance',
     actual: seedsAfter,
-    expected: seedsBefore + 11
-  })
-
-  console.log(`overdraw`)
-
-  var overdraw = false
-  try {
-    await contracts.referendums.refundstake(firstuser, "12.0000 SEEDS", { authorization: `${firstuser}@active` })
-    overdraw = true
-  } catch(e) {
-    console.log("expected error: "+e)
-  }
-
-  assert({
-    given: 'try to overdraw refund',
-    should: 'throw error',
-    actual: overdraw,
-    expected: false
-  })
-
-  console.log(`withdraw rest`)
-  await contracts.referendums.refundstake(firstuser, "11.0000 SEEDS", { authorization: `${firstuser}@active` })
-
-  assert({
-    given: 'refund all',
-    should: 'have same as before',
-    actual: await getSeedsBalance(firstuser),
-    expected: initialSeeds
-  })
-
-  bal = await getBalance(firstuser)
-
-  assert({
-    given: 'refund all seeds',
-    should: 'have zero left',
-    actual: bal,
-    expected: 0
+    expected: seedsBefore + 22
   })
 
 })

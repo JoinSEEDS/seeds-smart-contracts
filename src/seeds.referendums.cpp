@@ -178,13 +178,14 @@ void referendums::onperiod() {
 
 }
 
-void referendums::refundstake(name sponsor, asset quantity) {
+void referendums::refundstake(name sponsor) {
 
   require_auth(sponsor);
 
   auto bitr = balances.find(sponsor.value);
   check(bitr != balances.end(), "user has no balance");
-  check(bitr->stake >= quantity, "user has insufficient stake");
+
+  asset quantity = bitr->stake; 
 
   balances.modify(bitr, get_self(), [&](auto& balance) {
     balance.stake -= quantity;
