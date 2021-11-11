@@ -229,9 +229,9 @@ namespace utils {
   }
 
   template <typename T>
-  void delete_table (const name & code, const name & scope) {
+  void delete_table (const name & code, const uint64_t & scope) {
 
-    T table(code, scope.value);
+    T table(code, scope);
     auto itr = table.begin();
 
     while (itr != table.end()) {

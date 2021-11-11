@@ -1870,6 +1870,52 @@ describe('Delegate flagging', async assert => {
     ]
   })
 
+  console.log('undelegate flag')
+  await contracts.accounts.undlgateflag(thirduser, { authorization: `${firstuser}@active` })
+  await contracts.accounts.undlgateflag(fourthuser, { authorization: `${thirduser}@active` })
+
+  const delegatorsTableAfterUndelegate = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'delegators',
+    json: true
+  })
+  assert({
+    given: 'undelegate flag',
+    should: 'have the correct entries in the delegators table',
+    actual: delegatorsTableAfterUndelegate.rows,
+    expected: [
+      {
+        delegator: seconduser,
+        delegatee: firstuser
+      },
+      {
+          delegator: fifthuser,
+          delegatee: fourthuser
+      }
+    ]
+  })
+
+  console.log('remove flag')
+  await contracts.accounts.removeflag(firstuser, fifthuser, { authorization: `${firstuser}@active` })
+  await sleep(4000)
+
+  const flagPointsAfterRemove = await getTableRows({
+    code: accounts,
+    scope: fifthuser,
+    table: 'flagpts',
+    json: true
+  })
+  console.log(JSON.stringify(flagPointsAfterRemove, null, 4))
+
+  assert({
+    given: 'flag delegated',
+    should: 'trigger remove flagging in the whole tree',
+    expected: [thirduser, fourthuser],
+    actual: flagPointsAfterRemove.rows.map(r => r.account)
+  })
+
+
 })
 
 describe('Enforce accounts', async assert => {

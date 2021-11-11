@@ -1410,13 +1410,13 @@ void accounts::flag (name from, name to) {
     permission_level(get_self(), "active"_n),
     get_self(),
     "mimicflag"_n,
-    std::make_tuple(from, to, config_get(name("batchsize")))
+    std::make_tuple(from, to, "flag"_n, config_get(name("batchsize")))
   );
 
 }
 
 void accounts::removeflag (name from, name to) {
-  require_auth(from);
+  require_auth(has_auth(from) ? from : get_self());
 
   flag_points_tables flags(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
@@ -1432,6 +1432,14 @@ void accounts::removeflag (name from, name to) {
   });
 
   flags.erase(flag_itr);
+
+  utils::send_deferred_transaction(
+    get_self(),
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "mimicflag"_n,
+    std::make_tuple(from, to, "removeflag"_n, config_get(name("batchsize")))
+  );
 }
 
 void accounts::check_is_banned(name account)
@@ -1605,7 +1613,7 @@ void accounts::undlgateflag (name delegator) {
 
 }
 
-void accounts::mimicflag (name delegatee, name to, uint64_t chunksize) {
+void accounts::mimicflag (name delegatee, name to, name action, uint64_t chunksize) {
 
   require_auth(get_self());
 
@@ -1615,10 +1623,10 @@ void accounts::mimicflag (name delegatee, name to, uint64_t chunksize) {
   uint64_t count = 0;
 
   while (ditr != delegators_by_delegatee.end() && ditr->delegatee == delegatee && count < chunksize) {
-    action(
+    eosio::action(
       permission_level(get_self(), "active"_n),
       get_self(),
-      "flag"_n,
+      action,
       std::make_tuple(ditr->delegator, to)
     ).send();
 
@@ -1632,7 +1640,7 @@ void accounts::mimicflag (name delegatee, name to, uint64_t chunksize) {
       permission_level(get_self(), "active"_n),
       get_self(),
       "mimicflag"_n,
-      std::make_tuple(delegatee, to, chunksize)
+      std::make_tuple(delegatee, to, action, chunksize)
     );
   }
 

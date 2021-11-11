@@ -80,7 +80,7 @@ CONTRACT accounts : public contract {
       ACTION removeflag(name from, name to);
       ACTION delegateflag(name delegator, name delegatee);
       ACTION undlgateflag(name delegator);
-      ACTION mimicflag(name delegatee, name to, uint64_t chunksize);
+      ACTION mimicflag(name delegatee, name to, name action, uint64_t chunksize);
       ACTION punish(name account, uint64_t points);
       ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
       ACTION evaldemote(name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize);
