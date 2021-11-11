@@ -10,83 +10,33 @@ void accounts::reset() {
 
   auto uitr = users.begin();
   while (uitr != users.end()) {
-    vouch_tables vouch(get_self(), uitr->account.value);
-    auto vitr = vouch.begin();
-    while (vitr != vouch.end()) {
-      vitr = vouch.erase(vitr);
-    }
+    utils::delete_table<vouch_tables>(contracts::accounts, uitr->account.value);
 
-    flag_points_tables flags(get_self(), uitr->account.value);
-    auto fitr = flags.begin();
-    while (fitr != flags.end()) {
-      fitr = flags.erase(fitr);
-    }
+    utils::delete_table<flag_points_tables>(contracts::accounts, uitr->account.value);
 
     uitr = users.erase(uitr);
   }
 
-  flag_points_tables flags(get_self(), flag_total_scope.value);
-  auto fitr = flags.begin();
-  while (fitr != flags.end()) {
-    fitr = flags.erase(fitr);
-  }
+  utils::delete_table<flag_points_tables>(contracts::accounts, flag_total_scope.value);
+  utils::delete_table<flag_points_tables>(contracts::accounts, flag_remove_scope.value);
 
-  flag_points_tables flagsremoved(get_self(), flag_remove_scope.value);
-  auto fritr = flagsremoved.begin();
-  while (fritr != flagsremoved.end()) {
-    fritr = flagsremoved.erase(fritr);
-  }
+  utils::delete_table<vouches_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto vitr = vouches.begin();
-  while (vitr != vouches.end()) {
-    vitr = vouches.erase(vitr);
-  }
+  utils::delete_table<vouches_totals_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto vtitr = vouchtotals.begin();
-  while (vtitr != vouchtotals.end()) {
-    vtitr = vouchtotals.erase(vtitr);
-  }
+  utils::delete_table<ref_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto refitr = refs.begin();
-  while (refitr != refs.end()) {
-    refitr = refs.erase(refitr);
-  }
+  utils::delete_table<cbs_tables>(contracts::accounts, contracts::accounts.value);
+  utils::delete_table<cbs_tables>(contracts::accounts, organization_scope.value);
 
-  auto cbsitr = cbs.begin();
-  while (cbsitr != cbs.end()) {
-    cbsitr = cbs.erase(cbsitr);
-  }
+  utils::delete_table<rep_tables>(contracts::accounts, contracts::accounts.value);
+  utils::delete_table<rep_tables>(contracts::accounts, organization_scope.value);
 
-  cbs_tables cbs_t(get_self(), organization_scope.value);
-  auto cbsitr_org = cbs_t.begin();
-  while (cbsitr_org != cbs_t.end()) {
-    cbsitr_org = cbs_t.erase(cbsitr_org);
-  }
+  utils::delete_table<size_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto repitr = rep.begin();
-  while (repitr != rep.end()) {
-    repitr = rep.erase(repitr);
-  }
-
-  rep_tables rep_t(get_self(), organization_scope.value);
-  auto o_repitr = rep_t.begin();
-  while (o_repitr != rep_t.end()) {
-    o_repitr = rep_t.erase(o_repitr);
-  }
-
-  auto sitr = sizes.begin();
-  while (sitr != sizes.end()) {
-    sitr = sizes.erase(sitr);
-  }
-
-  ban_tables ban(contracts::accounts, contracts::accounts.value);
-  auto banitr = ban.begin();
-  while (banitr != ban.end()) {
-    banitr = ban.erase(banitr);
-  }
+  utils::delete_table<ban_tables>(contracts::accounts, contracts::accounts.value);
 
   utils::delete_table<delegators_tables>(contracts::accounts, contracts::accounts.value);
-
 }
 
 void accounts::history_add_resident(name account) {

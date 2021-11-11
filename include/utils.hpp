@@ -229,7 +229,7 @@ namespace utils {
   }
 
   template <typename T>
-  void delete_table (const name & code, const uint64_t & scope) {
+  inline void delete_table (const name & code, const uint64_t & scope) {
 
     T table(code, scope);
     auto itr = table.begin();
@@ -241,7 +241,7 @@ namespace utils {
   }
 
   template <typename... T>
-  void send_deferred_transaction (
+  inline void send_deferred_transaction (
     const name & code,
     const permission_level & permission,
     const name & contract, 
