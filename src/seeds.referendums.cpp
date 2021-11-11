@@ -184,6 +184,7 @@ void referendums::refundstake(name sponsor) {
 
   auto bitr = balances.find(sponsor.value);
   check(bitr != balances.end(), "user has no balance");
+  check(bitr->stake.amount > 0, "user has no balance");
 
   asset quantity = bitr->stake; 
 
