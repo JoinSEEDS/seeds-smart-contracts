@@ -9,6 +9,7 @@
 #include <tables/config_table.hpp>
 #include <tables/ban_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/deferred_id_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -77,6 +78,9 @@ CONTRACT accounts : public contract {
 
       ACTION flag(name from, name to);
       ACTION removeflag(name from, name to);
+      ACTION delegateflag(name delegator, name delegatee);
+      ACTION undlgateflag(name delegator);
+      ACTION mimicflag(name delegatee, name to, name action, uint64_t chunksize);
       ACTION punish(name account, uint64_t points);
       ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
       ACTION evaldemote(name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize);
@@ -373,13 +377,28 @@ CONTRACT accounts : public contract {
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
     active_tables actives;
 
+    DEFINE_DEFERRED_ID_TABLE
+    DEFINE_DEFERRED_ID_SINGLETON
+
+    TABLE delegators_table {
+      name delegator;
+      name delegatee;
+
+      uint64_t primary_key () const { return delegator.value; }
+      uint128_t by_delegatee_delegator () const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
+    };
+    typedef eosio::multi_index<"delegators"_n, delegators_table,
+      indexed_by<"bydelegatee"_n,
+      const_mem_fun<delegators_table, uint128_t, &delegators_table::by_delegatee_delegator>>
+    > delegators_tables;
+
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
-(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)
+(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)(delegateflag)(undlgateflag)(mimicflag)
 (refinfo)(unban)
 (testmvouch)
 (addcbs)
