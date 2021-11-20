@@ -1982,13 +1982,6 @@ ACTION proposals::delegate (name delegator, name delegatee, name scope) {
 }
 
 void proposals::send_vote_on_behalf (name voter, uint64_t id, uint64_t amount, name option) {
-  // action(
-  //   permission_level{get_self(), "active"_n},
-  //   get_self(),
-  //   "voteonbehalf"_n,
-  //   std::make_tuple(voter, id, amount, option)
-  // ).send();
-
   action vote_on_behalf_action(
     permission_level{get_self(), "active"_n},
     get_self(),
