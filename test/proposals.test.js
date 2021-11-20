@@ -2064,8 +2064,12 @@ describe('delegate trust', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  // users get 2 points for entering into the vote table
   console.log('configure voterep2.ind to 2')
   await contracts.settings.configure('voterep2.ind', 2, { authorization: `${settings}@active` })
+
+  // delegators will get 50% of the points for entering in the vote table
+  // this means voters get 2 points, and users who delegated get 1 point (50% of 2)
   console.log('configure votedel.mul to 50')
   await contracts.settings.configure('votedel.mul', 50, { authorization: `${settings}@active` })
   
