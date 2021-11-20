@@ -1289,17 +1289,21 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
 void proposals::erasepartpts(uint64_t active_proposals) {
   uint64_t batch_size = config_get(name("batchsize"));
+
+  // TODO: If there was delegation, this should be multiplied by delegation factor, e.g. 0.8 for example
   uint64_t reward_points = config_get(name("voterep1.ind"));
 
   uint64_t counter = 0;
   auto pitr = participants.begin();
   while (pitr != participants.end() && counter < batch_size) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
-      action(
-        permission_level{contracts::accounts, "active"_n},
-        contracts::accounts, "addrep"_n,
-        std::make_tuple(pitr -> account, reward_points)
-      ).send();
+      if (reward_points > 0) {
+        action(
+          permission_level{contracts::accounts, "active"_n},
+          contracts::accounts, "addrep"_n,
+          std::make_tuple(pitr -> account, reward_points)
+        ).send();
+      }
     }
     counter += 1;
     pitr = participants.erase(pitr);
@@ -1377,14 +1381,17 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (is_new) {
     auto rep = config_get(name("voterep2.ind"));
     double rep_multiplier = is_delegated ? config_get(name("votedel.mul")) / 100.0 : 1.0;
+    uint64_t rep_int_value = uint64_t(round( rep * rep_multiplier ));
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
-      // add reputation for entering in the table
-      action(
-        permission_level{contracts::accounts, "active"_n},
-        contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, uint64_t(rep * rep_multiplier))
-      ).send();
+      if (rep_int_value > 0) {
+        // add reputation for entering in the table
+        action(
+          permission_level{contracts::accounts, "active"_n},
+          contracts::accounts, "addrep"_n,
+          std::make_tuple(voter, rep_int_value)
+        ).send();
+      }
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
         participant.account = voter;
@@ -1690,11 +1697,13 @@ void proposals::refund_staked(name beneficiary, asset quantity) {
 void proposals::change_rep(name beneficiary, bool passed) {
   if (passed) {
     auto reward_points = config_get(name("proppass.rep"));
-    action(
-      permission_level{contracts::accounts, "active"_n},
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(beneficiary, reward_points)
-    ).send();
+    if (reward_points > 0) {
+      action(
+        permission_level{contracts::accounts, "active"_n},
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(beneficiary, reward_points)
+      ).send();
+    }
   }
 
 }
