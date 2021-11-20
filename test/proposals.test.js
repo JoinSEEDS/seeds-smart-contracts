@@ -2112,14 +2112,6 @@ describe('delegate trust', async assert => {
   for (let i = 0; i < users.length; i++) {
     await contracts.proposals.testsetvoice(users[i], voices[i], { authorization: `${proposals}@active` })
   }
-  const usersTable1 = await eos.getTableRows({
-    code: accounts,
-    scope: accounts,
-    table: 'users',
-    json: true,
-  })
-  const reps1 = usersTable1.rows.map(r => r.reputation)
-  console.log("reps1 " + JSON.stringify(reps1,null,2))
 
   console.log('delegate trust for campaigns')
   const scopeCampaigns = proposals
@@ -2225,8 +2217,6 @@ describe('delegate trust', async assert => {
   })
 
   const reps = usersTable.rows.map(r => r.reputation)
-
-  console.log("reps after " + JSON.stringify(reps,null,2))
 
   const voicesAfterVote = await getVoices()
 
