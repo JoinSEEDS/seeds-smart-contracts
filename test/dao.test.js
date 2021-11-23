@@ -1454,8 +1454,6 @@ describe('Voice Erase', async assert => {
       ]
     ]
   })
-  
-})
 
   console.log('Add alliance voices');
 
