@@ -365,12 +365,14 @@ ACTION dao::erasepartpts (const uint64_t & active_proposals) {
 
   while (pitr != participants_t.end() && counter < batch_size) {
     if (pitr->count == active_proposals && pitr->nonneutral) {
-      send_inline_action(
-        permission_level(contracts::accounts, "addrep"_n),
-        contracts::accounts, 
-        "addrep"_n,
-        std::make_tuple(pitr->account, reward_points)
-      );
+      if (reward_points > 0) {
+        send_inline_action(
+          permission_level(contracts::accounts, "addrep"_n),
+          contracts::accounts, 
+          "addrep"_n,
+          std::make_tuple(pitr->account, reward_points)
+        );
+      }
     }
     counter += 1;
     pitr = participants_t.erase(pitr);
@@ -780,7 +782,7 @@ void dao::vote_aux (const name & voter, const uint64_t & proposal_id, const uint
 
   if (paitr == participants_t.end()) {
     // add reputation for entering in the table
-    uint64_t rep_amount = uint64_t(rep * rep_multiplier);
+    uint64_t rep_amount = uint64_t(round(rep * rep_multiplier));
 
     if (rep_amount > 0) {
       send_inline_action(
