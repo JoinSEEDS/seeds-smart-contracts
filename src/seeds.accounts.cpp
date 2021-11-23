@@ -10,82 +10,33 @@ void accounts::reset() {
 
   auto uitr = users.begin();
   while (uitr != users.end()) {
-    vouch_tables vouch(get_self(), uitr->account.value);
-    auto vitr = vouch.begin();
-    while (vitr != vouch.end()) {
-      vitr = vouch.erase(vitr);
-    }
+    utils::delete_table<vouch_tables>(contracts::accounts, uitr->account.value);
 
-    flag_points_tables flags(get_self(), uitr->account.value);
-    auto fitr = flags.begin();
-    while (fitr != flags.end()) {
-      fitr = flags.erase(fitr);
-    }
+    utils::delete_table<flag_points_tables>(contracts::accounts, uitr->account.value);
 
     uitr = users.erase(uitr);
   }
 
-  flag_points_tables flags(get_self(), flag_total_scope.value);
-  auto fitr = flags.begin();
-  while (fitr != flags.end()) {
-    fitr = flags.erase(fitr);
-  }
+  utils::delete_table<flag_points_tables>(contracts::accounts, flag_total_scope.value);
+  utils::delete_table<flag_points_tables>(contracts::accounts, flag_remove_scope.value);
 
-  flag_points_tables flagsremoved(get_self(), flag_remove_scope.value);
-  auto fritr = flagsremoved.begin();
-  while (fritr != flagsremoved.end()) {
-    fritr = flagsremoved.erase(fritr);
-  }
+  utils::delete_table<vouches_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto vitr = vouches.begin();
-  while (vitr != vouches.end()) {
-    vitr = vouches.erase(vitr);
-  }
+  utils::delete_table<vouches_totals_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto vtitr = vouchtotals.begin();
-  while (vtitr != vouchtotals.end()) {
-    vtitr = vouchtotals.erase(vtitr);
-  }
+  utils::delete_table<ref_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto refitr = refs.begin();
-  while (refitr != refs.end()) {
-    refitr = refs.erase(refitr);
-  }
+  utils::delete_table<cbs_tables>(contracts::accounts, contracts::accounts.value);
+  utils::delete_table<cbs_tables>(contracts::accounts, organization_scope.value);
 
-  auto cbsitr = cbs.begin();
-  while (cbsitr != cbs.end()) {
-    cbsitr = cbs.erase(cbsitr);
-  }
+  utils::delete_table<rep_tables>(contracts::accounts, contracts::accounts.value);
+  utils::delete_table<rep_tables>(contracts::accounts, organization_scope.value);
 
-  cbs_tables cbs_t(get_self(), organization_scope.value);
-  auto cbsitr_org = cbs_t.begin();
-  while (cbsitr_org != cbs_t.end()) {
-    cbsitr_org = cbs_t.erase(cbsitr_org);
-  }
+  utils::delete_table<size_tables>(contracts::accounts, contracts::accounts.value);
 
-  auto repitr = rep.begin();
-  while (repitr != rep.end()) {
-    repitr = rep.erase(repitr);
-  }
+  utils::delete_table<ban_tables>(contracts::accounts, contracts::accounts.value);
 
-  rep_tables rep_t(get_self(), organization_scope.value);
-  auto o_repitr = rep_t.begin();
-  while (o_repitr != rep_t.end()) {
-    o_repitr = rep_t.erase(o_repitr);
-  }
-
-  auto sitr = sizes.begin();
-  while (sitr != sizes.end()) {
-    sitr = sizes.erase(sitr);
-  }
-
-  ban_tables ban(contracts::accounts, contracts::accounts.value);
-  auto banitr = ban.begin();
-  while (banitr != ban.end()) {
-    banitr = ban.erase(banitr);
-  }
-
-
+  utils::delete_table<delegators_tables>(contracts::accounts, contracts::accounts.value);
 }
 
 void accounts::history_add_resident(name account) {
@@ -1323,7 +1274,7 @@ void accounts::pnshvouchers (name account, uint64_t points, uint64_t start) {
 }
 
 void accounts::flag (name from, name to) {
-  require_auth(from);
+  require_auth(has_auth(from) ? from : get_self());
 
   check_is_banned(from);
 
@@ -1404,10 +1355,18 @@ void accounts::flag (name from, name to) {
     });
   }
 
+  utils::send_deferred_transaction(
+    get_self(),
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "mimicflag"_n,
+    std::make_tuple(from, to, "flag"_n, config_get(name("batchsize")))
+  );
+
 }
 
 void accounts::removeflag (name from, name to) {
-  require_auth(from);
+  require_auth(has_auth(from) ? from : get_self());
 
   flag_points_tables flags(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
@@ -1423,6 +1382,14 @@ void accounts::removeflag (name from, name to) {
   });
 
   flags.erase(flag_itr);
+
+  utils::send_deferred_transaction(
+    get_self(),
+    permission_level(get_self(), "active"_n),
+    get_self(),
+    "mimicflag"_n,
+    std::make_tuple(from, to, "removeflag"_n, config_get(name("batchsize")))
+  );
 }
 
 void accounts::check_is_banned(name account)
@@ -1521,7 +1488,7 @@ void accounts::evaldemote (name to, uint64_t start_val, uint64_t chunk, uint64_t
     transaction tx;
     tx.actions.emplace_back(next_execution);
     tx.delay_sec = 1;
-    tx.send(next_value + 1, _self); 
+    tx.send(next_value + 1, _self);
   }
 
 }
@@ -1543,3 +1510,89 @@ void accounts::testmvouch (name sponsor, name account, uint64_t reps) {
     });
   }
 }
+
+
+void accounts::delegateflag (name delegator, name delegatee) {
+  require_auth(delegator);
+
+  check(delegator != delegatee, "delegator can not be their delegatee");
+
+  delegators_tables delegator_t(get_self(), get_self().value);
+
+  uint64_t max_depth = config_get("dlegate.dpth"_n);
+  uint64_t count = 0;
+  name aux_delegatee = delegatee;
+
+  for (; count < max_depth; count++) {
+    auto curr_delegator_itr = delegator_t.find(aux_delegatee.value);
+
+    if (curr_delegator_itr != delegator_t.end()) {
+      check(curr_delegator_itr->delegatee != delegator, "cycles are not allowed");
+      aux_delegatee = curr_delegator_itr->delegatee;
+    } else {
+      break;
+    }
+  }
+
+  check(count < max_depth, "max depth of delegation reached, count=" + std::to_string(count) + ", max_depth=" + std::to_string(max_depth));
+
+  auto ditr = delegator_t.find(delegator.value);
+
+  if (ditr == delegator_t.end()) {
+    delegator_t.emplace(_self, [&](auto & item){
+      item.delegator = delegator;
+      item.delegatee = delegatee;
+    });
+  } else {
+    delegator_t.modify(ditr, _self, [&](auto & item){
+      item.delegatee = delegatee;
+    });
+  }
+}
+
+
+void accounts::undlgateflag (name delegator) {
+
+  delegators_tables delegator_t(get_self(), get_self().value);
+
+  auto ditr = delegator_t.require_find(delegator.value, "delegator not found");
+
+  require_auth(has_auth(ditr->delegator) ? ditr->delegator : ditr->delegatee);
+
+  delegator_t.erase(ditr);
+
+}
+
+void accounts::mimicflag (name delegatee, name to, name action, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegators_tables delegator_t(get_self(), get_self().value);
+  auto delegators_by_delegatee = delegator_t.get_index<"bydelegatee"_n>();
+  auto ditr = delegators_by_delegatee.lower_bound(uint128_t(delegatee.value) << 64);
+  uint64_t count = 0;
+
+  while (ditr != delegators_by_delegatee.end() && ditr->delegatee == delegatee && count < chunksize) {
+    eosio::action(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      action,
+      std::make_tuple(ditr->delegator, to)
+    ).send();
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != delegators_by_delegatee.end() && ditr->delegatee == delegatee) {
+    utils::send_deferred_transaction(
+      get_self(),
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "mimicflag"_n,
+      std::make_tuple(delegatee, to, action, chunksize)
+    );
+  }
+
+}
+
