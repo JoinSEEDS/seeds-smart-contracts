@@ -1215,6 +1215,184 @@ describe('Voice Delegation', async assert => {
 
 })
 
+describe('Stake burn in rejected proposals', async assert => {
+  
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  const printProps = async () => {
+    const proposalsTable = await eos.getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'proposals',
+      json: true,
+    })
+
+    console.log(proposalsTable)
+  }
+
+  const testStake = async (expectedValues) => {
+    const proposalsTable = await eos.getTableRows({
+      code: dao,
+      scope: dao,
+      table: 'proposals',
+      json: true,
+    })
+    assert({
+      given: 'onperiod ran',
+      should: 'have correct stake amount',
+      actual: proposalsTable.rows.map(r => r.staked),
+      expected: expectedValues
+    })    
+  }
+
+  await resetContracts()
+  
+  const users = [firstuser, seconduser, thirduser, fourthuser]
+  const contracts = await initContracts({ dao, token, settings, accounts, harvest, escrow })
+  await Promise.all(users.map(user => contracts.dao.testsetvoice(user, 99, { authorization: `${dao}@active` })))
+
+  console.log('reset escrow')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  const minStake =  100
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  console.log('set settings')
+  await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
+  await contracts.settings.configure("propquorum", 50, { authorization: `${settings}@active` }) 
+  await contracts.settings.configure("propmajority", 60, { authorization: `${settings}@active` })
+
+  console.log('create proposal')
+
+  await createProp(contracts.dao, firstuser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+
+  await createProp(contracts.dao, firstuser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', firstuser] }
+  ])
+
+  await createProp(contracts.dao, seconduser, 'p.camp.fnd', 'title', 'summary', 'description', 'image', 'url', campaignbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', seconduser] }
+  ])
+
+  await createProp(contracts.dao, seconduser, 'p.alliance', 'title', 'summary', 'description', 'image', 'url', alliancesbank, '100.0000 SEEDS', [
+    { key: 'recipient', value: ['name', seconduser] }
+  ])
+
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+
+  const firstBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
+  console.log('staking')
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '1', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(firstuser, dao, `${minStake}.0000 SEEDS`, '', { authorization: `${firstuser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '3', { authorization: `${seconduser}@active` })
+  await contracts.token.transfer(seconduser, dao, `${minStake}.0000 SEEDS`, '', { authorization: `${seconduser}@active` })
+
+  await testStake(['100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS' ])
+
+  const stakeBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+ 
+  console.log('move proposals to active')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(3000)
+
+  console.log('vote on first proposal') // unity but not quorum (loses 5% of stake)
+  await contracts.dao.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+
+  console.log('vote on second proposal') // not unity but quorum (loses 100% of stake)
+  await contracts.dao.favour(seconduser, 2, 20, { authorization: `${seconduser}@active` })
+  await contracts.dao.against(firstuser, 2, 30, { authorization: `${firstuser}@active` })
+
+  console.log('vote on 4th proposal') // not quorum either unity (loses 100% of stake)
+  await contracts.dao.against(seconduser, 4, 11, { authorization: `${seconduser}@active` })
+
+  // await printProps()
+
+  console.log('execute proposals')
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+  await sleep(3000)
+
+  const props = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'proposals',
+    json: true
+  })
+
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+
+  const finalBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
+  assert({
+    given: 'firstuser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[0] - stakeBalances[0],
+    expected: 200
+  })
+
+  assert({
+    given: 'seconduser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[1] - stakeBalances[1],
+    expected: 200
+  })
+
+  assert({
+    given: 'failed proposal quorum',
+    should: 'be rejected',
+    actual: props.rows[0].status,
+    expected: 'rejected'
+  })
+
+  assert({
+    given: 'failed proposal quorum majority',
+    should: 'be rejected',
+    actual: props.rows[1].status,
+    expected: "rejected"
+  })
+
+  assert({
+    given: 'unity met with invalid quorum',
+    should: 'return 0.95 of stake',
+    actual: finalBalances[0] - stakeBalances[0],
+    expected: 95
+  })
+
+  assert({
+    given: 'unity not met',
+    should: 'burn stake',
+    actual: finalBalances[1] - stakeBalances[1],
+    expected: 0
+  })
+
+  // await printProps()
+
+})
+  
 describe('Voice Erase', async assert => {
   
   if (!isLocal()) {
