@@ -3,10 +3,10 @@
 
 ACTION dao::updatevoices () {
   require_auth(get_self());
-  updatevoice(uint64_t(0));
+  updatevoice(uint64_t(0), ""_n);
 }
 
-ACTION dao::updatevoice (const uint64_t & start) {
+ACTION dao::updatevoice (const uint64_t & start, const name & scope) {
   require_auth(get_self());
   
   DEFINE_CS_POINTS_TABLE
@@ -30,8 +30,8 @@ ACTION dao::updatevoice (const uint64_t & start) {
       if (csitr != cspoints_t.end()) {
         points = csitr->rank;
       }
-      print("account: ", vitr->account, ", points: ", points, "\n");
-      set_voice(vitr->account, points, ""_n);
+      print("account: ", vitr->account, ", points: ", points, scope);
+      set_voice(vitr->account, points, scope);
       if (is_active(vitr -> account, cutoff_date)) {
         vote_power += points;
         active_users++;
@@ -46,10 +46,94 @@ ACTION dao::updatevoice (const uint64_t & start) {
       permission_level(get_self(), "active"_n),
       get_self(),
       "updatevoice"_n,
-      std::make_tuple(vitr->account.value)
+      std::make_tuple(vitr->account.value, scope)
     );
   }
 }
+
+
+ACTION dao::deletescope (const uint64_t & start, const name & scope) {
+
+  require_auth(get_self());
+
+  bool existing_scope = false;
+
+  for (auto & s : scopes) {
+    if (s == scope) {
+      existing_scope = true;
+    }
+  }
+  
+  check(existing_scope, "scope must exist");
+  
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  voice_tables voice_t(get_self(), scope.value);
+  auto vitr = start == 0 ? voice_t.begin() : voice_t.find(start);
+  
+  while (vitr != voice_t.end() && count < batch_size) {
+    vitr = voice_t.erase(vitr);
+    count++;
+  }
+  
+  if (vitr != voice_t.end()) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "deletescope"_n,
+      std::make_tuple(vitr->account.value, scope)
+    );
+  }
+}
+
+ACTION dao::addvoice(const uint64_t & start, const name & scope) {
+
+  require_auth(get_self());
+
+  bool existing_scope = false;
+
+  for (auto & s : scopes) {
+    if (s == scope) { existing_scope = true; }
+  }
+
+  check(existing_scope, "scope must exist");
+
+  cs_points_tables cspoints_t(contracts::harvest, contracts::harvest.value);
+
+  voice_tables voices_t(get_self(), campaign_scope.value);
+  auto vitr = start == 0 ? voices_t.begin() : voices_t.find(start);
+
+  uint64_t batch_size = config_get(name("batchsize"));
+  uint64_t count = 0;
+
+  while (vitr != voices_t.end() && count < batch_size) {
+    auto csitr = cspoints_t.find(vitr->account.value);
+    uint64_t voice_amount = 0;
+
+    if (csitr != cspoints_t.end()) {
+      voice_amount = calculate_decay(csitr->rank);
+    }
+
+    print("account: ", vitr->account, ", points: ", voice_amount, scope);
+    set_voice(vitr->account, voice_amount, scope);
+
+    vitr++;
+    count++;
+  }
+
+  if (vitr != voices_t.end()) {
+    send_deferred_transaction(
+      permission_level(get_self(), "active"_n),
+      get_self(),
+      "addvoice"_n,
+      std::make_tuple(vitr->account.value, scope)
+    );
+  }
+
+
+}
+
 
 ACTION dao::decayvoices () {
   require_auth(get_self());
