@@ -609,3 +609,170 @@ describe('Refund Stake', async assert => {
   })
 
 })
+
+describe('Cancel Staged Referendum', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ referendums, token, settings, accounts })
+
+  const settingName = 'tempsetting'
+  const settingDescription = 'test setting for referendums'
+  const settingImpact = 'high'
+  const settingValue = 21
+  const settingInitialValue = 0
+  const metadata = ['title', 'summary', 'description', 'image', 'url']
+
+  const getReferendums = async (status) => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: status,
+      table: 'referendums',
+      json: true
+    })
+
+    referendumsTable.rows.forEach(row => {
+      delete row.created_at
+    })
+
+    return referendumsTable
+  }
+
+  const getRefs = async() => {
+    const staged = await getReferendums("staged")
+    const active = await getReferendums("active")
+    const testing = await getReferendums('testing')
+    const passed = await getReferendums("passed")
+    const failed = await getReferendums("failed")
+  
+    return [staged, active, testing, passed, failed]
+  }
+
+  const checkRefs = async (numbers) => {
+    
+    let nums = await getRefs()
+    nums = nums.map(e => e.rows.length)
+
+    console.log("refs: ", nums)
+
+    assert({
+      given: 'refs',
+      should: 'have the correct statuses',
+      actual: nums,
+      expected: numbers
+    })
+  
+  }
+  const getBalance = async (user) => {
+    const referendumsTable = await getTableRows({
+      code: referendums,
+      scope: referendums,
+      table: 'balances',
+      json: true
+    })
+
+    bal = Number.parseInt(referendumsTable.rows[0].stake)
+    console.log("balance = "+bal)
+    return bal
+  }
+  const getSeedsBalance = async (user) => {
+    const balance = await eos.getCurrencyBalance(token, user, 'SEEDS')
+    return Number.parseInt(balance[0]) || 0
+  }
+
+
+  console.log('referendums reset')
+  await contracts.referendums.reset({ authorization: `${referendums}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('settings configure')
+  await contracts.settings.confwithdesc(settingName, settingInitialValue, settingDescription, settingImpact, { authorization: `${settings}@active` })
+
+  console.log('set stake price to 1')
+  await contracts.settings.configure('refsnewprice', 10000, { authorization: `${settings}@active` })
+
+  console.log('add users, make citizens')
+  await contracts.accounts.adduser(firstuser, '1', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+
+  console.log(`first user seeds balance before: `+(await getSeedsBalance(firstuser)))  
+
+  console.log(`stake`)  
+  const seedsBalanceBefore = await getSeedsBalance(firstuser)
+
+  await contracts.token.transfer(firstuser, referendums, "2.0000 SEEDS", '', { authorization: `${firstuser}@active` })
+  
+  console.log(`first user seeds balance after send : `+(await getSeedsBalance(firstuser)))  
+
+  console.log(`create 2 referendum`)
+  await contracts.referendums.create(firstuser, settingName, settingValue, 'R 1', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+  await contracts.referendums.create(firstuser, settingName, settingValue, 'R 1', 'summary', 'description', 'image', 'url', { authorization: `${firstuser}@active` })
+
+  console.log(`check that 2 referendums were created`)
+  await checkRefs([2, 0, 0, 0, 0])
+
+  console.log(`cancel one`)
+  await contracts.referendums.cancel(0, { authorization: `${firstuser}@active` })
+  
+  console.log(`first user seeds balance after cancel : `+(await getSeedsBalance(firstuser)))  
+
+  const balanceAfter = await getBalance(firstuser)
+
+  console.log(`one ref left at cancel`)
+  await checkRefs([1, 0, 0, 0, 0])
+
+  const remainingRef = (await getRefs())[0].rows[0]
+
+  //console.log("remainingRef " + JSON.stringify(remainingRef, null, 2))
+
+  console.log(`move to active`)
+  await contracts.referendums.onperiod({ authorization: `${referendums}@active` })
+
+  await checkRefs([0, 1, 0, 0, 0])
+
+  console.log("try to cancel active ref")
+  var cantCancelActiveRef = true
+  try {
+    await contracts.referendums.cancel(2, { authorization: `${firstuser}@active` })
+    cantCancelActiveRef = false
+  } catch (err) {
+    console.log("expected error")
+  }
+
+  const seedsBalanceAfter = await getSeedsBalance(firstuser)
+
+  assert({
+    given: 'canceled ref',
+    should: 'balance is now 1',
+    actual: balanceAfter,
+    expected: 0
+  })
+
+  assert({
+    given: 'balance',
+    should: 'have spent 1 seeds',
+    actual: seedsBalanceBefore - 1,
+    expected: seedsBalanceAfter
+  })
+
+  assert({
+    given: 'right ref was canceled',
+    should: 'have have the right id',
+    actual: remainingRef.referendum_id,
+    expected: 1
+  })
+
+  assert({
+    given: 'try to cancel active referendum',
+    should: 'does not work',
+    actual: cantCancelActiveRef,
+    expected: true
+  })
+
+
+})

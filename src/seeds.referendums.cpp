@@ -571,6 +571,7 @@ void referendums::cancelvote(name voter, uint64_t referendum_id) {
     });
   }
 }
+
 void referendums::check_citizen(name account)
 {
   DEFINE_USER_TABLE;
@@ -582,3 +583,18 @@ void referendums::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
+
+void referendums::cancel(uint64_t id) {
+  
+  referendum_tables staged(get_self(), name("staged").value);
+
+  auto sitr = staged.find(id);
+  check(sitr != staged.end(), "Referendum is not staged or does not exist.");
+
+  require_auth(sitr->creator);
+  
+  send_refund_stake(sitr->creator, sitr->staked);
+
+  staged.erase(sitr);
+
+}
