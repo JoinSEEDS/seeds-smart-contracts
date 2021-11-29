@@ -791,6 +791,9 @@ var permissions = [{
 },{
   target: `${accounts.dao.account}@execute`,
   action: 'dhocalcdists'
+}, {
+  target: `${accounts.policy.account}@active`,
+  actor: `${accounts.policy.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -834,6 +837,13 @@ const config = {
 }
 
 const eos = new Eos(config, isLocal)
+
+// Use eosNoNonce for not adding a nonce to every action
+// nonce means every action has a unique nonce - an action on policy.seeds
+// The nonce makes it so no duplicate transactions are recorded by the chain
+// So it makes unit tests a lot more predictable
+// But sometimes the nonce is undesired, example, when testing policy.seeds itself
+const eosNoNonce = new Eos(config, false)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -931,7 +941,7 @@ function asset (quantity) {
 
 module.exports = {
   keyProvider, httpEndpoint,
-  eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
+  eos, eosNoNonce, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset, isTestnet
 }

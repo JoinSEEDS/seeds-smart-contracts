@@ -1,7 +1,9 @@
 const { describe } = require('riteway')
-const { eos, names, isLocal } = require('../scripts/helper')
+const { eosNoNonce, names, isLocal, initContracts } = require('../scripts/helper')
 
 const { policy, firstuser, seconduser } = names
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 describe('policy', async assert => {
 
@@ -9,6 +11,8 @@ describe('policy', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
+
+  const eos = eosNoNonce
 
   const contract = await eos.contract(policy)
 
@@ -68,7 +72,7 @@ describe('policy', async assert => {
   })
 
   await contract.remove(
-    1,
+    0,
     { authorization: `${firstuser}@active` }
   )
 
@@ -89,8 +93,58 @@ describe('policy', async assert => {
   
   } catch (err) {
     console.log(err)
-
   }
+
+  console.log("create expliring policy")
+
+  const expiringPolicy = "this will expire in 1 second"
+
+  await contract.createexp(
+    accountField,
+    secondDeviceUUID,
+    secondDeviceField,
+    signatureField,
+    expiringPolicy,
+    1,
+    { authorization: `${firstuser}@active` }
+  )
+
+  const afterExpCreated = await eos.getTableRows({
+    code: policy,
+    scope: policy,
+    table: 'devicepolicy',
+    json: true
+  })
+
+  const expTable = await eos.getTableRows({
+    code: policy,
+    scope: policy,
+    table: 'expiry',
+    json: true
+  })
+
+  //console.log("afterExpCreated " + JSON.stringify(afterExpCreated, null, 2))
+  //console.log("expTable " + JSON.stringify(expTable, null, 2))
+
+  console.log("wait for expiry")
+  await sleep(1000)
+
+  const afterExpCreated2 = await eos.getTableRows({
+    code: policy,
+    scope: policy,
+    table: 'devicepolicy',
+    json: true
+  })
+
+  const expTable2 = await eos.getTableRows({
+    code: policy,
+    scope: policy,
+    table: 'expiry',
+    json: true
+  })
+
+  //console.log("afterExpCreated2 " + JSON.stringify(afterExpCreated2, null, 2))
+  //console.log("expTable2 " + JSON.stringify(expTable2, null, 2))
 
 
   assert({
@@ -126,6 +180,62 @@ describe('policy', async assert => {
     should: 'row deleted',
     actual: afterRemove.rows.length,
     expected: 1
+  })
+
+  assert({
+    given: 'added expiring policy',
+    should: 'have expiring policy',
+    actual: afterExpCreated.rows[1],
+    expected: {
+      id: 2,
+      account: accountField,
+      backend_user_id: secondDeviceUUID,
+      device_id: secondDeviceField,
+      signature: signatureField,
+      policy: expiringPolicy
+    }
+  })
+
+  assert({
+    given: 'added expiring policy',
+    should: '2 policies',
+    actual: afterExpCreated.rows.length,
+    expected: 2
+  })
+
+  assert({
+    given: 'added expiring policy after expiry date',
+    should: 'policy is gone',
+    actual: afterExpCreated2.rows.length,
+    expected: 1
+  })
+
+  assert({
+    given: 'added expiring policy',
+    should: 'have expiry',
+    actual: expTable.rows.length,
+    expected: 1
+  })
+
+  assert({
+    given: 'added expiring policy',
+    should: 'have id entry in expiry table',
+    actual: expTable.rows[0].id,
+    expected: 2
+  })
+
+  assert({
+    given: 'added expiring policy expiry table',
+    should: 'have 1 second delay',
+    actual: expTable.rows[0].valid_until - expTable.rows[0].created_at,
+    expected: 1
+  })
+
+  assert({
+    given: 'added expiring policy after expired',
+    should: 'expiry info gone',
+    actual: expTable2.rows.length,
+    expected: 0
   })
 
 })
