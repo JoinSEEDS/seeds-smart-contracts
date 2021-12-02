@@ -15,6 +15,7 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/organization_table.hpp>
 #include <tables/dho_share_table.hpp>
+#include <tables/moon_phases_table.hpp>
 #include <cmath>
 
 using namespace eosio;
@@ -185,6 +186,9 @@ CONTRACT dao : public contract {
 
       DEFINE_ORGANIZATION_TABLE
       DEFINE_ORGANIZATION_TABLE_MULTI_INDEX
+
+      DEFINE_MOON_PHASES_TABLE
+      DEFINE_MOON_PHASES_TABLE_MULTI_INDEX
 
       TABLE deferred_id_table {
         uint64_t id;
@@ -377,6 +381,7 @@ CONTRACT dao : public contract {
     void init_cycle_new_stats();
     uint64_t calc_voice_needed(const uint64_t & total_voice, const uint64_t & num_proposals);
     double get_quorum(uint64_t total_proposals);
+    uint64_t get_new_moon(uint64_t timestamp);
 
 };
 

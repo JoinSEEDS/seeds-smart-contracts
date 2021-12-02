@@ -914,13 +914,35 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
+uint64_t proposals::get_new_moon (uint64_t timestamp) {
+
+  moon_phases_tables moonphases_t(contracts::scheduler, contracts::scheduler.value);
+
+  auto mitr = moonphases_t.lower_bound(timestamp);
+
+  while (mitr != moonphases_t.end()) {
+    if (mitr->phase_name == "New Moon") {
+      return mitr->timestamp;
+    }
+    mitr++;
+  }
+
+  return 0;
+
+}
+
 void proposals::init_cycle_new_stats () {
   cycle_table c = cycle.get();
 
+  uint64_t now = eosio::current_time_point().sec_since_epoch() - (utils::seconds_per_day * 5);
+
+  uint64_t start_time = get_new_moon(now);
+  uint64_t end_time = get_new_moon(start_time + utils::seconds_per_day);
+
   cyclestats.emplace(_self, [&](auto & item){
     item.propcycle = c.propcycle;
-    item.start_time = c.t_onperiod;
-    item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
+    item.start_time = start_time;
+    item.end_time = end_time;
     // item.num_proposals = 0;
     item.num_votes = 0;
     item.total_voice_cast = 0;

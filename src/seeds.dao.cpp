@@ -950,6 +950,23 @@ void dao::send_mimic_delegatee_vote (const name & delegatee, const name & scope,
 
 }
 
+uint64_t dao::get_new_moon (uint64_t timestamp) {
+
+  moon_phases_tables moonphases_t(contracts::scheduler, contracts::scheduler.value);
+
+  auto mitr = moonphases_t.lower_bound(timestamp);
+
+  while (mitr != moonphases_t.end()) {
+    if (mitr->phase_name == "New Moon") {
+      return mitr->timestamp;
+    }
+    mitr++;
+  }
+
+  return 0;
+
+}
+
 void dao::init_cycle_new_stats () {
 
   cycle_tables cycle_t(get_self(), get_self().value);
@@ -957,10 +974,15 @@ void dao::init_cycle_new_stats () {
 
   cycle_stats_tables cyclestats_t(get_self(), get_self().value);
 
+  uint64_t now = eosio::current_time_point().sec_since_epoch() - (utils::seconds_per_day * 5);
+
+  uint64_t start_time = get_new_moon(now);
+  uint64_t end_time = get_new_moon(start_time + utils::seconds_per_day);
+
   cyclestats_t.emplace(_self, [&](auto & item){
     item.propcycle = c_t.propcycle;
-    item.start_time = c_t.t_onperiod;
-    item.end_time = c_t.t_onperiod + config_get("propcyclesec"_n);
+    item.start_time = start_time;
+    item.end_time = end_time;
     // item.num_proposals = 0;
     item.num_votes = 0;
     item.total_voice_cast = 0;

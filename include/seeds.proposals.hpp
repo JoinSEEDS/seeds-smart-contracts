@@ -9,6 +9,7 @@
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
 #include <tables/ban_table.hpp>
+#include <tables/moon_phases_table.hpp>
 #include <vector>
 #include <cmath>
 
@@ -239,6 +240,7 @@ CONTRACT proposals : public contract {
       uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
       void check_values(string title, string summary, string description, string image, string url);
       bool is_banned(name account);
+      uint64_t get_new_moon(uint64_t timestamp);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -366,6 +368,9 @@ CONTRACT proposals : public contract {
         uint64_t by_delegatee()const { return delegatee.value; }
         uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
       };
+
+      DEFINE_MOON_PHASES_TABLE
+      DEFINE_MOON_PHASES_TABLE_MULTI_INDEX
 
       TABLE cycle_stats_table {
         uint64_t propcycle; 
