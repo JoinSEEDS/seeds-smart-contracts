@@ -39,7 +39,7 @@ async function getNonce () {
           backend_user_id: random,
           device_id: random,
           signature: "",
-          policy: ""
+          policy: "CREATED BY UNIT TEST"
         }
       }]
     }
