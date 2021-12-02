@@ -390,6 +390,16 @@ var permissions = [{
   target: `${accounts.harvest.account}@setorgtxpt`,
   action: 'setorgtxpt'
 }, {
+  // create permission newround on gratitude
+  target: `${accounts.gratitude.account}@newround`,
+  actor: `${accounts.scheduler.account}@eosio.code`,
+  parent: 'active',
+  type: 'createActorPermission'
+}, {
+  // limit newround to newround action
+  target: `${accounts.gratitude.account}@newround`,
+  action: 'newround'
+}, {
   target: `${accounts.accounts.account}@api`,
   action: 'addref'
 }, {
