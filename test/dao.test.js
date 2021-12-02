@@ -4,7 +4,7 @@ const { should, assert } = require('chai')
 const { prop, ascend } = require('ramda')
 
 const { 
-  dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser, fifthuser,
+  dao, token, settings, accounts, harvest, proposals, referendums, firstuser, seconduser, thirduser, fourthuser, fifthuser, scheduler,
   alliancesbank, campaignbank, milestonebank, escrow, onboarding, hyphabank, pool, organization
 } = names
 
@@ -3084,5 +3084,74 @@ describe('Streaming Funding', async assert => {
     json: true
   })
   console.log(dhovotesTable5)
+
+})
+
+
+describe('Cycle stats use moon phases', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  await resetContracts()
+
+  const contracts = await initContracts({ dao, scheduler })
+
+  console.log('reset scheduler')
+  await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+  const moonPhases = ['First Quarter', 'Full Moon', 'Last Quarter', 'New Moon']
+  const now = parseInt(Date.now() / 1000)
+
+  for (let i = 1; i <= 10; i++) {
+    await contracts.scheduler.moonphase(now + (i * 86400), moonPhases[i%4], 0, { authorization: `${scheduler}@active` })
+  }
+
+  console.log('init propcycle')
+  await contracts.dao.initcycle(1, { authorization: `${dao}@active` })
+
+  await contracts.dao.onperiod({ authorization: `${dao}@active` })
+
+  const cycleStatsTable = await getTableRows({
+    code: dao,
+    scope: dao,
+    table: 'cyclestats',
+    json: true
+  })
+
+  const moonPhasesTable = await getTableRows({
+    code: scheduler,
+    scope: scheduler,
+    table: 'moonphases',
+    limit: 1000,
+    json: true
+  })
+
+  const cycleStat = cycleStatsTable.rows[0]
+  const startTimePhase = moonPhasesTable.rows.filter(r => (r.timestamp == cycleStat.start_time))
+  const endTimePhase = moonPhasesTable.rows.filter(r => (r.timestamp == cycleStat.end_time))
+
+  assert({
+    given: 'onperiod ran',
+    should: 'set the start date and end date with a valid moon cycle',
+    expected: [1, 1],
+    actual: [startTimePhase.length, endTimePhase.length]
+  })
+
+  assert({
+    given: 'onperiod ran',
+    should: 'set end date bigger than start date',
+    expected: true,
+    actual: cycleStat.end_time > cycleStat.start_time
+  })
+
+  assert({
+    given: 'onperiod ran',
+    should: 'have the moon phase set to New Moon',
+    expected: true,
+    actual: startTimePhase[0].phase_name == 'New Moon' && endTimePhase[0].phase_name == 'New Moon'
+  })
 
 })
