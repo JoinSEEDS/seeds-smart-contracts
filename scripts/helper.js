@@ -555,6 +555,9 @@ var permissions = [{
   parent: 'active'
 }, {
   target: `${accounts.referendums.account}@execute`,
+  action: 'onperiod'
+}, {
+  target: `${accounts.referendums.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
   target: `${accounts.proposals.account}@execute`,
