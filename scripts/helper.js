@@ -856,7 +856,8 @@ const eos = new Eos(config, isLocal)
 // The nonce makes it so no duplicate transactions are recorded by the chain
 // So it makes unit tests a lot more predictable
 // But sometimes the nonce is undesired, example, when testing policy.seeds itself
-const eosNoNonce = new Eos(config, false)
+// NOTE This is changing global variables, not working. Only needed for policy test.
+// const eosNoNonce = new Eos(config, false)
 
 setTimeout(async ()=>{
   let info = await eos.getInfo({})
@@ -954,7 +955,7 @@ function asset (quantity) {
 
 module.exports = {
   keyProvider, httpEndpoint,
-  eos, eosNoNonce, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
+  eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
   testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset, isTestnet
 }

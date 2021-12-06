@@ -1,5 +1,5 @@
 const { describe } = require('riteway')
-const { eosNoNonce, names, isLocal, initContracts } = require('../scripts/helper')
+const { eos, names, isLocal, initContracts } = require('../scripts/helper')
 
 const { policy, firstuser, seconduser } = names
 
@@ -11,8 +11,6 @@ describe('policy', async assert => {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
-
-  const eos = eosNoNonce
 
   const contract = await eos.contract(policy)
 

@@ -934,9 +934,9 @@ uint64_t proposals::get_new_moon (uint64_t timestamp) {
 void proposals::init_cycle_new_stats () {
   cycle_table c = cycle.get();
 
-  uint64_t now = eosio::current_time_point().sec_since_epoch() - (utils::seconds_per_day * 5);
+  uint64_t now_minus_5_days = eosio::current_time_point().sec_since_epoch() - (utils::seconds_per_day * 5);
 
-  uint64_t start_time = get_new_moon(now);
+  uint64_t start_time = get_new_moon(now_minus_5_days);
   uint64_t end_time = get_new_moon(start_time + utils::seconds_per_day);
 
   cyclestats.emplace(_self, [&](auto & item){
