@@ -10,9 +10,9 @@ using std::string;
    /**
     * The `tokensmaster' contract implements a master library of token metadata for tokens used in the Seeds ecosystems tools.
     *
-    * This addresses the use case of Light Wallet which requires a curated list of tokens which are visible to users in LW
-    *   and which must have unique symbol codes. Metadata needed for the LW UI include user-friendly name, logo image, background,
-    *   and balance title string.
+    * This specifically addresses the use case of Light Wallet which requires a curated list of tokens which are visible
+    *   to users in LW and which must have unique symbol codes. Metadata needed for the LW UI include user-friendly name,
+    *   logo image, background, and balance title string.
     *
     * The `tokens` table contains one row per token with fields for token identity and for each metadata item. It is scoped by use
     *   case (e.g. 'lightwallet').
@@ -36,18 +36,20 @@ CONTRACT tokensmaster : public contract {
           * `tokens` table, with the approved field set to false
           *
           * @param submitter - the account that submits the token,
-          * @param scope - identifier of use case (e.g. `lightwallet`),
+          * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param chain - identifier of chain (e.g. "Telos")
           * @param contract - the account name of the token contract,
           * @param symbolcode - the symbol code for the token,
           * @param json - the metadata for the token
           *
           * @pre submitter must be a valid account with authorization for the transaction,
-          * @pre scope must be a valid eosio name string
+          * @pre usecase must be a valid eosio name already existing in the `usecases` table
+          * @pre chain must be a known chain id string ("Telos", "EOS", "WAX", etc.)
           * @pre contract must be a valid account with a token contract matching symbolcode
           * @pre json must contain the required fields and be <= 2048 characters,
           * @pre there must not already be a row in the `tokens` table with matching parameters
       */
-      ACTION submittoken(name submitter, name scope, name contract, symbol_code symbolcode, string json);
+      ACTION submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json);
 
 
       /**
@@ -56,14 +58,28 @@ CONTRACT tokensmaster : public contract {
           * from the `tokens` table.
           *
           * @param submitter - the account that submitted the token,
-          * @param scope - identifier of use case (e.g. `lightwallet`),
+          * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param chain - identifier of chain (e.g. "Telos")
           * @param contract - the account name of the token contract,
           * @param symbolcode - the symbol code for the token,
           * @param approve - boolean: if true, accept the submitted token; if false, delete the token
           *
-          * @pre submitter, scope, contract, and symbolcode must match an existing row in the `tokens` table
+          * @pre submitter, usecase, chain, contract, and symbolcode must match an existing row in the `tokens` table
       */
-      ACTION approvetoken(name submitter, name scope, name contract, symbol_code symbolcode, bool approve);
+      ACTION approvetoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, bool approve);
+
+      /**
+          * The `usecase` action executed by the tokensmaster contract account adds or removes an entry in
+          * the `usecases` table.
+          * Adding an existing usecase is allowed but has no effect.
+          *
+          * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param add - boolean: if true, add the new row; if false, delete the row
+          *
+          * @pre usecase must be a valid eosio name
+          * @pre if `add` is false then the row must exist in the table
+      */
+      ACTION usecase(name usecase, bool add);
 
 
   private:
@@ -71,10 +87,11 @@ CONTRACT tokensmaster : public contract {
       const string DEFAULTLOGO = "logourl"; //TODO
       const string DEFAULTBACKGROUND = "backgroundurl"; //TODO
       const name LIGHTWALLET = "lightwallet"_n;
+      const std::set<string> CHAINS = {"Telos", "EOS"};
       TABLE token_table { // scoped by usecase (e.g. 'lightwallet'_n)
         uint64_t id;
         name submitter;
-        name scope;
+        name usecase;
         name contract;
         symbol_code symbolcode;
         bool approved;
@@ -87,13 +104,15 @@ CONTRACT tokensmaster : public contract {
         string extrajson;
 
         uint64_t primary_key() const { return id; }
-        eosio::checksum256 by_secondary() const {
-               string signature = submitter.to_string()+scope.to_string()+contract.to_string()+symbolcode.to_string();
+        eosio::checksum256 by_signature() const {
+               string signature = submitter.to_string()+usecase.to_string()+chainName
+                                  +contract.to_string()+symbolcode.to_string();
                return eosio::sha256( signature.c_str(), signature.length());
             }
+        uint64_t by_symbolcode() const { return symbolcode.raw(); }
       };
 
-      TABLE usecase { // singleton, scoped by contract account name
+      TABLE usecase_ { // singleton, scoped by contract account name
         name usecase;
 
         uint64_t primary_key() const { return usecase.value; }
@@ -110,10 +129,12 @@ CONTRACT tokensmaster : public contract {
 
     typedef eosio::multi_index<"tokens"_n, token_table,
      indexed_by<"signature"_n,
-       const_mem_fun<token_table, checksum256, &token_table::by_secondary>>
+       const_mem_fun<token_table, checksum256, &token_table::by_signature>>,
+     indexed_by<"symbolcode"_n,
+       const_mem_fun<token_table, uint64_t, &token_table::by_symbolcode>>
      > token_tables;
     
-    typedef eosio::multi_index<"usecases"_n, usecase> usecase_table;
+    typedef eosio::multi_index<"usecases"_n, usecase_> usecase_table;
 
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 };
