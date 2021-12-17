@@ -66,7 +66,7 @@ void tokensmaster::approvetoken(name submitter, name usecase, string chain, name
 {
   require_auth(get_self());
 
-  string signature = submitter.to_string()+usecase.to_string()+usecase.to_string()+chain+contract.to_string()+symbolcode.to_string();
+  string signature = submitter.to_string()+usecase.to_string()+chain+contract.to_string()+symbolcode.to_string();
   token_tables tokentable(get_self(), usecase.value);
   auto token_signature_index = tokentable.get_index<"signature"_n>();
   const auto& tt = token_signature_index.get( eosio::sha256( signature.c_str(), signature.length()),
@@ -90,7 +90,7 @@ void tokensmaster::usecase(name usecase, bool add)
       s.usecase = usecase;
     });
   } else {
-    check(uc != usecasetable.end(), ("usecase "+usecase.to_string()+"does not exist").c_str());
+    check(uc != usecasetable.end(), ("usecase '"+usecase.to_string()+"' does not exist").c_str());
     usecasetable.erase(uc);
   }
 }
@@ -99,7 +99,10 @@ string tokensmaster::skim_json(std::map<string, string>& result, const string& i
 {
   std::string key, value;
   size_t cp, s;
-  int keysremain = result.size();
+  int keysremain = 0;
+  for(auto itr=result.begin(); itr != result.end(); itr++) {
+    if (itr->second.empty()) { ++keysremain; }
+  }
   cp = input.find_first_of("{");
   if (cp==string::npos) { 
     return "no open brace";
@@ -122,12 +125,14 @@ string tokensmaster::skim_json(std::map<string, string>& result, const string& i
     } while (input[cp-1]=='\\');
     value = input.substr(s, cp-s);
     if ( result.find(key) != result.end() ) {
+      if (result[key].empty()) { --keysremain; }
       result[key] = value;
-      --keysremain;
     }
     cp = input.find_first_of(",}", cp+1);
-    if(input[cp]=='}') { return "incomplete by "+std::to_string(keysremain); }
+    if(input[cp]=='}' && keysremain) {
+      return "incomplete by "+std::to_string(keysremain);
+    }
   }
   return "";
 }
-   
+

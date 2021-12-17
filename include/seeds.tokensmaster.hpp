@@ -143,8 +143,8 @@ CONTRACT tokensmaster : public contract {
           * The `skim_json` function performs limited string processing to extract expected fields from
           * a json string. The field names are keys in a std::map passed to the function, and the field
           * values (strings) are returned as corresponding values in the map.
-          * The input string is parsed in sequence and the function returns when all keys have been
-          * assigned values or the input has been exhausted.
+          * The input string is parsed in sequence and the function returns when all empty keys have
+          * been assigned values or the input has been exhausted.
           * This function is not a general json processor and does not recognize objects {...} or non-
           * string json elements. Therefore the expected fields should occur before any non-string
           * element.
@@ -160,5 +160,5 @@ CONTRACT tokensmaster : public contract {
 
 };
 
-EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken));
+EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken)(usecase));
 
