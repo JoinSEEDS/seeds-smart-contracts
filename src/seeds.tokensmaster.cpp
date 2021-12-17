@@ -1,7 +1,5 @@
 #include <seeds.tokensmaster.hpp>
 
-
-
 void tokensmaster::reset() {
   require_auth(_self);
 
@@ -33,19 +31,29 @@ void tokensmaster::submittoken(name submitter, name usecase, string chain, name 
   tt.symbolcode = symbolcode;
   tt.approved = false;
   tt.chainName = chain;
-  tt.name = symbolcode.to_string();
-  tt.logo = DEFAULTLOGO;
-  tt.backgroundImage = DEFAULTBACKGROUND;
-  tt.balanceSubTitle = "Wallet Balance";
-  tt.precision = 4;
-  tt.extrajson = "{}";
+  tt.json = json;
 
-  /* parse json, validate, insert into structure */
+  std::map<string, string> mapoffields = {
+    {"name", ""},
+    {"logo", ""},
+    {"backgroundImage", ""},
+    {"balanceSubTitle", ""},
+    {"precision", ""}
+  };
+
+  string rv = skim_json(mapoffields, json);
+  check(rv.empty(), ("couldn't parse json: "+rv).c_str());
+  tt.name = mapoffields["name"];
+  tt.logo = mapoffields["logo"];
+  tt.backgroundImage = mapoffields["backgroundImage"];
+  tt.balanceSubTitle = mapoffields["balanceSubTitle"];
+  tt.precision = stoi(mapoffields["precision"]);
 
   if(usecase==LIGHTWALLET) {
-    for( auto itr = tokentable.begin(); itr != tokentable.end(); itr++ ) {
-      check(itr->symbolcode != symbolcode, "duplicate symbol code");
-    }
+    auto token_symbolcode_index = tokentable.get_index<"symbolcode"_n>();
+    check(token_symbolcode_index.find(symbolcode.raw()) == token_symbolcode_index.end(),
+          "duplicate symbol code");
+    check(chain=="Telos", "chain must be Telos");
   }
 
   tokentable.emplace(submitter, [&]( auto& s ) {
@@ -87,4 +95,39 @@ void tokensmaster::usecase(name usecase, bool add)
   }
 }
   
-    
+string tokensmaster::skim_json(std::map<string, string>& result, const string& input)
+{
+  std::string key, value;
+  size_t cp, s;
+  int keysremain = result.size();
+  cp = input.find_first_of("{");
+  if (cp==string::npos) { 
+    return "no open brace";
+  }
+  while(keysremain) {
+    cp = input.find_first_of("\"", cp+1);
+    if (cp==string::npos) { return "expected \""; }
+    s = cp+1;
+    cp = input.find_first_of("\"", cp+1);
+    key = input.substr(s, cp-s);
+    cp = input.find_first_of(":", cp+1);
+    cp = input.find_first_of("{,\"", cp+1);
+    s = cp+1;
+    if(input[cp]==',') { continue; }
+    if(input[cp]=='{') {
+      return "reached {";
+    }
+    do {
+      cp = input.find_first_of("\"", cp+1);
+    } while (input[cp-1]=='\\');
+    value = input.substr(s, cp-s);
+    if ( result.find(key) != result.end() ) {
+      result[key] = value;
+      --keysremain;
+    }
+    cp = input.find_first_of(",}", cp+1);
+    if(input[cp]=='}') { return "incomplete by "+std::to_string(keysremain); }
+  }
+  return "";
+}
+   

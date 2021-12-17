@@ -46,7 +46,8 @@ CONTRACT tokensmaster : public contract {
           * @pre usecase must be a valid eosio name already existing in the `usecases` table
           * @pre chain must be a known chain id string ("Telos", "EOS", "WAX", etc.)
           * @pre contract must be a valid account with a token contract matching symbolcode
-          * @pre json must contain the required fields and be <= 2048 characters,
+          * @pre json must contain the required fields and be <= 2048 characters; required fields are
+          *       "name", "logo", "backgroundImage", "balanceSubTitle", "precision".
           * @pre there must not already be a row in the `tokens` table with matching parameters
       */
       ACTION submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json);
@@ -101,7 +102,7 @@ CONTRACT tokensmaster : public contract {
         string backgroundImage;
         string balanceSubTitle;
         uint8_t precision; // TODO: is this just UI preferred display precision or should it always match token asset?
-        string extrajson;
+        string json;
 
         uint64_t primary_key() const { return id; }
         eosio::checksum256 by_signature() const {
@@ -137,6 +138,26 @@ CONTRACT tokensmaster : public contract {
     typedef eosio::multi_index<"usecases"_n, usecase_> usecase_table;
 
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+
+      /**
+          * The `skim_json` function performs limited string processing to extract expected fields from
+          * a json string. The field names are keys in a std::map passed to the function, and the field
+          * values (strings) are returned as corresponding values in the map.
+          * The input string is parsed in sequence and the function returns when all keys have been
+          * assigned values or the input has been exhausted.
+          * This function is not a general json processor and does not recognize objects {...} or non-
+          * string json elements. Therefore the expected fields should occur before any non-string
+          * element.
+          *
+          * @param result - a map<string, string>
+          * @param input - the json string to be scanned
+          *
+          * @return - a status string which is zero-length on success
+          *
+          * @pre the input string should not contain escaped double quotation marks \"
+      */
+    string skim_json(std::map<string, string>& result, const string& input);
+
 };
 
 EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken));
