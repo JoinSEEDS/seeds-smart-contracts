@@ -71,37 +71,44 @@ CONTRACT tokensmaster : public contract {
 
       /**
           * The `usecase` action executed by the tokensmaster contract account adds or removes an entry in
-          * the `usecases` table.
-          * Adding an existing usecase is allowed but has no effect.
+          * the `usecases` table and assigns an account to manage it.
           *
           * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param manager - an account with management authority over the usecase
           * @param add - boolean: if true, add the new row; if false, delete the row
           *
           * @pre usecase must be a valid eosio name
+          * @pre manager must be an existing account
+          * @pre if `add` is true then the row must not exist in the table
           * @pre if `add` is false then the row must exist in the table
       */
-      ACTION usecase(name usecase, bool add);
+      ACTION usecase(name usecase, name manager, bool add);
+
+      /**
+          * The `usecasecfg` action executed by the usecase manager configures the 
+          * the required json fields for a row of the `usecases` table.
+          *
+          * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param required_fields - a space-delimited string of field names
+          *
+          * @pre usecase must exist in the `usecases` table
+          * @pre the transaction must have the active authority of the usecase manager
+          * @pre each substring in `required_fields` must be a valid eosio name
+      */
+      ACTION usecasecfg(name usecase, string required_fields);
 
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
-      const string DEFAULTLOGO = "logourl"; //TODO
-      const string DEFAULTBACKGROUND = "backgroundurl"; //TODO
-      const name LIGHTWALLET = "lightwallet"_n;
       const std::set<string> CHAINS = {"Telos", "EOS"};
       TABLE token_table { // scoped by usecase (e.g. 'lightwallet'_n)
         uint64_t id;
         name submitter;
         name usecase;
+        string chainName;
         name contract;
         symbol_code symbolcode;
         bool approved;
-        string chainName;
-        string name;
-        string logo;
-        string backgroundImage;
-        string balanceSubTitle;
-        uint8_t precision; // TODO: is this just UI preferred display precision or should it always match token asset?
         string json;
 
         uint64_t primary_key() const { return id; }
@@ -113,8 +120,10 @@ CONTRACT tokensmaster : public contract {
         uint64_t by_symbolcode() const { return symbolcode.raw(); }
       };
 
-      TABLE usecase_ { // singleton, scoped by contract account name
+      TABLE usecase_ { // single table, scoped by contract account name
         name usecase;
+        name manager;
+        string required_fields;
 
         uint64_t primary_key() const { return usecase.value; }
 
@@ -140,25 +149,24 @@ CONTRACT tokensmaster : public contract {
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
       /**
-          * The `skim_json` function performs limited string processing to extract expected fields from
-          * a json string. The field names are keys in a std::map passed to the function, and the field
-          * values (strings) are returned as corresponding values in the map.
-          * The input string is parsed in sequence and the function returns when all empty keys have
-          * been assigned values or the input has been exhausted.
+          * The `check_json_fields` function performs limited string processing to test that expected fields
+          * exist in a json string. The field names are keys in a std::map passed to the function.
+          * The input string is parsed in sequence and the function returns when all fields have
+          * been found, the input has been exhausted, or the function is unable to process further.
           * This function is not a general json processor and does not recognize objects {...} or non-
           * string json elements. Therefore the expected fields should occur before any non-string
           * element.
           *
-          * @param result - a map<string, string>
+          * @param result - a map<string, bool> with the bool values initialized to false
           * @param input - the json string to be scanned
           *
           * @return - a status string which is zero-length on success
           *
-          * @pre the input string should not contain escaped double quotation marks \"
+          * @pre the input string should not contain any escaped backslash \\ before a double quote "
       */
-    string skim_json(std::map<string, string>& result, const string& input);
+    string check_json_fields(std::map<string, bool>& field_list, const string& input);
 
 };
 
-EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken)(usecase));
+EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken)(usecase)(usecasecfg));
 
