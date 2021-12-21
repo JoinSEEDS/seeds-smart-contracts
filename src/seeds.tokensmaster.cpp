@@ -52,6 +52,12 @@ void tokensmaster::submittoken(name submitter, name usecase, string chain, name 
   }
   string rv = check_json_fields(field_list, json);
   check(rv.empty(), ("json error: "+rv).c_str());
+  
+  bool reject_duplicate_symbols = (usecase == "lightwallet"_n);
+  if(reject_duplicate_symbols) {
+    auto token_symbol_index = tokentable.get_index<"symbolcode"_n>();
+    check(token_symbol_index.find(symbolcode.raw()) == token_symbol_index.end(), "duplicate symbol");
+  } 
 
   tokentable.emplace(submitter, [&]( auto& s ) {
     s = tt;
@@ -70,6 +76,13 @@ void tokensmaster::approvetoken(name submitter, name usecase, string chain, name
   const auto& tt = token_signature_index.get( eosio::sha256( signature.c_str(), signature.length()),
                                              "no matching row to approve" );
   if(approve) {
+    auto token_symbol_index = tokentable.get_index<"symbolcode"_n>();
+    auto itr = token_symbol_index.lower_bound(symbolcode.raw());
+    while (itr != token_symbol_index.end() && itr->symbolcode == symbolcode) {
+      check(itr->contract != contract || itr->usecase != usecase || itr->chainName != chain, 
+            "cannot overwrite existing token");
+      ++itr;
+    }
     tokentable.modify (tt, get_self(), [&]( auto& s ) {
       s.approved = true;
     });
