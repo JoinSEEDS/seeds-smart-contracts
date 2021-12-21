@@ -13,6 +13,7 @@ using std::string;
     * This specifically addresses the use case of Light Wallet which requires a curated list of tokens which are visible
     *   to users in LW and which must have unique symbol codes. Metadata needed for the LW UI include user-friendly name,
     *   logo image, background, and balance title string.
+    * Other wallets/applications are potentially supported through additional "usecase" entries.
     *
     * The `tokens` table contains one row per token with fields for token identity and for each metadata item. It is scoped by use
     *   case (e.g. 'lightwallet').
@@ -89,18 +90,20 @@ CONTRACT tokensmaster : public contract {
           * the required json fields for a row of the `usecases` table.
           *
           * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param unique_symbols - if true, identical symbols on distinct contracts are disallowed
+          * @param allowed_chain - a chain name (e.g. "Telos")
           * @param required_fields - a space-delimited string of field names
           *
           * @pre usecase must exist in the `usecases` table
           * @pre the transaction must have the active authority of the usecase manager
+          * @pre `allowed_chain` must be 12 or fewer characters
           * @pre each substring in `required_fields` must be a valid eosio name
       */
-      ACTION usecasecfg(name usecase, string required_fields);
+      ACTION usecasecfg(name usecase, bool unique_symbols, string allowed_chain, string required_fields);
 
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
-      const std::set<string> CHAINS = {"Telos", "EOS"};
       TABLE token_table { // scoped by usecase (e.g. 'lightwallet'_n)
         uint64_t id;
         name submitter;
@@ -123,6 +126,8 @@ CONTRACT tokensmaster : public contract {
       TABLE usecase_ { // single table, scoped by contract account name
         name usecase;
         name manager;
+        bool unique_symbols;
+        string allowed_chain;
         string required_fields;
 
         uint64_t primary_key() const { return usecase.value; }

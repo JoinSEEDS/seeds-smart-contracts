@@ -14,12 +14,12 @@ void tokensmaster::reset() {
 void tokensmaster::submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json)
 {
   require_auth(submitter);
-  check(CHAINS.find(chain)!=CHAINS.end(), "invalid chain");
   check(is_account(contract), "no contract account");
   check(symbolcode.is_valid(), "invalid symbol");
   check(json.size() <= MAXJSONLENGTH, "json string is > "+std::to_string(MAXJSONLENGTH));
   usecase_table usecasetable(get_self(), get_self().value);
-  const auto& uc = usecasetable.get(usecase.value, "invalid use case");  
+  const auto& uc = usecasetable.get(usecase.value, "invalid use case");
+  check(uc.allowed_chain == chain, "invalid chain");
   string signature = submitter.to_string()+usecase.to_string()+chain+contract.to_string()+symbolcode.to_string();
   token_tables tokentable(get_self(), usecase.value);
   auto token_signature_index = tokentable.get_index<"signature"_n>();
@@ -53,8 +53,7 @@ void tokensmaster::submittoken(name submitter, name usecase, string chain, name 
   string rv = check_json_fields(field_list, json);
   check(rv.empty(), ("json error: "+rv).c_str());
   
-  bool reject_duplicate_symbols = (usecase == "lightwallet"_n);
-  if(reject_duplicate_symbols) {
+  if(uc.unique_symbols) {
     auto token_symbol_index = tokentable.get_index<"symbolcode"_n>();
     check(token_symbol_index.find(symbolcode.raw()) == token_symbol_index.end(), "duplicate symbol");
   } 
@@ -79,7 +78,7 @@ void tokensmaster::approvetoken(name submitter, name usecase, string chain, name
     auto token_symbol_index = tokentable.get_index<"symbolcode"_n>();
     auto itr = token_symbol_index.lower_bound(symbolcode.raw());
     while (itr != token_symbol_index.end() && itr->symbolcode == symbolcode) {
-      check(itr->contract != contract || itr->usecase != usecase || itr->chainName != chain, 
+      check(itr->contract != contract || itr->usecase != usecase || itr->chainName != chain || !itr->approved, 
             "cannot overwrite existing token");
       ++itr;
     }
@@ -109,22 +108,25 @@ void tokensmaster::usecase(name usecase, name manager, bool add)
   }
 }
   
-void tokensmaster::usecasecfg(name usecase, string required_fields)
+void tokensmaster::usecasecfg(name usecase, bool unique_symbols, string allowed_chain, string required_fields)
 {
   usecase_table usecasetable(get_self(), get_self().value);
   const auto& uc = usecasetable.get(usecase.value, "usecase not found");
   require_auth(uc.manager);
-  int field_name_length = 0;
+  check(allowed_chain.size() < 13, "chain name too long");
+  int name_length = 0;
   const char* charmap = ".12345abcdefghijklmnopqrstuvwxyz";
   for (auto x : required_fields) {
     if (x == ' ') {
-      field_name_length = 0;
+      name_length = 0;
     } else {
       check(strchr(charmap, x) != NULL, "invalid field name");
-      check(++field_name_length < 13, "field name too long");
+      check(++name_length < 13, "field name too long");
     }
   }
   usecasetable.modify (uc, uc.manager, [&]( auto& s ) {
+    s.unique_symbols = unique_symbols;
+    s.allowed_chain = allowed_chain;
     s.required_fields = required_fields;
   });
   
