@@ -61,8 +61,9 @@ void tokensmaster::submittoken(name submitter, name usecase, string chain, name 
 
 void tokensmaster::approvetoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, bool approve)
 {
-  require_auth(get_self());
-
+  usecase_table usecasetable(get_self(), get_self().value);
+  const auto& uc = usecasetable.get(usecase.value, "usecase not found");
+  require_auth(uc.manager);
   string signature = submitter.to_string()+usecase.to_string()+chain+contract.to_string()+symbolcode.to_string();
   token_tables tokentable(get_self(), usecase.value);
   auto token_signature_index = tokentable.get_index<"signature"_n>();
@@ -110,6 +111,10 @@ void tokensmaster::usecasecfg(name usecase, string required_fields)
       check(++field_name_length < 13, "field name too long");
     }
   }
+  usecasetable.modify (uc, uc.manager, [&]( auto& s ) {
+    s.required_fields = required_fields;
+  });
+  
 }
   
 string tokensmaster::check_json_fields(std::map<string,bool>& field_list, const string& input)
@@ -130,13 +135,14 @@ string tokensmaster::check_json_fields(std::map<string,bool>& field_list, const 
     cp = input.find_first_of(":", cp+1);
     cp = input.find_first_of("{,\"", cp+1);
     s = cp+1;
-    if(input[cp]==',') { continue; }
     if(input[cp]=='{') {
       return "reached {";
     }
-    do {
-      cp = input.find_first_of("\"", cp+1);
-    } while (input[cp-1]=='\\');
+    if(input[cp]=='"') { 
+      do {
+        cp = input.find_first_of("\"", cp+1);
+      } while (input[cp-1]=='\\');
+    }
     if ( field_list.find(field) != field_list.end() ) {
       if (!field_list[field]) {
         --fields_remain;
