@@ -33,6 +33,22 @@ The COMPILER variable can either be docker or local - if you have eos-cpp instal
 npm install
 ```
 
+### Start single-node local test network
+
+```
+nodeos -e -p eosio --plugin eosio::procer_plugin --plugin eosio::producer_api_plugin --plugin eosio::chain_api_plugin --plugin eosio::http_plugin --plugin eosio::history_plugin --plugin eosio::history_api_plugin --filter-on="*" --access-control-allow-origin='*' --contracts-console --http-validate-host=false --delete-all-blocks --delete-state-history --verbose-http-errors >> nodeos.log 2>&1
+```
+
+### Create testnet owner account
+
+This requires a wallet capable of signing the "create account" action, for example `cleos`.
+
+```
+cleos wallet create --to-console
+cleos wallet import --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3 # LOCAL_PRIVATE_KEY in .env file
+cleos create account eosio owner EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV # Public key matching above
+```
+
 # Deploy Tools
 
 Use the seeds.js script to 
