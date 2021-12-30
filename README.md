@@ -35,11 +35,13 @@ npm install
 
 ### Start single-node local test network
 
+The local testnet is required for unit tests.
+
 ```
-nodeos -e -p eosio --plugin eosio::procer_plugin --plugin eosio::producer_api_plugin --plugin eosio::chain_api_plugin --plugin eosio::http_plugin --plugin eosio::history_plugin --plugin eosio::history_api_plugin --filter-on="*" --access-control-allow-origin='*' --contracts-console --http-validate-host=false --delete-all-blocks --delete-state-history --verbose-http-errors >> nodeos.log 2>&1
+nodeos -e -p eosio --plugin eosio::producer_plugin --plugin eosio::producer_api_plugin --plugin eosio::chain_api_plugin --plugin eosio::http_plugin --plugin eosio::history_plugin --plugin eosio::history_api_plugin --filter-on="*" --access-control-allow-origin='*' --contracts-console --http-validate-host=false --delete-all-blocks --delete-state-history --verbose-http-errors >> nodeos.log 2>&1
 ```
 
-### Create testnet owner account
+### Create local testnet owner account
 
 This requires a wallet capable of signing the "create account" action, for example `cleos`.
 
