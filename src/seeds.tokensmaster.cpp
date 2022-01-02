@@ -104,7 +104,9 @@ void tokensmaster::usecase(name usecase, name manager, bool add)
     });
   } else {
     check(uc != usecasetable.end(), ("usecase '"+usecase.to_string()+"' does not exist").c_str());
+    check(uc->manager == manager, ("'"+manager.to_string()+"' does not manage usecase '"+usecase.to_string()+"'").c_str());
     usecasetable.erase(uc);
+    utils::delete_table<token_tables>(get_self(), usecase.value);
   }
 }
   
