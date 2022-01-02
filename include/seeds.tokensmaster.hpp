@@ -45,10 +45,10 @@ CONTRACT tokensmaster : public contract {
           *
           * @pre submitter must be a valid account with authorization for the transaction,
           * @pre usecase must be a valid eosio name already existing in the `usecases` table
-          * @pre chain must be a known chain id string ("Telos", "EOS", "WAX", etc.)
+          * @pre chain must match the allowed_chain parameter of the `usecasecfg` action
           * @pre contract must be a valid account with a token contract matching symbolcode
-          * @pre json must contain the required fields and be <= 2048 characters; required fields are
-          *       "name", "logo", "backgroundImage", "balanceSubTitle", "precision".
+          * @pre json must contain the required fields and be <= 2048 characters; the list of
+          *       required fields is declared in the `usecasecfg` action
           * @pre there must not already be a row in the `tokens` table with matching parameters
       */
       ACTION submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json);
@@ -76,7 +76,8 @@ CONTRACT tokensmaster : public contract {
           *
           * @param usecase - identifier of use case (e.g. `lightwallet`),
           * @param manager - an account with management authority over the usecase
-          * @param add - boolean: if true, add the new row; if false, delete the row
+          * @param add - boolean: if true, add the new row;
+          *                       if false, delete the row and associated token table scope
           *
           * @pre usecase must be a valid eosio name
           * @pre manager must be an existing account
