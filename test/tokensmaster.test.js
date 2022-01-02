@@ -49,7 +49,7 @@ describe('Master token list', async assert => {
                             { authorization: `${firstuser}@active` })
   await contract.usecasecfg('usecase2', true, 'Telos', 'name logo weblink',
                             { authorization: `${seconduser}@active` })
-  await contract.usecasecfg('usecase1', false, 'Telos', 'name backgdimage logo balancesubt precision',
+  await contract.usecasecfg('usecase1', false, 'Telos', 'name backgdimage logo baltitle precision',
                             { authorization: `${firstuser}@active` })
 
 
@@ -57,7 +57,7 @@ describe('Master token list', async assert => {
     given: 'configuring usecases',
     should: 'update usecase entries',
     actual: (await getUsecaseTable())['rows'],
-    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo balancesubt precision' },
+    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo baltitle precision' },
                 { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' },
                 { usecase: 'usecase3', manager: seconduser, unique_symbols :0, allowed_chain: '', required_fields: '' } ]
   })
@@ -71,7 +71,7 @@ describe('Master token list', async assert => {
 
     should: 'delete usecase entry',
     actual: (await getUsecaseTable())['rows'],
-    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo balancesubt precision' },
+    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo baltitle precision' },
                 { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' } ]
   })
 
@@ -81,7 +81,8 @@ describe('Master token list', async assert => {
   const testSymbol = 'SEEDS'
 
   await contract.submittoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol,
-    '{"name": "Seeds token", "logo": "somelogo", "precision": "6", "balancesubt": "Wallet balance", "backgdimage": "someimg"}',
+    '{"name": "Seeds token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
+     '"baltitle.es": "saldo de la billetera", "backgdimage": "someimg"}',
     { authorization: `${thirduser}@active` })
 
   const getTokenTable = async (usecase) => {
@@ -98,7 +99,7 @@ describe('Master token list', async assert => {
     should: 'create token entry',
     actual: (await getTokenTable('usecase1'))['rows'],
     expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:0,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"balancesubt\": \"Wallet balance\", \"backgdimage\": \"someimg\"}"} ]
+                 approved:0,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle.es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
   console.log('approve token')
@@ -112,7 +113,7 @@ describe('Master token list', async assert => {
     should: 'approve token entry',
     actual: (await getTokenTable('usecase1'))['rows'],
     expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"balancesubt\": \"Wallet balance\", \"backgdimage\": \"someimg\"}"} ]
+                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle.es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
 
