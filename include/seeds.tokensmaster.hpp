@@ -48,7 +48,8 @@ CONTRACT tokensmaster : public contract {
           * @pre chain must match the allowed_chain parameter of the `usecasecfg` action
           * @pre contract must be a valid account with a token contract matching symbolcode
           * @pre json must contain the required fields and be <= 2048 characters; the list of
-          *       required fields is declared in the `usecasecfg` action
+          *       required fields is declared in the `usecasecfg` action. Note that the contract
+          *       does not validate the json.
           * @pre there must not already be a row in the `tokens` table with matching parameters
       */
       ACTION submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json);
@@ -98,7 +99,8 @@ CONTRACT tokensmaster : public contract {
           * @pre usecase must exist in the `usecases` table
           * @pre the transaction must have the active authority of the usecase manager
           * @pre `allowed_chain` must be 12 or fewer characters
-          * @pre each substring in `required_fields` must be a valid eosio name
+          * @pre each substring in `required_fields` must be a valid eosio name. (Each dot within
+          *    a substring will be converted to an underscore in the usecase table entry)
       */
       ACTION usecasecfg(name usecase, bool unique_symbols, string allowed_chain, string required_fields);
 

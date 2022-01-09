@@ -1,7 +1,7 @@
 const { describe } = require("riteway")
 const { eos, names, getTableRows, isLocal, initContracts, sleep, asset, getBalanceFloat } = require("../scripts/helper")
 
-const { firstuser, seconduser, thirduser, token, tokensmaster } = names
+const { firstuser, seconduser, thirduser, fourthuser, token, tokensmaster } = names
 
 
 describe('Master token list', async assert => {
@@ -16,6 +16,7 @@ describe('Master token list', async assert => {
 
   const users = [firstuser, seconduser, thirduser]
 
+  console.log('Normal operations')
   console.log('reset')
   await contract.reset({ authorization: `${tokensmaster}@active` })
 
@@ -67,7 +68,7 @@ describe('Master token list', async assert => {
   await contract.usecase('usecase3', seconduser, false, { authorization: `${tokensmaster}@active` })
 
   assert({
-    given: 'deleting usecase',
+    given: 'deleting empty usecase',
 
     should: 'delete usecase entry',
     actual: (await getUsecaseTable())['rows'],
@@ -82,7 +83,7 @@ describe('Master token list', async assert => {
 
   await contract.submittoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol,
     '{"name": "Seeds token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
-     '"baltitle.es": "saldo de la billetera", "backgdimage": "someimg"}',
+     '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
     { authorization: `${thirduser}@active` })
 
   const getTokenTable = async (usecase) => {
@@ -99,7 +100,7 @@ describe('Master token list', async assert => {
     should: 'create token entry',
     actual: (await getTokenTable('usecase1'))['rows'],
     expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:0,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle.es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+                 approved:0,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
   console.log('approve token')
@@ -113,8 +114,60 @@ describe('Master token list', async assert => {
     should: 'approve token entry',
     actual: (await getTokenTable('usecase1'))['rows'],
     expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle.es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
+
+  console.log('add second token')
+  const secondSymbol = 'TESTS'
+
+  await contract.submittoken(fourthuser, 'usecase1', 'Telos', testToken, secondSymbol,
+    '{"name": "Test token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
+     '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
+    { authorization: `${fourthuser}@active` })
+  await contract.approvetoken(fourthuser, 'usecase1', 'Telos', testToken, secondSymbol, true,
+    { authorization: `${firstuser}@active` })
+
+  assert({
+    given: 'add token',
+    should: 'approve token entry',
+    actual: (await getTokenTable('usecase1'))['rows'],
+    expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
+                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"},
+                {id:1, submitter:"seedsuserxxx",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
+                 approved:1,json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+  })
+
+  console.log('delete token')
+
+  await contract.approvetoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol, false,
+    { authorization: `${firstuser}@active` })
+
+  assert({
+    given: 'delete token',
+    should: 'remove token entry',
+    actual: (await getTokenTable('usecase1'))['rows'],
+    expected: [ {id:1, submitter:"seedsuserxxx",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
+                 approved:1,json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+  })
+
+  console.log('usecase delete')
+
+  await contract.usecase('usecase1', firstuser, false, { authorization: `${tokensmaster}@active` })
+
+  assert({
+    given: 'deleting usecase w/tokens',
+
+    should: 'delete usecase & token entries',
+    actual: [(await getUsecaseTable())['rows'], (await getTokenTable('usecase1'))['rows']],
+    expected: [
+       [ { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' } ],
+       [ ]
+      ]
+  })
+
+  console.log('Failing operations')
+
+  console.log('TBD')
 
 
 })

@@ -1,5 +1,6 @@
 #include <seeds.tokensmaster.hpp>
 #include <cstring>
+#include <algorithm>
 
 void tokensmaster::reset() {
   require_auth(_self);
@@ -126,6 +127,7 @@ void tokensmaster::usecasecfg(name usecase, bool unique_symbols, string allowed_
       check(++name_length < 13, "field name too long");
     }
   }
+  std::replace(required_fields.begin(), required_fields.end(), '.', '_');
   usecasetable.modify (uc, uc.manager, [&]( auto& s ) {
     s.unique_symbols = unique_symbols;
     s.allowed_chain = allowed_chain;
