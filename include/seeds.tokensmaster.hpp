@@ -1,6 +1,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/crypto.hpp>
+#include <eosio/singleton.hpp>
 #include <contracts.hpp>
 #include <tables.hpp>
 #include <utils.hpp>
@@ -13,14 +14,18 @@ using std::string;
     * This specifically addresses the use case of Light Wallet which requires a curated list of tokens which are visible
     *   to users in LW and which must have unique symbol codes. Metadata needed for the LW UI include user-friendly name,
     *   logo image, background, and balance title string.
-    * Other wallets/applications are potentially supported through additional "usecase" entries.
+    * Other wallets/applications (e.g. PTM) are potentially supported through additional "usecase" names.
     *
-    * The `tokens` table contains one row per token with fields for token identity and for each metadata item. It is scoped by use
-    *   case (e.g. 'lightwallet').
+    * The `tokens` table contains one row per submitted token with fields for token identity and for each metadata item.
     *
-    * The `usecases` table contains one row for each use case and is scoped to the tokensmaster contract account name.
+    * The `acceptances` table contains one row for each token acceptable for a usecase and is scoped to usecase name.
     *
-    * Adding new tokens to the master list is done through a sumbit/approve sequence
+    * New tokens are submitted to the master list without a vetting process, but spam is discouraged due to a RAM
+    *  requirement. An acceptance may be performed by the manager account. It is expected that an application
+    *  (associated to a usecase) will only recognize "accepted" token entries.
+    *
+    * A submitter cannot update a token entry he/she previously submitted, but if the manager deletes
+    * the token, a replacement entry may be submitted which will have a different numerical token_id.
     */
 
 CONTRACT tokensmaster : public contract {
@@ -33,107 +38,105 @@ CONTRACT tokensmaster : public contract {
       ACTION reset();
 
       /**
+          * The one-time `init` action executed by the tokensmaster contract account records
+          *  the chain name and code hash in the config table; it also specifies whether the contract
+          *  should verify that a token contract exists when a token is submitted
+          *
+          * @param chain - the conventional string name for the chain (e.g. "Telos"),
+          * @param code_hash - the code hash registered on-chain with the "set code" transaction,
+          * @param verify - if true, test that token contract & supply exist on `submittoken` action
+          * @param manager - an account empowered to execute `accepttoken` and `deletetoken` actions
+      */
+      ACTION init(string chain, eosio::checksum256 code_hash, bool verify, name manager);
+
+      /**
           * The `submittoken` action executed by the `submitter` account places a new row into the
           * `tokens` table, with the approved field set to false
           *
           * @param submitter - the account that submits the token,
-          * @param usecase - identifier of use case (e.g. `lightwallet`),
           * @param chain - identifier of chain (e.g. "Telos")
           * @param contract - the account name of the token contract,
           * @param symbolcode - the symbol code for the token,
           * @param json - the metadata for the token
           *
           * @pre submitter must be a valid account with authorization for the transaction,
-          * @pre usecase must be a valid eosio name already existing in the `usecases` table
-          * @pre chain must match the allowed_chain parameter of the `usecasecfg` action
+          * @pre submitter account must own sufficient RAM to support the transaction,
+          * @pre chain must be <= 32 characters,
           * @pre contract must be a valid account with a token contract matching symbolcode
-          * @pre json must contain the required fields and be <= 2048 characters; the list of
-          *       required fields is declared in the `usecasecfg` action. Note that the contract
-          *       does not validate the json.
+          * @pre json must be <= 2048 characters. Note that the contract does not validate the json.
           * @pre there must not already be a row in the `tokens` table with matching parameters
       */
-      ACTION submittoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, string json);
-
+      ACTION submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json);
 
       /**
-          * The `approvetoken` action executed by the tokensmaster contract account refers to an existing row
-          * in the `tokens` table and either (1) sets the approved field to true, or (2) deletes the row
-          * from the `tokens` table.
+          * The `accepttoken` action executed by the manager account adds or removes a
+          * `usecases` table row indicating that a particular token is accepted for that usecase.
+          * A new usecase is created if one does not exist; a usecase is deleted if its last token is removed.
           *
-          * @param submitter - the account that submitted the token,
-          * @param usecase - identifier of use case (e.g. `lightwallet`),
-          * @param chain - identifier of chain (e.g. "Telos")
-          * @param contract - the account name of the token contract,
+          * @param id - token identifier, from the row id of the tokens table,
           * @param symbolcode - the symbol code for the token,
-          * @param approve - boolean: if true, accept the submitted token; if false, delete the token
+          * @param usecase - identifier of use case (e.g. `lightwallet`),
+          * @param accept - boolean: if true, add the new row;
+          *                          if false, delete the row.
           *
-          * @pre submitter, usecase, chain, contract, and symbolcode must match an existing row in the `tokens` table
+          * @pre id must exist in the `tokens` table and match the symbolcode
+          * @pre if 'accept' is false, the row must exist in the `acceptances` table;
+          *       if true, the row must not exist.
+          * @pre the tokensmaster contract account must own sufficient RAM to support the
+          *   transaction
       */
-      ACTION approvetoken(name submitter, name usecase, string chain, name contract, symbol_code symbolcode, bool approve);
+      ACTION accepttoken(uint64_t id, symbol_code symbolcode, name usecase, bool accept);
 
       /**
-          * The `usecase` action executed by the tokensmaster contract account adds or removes an entry in
-          * the `usecases` table and assigns an account to manage it.
+          * The `deletetoken` action executed by the manager account deletes a token
+          * and any associates usecase acceptance.
           *
-          * @param usecase - identifier of use case (e.g. `lightwallet`),
-          * @param manager - an account with management authority over the usecase
-          * @param add - boolean: if true, add the new row;
-          *                       if false, delete the row and associated token table scope
+          * @param id - token identifier, from the row id of the tokens table,
+          * @param symbolcode - the symbol code for the token
           *
-          * @pre usecase must be a valid eosio name
-          * @pre manager must be an existing account
-          * @pre if `add` is true then the row must not exist in the table
-          * @pre if `add` is false then the row must exist in the table
+          * @pre id must exist in the `tokens` table and match the symbolcode
       */
-      ACTION usecase(name usecase, name manager, bool add);
-
-      /**
-          * The `usecasecfg` action executed by the usecase manager configures the 
-          * the required json fields for a row of the `usecases` table.
-          *
-          * @param usecase - identifier of use case (e.g. `lightwallet`),
-          * @param unique_symbols - if true, identical symbols on distinct contracts are disallowed
-          * @param allowed_chain - a chain name (e.g. "Telos")
-          * @param required_fields - a space-delimited string of field names
-          *
-          * @pre usecase must exist in the `usecases` table
-          * @pre the transaction must have the active authority of the usecase manager
-          * @pre `allowed_chain` must be 12 or fewer characters
-          * @pre each substring in `required_fields` must be a valid eosio name. (Each dot within
-          *    a substring will be converted to an underscore in the usecase table entry)
-      */
-      ACTION usecasecfg(name usecase, bool unique_symbols, string allowed_chain, string required_fields);
+      ACTION deletetoken(uint64_t id, symbol_code symbolcode);
 
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
-      TABLE token_table { // scoped by usecase (e.g. 'lightwallet'_n)
+
+      TABLE config { // single table, singleton, scoped by contract account name
+        string             chain;
+        eosio::checksum256 code_hash;
+        bool               verify;
+        time_point         init_time;
+      } config_row;
+
+      TABLE token_table { // single table, scoped by contract account name
         uint64_t id;
         name submitter;
-        name usecase;
         string chainName;
         name contract;
         symbol_code symbolcode;
-        bool approved;
         string json;
 
         uint64_t primary_key() const { return id; }
         eosio::checksum256 by_signature() const {
-               string signature = submitter.to_string()+usecase.to_string()+chainName
+               string signature = submitter.to_string()+chainName
                                   +contract.to_string()+symbolcode.to_string();
                return eosio::sha256( signature.c_str(), signature.length());
             }
         uint64_t by_symbolcode() const { return symbolcode.raw(); }
       };
 
-      TABLE usecase_ { // single table, scoped by contract account name
-        name usecase;
-        name manager;
-        bool unique_symbols;
-        string allowed_chain;
-        string required_fields;
+      TABLE usecases { // single table, scoped by contract account name
+        name   usecase;
 
         uint64_t primary_key() const { return usecase.value; }
+
+      };
+
+      TABLE acceptances { // scoped by usecase name
+        uint64_t   token_id;
+ 
+        uint64_t primary_key() const { return token_id; }
 
       };
 
@@ -145,6 +148,9 @@ CONTRACT tokensmaster : public contract {
          uint64_t primary_key()const { return supply.symbol.code().raw(); }
       };
 
+    typedef eosio::singleton< "config"_n, config > config_table;
+    typedef eosio::multi_index< "config"_n, config >  dump_for_config;
+
     typedef eosio::multi_index<"tokens"_n, token_table,
      indexed_by<"signature"_n,
        const_mem_fun<token_table, checksum256, &token_table::by_signature>>,
@@ -152,29 +158,13 @@ CONTRACT tokensmaster : public contract {
        const_mem_fun<token_table, uint64_t, &token_table::by_symbolcode>>
      > token_tables;
     
-    typedef eosio::multi_index<"usecases"_n, usecase_> usecase_table;
+    typedef eosio::multi_index<"usecases"_n, usecases> usecase_table;
+
+    typedef eosio::multi_index<"acceptances"_n, acceptances> acceptance_table;
 
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
-      /**
-          * The `check_json_fields` function performs limited string processing to test that expected fields
-          * exist in a json string. The field names are keys in a std::map passed to the function.
-          * The input string is parsed in sequence and the function returns when all fields have
-          * been found, the input has been exhausted, or the function is unable to process further.
-          * This function is not a general json processor and does not recognize objects {...} or non-
-          * string json elements. Therefore the expected fields should occur before any non-string
-          * element.
-          *
-          * @param result - a map<string, bool> with the bool values initialized to false
-          * @param input - the json string to be scanned
-          *
-          * @return - a status string which is zero-length on success
-          *
-          * @pre the input string should not contain any escaped backslash \\ before a double quote "
-      */
-    string check_json_fields(std::map<string, bool>& field_list, const string& input);
-
 };
 
-EOSIO_DISPATCH(tokensmaster, (reset)(submittoken)(approvetoken)(usecase)(usecasecfg));
+EOSIO_DISPATCH(tokensmaster, (reset)(init)(submittoken)(accepttoken));
 

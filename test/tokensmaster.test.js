@@ -20,11 +20,63 @@ describe('Master token list', async assert => {
   console.log('reset')
   await contract.reset({ authorization: `${tokensmaster}@active` })
 
-  console.log('usecase create')
+  //return;
 
-  await contract.usecase('usecase1', firstuser, true, { authorization: `${tokensmaster}@active` })
-  await contract.usecase('usecase2', seconduser, true, { authorization: `${tokensmaster}@active` })
-  await contract.usecase('usecase3', seconduser, true, { authorization: `${tokensmaster}@active` })
+  console.log('init')
+
+  await contract.init('Telos', 'a8a87fd75f217b9432fb2173cef5fa20bdb9caf6d10b178d24f62e6d705f6728', true, { authorization: `${tokensmaster}@active` })
+
+  const getConfigTable = async () => {
+    return await eos.getTableRows({
+      code: tokensmaster,
+      scope: tokensmaster,
+      table: 'config',
+      json: true,
+    })
+  }
+
+  function dropTime(object) { object.init_time = ""; return object };
+ 
+  assert({
+    given: 'initializing contract',
+    should: 'create config table',
+    actual: dropTime( (await getConfigTable())['rows'][0] ),
+    expected: { chain: "Telos", code_hash: "a8a87fd75f217b9432fb2173cef5fa20bdb9caf6d10b178d24f62e6d705f6728",
+                  verify: 1, init_time: "" }
+  })
+
+
+  console.log('submit token')
+
+  const testToken = token
+  const testSymbol = 'SEEDS'
+
+  await contract.submittoken(thirduser, 'Telos', testToken, testSymbol,
+    '{"name": "Seeds token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
+     '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
+    { authorization: `${thirduser}@active` })
+
+  const getTokenTable = async () => {
+    return await eos.getTableRows({
+      code: tokensmaster,
+      scope: tokensmaster,
+      table: 'tokens',
+      json: true,
+    })
+  }
+
+  assert({
+    given: 'submitting token',
+    should: 'create token entry',
+    actual: (await getTokenTable())['rows'],
+    expected: [ {id:0, submitter:"seedsuserccc",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
+                 json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+  })
+
+  console.log('accept token')
+
+  await contract.accepttoken(0, testSymbol, 'usecase1', true,
+    { authorization: `${tokensmaster}@active` })
 
   const getUsecaseTable = async () => {
     return await eos.getTableRows({
@@ -35,119 +87,54 @@ describe('Master token list', async assert => {
     })
   }
 
-  assert({
-    given: 'creating usecases',
-    should: 'create usecase entries',
-    actual: (await getUsecaseTable())['rows'],
-    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: '', required_fields: '' },
-                { usecase: 'usecase2', manager: seconduser, unique_symbols :0, allowed_chain: '', required_fields: '' },
-                { usecase: 'usecase3', manager: seconduser, unique_symbols :0, allowed_chain: '', required_fields: '' } ]
-  })
-
-  console.log('usecase config')
-
-  await contract.usecasecfg('usecase1', true, 'EOS', 'name logo balance.es weblink',
-                            { authorization: `${firstuser}@active` })
-  await contract.usecasecfg('usecase2', true, 'Telos', 'name logo weblink',
-                            { authorization: `${seconduser}@active` })
-  await contract.usecasecfg('usecase1', false, 'Telos', 'name backgdimage logo baltitle precision',
-                            { authorization: `${firstuser}@active` })
-
-
-  assert({
-    given: 'configuring usecases',
-    should: 'update usecase entries',
-    actual: (await getUsecaseTable())['rows'],
-    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo baltitle precision' },
-                { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' },
-                { usecase: 'usecase3', manager: seconduser, unique_symbols :0, allowed_chain: '', required_fields: '' } ]
-  })
-
-  console.log('usecase delete')
-
-  await contract.usecase('usecase3', seconduser, false, { authorization: `${tokensmaster}@active` })
-
-  assert({
-    given: 'deleting empty usecase',
-
-    should: 'delete usecase entry',
-    actual: (await getUsecaseTable())['rows'],
-    expected: [ { usecase: 'usecase1', manager: firstuser, unique_symbols: 0, allowed_chain: 'Telos', required_fields: 'name backgdimage logo baltitle precision' },
-                { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' } ]
-  })
-
-  console.log('submit token')
-
-  const testToken = token
-  const testSymbol = 'SEEDS'
-
-  await contract.submittoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol,
-    '{"name": "Seeds token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
-     '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
-    { authorization: `${thirduser}@active` })
-
-  const getTokenTable = async (usecase) => {
+  const getAcceptanceTable = async (usecase) => {
     return await eos.getTableRows({
       code: tokensmaster,
       scope: usecase,
-      table: 'tokens',
+      table: 'acceptances',
       json: true,
     })
   }
 
-  assert({
-    given: 'submitting token',
-    should: 'create token entry',
-    actual: (await getTokenTable('usecase1'))['rows'],
-    expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:0,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
-  })
-
-  console.log('approve token')
-
-  await contract.approvetoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol, true,
-    { authorization: `${firstuser}@active` })
-
 
   assert({
-    given: 'approving token',
-    should: 'approve token entry',
-    actual: (await getTokenTable('usecase1'))['rows'],
-    expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+    given: 'accepting token',
+    should: 'accept token entry',
+    actual: [(await getUsecaseTable())['rows'], (await getAcceptanceTable('usecase1'))['rows'] ],
+    expected: [ [{"usecase":"usecase1"} ], [{"token_id":0}] ]
   })
 
   console.log('add second token')
   const secondSymbol = 'TESTS'
 
-  await contract.submittoken(fourthuser, 'usecase1', 'Telos', testToken, secondSymbol,
+  await contract.submittoken(fourthuser, 'Telos', testToken, secondSymbol,
     '{"name": "Test token", "logo": "somelogo", "precision": "6", "baltitle": "Wallet balance", '+
      '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
     { authorization: `${fourthuser}@active` })
-  await contract.approvetoken(fourthuser, 'usecase1', 'Telos', testToken, secondSymbol, true,
-    { authorization: `${firstuser}@active` })
+  await contract.accepttoken(1, secondSymbol, 'usecase1', true,
+    { authorization: `${tokensmaster}@active` })
 
   assert({
     given: 'add token',
     should: 'approve token entry',
-    actual: (await getTokenTable('usecase1'))['rows'],
-    expected: [ {id:0, submitter:"seedsuserccc",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
-                 approved:1,json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"},
-                {id:1, submitter:"seedsuserxxx",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
-                 approved:1,json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+    actual: (await getTokenTable())['rows'],
+    expected: [ {id:0, submitter:"seedsuserccc",chainName:"Telos",contract:"token.seeds",symbolcode:"SEEDS",
+                 json:"{\"name\": \"Seeds token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"},
+                {id:1,submitter:"seedsuserxxx",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
+                 json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
   console.log('delete token')
 
-  await contract.approvetoken(thirduser, 'usecase1', 'Telos', testToken, testSymbol, false,
-    { authorization: `${firstuser}@active` })
+  await contract.accepttoken(0, testSymbol, 'usecase1', false,
+    { authorization: `${tokensmaster}@active` })
 
   assert({
     given: 'delete token',
     should: 'remove token entry',
-    actual: (await getTokenTable('usecase1'))['rows'],
-    expected: [ {id:1, submitter:"seedsuserxxx",usecase:"usecase1",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
-                 approved:1,json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+    actual: (await getTokenTable())['rows'],
+    expected: [ {id:1, submitter:"seedsuserxxx",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
+                 json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
   console.log('usecase delete')
