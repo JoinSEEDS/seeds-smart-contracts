@@ -88,148 +88,69 @@ const getBalance = async ({
     return null
   }
 
-  //console.log("balance: "+JSON.stringify(balance))
 }
 
+const reduceAction = (account, amount) => {
 
-function timeStampString() {
-  var date = new Date()
-  var hours = date.getHours();
-  var minutes = date.getMinutes();
-  var month = date.getMonth() + 1;
-  var day = date.getDate()
-
-  hours = hours < 10 ? '0' + hours : hours;
-  minutes = minutes < 10 ? '0' + minutes : minutes;
-  day = day < 10 ? '0' + day : day;
-  month = month < 10 ? '0' + month : month;
-
-  res = date.getFullYear() + month + day + hours + minutes;
-
-  return res
-}
-
-
-/** Raw call to `/v1/chain/get_table_by_scope` */
-const get_table_by_scope = async ({
-  code,
-  table,
-  lower_bound = '',
-  upper_bound = '',
-  limit = 10,
-}) => {
-
-  const url = host + '/v1/chain/get_table_by_scope'
-
-  const params = {
-    code,
-    table,
-    lower_bound,
-    upper_bound,
-    limit,
-  }
-
-  const rawResponse = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(params)
-  });
-  const res = await rawResponse.json();
-  return res
-
-}
-
-const getBalanceObjectFor = async (account, code, symbol) => {
-  const balance = await getBalance({
-    user: account,
-    code: code,
-    symbol: symbol
-  })
-  if (balance != null) {
-    return {
-      account: account,
-      balance: balance,
-      date: new Date().toISOString()
-    }
-  } else {
-    return null
-  }
-}
-
-const addBalances = async (balances, accounts, contract, symbol) => {
-  var futures = []
-  accounts.forEach((acct) => futures.push(getBalanceObjectFor(acct, contract, symbol)))
-  var results = await Promise.all(futures)
-
-  results.forEach(res => {
-    if (res != null) {
-      console.log("adding balance " + JSON.stringify(res, null, 2))
-      balances[res.account] = res.balance
-      // balances.push(res)
-    }
-  });
-
-}
-
-
-const burnAction = (account, amount) => {
-
-  return  {
+  return {
     "account": "token.hypha",
-    "name": "burn",
+    "name": "reduce",
     "authorization": [{
-        "actor": "dao.hypha",
-        "permission": "active"
-      }
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
     ],
     "data": {
       "account": account,
-      "quantity": amount + " HYPHA",
-      //"memo": "Hypha H^2 Redistribution"
+      "quantity": amount + " HYPHA"
     },
   }
 
 }
 
-const createLockAction = (account, amount) => {
+const getEOSTimePoint = (date) => {
+  return date.toISOString().replace('Z', '')
+}
 
-  // TBD
+const lockAction = (account, amount) => {
 
-  return  {
-    "account": "costak.hypha", // TBD
+  const expiration = new Date()
+  expiration.setFullYear(expiration.getFullYear() + 3)
+
+  return {
+    "account": "costak.hypha",
     "name": "createlock",
     "authorization": [{
-        "actor": "dao.hypha",
-        "permission": "active"
-      }
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
     ],
     "data": {
-      "account": account,
+      "sponsor": "dao.hypha",
+      "beneficiary": account,
       "quantity": amount + " HYPHA",
-      //"memo": "Hypha H^2 Redistribution"
+      "notes": 'HIP1 redistribution event',
+      "expiration_date": getEOSTimePoint(expiration)
     },
   }
 
 }
 
-const transferAction = ({beneficiary, amount, memo}) => {
+const transferAction = ({ beneficiary, amount, memo }) => {
 
-  return  {
+  return {
     "account": "token.hypha",
     "name": "transfer",
     "authorization": [{
-        "actor": "dao.hypha",
-        "permission": "active"
-      }
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
     ],
     "data": {
       "from": "dao.hypha",
       "to": beneficiary,
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": memo
+      "memo": "HIP1 redistribution event"
     },
   }
 
@@ -237,21 +158,31 @@ const transferAction = ({beneficiary, amount, memo}) => {
 
 const issueAction = (amount) => {
 
-  return  {
+  return {
     "account": "token.hypha",
     "name": "issue",
     "authorization": [{
-        "actor": "dao.hypha",
-        "permission": "active"
-      }
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
     ],
     "data": {
       "to": "dao.hypha",
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": "Hypha payout correction 2021/12"
+      "memo": "HIP1 redistribution event"
     },
   }
 
+}
+
+const getApprovers = async (account, permission_name = "active") => {
+  const { permissions } = await eos.getAccount(account)
+  const activePerm = permissions.filter(item => item.perm_name == permission_name)
+  const result = activePerm[0].required_auth.accounts
+    .filter(item => item.permission.actor != account)
+    .map(item => item.permission)
+  console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  return result
 }
 
 const createMultisigPropose = async (proposerAccount, proposalName, contract, actions, permission = "active") => {
@@ -263,8 +194,8 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
   requestedApprovals = await getApprovers(contract)
 
   console.log("====== PROPOSING ======")
-  
-  console.log("requested permissions: "+permission+ " " + JSON.stringify(requestedApprovals))
+
+  console.log("requested permissions: " + permission + " " + JSON.stringify(requestedApprovals))
 
   const proposeInput = {
     proposer: proposerAccount,
@@ -282,7 +213,7 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
       transaction_extensions: []
     }
   };
-  
+
   const auth = [{
     actor: proposerAccount,
     permission: "active",
@@ -294,15 +225,15 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
     authorization: auth,
     data: proposeInput
   }]
-  
-  return createESRWithActions({actions: propActions})
+
+  return createESRWithActions({ actions: propActions })
 
 }
 
-const createESRWithActions = async ({actions}) => {
+const createESRWithActions = async ({ actions }) => {
 
   console.log("========= Generating ESR Code ===========")
-  
+
   const esr_uri = "https://api-esr.hypha.earth/qr"
   const body = {
     actions
@@ -331,19 +262,70 @@ const distribute = async () => {
   console.log("getting new token distributions");
   const data = await processDataFile()
 
+  let actions = []
+  let sum = 0
+  let intsum = 0
+
+  for (item of data) {
+
+
+    /// 1 destroy the balance
+    actions.push(
+      reduceAction(item.account, item.current)
+    )
+
+    /// 2 send the new balance to the CS contract
+    actions.push(
+      lockAction(item.account, item.after)
+    )
+
+    const itemAfterX100 = parseInt(item.after.replace(".", ""))
+
+    const floatAmount = parseFloat(item.after)
+
+    if (floatAmount.toFixed(2) != item.after) {
+      console.log("ERROR on " + item.after)
+      throw "fatal - math error" + parseFloat(item.after) + " != " + item.after
+    }
+
+    sum = sum + floatAmount
+
+    //const int100val = parseInt(floatAmount * 100, 10)
+
+    intsum += itemAfterX100
+
+    console.log(item.after + " sum: " + sum + " intsum " + intsum)
+
+  }
+
+  console.log("total sum: " + sum)
+  console.log("total intsum: " + intsum)
+
+  // issue HYPHA
+  actions.splice(0, 0, issueAction(sum))
+
+  // transfer to lock account
+  actions.splice(1, 0, transferAction({ beneficiary: "vast.seeds", amount: sum, memo: "H^2 redistribution" }))
+
+  proposerAccount = "illumination"
+  proposalName = "h2dist"
+
+  console.log("ACTIONS: " + JSON.stringify(actions, null, 2))
+
+  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
+
+  console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
+
+}
+
+const verify = async () => {
+  console.log("verifying data in spreadsheet with chain data");
+  const data = await processDataFile()
+
   //console.log("data: "+JSON.stringify(data, null, 2))
 
-  // {
-  //   "account": "solomonx3333",
-  //   "name": "David Solomon",
-  //   "current": "8229.66",
-  //   "multiplier": "5.00",
-  //   "after": "41148.30"
-  // },
+  /// Check if the balance is accurate
 
-  /// 1 - Check if the balance is accurate
-
-  let actions = []
   let sum = 0
 
   for (item of data) {
@@ -357,58 +339,16 @@ const distribute = async () => {
     const amountString = item.current + " HYPHA"
 
     if (balance != amountString) {
-      console.log("account: "+item.account)
-      console.log("current: "+item.current)
-      console.log("balance: "+balance)
+      console.log("account: " + item.account + " expected: " + item.current + " actual: " + balance)
     }
 
-    /// 2 - destroy the balance
-    actions.push(
-      burnAction(item.account, amountString)
-    )
-
-    /// 3 - send the new balance to the CS contract
-    actions.push(
-      createLockAction(item.account, item.after)
-    )
-
     sum = sum + parseFloat(item.after)
-
-
-
   }
 
-  console.log("sum: "+sum)
+  console.log("Total sum: " + sum)
+
+  console.log("Verify done.")
   
-  // issue HYPHA
-  actions.push(
-    issueAction(sum)
-  )
-
-  // transfer to lock account
-  actions.push(
-    transferAction({beneficiary: "vast.seeds", amount: sum, memo: "H^2 redistribution"})
-  )
-
-  proposerAccount = "illumination"
-  proposalName = "h2dist"
-
-  console.log("ACTIONS: "+JSON.stringify(actions, null, 2))
-
-  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
-
-  console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
-
-  const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
-
-  console.log("ESR for Approve: " + JSON.stringify(approveESR, null, 2))
-
-  const execESR = await createESRCodeExec({proposerAccount, proposalName})
-
-  console.log("ESR for Exec: " + JSON.stringify(execESR, null, 2))
-
-
-
 }
 
 program
@@ -416,6 +356,13 @@ program
   .description('distribute HYPHA^2')
   .action(async function () {
     await distribute()
+  })
+
+program
+  .command('verify')
+  .description('verify HYPHA^2 data with chain')
+  .action(async function () {
+    await verify()
   })
 
 

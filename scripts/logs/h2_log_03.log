@@ -1,0 +1,128 @@
+Verify run - no deviations
+
+
+❯ EOSIO_NETWORK=telosMainnet node scripts/token_distribution_H2.js verify
+Telos Mainnet
+verifying data in spreadsheet with chain data
+Line from file: account name    current multiplier      after
+Line from file: thealchemist    Rieki   456259.87       20.00   9125197.40
+Line from file: cometogether    Alex    246275.01       20.00   4925500.20
+Line from file: thelovewitch    Cece    78357.28        5.00    391786.40
+Line from file: dangermouse1    Ronnie  179775.97       15.00   2696639.55
+Line from file: hyphanewyork    Max     179202.20       20.00   3584044.00
+Line from file: joachimstroh    Joachim 124738.93       20.00   2494778.60
+Line from file: astoryteller    Nila    101859.98       5.00    509299.90
+Line from file: lisalight231    Lisa    94053.43        10.00   940534.30
+Line from file: biodiversity    Simon   92000.00        10.00   920000.00
+Line from file: illumination    Nik     96524.89        20.00   1930497.80
+Line from file: loveandlight    Franz   87129.70        20.00   1742594.00
+Line from file: supernatural    Vish    56917.12        5.00    284585.60
+Line from file: markflowfarm    Mark    61223.16        15.00   918347.40
+Line from file: acascalheira    Antonio 57253.45        5.00    286267.25
+Line from file: jaclynjhin11    Jaclyn  54995.14        15.00   824927.10
+Line from file: willblakey11    Will Blakey     48778.83        15.00   731682.45
+Line from file: iampriestess    France  45000.00        15.00   675000.00
+Line from file: everywherehk    David B 38400.00        5.00    192000.00
+Line from file: vasylmarchuk    Vasyl   35033.74        5.00    175168.70
+Line from file: paulcarvalho    Paul Carvalho   33173.92        5.00    165869.60
+Line from file: luigicarlini    Luigi   34984.32        20.00   699686.40
+Line from file: seeding1love    Dannie  32258.84        5.00    161294.20
+Line from file: montanath135    Tucker  30000.00        15.00   450000.00
+Line from file: searchingfor    Ben Levine      30000.00        15.00   450000.00
+Line from file: stefanrust12    Stefan Rust     29053.45        5.00    145267.25
+Line from file: esteesh12345    Estee   23944.93        5.00    119724.65
+Line from file: localscaling    Stephane Localscale     21735.69        5.00    108678.45
+Line from file: georgetaylor    John Taylor     21000.00        15.00   315000.00
+Line from file: abrancusi123    Keala   20875.39        5.00    104376.95
+Line from file: nomik22kimon    Joost   22455.54        5.00    112277.70
+Line from file: seedspiyush2    Piyush  23605.73        20.00   472114.60
+Line from file: sonicsphinxy    Sarah Sphinx    15204.11        1.00    15204.11
+Line from file: mightymighty    Mighty Wizards  21691.39        20.00   433827.80
+Line from file: exponential1    Troy Mork       21564.63        5.00    107823.15
+Line from file: clarelaverty    Clare   18270.46        5.00    91352.30
+Line from file: nahimafzal11    Nahim   17700.00        5.00    88500.00
+Line from file: iblvnnwwrld1    Scott Davies    15000.00        15.00   225000.00
+Line from file: greensurge12    Dr. Greig       15000.00        15.00   225000.00
+Line from file: alanlaub1111    Alan Laubsch    15000.00        15.00   225000.00
+Line from file: alextrojan43    Alex Trojonow   15000.00        15.00   225000.00
+Line from file: wearesailing    Anton Abraham   15000.00        15.00   225000.00
+Line from file: febudfuture1    Jason Budovitch 15000.00        15.00   225000.00
+Line from file: tamsinrose22    Tamsin Bradshaw 15000.00        15.00   225000.00
+Line from file: cookieinbali    Cookie  15000.00        15.00   225000.00
+Line from file: rocklandroad    Reggie  14300.00        15.00   214500.00
+Line from file: juliomonteir    Julio   15378.07        20.00   307561.40
+Line from file: sevenflash42    Igor    13533.28        5.00    67666.40
+Line from file: sanjayrajan1    Sanjay  13328.19        5.00    66640.95
+Line from file: theremotecub    Gery    13012.67        20.00   260253.40
+Line from file: totohmshanti    Toto    8821.57 5.00    44107.85
+Line from file: gregory.tk      Gregory DHO     8713.42 5.00    43567.10
+Line from file: c1or1dons115    Karen Cordon    8665.00 15.00   129975.00
+Line from file: solomonx3333    David Solomon   8229.66 5.00    41148.30
+Line from file: westonshanec    Weston Cordon   8000.00 15.00   120000.00
+Line from file: gradinagruiu    Sorin   9657.64 20.00   193152.80
+Line from file: nicktucker11    Nick tucker     7255.25 5.00    36276.25
+Line from file: zerowastebcn    Ben, Lucile     6500.00 15.00   97500.00
+Line from file: dao.hypha       system  7722.55 0.00    0.00
+Line from file: hyphax.seeds    system  4417.32 0.00    0.00
+Line from file: dbeverywhere    David B 6203.59 5.00    31017.95
+Line from file: evgeiobrn243    Evgeni  9390.59 20.00   187811.80
+Line from file: jasondoh1155    Jason Doh       7587.21 20.00   151744.20
+Line from file: leonieherma1    Leonie  8034.97 20.00   160699.40
+Line from file: azarltfpa455            4950.00 5.00    24750.00
+Line from file: anneloes3313    Anneloes        5405.99 20.00   108119.80
+Line from file: stephengomes    Stephen Gomes   4687.50 20.00   93750.00
+Line from file: sienaraa3535    Sienara 5160.79 20.00   103215.80
+Line from file: jasonrswamy1    Jason Swamy     4605.71 5.00    23028.55
+Line from file: kimmarsh1111    Kim Marsh       3518.53 5.00    17592.65
+Line from file: aleksandardj    Aleksander (Passport)   6572.62 20.00   131452.40
+Line from file: stephenreid1    Stephen Reid    3104.00 20.00   62080.00
+Line from file: carleymonty1    Carley Montgomery       3081.82 1.00    3081.82
+Line from file: rainskyarel5    Rain    3275.43 5.00    16377.15
+Line from file: lukskywalker    GBK     2777.75 5.00    13888.75
+Line from file: seedsofheart            2545.90 5.00    12729.50
+Line from file: sanjeevsingh            2525.00 5.00    12625.00
+Line from file: takayaren555            2139.44 5.00    10697.20
+Line from file: adafriedrich    Ada Friedrich   2534.52 5.00    12672.60
+Line from file: gguijarro123    Gabriel (LW)    2691.71 20.00   53834.20
+Line from file: martinaepple    Martina Apple   2171.20 5.00    10856.00
+Line from file: matteotangi1    Matteo Tangi    2037.50 5.00    10187.50
+Line from file: dstudioproto    dStudio 1949.20 5.00    9746.00
+Line from file: christelos55            1904.45 5.00    9522.25
+Line from file: virtuousloop            1896.32 5.00    9481.60
+Line from file: atmalife2312            2316.75 5.00    11583.75
+Line from file: ronscroggin1    Ron Scrogging   1619.07 5.00    8095.35
+Line from file: rpiesveloces    Randall 1282.90 5.00    6414.50
+Line from file: lukegravdent    Luke    4274.62 20.00   85492.40
+Line from file: pmdwithseeds            1097.41 5.00    5487.05
+Line from file: denistoledoo            1085.08 5.00    5425.40
+Line from file: ugxxqvybh233            1105.23 5.00    5526.15
+Line from file: minosdoros55    Irina   889.84  20.00   17796.80
+Line from file: massimohypha    Massimo 1743.71 20.00   34874.20
+Line from file: natajuvbr125            1488.25 5.00    7441.25
+Line from file: etherweaver1            811.20  5.00    4056.00
+Line from file: leoslaagr421            810.00  5.00    4050.00
+Line from file: natureboy222    Basil   656.40  5.00    3282.00
+Line from file: radiantseeds            650.00  5.00    3250.00
+Line from file: starseedyogi            500.00  5.00    2500.00
+Line from file: cedricseedss    Cedric (Passport)       455.00  5.00    2275.00
+Line from file: magic1234555            450.00  5.00    2250.00
+Line from file: gerard5ph321            1323.66 20.00   26473.20
+Line from file: jedipath3335            321.75  5.00    1608.75
+Line from file: earthgym.gm             195.00  5.00    975.00
+Line from file: peterrakj234            177.06  5.00    885.30
+Line from file: danigorfest3            144.90  5.00    724.50
+Line from file: skyblueearth    Sky (Light Wallet)      465.17  20.00   9303.40
+Line from file: imprvsociety            587.66  5.00    2938.30
+Line from file: marcmarcmarc            108.44  5.00    542.20
+Line from file: cathk33seeds            107.64  5.00    538.20
+Line from file: inhabit4love            104.65  5.00    523.25
+Line from file: khempoudel12    Khem (Passport) 992.32  5.00    4961.60
+Line from file: hyphax.seeds            4417.32 5.00    22086.60
+Line from file: emanwplcl322            35.10   5.00    175.50
+Line from file: oumniaabidi1            35.10   5.00    175.50
+Line from file: nadimhamdan1            5.87    5.00    29.35
+Line from file: geschichten1            2.09    5.00    10.45
+Line from file: vedadogguija            1.01    5.00    5.05
+Total sum: 42374915.38
+Verify done.
+
