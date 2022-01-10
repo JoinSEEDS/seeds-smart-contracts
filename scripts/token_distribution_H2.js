@@ -199,7 +199,7 @@ const createLockAction = (account, amount) => {
   // TBD
 
   return  {
-    "account": "vest.hypha", // TBD
+    "account": "costak.hypha", // TBD
     "name": "createlock",
     "authorization": [{
         "actor": "dao.hypha",
