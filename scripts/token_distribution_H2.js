@@ -55,8 +55,8 @@ const processDataFile = async () => {
 
 const getBalance = async ({
   user,
-  code = 'token.seeds',
-  symbol = 'SEEDS',
+  code,
+  symbol,
 }) => {
 
   const params = {
@@ -97,7 +97,7 @@ const reduceAction = (account, amount) => {
     "account": "token.hypha",
     "name": "reduce",
     "authorization": [{
-      "actor": "dao.hypha",
+      "actor": "dao.hypha", //
       "permission": "active"
     }
     ],
@@ -309,6 +309,10 @@ const distributeBatch = async (batchNum, data) => {
 
   for (item of data) {
 
+    if (item.account == "dao.hypha") {
+      continue
+    }
+
     /// 1 destroy the balance
     actions.push(
       reduceAction(item.account, item.current)
@@ -341,11 +345,11 @@ const distributeBatch = async (batchNum, data) => {
   actions.splice(0, 0, issueAction(sum))
 
   // transfer to lock account
-  actions.splice(1, 0, transferAction({ beneficiary: "costak.seeds", amount: sum, memo: "H^2 redistribution" }))
+  actions.splice(1, 0, transferAction({ beneficiary: "costak.hypha", amount: sum, memo: "H^2 redistribution" }))
 
   proposerAccount = "illumination"
   propnumber = "xabcdefghijklmnopq"
-  proposalName = "h2dist" + propnumber.charAt(batchNum)
+  proposalName = "hip1dist" + propnumber.charAt(batchNum)
 
   console.log("batch " + batchNum + " has " + actions.length + " ACTIONS: " + JSON.stringify(actions, null, 2))
 
@@ -368,6 +372,37 @@ const verify = async () => {
   const data = await processDataFile()
 
   //console.log("data: "+JSON.stringify(data, null, 2))
+
+  /// Check if the balance is accurate
+
+  let sum = 0
+
+  for (item of data) {
+
+    const balance = await getBalance({
+      user: item.account,
+      code: "token.hypha",
+      symbol: "HYPHA"
+    })
+
+    const amountString = item.current + " HYPHA"
+
+    if (balance != amountString) {
+      console.log("account: " + item.account + " expected: " + item.current + " actual: " + balance)
+    }
+
+    sum = sum + parseFloat(item.after)
+  }
+
+  console.log("Total sum: " + sum)
+
+  console.log("Verify done.")
+
+}
+
+const testlocal = async () => {
+  console.log("test local");
+  const data = await processDataFile()
 
   /// Check if the balance is accurate
 
