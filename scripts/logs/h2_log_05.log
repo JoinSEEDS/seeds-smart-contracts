@@ -1,0 +1,4114 @@
+25 limit crashed Anchor which I took as a bad sign
+
+now 17 limit works
+
+=======
+
+❯ EOSIO_NETWORK=telosMainnet node scripts/token_distribution_H2.js distribute
+Telos Mainnet
+getting new token distributions
+Line from file: account name    current multiplier      after
+Line from file: thealchemist    Rieki   456259.87       20.00   9125197.40
+Line from file: cometogether    Alex    246275.01       20.00   4925500.20
+Line from file: thelovewitch    Cece    78357.28        5.00    391786.40
+Line from file: dangermouse1    Ronnie  179775.97       15.00   2696639.55
+Line from file: hyphanewyork    Max     179202.20       20.00   3584044.00
+Line from file: joachimstroh    Joachim 124738.93       20.00   2494778.60
+Line from file: astoryteller    Nila    101859.98       5.00    509299.90
+Line from file: lisalight231    Lisa    94053.43        10.00   940534.30
+Line from file: biodiversity    Simon   92000.00        10.00   920000.00
+Line from file: illumination    Nik     96524.89        20.00   1930497.80
+Line from file: loveandlight    Franz   87129.70        20.00   1742594.00
+Line from file: supernatural    Vish    56917.12        5.00    284585.60
+Line from file: markflowfarm    Mark    61223.16        15.00   918347.40
+Line from file: acascalheira    Antonio 57253.45        5.00    286267.25
+Line from file: jaclynjhin11    Jaclyn  54995.14        15.00   824927.10
+Line from file: willblakey11    Will Blakey     48778.83        15.00   731682.45
+Line from file: iampriestess    France  45000.00        15.00   675000.00
+Line from file: everywherehk    David B 38400.00        5.00    192000.00
+Line from file: vasylmarchuk    Vasyl   35033.74        5.00    175168.70
+Line from file: paulcarvalho    Paul Carvalho   33173.92        5.00    165869.60
+Line from file: luigicarlini    Luigi   34984.32        20.00   699686.40
+Line from file: seeding1love    Dannie  32258.84        5.00    161294.20
+Line from file: montanath135    Tucker  30000.00        15.00   450000.00
+Line from file: searchingfor    Ben Levine      30000.00        15.00   450000.00
+Line from file: stefanrust12    Stefan Rust     29053.45        5.00    145267.25
+Line from file: esteesh12345    Estee   23944.93        5.00    119724.65
+Line from file: localscaling    Stephane Localscale     21735.69        5.00    108678.45
+Line from file: georgetaylor    John Taylor     21000.00        15.00   315000.00
+Line from file: abrancusi123    Keala   20875.39        5.00    104376.95
+Line from file: nomik22kimon    Joost   22455.54        5.00    112277.70
+Line from file: seedspiyush2    Piyush  23605.73        20.00   472114.60
+Line from file: sonicsphinxy    Sarah Sphinx    15204.11        1.00    15204.11
+Line from file: mightymighty    Mighty Wizards  21691.39        20.00   433827.80
+Line from file: exponential1    Troy Mork       21564.63        5.00    107823.15
+Line from file: clarelaverty    Clare   18270.46        5.00    91352.30
+Line from file: nahimafzal11    Nahim   17700.00        5.00    88500.00
+Line from file: iblvnnwwrld1    Scott Davies    15000.00        15.00   225000.00
+Line from file: greensurge12    Dr. Greig       15000.00        15.00   225000.00
+Line from file: alanlaub1111    Alan Laubsch    15000.00        15.00   225000.00
+Line from file: alextrojan43    Alex Trojonow   15000.00        15.00   225000.00
+Line from file: wearesailing    Anton Abraham   15000.00        15.00   225000.00
+Line from file: febudfuture1    Jason Budovitch 15000.00        15.00   225000.00
+Line from file: tamsinrose22    Tamsin Bradshaw 15000.00        15.00   225000.00
+Line from file: cookieinbali    Cookie  15000.00        15.00   225000.00
+Line from file: rocklandroad    Reggie  14300.00        15.00   214500.00
+Line from file: juliomonteir    Julio   15378.07        20.00   307561.40
+Line from file: sevenflash42    Igor    13533.28        5.00    67666.40
+Line from file: sanjayrajan1    Sanjay  13328.19        5.00    66640.95
+Line from file: theremotecub    Gery    13012.67        20.00   260253.40
+Line from file: totohmshanti    Toto    8821.57 5.00    44107.85
+Line from file: gregory.tk      Gregory DHO     8713.42 5.00    43567.10
+Line from file: c1or1dons115    Karen Cordon    8665.00 15.00   129975.00
+Line from file: solomonx3333    David Solomon   8229.66 5.00    41148.30
+Line from file: westonshanec    Weston Cordon   8000.00 15.00   120000.00
+Line from file: gradinagruiu    Sorin   9657.64 20.00   193152.80
+Line from file: nicktucker11    Nick tucker     7255.25 5.00    36276.25
+Line from file: zerowastebcn    Ben, Lucile     6500.00 15.00   97500.00
+Line from file: dao.hypha       system  7722.55 0.00    0.00
+Line from file: hyphax.seeds    system  4417.32 0.00    0.00
+Line from file: dbeverywhere    David B 6203.59 5.00    31017.95
+Line from file: evgeiobrn243    Evgeni  9390.59 20.00   187811.80
+Line from file: jasondoh1155    Jason Doh       7587.21 20.00   151744.20
+Line from file: leonieherma1    Leonie  8034.97 20.00   160699.40
+Line from file: azarltfpa455            4950.00 5.00    24750.00
+Line from file: anneloes3313    Anneloes        5405.99 20.00   108119.80
+Line from file: stephengomes    Stephen Gomes   4687.50 20.00   93750.00
+Line from file: sienaraa3535    Sienara 5160.79 20.00   103215.80
+Line from file: jasonrswamy1    Jason Swamy     4605.71 5.00    23028.55
+Line from file: kimmarsh1111    Kim Marsh       3518.53 5.00    17592.65
+Line from file: aleksandardj    Aleksander (Passport)   6572.62 20.00   131452.40
+Line from file: stephenreid1    Stephen Reid    3104.00 20.00   62080.00
+Line from file: carleymonty1    Carley Montgomery       3081.82 1.00    3081.82
+Line from file: rainskyarel5    Rain    3275.43 5.00    16377.15
+Line from file: lukskywalker    GBK     2777.75 5.00    13888.75
+Line from file: seedsofheart            2545.90 5.00    12729.50
+Line from file: sanjeevsingh            2525.00 5.00    12625.00
+Line from file: takayaren555            2139.44 5.00    10697.20
+Line from file: adafriedrich    Ada Friedrich   2534.52 5.00    12672.60
+Line from file: gguijarro123    Gabriel (LW)    2691.71 20.00   53834.20
+Line from file: martinaepple    Martina Apple   2171.20 5.00    10856.00
+Line from file: matteotangi1    Matteo Tangi    2037.50 5.00    10187.50
+Line from file: dstudioproto    dStudio 1949.20 5.00    9746.00
+Line from file: christelos55            1904.45 5.00    9522.25
+Line from file: virtuousloop            1896.32 5.00    9481.60
+Line from file: atmalife2312            2316.75 5.00    11583.75
+Line from file: ronscroggin1    Ron Scrogging   1619.07 5.00    8095.35
+Line from file: rpiesveloces    Randall 1282.90 5.00    6414.50
+Line from file: lukegravdent    Luke    4274.62 20.00   85492.40
+Line from file: pmdwithseeds            1097.41 5.00    5487.05
+Line from file: denistoledoo            1085.08 5.00    5425.40
+Line from file: ugxxqvybh233            1105.23 5.00    5526.15
+Line from file: minosdoros55    Irina   889.84  20.00   17796.80
+Line from file: massimohypha    Massimo 1743.71 20.00   34874.20
+Line from file: natajuvbr125            1488.25 5.00    7441.25
+Line from file: etherweaver1            811.20  5.00    4056.00
+Line from file: leoslaagr421            810.00  5.00    4050.00
+Line from file: natureboy222    Basil   656.40  5.00    3282.00
+Line from file: radiantseeds            650.00  5.00    3250.00
+Line from file: starseedyogi            500.00  5.00    2500.00
+Line from file: cedricseedss    Cedric (Passport)       455.00  5.00    2275.00
+Line from file: magic1234555            450.00  5.00    2250.00
+Line from file: gerard5ph321            1323.66 20.00   26473.20
+Line from file: jedipath3335            321.75  5.00    1608.75
+Line from file: earthgym.gm             195.00  5.00    975.00
+Line from file: peterrakj234            177.06  5.00    885.30
+Line from file: danigorfest3            144.90  5.00    724.50
+Line from file: skyblueearth    Sky (Light Wallet)      465.17  20.00   9303.40
+Line from file: imprvsociety            587.66  5.00    2938.30
+Line from file: marcmarcmarc            108.44  5.00    542.20
+Line from file: cathk33seeds            107.64  5.00    538.20
+Line from file: inhabit4love            104.65  5.00    523.25
+Line from file: khempoudel12    Khem (Passport) 992.32  5.00    4961.60
+Line from file: hyphax.seeds            4417.32 5.00    22086.60
+Line from file: emanwplcl322            35.10   5.00    175.50
+Line from file: oumniaabidi1            35.10   5.00    175.50
+Line from file: nadimhamdan1            5.87    5.00    29.35
+Line from file: geschichten1            2.09    5.00    10.45
+Line from file: vedadogguija            1.01    5.00    5.05
+create batch 1
+ total sum: 33173681.950000003
+ total intsum: 3317368195
+batch 1 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "33173681.95 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "33173681.95 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "thealchemist",
+      "quantity": "456259.87 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "thealchemist",
+      "quantity": "9125197.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.490"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "cometogether",
+      "quantity": "246275.01 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "cometogether",
+      "quantity": "4925500.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.491"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "thelovewitch",
+      "quantity": "78357.28 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "thelovewitch",
+      "quantity": "391786.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "dangermouse1",
+      "quantity": "179775.97 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "dangermouse1",
+      "quantity": "2696639.55 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "hyphanewyork",
+      "quantity": "179202.20 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "hyphanewyork",
+      "quantity": "3584044.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "joachimstroh",
+      "quantity": "124738.93 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "joachimstroh",
+      "quantity": "2494778.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "astoryteller",
+      "quantity": "101859.98 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "astoryteller",
+      "quantity": "509299.90 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "lisalight231",
+      "quantity": "94053.43 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "lisalight231",
+      "quantity": "940534.30 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "biodiversity",
+      "quantity": "92000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "biodiversity",
+      "quantity": "920000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "illumination",
+      "quantity": "96524.89 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "illumination",
+      "quantity": "1930497.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "loveandlight",
+      "quantity": "87129.70 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "loveandlight",
+      "quantity": "1742594.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "supernatural",
+      "quantity": "56917.12 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "supernatural",
+      "quantity": "284585.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "markflowfarm",
+      "quantity": "61223.16 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "markflowfarm",
+      "quantity": "918347.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "acascalheira",
+      "quantity": "57253.45 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "acascalheira",
+      "quantity": "286267.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "jaclynjhin11",
+      "quantity": "54995.14 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "jaclynjhin11",
+      "quantity": "824927.10 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "willblakey11",
+      "quantity": "48778.83 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "willblakey11",
+      "quantity": "731682.45 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "iampriestess",
+      "quantity": "45000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "iampriestess",
+      "quantity": "675000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "everywherehk",
+      "quantity": "38400.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "everywherehk",
+      "quantity": "192000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:36.492"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 1 for propose to h2distb: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0y7GO4nqh8O3sOUzAAEjA0NxBNMrg1Ag2yEx6uVaRoOVp9OsViaXgGRXvDUyeiuBJPIg5c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggm0My6-yhIkMkjMsDDkYFB0sMzwFChKDUls7ikKDOptCQzP08htSw1rwTJzHBdm7NnMcy0ggk0TA6ScJhs6EqW2QwaSybvwjBbAubhZqMdTMhmJkR95QXZxcDgYrIq54orhk4nmADMBJtPyWbEuUpAtd0uTJuNgbDrCkJPd11co-Kqe7KckTzXwUxo2R4tS5zrfmgQ67oLAWUxuVKhpwMmlDOQ5zqYCRMuhjIR57oHOsS6TkDkWkjc0WWefwOEyAw7mAmX9wkJUNt1sIx8p0CQTNfBTDC4GCNKbdfBihHVsH3kxizUhCe77vFR23UFoT1av72NzfhyZ5PpOpgJboqczFRPd20nendmbOie39xPputgJpipzGaltusebD4cnjt9hXVDYg-ZroOZwHC-muqug1VnnJ6TyXQdzIQtWxq5qe26CdLFhr6LzXq5PreQ6TqYCSf-JHFRPd2dvXrzzOpVxxxuhpGb7mAm2G1ipLbrFNZHzjnGun6iT3Ysma6DmVDiWUn1dJewLlhXqoXXaGFMOJmug5mgen4L1cNO4FDJW1_5iZVVr4LJjVmoCWp7X7FQ3XVN4ReOCC9-bJ3nRa7roCaUlsZQ3XUNG09F7IxeWqiwyoVM18FMePCdlequY5i9a1Vh_dUwhhlWZLoObsIPFVLTHahHAgA",
+  "qr": "https://api-esr.hypha.earth/images/5b6b12f71a3f4a76f08d432c06b035e0.png"
+}
+create batch 2
+ total sum: 4216165.86
+ total intsum: 421616586
+batch 2 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "4216165.86 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "4216165.86 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "vasylmarchuk",
+      "quantity": "35033.74 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "vasylmarchuk",
+      "quantity": "175168.70 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "paulcarvalho",
+      "quantity": "33173.92 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "paulcarvalho",
+      "quantity": "165869.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "luigicarlini",
+      "quantity": "34984.32 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "luigicarlini",
+      "quantity": "699686.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "seeding1love",
+      "quantity": "32258.84 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "seeding1love",
+      "quantity": "161294.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "montanath135",
+      "quantity": "30000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "montanath135",
+      "quantity": "450000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "searchingfor",
+      "quantity": "30000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "searchingfor",
+      "quantity": "450000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "stefanrust12",
+      "quantity": "29053.45 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "stefanrust12",
+      "quantity": "145267.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "esteesh12345",
+      "quantity": "23944.93 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "esteesh12345",
+      "quantity": "119724.65 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "localscaling",
+      "quantity": "21735.69 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "localscaling",
+      "quantity": "108678.45 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "georgetaylor",
+      "quantity": "21000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "georgetaylor",
+      "quantity": "315000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "abrancusi123",
+      "quantity": "20875.39 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "abrancusi123",
+      "quantity": "104376.95 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "nomik22kimon",
+      "quantity": "22455.54 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "nomik22kimon",
+      "quantity": "112277.70 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "seedspiyush2",
+      "quantity": "23605.73 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "seedspiyush2",
+      "quantity": "472114.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "sonicsphinxy",
+      "quantity": "15204.11 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "sonicsphinxy",
+      "quantity": "15204.11 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "mightymighty",
+      "quantity": "21691.39 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "mightymighty",
+      "quantity": "433827.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "exponential1",
+      "quantity": "21564.63 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "exponential1",
+      "quantity": "107823.15 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "clarelaverty",
+      "quantity": "18270.46 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "clarelaverty",
+      "quantity": "91352.30 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "nahimafzal11",
+      "quantity": "17700.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "nahimafzal11",
+      "quantity": "88500.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:39.682"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 2 for propose to h2distc: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0y7GO4nqh8O3sOUzAAEjA0NxBNMrg1Ag2yEx6uVaRoOVp9OsViaXgGRXvDUyeiuBLJL6ZlIGh8CRjK1LstclwZQw6H-N8b28Kh_GRzfiwouzEbvaeGphfIGePas0zVd2wfgTlnvdjlm2oA9uHhgYH4DLb5y8amFGyGkYf_OpT4kMcKDG4LN6X-NKhbNg3lLDMqCfDNb-YlvhCVNvBBM4Fa0oCRJk8ogM8HBkYJD08AwwVChKTcksLinKTCotyczPU0gtS80rQTIzXNfm7FkMM61gAg2TgyQcJhu6kmU2g8aSybswzJZgKHW-fuLFxpt8paYMyGYmRH3lBdnFwOBisirniiuGTie4ANQEN09uRuJcdeHmdrswbTYGwq5ziDb5LSWydeWEeUZkug5mwgWJvwzUdt2DZd3XFY7P6TuQSG7YwUxgWKzNQm3XLTDrbfSdPuWQjKUhma6DmdAj-43qYRfglnHTZ7L61APHdMl0HcwEh6XrmKjtuoKXSZdNS3oPke86mAm0cJ2C07FffptDjjGG6pDpOpgJrCvvUj9mTwgsTFxqFFbbqUJuzEJNKFy_jequO7Csm-1hhkBvo5Yima6DmdB6ZSnVXVeQ-UVNu2xlkgK3ArnpDmrCg2UPqF4aG7gURCzOfGdYfEueTNfBTLB3mU_1sDNYWRLA8UJl7iZnJXJdBzWhKmg11V2nIHXtXuicKYf-spCbK2AmHEm-QPUS5cHvkrVJT9SOShuLk1uT4TCBKq4rTvb7dWfGZGNJcvMszIQ_36dSPewEFhVWrvLMDl__nNw8CzMhu20J9cPuc-htl1Jfl2cPpMkNO6gJdSndVHedgJNJveTLWTMFmMh1HcyEAK52Ul0H6pEAAA",
+  "qr": "https://api-esr.hypha.earth/images/606f9b7369771261b0d84cbcfd7660b2.png"
+}
+create batch 3
+ total sum: 3095420.4
+ total intsum: 309542040
+batch 3 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "3095420.40 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "3095420.40 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "iblvnnwwrld1",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "iblvnnwwrld1",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "greensurge12",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "greensurge12",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "alanlaub1111",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "alanlaub1111",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "alextrojan43",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "alextrojan43",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "wearesailing",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "wearesailing",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "febudfuture1",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "febudfuture1",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "tamsinrose22",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "tamsinrose22",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "cookieinbali",
+      "quantity": "15000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "cookieinbali",
+      "quantity": "225000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "rocklandroad",
+      "quantity": "14300.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "rocklandroad",
+      "quantity": "214500.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "juliomonteir",
+      "quantity": "15378.07 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "juliomonteir",
+      "quantity": "307561.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "sevenflash42",
+      "quantity": "13533.28 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "sevenflash42",
+      "quantity": "67666.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "sanjayrajan1",
+      "quantity": "13328.19 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "sanjayrajan1",
+      "quantity": "66640.95 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "theremotecub",
+      "quantity": "13012.67 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "theremotecub",
+      "quantity": "260253.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "totohmshanti",
+      "quantity": "8821.57 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "totohmshanti",
+      "quantity": "44107.85 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "gregory.tk",
+      "quantity": "8713.42 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "gregory.tk",
+      "quantity": "43567.10 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "c1or1dons115",
+      "quantity": "8665.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "c1or1dons115",
+      "quantity": "129975.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "solomonx3333",
+      "quantity": "8229.66 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "solomonx3333",
+      "quantity": "41148.30 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "westonshanec",
+      "quantity": "8000.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "westonshanec",
+      "quantity": "120000.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:41.254"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 3 for propose to h2distd: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSUQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmMMOmWAgkyOQRGeDhyMAg6eEZYKhQlJqSWVxSlJlUWpKZn6eQWpaaV4JkZriuzdmzGGZawQQaJgdJOEw2dCXLbAaNJZN3YZgtIRC0Z875nY8LEx6LMSCbmRD1lRdkFwODi8mqnCuuGDqdYAIwExYEhTMS56qCa-ftwrTZGAi7TqEpKfzxyiup5LsOZgItXCfgxOE-28LXhIKwg5pAC9cZnDDpv3cnlALXwUyghesOLOs-l1Da-4h818FMoEnMXrkauX5JfxQFMQs1gSa5ouXQF7_2pScpyBVQE2jhugeLLC9rsmu6ku86mAm0cN0Enr2ZszgE9364KEqm62AmCPi6U911BXNPTfZ6taiOv1ycTNfBTNDxvUr9dOdxWG3dym2HCpaJkJvuoCYYOKQzUNt1Assqn1V9XnYwOIxc18FMmL8-lequKzAJmulVGnpa-LYwuTELNaFGtpf6efaTCe9pN-Ozb0t5yc2zUBMW-jpTPewYGM4ciD91JXWdN7mug5mQVuVEddcFOB2YvKwg0-GIBbmug5lQE3yM6q4zOCZRG-SpfHRbHw-ZroOZ0HfSjuqua7hiwus_a-MjBlNyXQc3QXo7qa4D9UgA",
+  "qr": "https://api-esr.hypha.earth/images/dd72c5ec697b2d586ec835ab354307ab.png"
+}
+create batch 4
+ total sum: 1425273.4200000002
+ total intsum: 142527342
+batch 4 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "1425273.42 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "1425273.42 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "gradinagruiu",
+      "quantity": "9657.64 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "gradinagruiu",
+      "quantity": "193152.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "nicktucker11",
+      "quantity": "7255.25 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "nicktucker11",
+      "quantity": "36276.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "zerowastebcn",
+      "quantity": "6500.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "zerowastebcn",
+      "quantity": "97500.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "dao.hypha",
+      "quantity": "7722.55 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "dao.hypha",
+      "quantity": "0.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "hyphax.seeds",
+      "quantity": "4417.32 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "hyphax.seeds",
+      "quantity": "0.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "dbeverywhere",
+      "quantity": "6203.59 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "dbeverywhere",
+      "quantity": "31017.95 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "evgeiobrn243",
+      "quantity": "9390.59 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "evgeiobrn243",
+      "quantity": "187811.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "jasondoh1155",
+      "quantity": "7587.21 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "jasondoh1155",
+      "quantity": "151744.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "leonieherma1",
+      "quantity": "8034.97 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "leonieherma1",
+      "quantity": "160699.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "azarltfpa455",
+      "quantity": "4950.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "azarltfpa455",
+      "quantity": "24750.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "anneloes3313",
+      "quantity": "5405.99 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "anneloes3313",
+      "quantity": "108119.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "stephengomes",
+      "quantity": "4687.50 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "stephengomes",
+      "quantity": "93750.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "sienaraa3535",
+      "quantity": "5160.79 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "sienaraa3535",
+      "quantity": "103215.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "jasonrswamy1",
+      "quantity": "4605.71 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "jasonrswamy1",
+      "quantity": "23028.55 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "kimmarsh1111",
+      "quantity": "3518.53 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "kimmarsh1111",
+      "quantity": "17592.65 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "aleksandardj",
+      "quantity": "6572.62 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "aleksandardj",
+      "quantity": "131452.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "stephenreid1",
+      "quantity": "3104.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "stephenreid1",
+      "quantity": "62080.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "carleymonty1",
+      "quantity": "3081.82 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "carleymonty1",
+      "quantity": "3081.82 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:42.871"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 4 for propose to h2diste: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCScQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmkHe6jgMkyOQRGeDhyMAg6eEZYKhQlJqSWVxSlJlUWpKZn6eQWpaaV4JkZriuzdmzGGZawQQaJgdJOEw2dCXLbAaNJZN3YZgtsWDuvjM-08-ktuzhY0A2MyHqKy_ILgYGF5NVOVdcMXQ6wQRgJgTsUmMkzlU3ml7YhWmzMRB2ncChUIGXPBNniwpxk-k6mAmZUeYM1HadwcVASWm_9b8EXnOS6TqYCR-OTqG662AC80-QG3bIEtR2HSgtlwAzcsteNjJdBzOBFq5bsC7rTvzWq57u5eTGLMyE5BB96qe7jhnfA5bfCDMOITfPwkz4M1mO6nk2wIujd5nnxsqDk8lNdzATRLqfUz3sYBXCSicecksUqAkmpl-p7roALsPSpxVnzWf0spMbdlATfhxWpX66OyQRcXHFM5Pt9hzkpjuoCT6_llC_RJm6JGdVWOgxPnVyww5mggRvP_Vj1k3yWIzx1MPv75Mds1AT1tTNpX6u2GMicx-Y46TZyXUdzIR2ZWXqu86JgzdeeWlzbhwrua6DmqB4Q4rqrvtwyTRTiifUJI-di0zXwUyYMeUE9cNuUnA5KE037GEhN-ygJjDsiqO-62rmhVSJrne8tpls1-EwgQjXgXokAA",
+  "qr": "https://api-esr.hypha.earth/images/25f03371ffe7bcb4e5512e12c7bfe7dc.png"
+}
+create batch 5
+ total sum: 305116.2
+ total intsum: 30511620
+batch 5 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "305116.20 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "305116.20 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "rainskyarel5",
+      "quantity": "3275.43 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "rainskyarel5",
+      "quantity": "16377.15 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "lukskywalker",
+      "quantity": "2777.75 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "lukskywalker",
+      "quantity": "13888.75 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "seedsofheart",
+      "quantity": "2545.90 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "seedsofheart",
+      "quantity": "12729.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "sanjeevsingh",
+      "quantity": "2525.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "sanjeevsingh",
+      "quantity": "12625.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "takayaren555",
+      "quantity": "2139.44 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "takayaren555",
+      "quantity": "10697.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "adafriedrich",
+      "quantity": "2534.52 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "adafriedrich",
+      "quantity": "12672.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "gguijarro123",
+      "quantity": "2691.71 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "gguijarro123",
+      "quantity": "53834.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "martinaepple",
+      "quantity": "2171.20 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "martinaepple",
+      "quantity": "10856.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "matteotangi1",
+      "quantity": "2037.50 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "matteotangi1",
+      "quantity": "10187.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "dstudioproto",
+      "quantity": "1949.20 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "dstudioproto",
+      "quantity": "9746.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "christelos55",
+      "quantity": "1904.45 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "christelos55",
+      "quantity": "9522.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "virtuousloop",
+      "quantity": "1896.32 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "virtuousloop",
+      "quantity": "9481.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "atmalife2312",
+      "quantity": "2316.75 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "atmalife2312",
+      "quantity": "11583.75 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "ronscroggin1",
+      "quantity": "1619.07 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "ronscroggin1",
+      "quantity": "8095.35 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "rpiesveloces",
+      "quantity": "1282.90 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "rpiesveloces",
+      "quantity": "6414.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "lukegravdent",
+      "quantity": "4274.62 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "lukegravdent",
+      "quantity": "85492.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "pmdwithseeds",
+      "quantity": "1097.41 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "pmdwithseeds",
+      "quantity": "5487.05 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "denistoledoo",
+      "quantity": "1085.08 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "denistoledoo",
+      "quantity": "5425.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:44.539"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 5 for propose to h2distf: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSSQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmwDLpIiNIkMkjMsDDkYFB0sMzwFChKDUls7ikKDOptCQzP08htSw1rwTJzHBdm7NnMcy0ggk0TA6ScJhs6EqW2QwaSybvwjBbImDRrmPONnN3lv9nYUA2MyHqKy_ILgYGF5NVOVdcMXQ6wQRgJgT_lWAgzlUV3xjtw7TZGAi7rkC0p626Y2Efvy25roOZ4G0oSnXXTVgfmBs4Z8qhukfMZLoOZkJZjjDVXXfhRkmF9tdlB0Nukes6mAlLnKnvugCvma-k8hec3OFMrutgJswIEqB-2E3Y7blzt48Rzz2yww5qgk0Y9cPOwGXB91nPTZKLpcnNFTAT_qgEUd11C5LWnvKZvn6iQgC5YQczYcEE6sesgMxsteCpmyc-kybXdTAT6rr5qe46B-O9U3ctMfbL-MlEputgJnDc56N-nuVaFpj6Js_57XNyXQczYWE7DVyn2RsRPHf97QNPyHYdzIRy6rtO4ZBA1s6MFLPfHeSmO5gJz9cIUj9XLEvuiWtR31tcQW7YwUywj-KhuusaRBcF5q6J2av0lZFM18FMWHWSk-qugzUpj7Wykek6mAkVxU3UD7vJQTtSj09es3YN2WEHNSExnoP65V1m0MS0N8u87iwn13UwE3zcSXYdqEcCAA",
+  "qr": "https://api-esr.hypha.earth/images/253af78af96dd7b4d25b82c839c26780.png"
+}
+create batch 6
+ total sum: 130209.84999999999
+ total intsum: 13020985
+batch 6 has 38 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "130209.85 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "130209.85 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "ugxxqvybh233",
+      "quantity": "1105.23 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "ugxxqvybh233",
+      "quantity": "5526.15 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "minosdoros55",
+      "quantity": "889.84 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "minosdoros55",
+      "quantity": "17796.80 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "massimohypha",
+      "quantity": "1743.71 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "massimohypha",
+      "quantity": "34874.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "natajuvbr125",
+      "quantity": "1488.25 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "natajuvbr125",
+      "quantity": "7441.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "etherweaver1",
+      "quantity": "811.20 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "etherweaver1",
+      "quantity": "4056.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "leoslaagr421",
+      "quantity": "810.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "leoslaagr421",
+      "quantity": "4050.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "natureboy222",
+      "quantity": "656.40 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "natureboy222",
+      "quantity": "3282.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "radiantseeds",
+      "quantity": "650.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "radiantseeds",
+      "quantity": "3250.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "starseedyogi",
+      "quantity": "500.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "starseedyogi",
+      "quantity": "2500.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "cedricseedss",
+      "quantity": "455.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "cedricseedss",
+      "quantity": "2275.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "magic1234555",
+      "quantity": "450.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "magic1234555",
+      "quantity": "2250.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "gerard5ph321",
+      "quantity": "1323.66 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "gerard5ph321",
+      "quantity": "26473.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "jedipath3335",
+      "quantity": "321.75 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "jedipath3335",
+      "quantity": "1608.75 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "earthgym.gm",
+      "quantity": "195.00 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "earthgym.gm",
+      "quantity": "975.00 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "peterrakj234",
+      "quantity": "177.06 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "peterrakj234",
+      "quantity": "885.30 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "danigorfest3",
+      "quantity": "144.90 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "danigorfest3",
+      "quantity": "724.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "skyblueearth",
+      "quantity": "465.17 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "skyblueearth",
+      "quantity": "9303.40 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "imprvsociety",
+      "quantity": "587.66 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "imprvsociety",
+      "quantity": "2938.30 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:46.185"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 6 for propose to h2distg: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSaQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmYLn-GFgRk0dkgIcjA4Okh2eAoUJRakpmcUlRZlJpSWZ-nkJqWWpeCZKZ4bo2Z89imGkFE2iYHCThMNnQlSyzGTSWTN6FYbaEQVvG8fzb1pd3r2dEMTMh6isvyC4GBheTVTlXXDF0OsEEYCYsz-Mg0lUaItL2YdpsDIRdF8C1bLqaz_LJM6LJdR3MhAfq0lR3HdAVvV7tGycqr2Qi03UwE_aYmVI_7Fx2pL9O3zQz0pVc18FM2BvFTXXXCay75fZxdVTYAxtyYxZmQoIBG_Vdx7LzzIyOlV0Z5LsOagKHHvVdp9Dy4cuK1ZtnZjCQ6zqYCRxMrFR3HbCUsvB_PGnni78MZLoOZkLHVxaqu-6BxFdPzRrfYwGHyXUdzIQJF5ipH3aFQVzK5ZOd9mwkO-ygJqypoL7rArwUnVmezJh4Yj25roOZ8CKP-q6DNRX4WMkt72AmSKRqUD_sjknozn41qWp9LdlhBzUhu4SJ6q5jUGG-tHna-kAdH3JdBzPhTg0j1V3n0FZx4c7qTau0XMl1HcyES5HUd52BUdjroGfLPGdZkOs6mAlM0tR33YVPpl4vK2yObN1KrutgJqgY8VG_NN5c1PGodnVJ31OyS2OoCceqSa4rQLUnAA",
+  "qr": "https://api-esr.hypha.earth/images/6a218e202912901519ff6a5d4cb3af0d.png"
+}
+create batch 7
+ total sum: 29047.699999999997
+ total intsum: 2904770
+batch 7 has 22 ACTIONS: [
+  {
+    "account": "token.hypha",
+    "name": "issue",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "to": "dao.hypha",
+      "quantity": "29047.70 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "transfer",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "from": "dao.hypha",
+      "to": "costak.seeds",
+      "quantity": "29047.70 HYPHA",
+      "memo": "HIP1 redistribution event"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "marcmarcmarc",
+      "quantity": "108.44 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "marcmarcmarc",
+      "quantity": "542.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "cathk33seeds",
+      "quantity": "107.64 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "cathk33seeds",
+      "quantity": "538.20 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "inhabit4love",
+      "quantity": "104.65 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "inhabit4love",
+      "quantity": "523.25 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "khempoudel12",
+      "quantity": "992.32 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "khempoudel12",
+      "quantity": "4961.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "hyphax.seeds",
+      "quantity": "4417.32 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "hyphax.seeds",
+      "quantity": "22086.60 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "emanwplcl322",
+      "quantity": "35.10 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "emanwplcl322",
+      "quantity": "175.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "oumniaabidi1",
+      "quantity": "35.10 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "oumniaabidi1",
+      "quantity": "175.50 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "nadimhamdan1",
+      "quantity": "5.87 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "nadimhamdan1",
+      "quantity": "29.35 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "geschichten1",
+      "quantity": "2.09 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "geschichten1",
+      "quantity": "10.45 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  },
+  {
+    "account": "token.hypha",
+    "name": "reduce",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "account": "vedadogguija",
+      "quantity": "1.01 HYPHA"
+    }
+  },
+  {
+    "account": "costak.hypha",
+    "name": "createlock",
+    "authorization": [
+      {
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "sponsor": "dao.hypha",
+      "beneficiary": "vedadogguija",
+      "quantity": "5.05 HYPHA",
+      "notes": "HIP1 redistribution event",
+      "expiration_date": "2025-01-10T08:54:47.662"
+    }
+  }
+]
+====== PROPOSING ======
+requested permissions: active [{"actor":"gerard5ph321","permission":"active"},{"actor":"hyphanewyork","permission":"active"},{"actor":"illumination","permission":"active"},{"actor":"joachimstroh","permission":"active"},{"actor":"leonieherma1","permission":"active"},{"actor":"lukegravdent","permission":"active"},{"actor":"s.tk","permission":"active"},{"actor":"thealchemist","permission":"active"}]
+========= Generating ESR Code ===========
+ESR 7 for propose to h2disth: {
+  "esr": "esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0zHGO4n2h5d5851hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9JcPSWRB6ptJGRwCRzK2LslelwRTwqD_Ncb38qp8GB_diAsvzkbsauOphfEFevas0jRf2QXjT1judTtm2YI-uHlgYHwALr9x8qqFGSGnYfzNpz4lMsCBGIPP6n2NKxXOgnlLDcuAfjJY-4tthSdMvRFM4FCQDlgRk0dkgIcjA4Okh2eAoUJRakpmcUlRZlJpSWZ-nkJqWWpeCZKZ4bo2Z89imGkFE2iYHCThMNnQlSyzGTSWTN6FYbZEw7qJL6Q6102M0WJAMTMh6isvyC4GBheTVTlXXDF0OsFdBTXhzGUGIl21Ya6hfZg2GwMRrpscVMFzY5MjD_mug5pgc4n6rltg1quyO_lWyUMNcl0HMyH1DPVdp-AU4nlZK7R5QTMjma6DmaAwiZ0WMStRAszILXvZyI9ZsAlTNitSP-yOdGiE2fWGbOMlN2ZhJvS5UD9mBWKKjkuYL11GvutgJtDEdcs8L5m8nDTTm4ls10FNKOemhetO8e5s25B0kYF810FMEGWhvusS5l3uuZgy6VYq2a6DmfCTkWTXgWpoAA",
+  "qr": "https://api-esr.hypha.earth/images/16718887271f185dda004884b6daec00.png"
+}
+URLs 
+Batch 1 https://telos.bloks.io/msig/illumination/h2distb
+Batch 2 https://telos.bloks.io/msig/illumination/h2distc
+Batch 3 https://telos.bloks.io/msig/illumination/h2distd
+Batch 4 https://telos.bloks.io/msig/illumination/h2diste
+Batch 5 https://telos.bloks.io/msig/illumination/h2distf
+Batch 6 https://telos.bloks.io/msig/illumination/h2distg
+Batch 7 https://telos.bloks.io/msig/illumination/h2disth
+ESR 
+Batch 1 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0y7GO4nqh8O3sOUzAAEjA0NxBNMrg1Ag2yEx6uVaRoOVp9OsViaXgGRXvDUyeiuBJPIg5c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggm0My6-yhIkMkjMsDDkYFB0sMzwFChKDUls7ikKDOptCQzP08htSw1rwTJzHBdm7NnMcy0ggk0TA6ScJhs6EqW2QwaSybvwjBbAubhZqMdTMhmJkR95QXZxcDgYrIq54orhk4nmADMBJtPyWbEuUpAtd0uTJuNgbDrCkJPd11co-Kqe7KckTzXwUxo2R4tS5zrfmgQ67oLAWUxuVKhpwMmlDOQ5zqYCRMuhjIR57oHOsS6TkDkWkjc0WWefwOEyAw7mAmX9wkJUNt1sIx8p0CQTNfBTDC4GCNKbdfBihHVsH3kxizUhCe77vFR23UFoT1av72NzfhyZ5PpOpgJboqczFRPd20nendmbOie39xPputgJpipzGaltusebD4cnjt9hXVDYg-ZroOZwHC-muqug1VnnJ6TyXQdzIQtWxq5qe26CdLFhr6LzXq5PreQ6TqYCSf-JHFRPd2dvXrzzOpVxxxuhpGb7mAm2G1ipLbrFNZHzjnGun6iT3Ysma6DmVDiWUn1dJewLlhXqoXXaGFMOJmug5mgen4L1cNO4FDJW1_5iZVVr4LJjVmoCWp7X7FQ3XVN4ReOCC9-bJ3nRa7roCaUlsZQ3XUNG09F7IxeWqiwyoVM18FMePCdlequY5i9a1Vh_dUwhhlWZLoObsIPFVLTHahHAgA
+Batch 2 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0y7GO4nqh8O3sOUzAAEjA0NxBNMrg1Ag2yEx6uVaRoOVp9OsViaXgGRXvDUyeiuBLJL6ZlIGh8CRjK1LstclwZQw6H-N8b28Kh_GRzfiwouzEbvaeGphfIGePas0zVd2wfgTlnvdjlm2oA9uHhgYH4DLb5y8amFGyGkYf_OpT4kMcKDG4LN6X-NKhbNg3lLDMqCfDNb-YlvhCVNvBBM4Fa0oCRJk8ogM8HBkYJD08AwwVChKTcksLinKTCotyczPU0gtS80rQTIzXNfm7FkMM61gAg2TgyQcJhu6kmU2g8aSybswzJZgKHW-fuLFxpt8paYMyGYmRH3lBdnFwOBisirniiuGTie4ANQEN09uRuJcdeHmdrswbTYGwq5ziDb5LSWydeWEeUZkug5mwgWJvwzUdt2DZd3XFY7P6TuQSG7YwUxgWKzNQm3XLTDrbfSdPuWQjKUhma6DmdAj-43qYRfglnHTZ7L61APHdMl0HcwEh6XrmKjtuoKXSZdNS3oPke86mAm0cJ2C07FffptDjjGG6pDpOpgJrCvvUj9mTwgsTFxqFFbbqUJuzEJNKFy_jequO7Csm-1hhkBvo5Yima6DmdB6ZSnVXVeQ-UVNu2xlkgK3ArnpDmrCg2UPqF4aG7gURCzOfGdYfEueTNfBTLB3mU_1sDNYWRLA8UJl7iZnJXJdBzWhKmg11V2nIHXtXuicKYf-spCbK2AmHEm-QPUS5cHvkrVJT9SOShuLk1uT4TCBKq4rTvb7dWfGZGNJcvMszIQ_36dSPewEFhVWrvLMDl__nNw8CzMhu20J9cPuc-htl1Jfl2cPpMkNO6gJdSndVHedgJNJveTLWTMFmMh1HcyEAK52Ul0H6pEAAA
+Batch 3 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSUQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmMMOmWAgkyOQRGeDhyMAg6eEZYKhQlJqSWVxSlJlUWpKZn6eQWpaaV4JkZriuzdmzGGZawQQaJgdJOEw2dCXLbAaNJZN3YZgtIRC0Z875nY8LEx6LMSCbmRD1lRdkFwODi8mqnCuuGDqdYAIwExYEhTMS56qCa-ftwrTZGAi7TqEpKfzxyiup5LsOZgItXCfgxOE-28LXhIKwg5pAC9cZnDDpv3cnlALXwUyghesOLOs-l1Da-4h818FMoEnMXrkauX5JfxQFMQs1gSa5ouXQF7_2pScpyBVQE2jhugeLLC9rsmu6ku86mAm0cN0Enr2ZszgE9364KEqm62AmCPi6U911BXNPTfZ6taiOv1ycTNfBTNDxvUr9dOdxWG3dym2HCpaJkJvuoCYYOKQzUNt1Assqn1V9XnYwOIxc18FMmL8-lequKzAJmulVGnpa-LYwuTELNaFGtpf6efaTCe9pN-Ozb0t5yc2zUBMW-jpTPewYGM4ciD91JXWdN7mug5mQVuVEddcFOB2YvKwg0-GIBbmug5lQE3yM6q4zOCZRG-SpfHRbHw-ZroOZ0HfSjuqua7hiwus_a-MjBlNyXQc3QXo7qa4D9UgA
+Batch 4 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCScQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmkHe6jgMkyOQRGeDhyMAg6eEZYKhQlJqSWVxSlJlUWpKZn6eQWpaaV4JkZriuzdmzGGZawQQaJgdJOEw2dCXLbAaNJZN3YZgtsWDuvjM-08-ktuzhY0A2MyHqKy_ILgYGF5NVOVdcMXQ6wQRgJgTsUmMkzlU3ml7YhWmzMRB2ncChUIGXPBNniwpxk-k6mAmZUeYM1HadwcVASWm_9b8EXnOS6TqYCR-OTqG662AC80-QG3bIEtR2HSgtlwAzcsteNjJdBzOBFq5bsC7rTvzWq57u5eTGLMyE5BB96qe7jhnfA5bfCDMOITfPwkz4M1mO6nk2wIujd5nnxsqDk8lNdzATRLqfUz3sYBXCSicecksUqAkmpl-p7roALsPSpxVnzWf0spMbdlATfhxWpX66OyQRcXHFM5Pt9hzkpjuoCT6_llC_RJm6JGdVWOgxPnVyww5mggRvP_Vj1k3yWIzx1MPv75Mds1AT1tTNpX6u2GMicx-Y46TZyXUdzIR2ZWXqu86JgzdeeWlzbhwrua6DmqB4Q4rqrvtwyTRTiifUJI-di0zXwUyYMeUE9cNuUnA5KE037GEhN-ygJjDsiqO-62rmhVSJrne8tpls1-EwgQjXgXokAA
+Batch 5 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSSQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmwDLpIiNIkMkjMsDDkYFB0sMzwFChKDUls7ikKDOptCQzP08htSw1rwTJzHBdm7NnMcy0ggk0TA6ScJhs6EqW2QwaSybvwjBbImDRrmPONnN3lv9nYUA2MyHqKy_ILgYGF5NVOVdcMXQ6wQRgJgT_lWAgzlUV3xjtw7TZGAi7rkC0p626Y2Efvy25roOZ4G0oSnXXTVgfmBs4Z8qhukfMZLoOZkJZjjDVXXfhRkmF9tdlB0Nukes6mAlLnKnvugCvma-k8hec3OFMrutgJswIEqB-2E3Y7blzt48Rzz2yww5qgk0Y9cPOwGXB91nPTZKLpcnNFTAT_qgEUd11C5LWnvKZvn6iQgC5YQczYcEE6sesgMxsteCpmyc-kybXdTAT6rr5qe46B-O9U3ctMfbL-MlEputgJnDc56N-nuVaFpj6Js_57XNyXQczYWE7DVyn2RsRPHf97QNPyHYdzIRy6rtO4ZBA1s6MFLPfHeSmO5gJz9cIUj9XLEvuiWtR31tcQW7YwUywj-KhuusaRBcF5q6J2av0lZFM18FMWHWSk-qugzUpj7Wykek6mAkVxU3UD7vJQTtSj09es3YN2WEHNSExnoP65V1m0MS0N8u87iwn13UwE3zcSXYdqEcCAA
+Batch 6 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0wHGO4nGhxWdVn9hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9FYCSaQh9c2kDA6BIxlbl2SvS4IpYdD_GuN7eVU-jI9uxIUXZyN2tfHUwvgCPXtWaZqv7ILxJyz3uh2zbEEf3DwwMD4Al984edXCjJDTMP7mU58SGeBAjcFn9b7GlQpnwbylhmVAPxms_cW2whOm3ggmYLn-GFgRk0dkgIcjA4Okh2eAoUJRakpmcUlRZlJpSWZ-nkJqWWpeCZKZ4bo2Z89imGkFE2iYHCThMNnQlSyzGTSWTN6FYbaEQVvG8fzb1pd3r2dEMTMh6isvyC4GBheTVTlXXDF0OsEEYCYsz-Mg0lUaItL2YdpsDIRdF8C1bLqaz_LJM6LJdR3MhAfq0lR3HdAVvV7tGycqr2Qi03UwE_aYmVI_7Fx2pL9O3zQz0pVc18FM2BvFTXXXCay75fZxdVTYAxtyYxZmQoIBG_Vdx7LzzIyOlV0Z5LsOagKHHvVdp9Dy4cuK1ZtnZjCQ6zqYCRxMrFR3HbCUsvB_PGnni78MZLoOZkLHVxaqu-6BxFdPzRrfYwGHyXUdzIQJF5ipH3aFQVzK5ZOd9mwkO-ygJqypoL7rArwUnVmezJh4Yj25roOZ8CKP-q6DNRX4WMkt72AmSKRqUD_sjknozn41qWp9LdlhBzUhu4SJ6q5jUGG-tHna-kAdH3JdBzPhTg0j1V3n0FZx4c7qTau0XMl1HcyES5HUd52BUdjroGfLPGdZkOs6mAlM0tR33YVPpl4vK2yObN1KrutgJqgY8VG_NN5c1PGodnVJ31OyS2OoCceqSa4rQLUnAA
+Batch 7 esr://gmN0S9_Eeqy57zv_9xn9eU3hL_bxCbUs-jptJqsXY3-Jtawg0zHGO4n2h5d5851hAAJGBobiCKZXBqFAtkNi1Mu1jAYrT6dZrUwuAcmueGtk9JcPSWRB6ptJGRwCRzK2LslelwRTwqD_Ncb38qp8GB_diAsvzkbsauOphfEFevas0jRf2QXjT1judTtm2YI-uHlgYHwALr9x8qqFGSGnYfzNpz4lMsCBGIPP6n2NKxXOgnlLDcuAfjJY-4tthSdMvRFM4FCQDlgRk0dkgIcjA4Okh2eAoUJRakpmcUlRZlJpSWZ-nkJqWWpeCZKZ4bo2Z89imGkFE2iYHCThMNnQlSyzGTSWTN6FYbZEw7qJL6Q6102M0WJAMTMh6isvyC4GBheTVTlXXDF0OsFdBTXhzGUGIl21Ya6hfZg2GwMRrpscVMFzY5MjD_mug5pgc4n6rltg1quyO_lWyUMNcl0HMyH1DPVdp-AU4nlZK7R5QTMjma6DmaAwiZ0WMStRAszILXvZyI9ZsAlTNitSP-yOdGiE2fWGbOMlN2ZhJvS5UD9mBWKKjkuYL11GvutgJtDEdcs8L5m8nDTTm4ls10FNKOemhetO8e5s25B0kYF810FMEGWhvusS5l3uuZgy6VYq2a6DmfCTkWTXgWpoAA
+QR 
+Batch 1 https://api-esr.hypha.earth/images/5b6b12f71a3f4a76f08d432c06b035e0.png
+Batch 2 https://api-esr.hypha.earth/images/606f9b7369771261b0d84cbcfd7660b2.png
+Batch 3 https://api-esr.hypha.earth/images/dd72c5ec697b2d586ec835ab354307ab.png
+Batch 4 https://api-esr.hypha.earth/images/25f03371ffe7bcb4e5512e12c7bfe7dc.png
+Batch 5 https://api-esr.hypha.earth/images/253af78af96dd7b4d25b82c839c26780.png
+Batch 6 https://api-esr.hypha.earth/images/6a218e202912901519ff6a5d4cb3af0d.png
+Batch 7 https://api-esr.hypha.earth/images/16718887271f185dda004884b6daec00.png
+
+~/play/seeds/seeds-smart-contracts feature/dao_redist_list* 13s
+❯ 

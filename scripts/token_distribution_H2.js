@@ -9,6 +9,7 @@ const host = "https://api.telosfoundation.io"
 const { eos, getTableRows, accounts } = require("./helper");
 const { min } = require("ramda");
 const { parse } = require("path");
+const { action } = require("commander");
 
 const logDir = "log"
 
@@ -114,8 +115,11 @@ const getEOSTimePoint = (date) => {
 
 const lockAction = (account, amount) => {
 
-  const expiration = new Date()
-  expiration.setFullYear(expiration.getFullYear() + 3)
+  // const expiration = new Date()
+  // expiration.setFullYear(expiration.getFullYear() + 3)
+  // const expirationString = getEOSTimePoint(expiration)
+
+  const expirationString  = "2025-01-11T11:11:44.000"
 
   return {
     "account": "costak.hypha",
@@ -130,7 +134,7 @@ const lockAction = (account, amount) => {
       "beneficiary": account,
       "quantity": amount + " HYPHA",
       "notes": 'HIP1 redistribution event',
-      "expiration_date": getEOSTimePoint(expiration)
+      "expiration_date": expirationString 
     },
   }
 
@@ -181,7 +185,7 @@ const getApprovers = async (account, permission_name = "active") => {
   const result = activePerm[0].required_auth.accounts
     .filter(item => item.permission.actor != account)
     .map(item => item.permission)
-  console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  //console.log("approver accounts: " + JSON.stringify(result, null, 2))
   return result
 }
 
@@ -262,12 +266,48 @@ const distribute = async () => {
   console.log("getting new token distributions");
   const data = await processDataFile()
 
+  const batchMaxLength = 17
+
+  let batchNum = 1
+
+  batchData = []
+
+  results = []
+
+  for (item of data) {
+    batchData.push(item)
+    if (batchData.length > batchMaxLength || item == data[data.length-1]) {
+      results.push(await distributeBatch(batchNum, batchData))
+      batchData = []
+      batchNum++
+    }
+  }
+
+  console.log("URLs ")
+  for (r of results) {
+    console.log("Batch "+r.batchNum + " "+ r.url)
+  }
+
+  console.log("ESR ")
+  for (r of results) {
+    console.log("Batch "+r.batchNum + " "+ r.esr)
+  }
+
+  console.log("QR ")
+  for (r of results) {
+    console.log("Batch "+r.batchNum + " "+ r.qr)
+  }
+
+}
+
+const distributeBatch = async (batchNum, data) => {
   let actions = []
   let sum = 0
   let intsum = 0
 
-  for (item of data) {
+  console.log("create batch " + batchNum)
 
+  for (item of data) {
 
     /// 1 destroy the balance
     actions.push(
@@ -290,32 +330,37 @@ const distribute = async () => {
 
     sum = sum + floatAmount
 
-    //const int100val = parseInt(floatAmount * 100, 10)
-
     intsum += itemAfterX100
-
-    console.log(item.after + " sum: " + sum + " intsum " + intsum)
 
   }
 
-  console.log("total sum: " + sum)
-  console.log("total intsum: " + intsum)
+  console.log(" total sum: " + sum)
+  console.log(" total intsum: " + intsum)
 
   // issue HYPHA
   actions.splice(0, 0, issueAction(sum))
 
   // transfer to lock account
-  actions.splice(1, 0, transferAction({ beneficiary: "vast.seeds", amount: sum, memo: "H^2 redistribution" }))
+  actions.splice(1, 0, transferAction({ beneficiary: "costak.seeds", amount: sum, memo: "H^2 redistribution" }))
 
   proposerAccount = "illumination"
-  proposalName = "h2dist"
+  propnumber = "xabcdefghijklmnopq"
+  proposalName = "h2dist" + propnumber.charAt(batchNum)
 
-  console.log("ACTIONS: " + JSON.stringify(actions, null, 2))
+  console.log("batch " + batchNum + " has " + actions.length + " ACTIONS: " + JSON.stringify(actions, null, 2))
 
   const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
 
-  console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
+  console.log("ESR " + batchNum + " for propose to " + proposalName + ": " + JSON.stringify(proposeESR, null, 2))
 
+  return {
+    batchNum,
+    proposalName,
+    url: "https://telos.bloks.io/msig/"+proposerAccount+"/"+proposalName,
+    esr: proposeESR.esr,
+    qr: proposeESR.qr,
+
+  }
 }
 
 const verify = async () => {
@@ -348,7 +393,7 @@ const verify = async () => {
   console.log("Total sum: " + sum)
 
   console.log("Verify done.")
-  
+
 }
 
 program
