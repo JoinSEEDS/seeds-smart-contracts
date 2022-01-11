@@ -309,7 +309,7 @@ const distributeBatch = async (batchNum, data) => {
 
   for (item of data) {
 
-    if (item.account == "dao.hypha") {
+    if (item.account == "dao.hypha" || item.account == "hyphax.seeds") {
       continue
     }
 
@@ -349,7 +349,7 @@ const distributeBatch = async (batchNum, data) => {
 
   proposerAccount = "illumination"
   propnumber = "xabcdefghijklmnopq"
-  proposalName = "hip1dist" + propnumber.charAt(batchNum)
+  proposalName = "hip1dist1" + propnumber.charAt(batchNum)
 
   console.log("batch " + batchNum + " has " + actions.length + " ACTIONS: " + JSON.stringify(actions, null, 2))
 
