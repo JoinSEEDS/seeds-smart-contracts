@@ -367,6 +367,47 @@ const distributeBatch = async (batchNum, data) => {
   }
 }
 
+const test = async () => {
+  console.log("test");
+//   cleosm push action costak.hypha addtoken '{ 
+//     "contract":"token.hypha",
+//     "token":"2,HYPHA",
+// }' -p costak.hypha@active
+
+  const actions = [
+    {
+      "account": "costak.hypha",
+      "name": "addtoken",
+      "authorization": [
+        {
+          "actor": "costak.hypha",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "contract":"token.hypha",
+        "token":"2,HYPHA",
+      }
+    },
+  ]
+
+  proposerAccount = "illumination"
+  proposalName = "addtok1"
+
+  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "costak.hypha", actions)
+
+  const result = {
+    proposalName,
+    url: "https://telos.bloks.io/msig/"+proposerAccount+"/"+proposalName,
+    esr: proposeESR.esr,
+    qr: proposeESR.qr,
+  }
+
+  console.log("test done "+JSON.stringify(result, null, 2))
+
+
+}
+
 const verify = async () => {
   console.log("verifying data in spreadsheet with chain data");
   const data = await processDataFile()
@@ -400,36 +441,6 @@ const verify = async () => {
 
 }
 
-const testlocal = async () => {
-  console.log("test local");
-  const data = await processDataFile()
-
-  /// Check if the balance is accurate
-
-  let sum = 0
-
-  for (item of data) {
-
-    const balance = await getBalance({
-      user: item.account,
-      code: "token.hypha",
-      symbol: "HYPHA"
-    })
-
-    const amountString = item.current + " HYPHA"
-
-    if (balance != amountString) {
-      console.log("account: " + item.account + " expected: " + item.current + " actual: " + balance)
-    }
-
-    sum = sum + parseFloat(item.after)
-  }
-
-  console.log("Total sum: " + sum)
-
-  console.log("Verify done.")
-
-}
 
 program
   .command('distribute')
@@ -438,11 +449,18 @@ program
     await distribute()
   })
 
-program
+  program
   .command('verify')
   .description('verify HYPHA^2 data with chain')
   .action(async function () {
     await verify()
+  })
+
+  program
+  .command('test')
+  .description('testing')
+  .action(async function () {
+    await test()
   })
 
 
