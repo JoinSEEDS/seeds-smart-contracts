@@ -94,7 +94,6 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
   const auto& tt = tokentable.get(id, ("no match for token id "+std::to_string(id)).c_str());
   check(tt.symbolcode == symbolcode, "symbol doesn't match id");
   check(has_auth(manager) || has_auth(tt.submitter), "not authorized");
-  tokentable.erase(tt);
   usecase_table usecasetable(get_self(), get_self().value);
   for(auto itr = usecasetable.begin(); itr != usecasetable.end(); itr++) {
     name usecase = itr->usecase;
@@ -104,5 +103,6 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
           ("cannot delete token, accepted by "+usecase.to_string()).c_str());
 
   }
+  tokentable.erase(tt);
 }
 
