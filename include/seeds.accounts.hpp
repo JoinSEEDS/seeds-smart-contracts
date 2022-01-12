@@ -268,14 +268,18 @@ CONTRACT accounts : public contract {
         uint64_t flag_points;
 
         uint64_t primary_key() const { return from.value; }
-        uint64_t by_flagged() const { return to.value; }
+        uint64_t by_to() const { return to.value; }
+        uint128_t by_from_to()const { return (uint128_t(from.value) << 64) + to.value; }
 
       };
 
       typedef eosio::multi_index<"flags"_n, flags_table,
-        indexed_by<"byflagged"_n,
-        const_mem_fun<flags_table, uint64_t, &flags_table::by_flagged>>
+        indexed_by<"byto"_n,
+        const_mem_fun<flags_table, uint64_t, &flags_table::by_to>>,
+        indexed_by<"byfromto"_n,
+        const_mem_fun<flags_table, uint128_t, &flags_table::by_from_to>>
       > flags_tables;
+      
       flags_tables flags;
 
       DEFINE_CONFIG_TABLE

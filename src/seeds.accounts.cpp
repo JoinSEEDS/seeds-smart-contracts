@@ -1370,9 +1370,13 @@ void accounts::removeflag (name from, name to) {
 
   flag_points_tables flag_points(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
+  auto flags_by_from_to = flags.get_index<"byfromto"_n>();
 
   auto flag_itr = flag_points.find(from.value);
-  check(flag_itr != flag_points.end(), "flag not found");
+  check(flag_itr != flag_points.end(), "flag points not found");
+
+  auto flags_from_to_itr = flags_by_from_to.find((uint128_t(from.value) << 64) + to.value);
+  check(flags_from_to_itr != flags_by_from_to.end(), "flag not found");
 
   auto total_flag_p_itr = total_flags.find(to.value);
   check(total_flag_p_itr != flag_points.end(), to.to_string() + ", has not total flags entry");
@@ -1382,6 +1386,7 @@ void accounts::removeflag (name from, name to) {
   });
 
   flag_points.erase(flag_itr);
+  flags_by_from_to.erase(flags_from_to_itr);
 
   utils::send_deferred_transaction(
     get_self(),
