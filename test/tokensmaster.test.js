@@ -11,12 +11,11 @@ describe('Master token list', async assert => {
     return
   }
 
+  console.log('installed at '+tokensmaster)
   const contract = await eos.contract(tokensmaster)
   const thetoken = await eos.contract(token)
 
-  const users = [firstuser, seconduser, thirduser]
-
-  console.log('Normal operations')
+  console.log('--Normal operations--')
   console.log('reset')
   await contract.reset({ authorization: `${tokensmaster}@active` })
 
@@ -24,7 +23,8 @@ describe('Master token list', async assert => {
 
   console.log('init')
 
-  await contract.init('Telos', 'a8a87fd75f217b9432fb2173cef5fa20bdb9caf6d10b178d24f62e6d705f6728', true, { authorization: `${tokensmaster}@active` })
+
+  await contract.init('Telos', seconduser, true, { authorization: `${tokensmaster}@active` })
 
   const getConfigTable = async () => {
     return await eos.getTableRows({
@@ -41,7 +41,7 @@ describe('Master token list', async assert => {
     given: 'initializing contract',
     should: 'create config table',
     actual: dropTime( (await getConfigTable())['rows'][0] ),
-    expected: { chain: "Telos", code_hash: "a8a87fd75f217b9432fb2173cef5fa20bdb9caf6d10b178d24f62e6d705f6728",
+    expected: { chain: "Telos", manager: "seedsuserbbb",
                   verify: 1, init_time: "" }
   })
 
@@ -124,31 +124,31 @@ describe('Master token list', async assert => {
                  json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
-  console.log('delete token')
+  console.log('unaccept token')
 
   await contract.accepttoken(0, testSymbol, 'usecase1', false,
     { authorization: `${tokensmaster}@active` })
 
   assert({
-    given: 'delete token',
-    should: 'remove token entry',
-    actual: (await getTokenTable())['rows'],
-    expected: [ {id:1, submitter:"seedsuserxxx",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
-                 json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
+    given: 'unaccept token',
+    should: 'remove token acceptance',
+    actual: (await getAcceptanceTable('usecase1'))['rows'],
+    expected: [ {"token_id":1} ]
   })
 
-  console.log('usecase delete')
+  console.log('token delete')
 
-  await contract.usecase('usecase1', firstuser, false, { authorization: `${tokensmaster}@active` })
+  await contract.deletetoken(0, testSymbol, { authorization: `${seconduser}@active` })
 
   assert({
-    given: 'deleting usecase w/tokens',
+    given: 'deleting token',
 
-    should: 'delete usecase & token entries',
+    should: 'delete token',
     actual: [(await getUsecaseTable())['rows'], (await getTokenTable('usecase1'))['rows']],
     expected: [
-       [ { usecase: 'usecase2', manager: seconduser, unique_symbols :1, allowed_chain: 'Telos', required_fields: 'name logo weblink' } ],
-       [ ]
+       [ {"usecase":"usecase1"} ],
+       [ {id:1,submitter:"seedsuserxxx",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
+                 json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"}]
       ]
   })
 
