@@ -263,11 +263,13 @@ CONTRACT accounts : public contract {
       // A more complete flags table, scoped one will be deprecated.
       // for now copying the information
       TABLE flags_table { 
+        uint64_t id;
         name from;
         name to;
         uint64_t flag_points;
 
-        uint64_t primary_key() const { return from.value; }
+        uint64_t primary_key() const { return id; }
+        uint64_t by_from() const { return from.value; }
         uint64_t by_to() const { return to.value; }
         uint128_t by_from_to()const { return (uint128_t(from.value) << 64) + to.value; }
 

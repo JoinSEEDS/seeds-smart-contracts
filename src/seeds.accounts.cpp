@@ -1287,6 +1287,10 @@ void accounts::flag (name from, name to) {
   auto fitr = flag_points.find(from.value);
   check(fitr == flag_points.end(), "a user can only flag another user once");
 
+  auto flags_by_from_to = flags.get_index<"byfromto"_n>();
+  auto flags_from_to_itr = flags_by_from_to.find((uint128_t(from.value) << 64) + to.value);
+  check(flags_from_to_itr == flags_by_from_to.end(), "can only flag once");
+
   uint64_t points = 0;
   uint64_t base_points = 0;
   auto uitr = users.get(from.value, "user not found");
@@ -1305,6 +1309,13 @@ void accounts::flag (name from, name to) {
 
   flag_points.emplace(_self, [&](auto & item){
     item.account = from;
+    item.flag_points = points;
+  });
+
+  flags.emplace(_self, [&](auto & item){
+    item.id = flags.available_primary_key();
+    item.from = from;
+    item.to = to;
     item.flag_points = points;
   });
 
