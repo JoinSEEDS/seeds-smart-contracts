@@ -50,6 +50,8 @@ CONTRACT scheduler : public contract {
         ACTION test2();
 
         ACTION testexec(name op);
+        
+        ACTION checknext();
 
     private:
         void exec_op(name id, name contract, name action);

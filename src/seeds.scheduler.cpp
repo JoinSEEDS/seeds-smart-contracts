@@ -10,7 +10,7 @@ uint64_t scheduler::is_ready_op (const name & operation, const uint64_t & timest
     auto itr = operations.find(operation.value);
 
     if(itr -> pause > 0) {
-        print("transaction " + operation.to_string() + " is paused");
+        print(" transaction " + operation.to_string() + " is paused");
         return 0;
     }
 
@@ -627,6 +627,56 @@ ACTION scheduler::execute() {
 
 }
 
+ACTION scheduler::checknext() {
+
+    require_auth(get_self());
+
+    // =======================
+    // check operations
+    // =======================
+
+    auto ops_by_last_executed = operations.get_index<"bytimestamp"_n>();
+    auto itr = ops_by_last_executed.begin();
+    bool has_executed = false;
+
+    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
+
+    while(itr != ops_by_last_executed.end()) {
+        print(" checking op " + (itr -> id).to_string());
+        if(is_ready_op(itr -> id, timestamp)){
+
+            print(" next op: " + (itr -> id).to_string());
+
+            has_executed = true;
+            
+            break;
+        }
+        itr++;
+    }
+
+    if (!has_executed) {
+
+        auto moonops_by_last_cycle = moonops.get_index<"bylastcycle"_n>();
+        auto mitr = moonops_by_last_cycle.begin();
+
+        print(" checking moon op " + (mitr -> id).to_string());
+        
+        while (mitr != moonops_by_last_cycle.end()) {
+            uint64_t used_timestamp = is_ready_moon_op(mitr->id, timestamp);
+            if (used_timestamp) {
+                
+                print(" next op: " + (mitr -> id).to_string());
+                
+                has_executed = true;
+                break;
+            }
+            mitr++;
+        }
+    }
+
+
+}
+
 void scheduler::cancel_exec() {
     require_auth(get_self());
     cancel_deferred(contracts::scheduler.value);
@@ -719,5 +769,8 @@ uint64_t scheduler::next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quart
 
 
 EOSIO_DISPATCH(scheduler,
-    (configop)(configmoonop)(addmoonop)(execute)(reset)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+    (configop)(configmoonop)(addmoonop)
+    (execute)(reset)(pauseop)(removeop)
+    (stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+    (checknext)
 );
