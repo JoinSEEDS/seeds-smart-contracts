@@ -1280,12 +1280,12 @@ void accounts::flag (name from, name to) {
 
   if (from == to) { return; }
 
-  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables flag_points(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
   flag_points_tables removed_flags(get_self(), flag_remove_scope.value);
 
-  auto fitr = flags.find(from.value);
-  check(fitr == flags.end(), "a user can only flag another user once");
+  auto fitr = flag_points.find(from.value);
+  check(fitr == flag_points.end(), "a user can only flag another user once");
 
   uint64_t points = 0;
   uint64_t base_points = 0;
@@ -1303,7 +1303,7 @@ void accounts::flag (name from, name to) {
   
   points = base_points * utils::rep_multiplier_for_score(ritr.rank);
 
-  flags.emplace(_self, [&](auto & item){
+  flag_points.emplace(_self, [&](auto & item){
     item.account = from;
     item.flag_points = points;
   });
@@ -1368,20 +1368,20 @@ void accounts::flag (name from, name to) {
 void accounts::removeflag (name from, name to) {
   require_auth(has_auth(from) ? from : get_self());
 
-  flag_points_tables flags(get_self(), to.value);
+  flag_points_tables flag_points(get_self(), to.value);
   flag_points_tables total_flags(get_self(), flag_total_scope.value);
 
-  auto flag_itr = flags.find(from.value);
-  check(flag_itr != flags.end(), "flag not found");
+  auto flag_itr = flag_points.find(from.value);
+  check(flag_itr != flag_points.end(), "flag not found");
 
   auto total_flag_p_itr = total_flags.find(to.value);
-  check(total_flag_p_itr != flags.end(), to.to_string() + ", has not total flags entry");
+  check(total_flag_p_itr != flag_points.end(), to.to_string() + ", has not total flags entry");
 
   total_flags.modify(total_flag_p_itr, _self, [&](auto & item){
     item.flag_points -= flag_itr -> flag_points;
   });
 
-  flags.erase(flag_itr);
+  flag_points.erase(flag_itr);
 
   utils::send_deferred_transaction(
     get_self(),
