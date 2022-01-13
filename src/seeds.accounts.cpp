@@ -37,6 +37,8 @@ void accounts::reset() {
   utils::delete_table<ban_tables>(contracts::accounts, contracts::accounts.value);
 
   utils::delete_table<delegators_tables>(contracts::accounts, contracts::accounts.value);
+  
+  utils::delete_table<flags_tables>(contracts::accounts, contracts::accounts.value);
 }
 
 void accounts::history_add_resident(name account) {
@@ -1611,4 +1613,34 @@ void accounts::mimicflag (name delegatee, name to, name action, uint64_t chunksi
   }
 
 }
+
+ACTION accounts::migflags(name to) {
+
+  require_auth(get_self());
+
+  flag_points_tables flag_points(get_self(), to.value);
+  auto flags_by_from_to = flags.get_index<"byfromto"_n>();
+
+  auto flag_itr = flag_points.begin();
+
+  check(flag_itr != flag_points.end(), "flag points not found");
+
+  while(flag_itr != flag_points.end()) {
+      name from = flag_itr->account;
+      auto flags_from_to_itr = flags_by_from_to.find((uint128_t(from.value) << 64) + to.value);
+      if (flags_from_to_itr == flags_by_from_to.end()) {
+        flags.emplace(_self, [&](auto & item){
+          item.id = flags.available_primary_key();
+          item.from = from;
+          item.to = to;
+          item.flag_points = flag_itr->flag_points;
+        });
+      }
+      flag_itr++;
+  }
+
+
+
+}
+
 

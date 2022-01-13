@@ -100,6 +100,8 @@ CONTRACT accounts : public contract {
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
 
+      ACTION migflags(name account);
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       symbol network_symbol = symbol("TLOS", 4);
@@ -426,5 +428,6 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)(delegateflag)(undlgateflag)(mimicflag)
 (refinfo)(unban)
 (testmvouch)
+(migflags)
 (addcbs)
 );

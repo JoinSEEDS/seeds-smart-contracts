@@ -1533,7 +1533,7 @@ const accept = async (newAccount, inviteSecret, publicKey, contracts) => {
   console.log("accept success!")
 }
 
-describe('Punishment', async assert => {
+describe.only('Punishment', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -1676,6 +1676,14 @@ describe('Punishment', async assert => {
   await contracts.accounts.flag(seconduser, firstuser, { authorization: `${seconduser}@active` })
   await contracts.accounts.flag(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
 
+  const flagsFirst = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'flags',
+    json: true
+  })
+
+
   let onlyOneFlag = true
   try {
     await sleep(300)
@@ -1704,6 +1712,13 @@ describe('Punishment', async assert => {
   console.log('remove flag')
   await contracts.accounts.removeflag(seconduser, firstuser, { authorization: `${seconduser}@active` })
 
+  const flagsRemoved = await getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'flags',
+    json: true
+  })
+
   await checkFlags(firstuser, 40)
   await checkPunishmentPoints(firstuser, 46)
   await checkReps([rep_0 - 46, 77, 177, 300, rep_4])
@@ -1716,6 +1731,9 @@ describe('Punishment', async assert => {
   await sleep(1500)
 
   await checkFlags(firstuser, 70) // -24
+
+
+
   await checkPunishmentPoints(firstuser, 70)
   await checkReps([65, 165, 300, rep_4])
   await checkUserStatus(firstuser, 'visitor')
@@ -1740,6 +1758,25 @@ describe('Punishment', async assert => {
     actual: onlyResidentCitizen,
     expected: true
   })
+
+  assert({
+    given: '2 flags added',
+    should: 'have table entries',
+    actual: flagsFirst.rows,
+    expected: [
+      {"id":0,"from":"seedsuserbbb","to":"seedsuseraaa","flag_points":6},
+      {"id":1,"from":"seedsuserxxx","to":"seedsuseraaa","flag_points":40}
+    ]
+  })
+  assert({
+    given: 'flags removed again',
+    should: 'have table 1 table entry',
+    actual: flagsRemoved.rows,
+    expected: [
+      {"id":1,"from":"seedsuserxxx","to":"seedsuseraaa","flag_points":40}
+    ]
+  })
+
 
 })
 
