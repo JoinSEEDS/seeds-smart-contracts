@@ -178,6 +178,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      rainbows: contract('rainbo.seeds','rainbows'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -219,6 +220,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      rainbows: contract('rainbo.seeds','rainbows'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -268,6 +270,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      rainbows: contract('rainbo.seeds','rainbows'),
     }
   } else {
     throw new Error(`${network} deployment not supported`)
