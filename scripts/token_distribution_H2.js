@@ -367,6 +367,55 @@ const distributeBatch = async (batchNum, data) => {
   }
 }
 
+const settingsActions = async () => {
+  let actions = []
+  let sum = 0
+  let intsum = 0
+
+  console.log("settings actions ")
+
+  actions.push({
+    "account": "dao.hypha",
+    "name": "setsetting",
+    "authorization": [{
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
+    ],
+    "data": {
+      "key":"hypha_usd_value",
+      "value":["asset","0.5000 USD"]
+    },
+  },
+  {
+    "account": "dao.hypha",
+    "name": "setsetting",
+    "authorization": [{
+      "actor": "dao.hypha",
+      "permission": "active"
+    }
+    ],
+    "data": {
+      "key":"hypha_cosale_contract",
+      "value":["name","costak.hypha"]
+    },
+  },
+  )
+
+  proposerAccount = "illumination"
+  proposalName = "hip1settings"
+
+  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
+
+  let result = {
+    proposalName,
+    url: "https://telos.bloks.io/msig/"+proposerAccount+"/"+proposalName,
+    esr: proposeESR.esr,
+    qr: proposeESR.qr,
+  }
+  console.log("Result: "+JSON.stringify(result, null, 2))
+}
+
 const test = async () => {
   console.log("test");
 //   cleosm push action costak.hypha addtoken '{ 
@@ -457,10 +506,10 @@ program
   })
 
   program
-  .command('test')
-  .description('testing')
+  .command('settings')
+  .description('settings msig')
   .action(async function () {
-    await test()
+    await settingsActions()
   })
 
 
