@@ -100,7 +100,8 @@ CONTRACT accounts : public contract {
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
 
-      ACTION migflags(name account);
+      ACTION migflags(name to);
+      ACTION migflags1();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -278,6 +279,8 @@ CONTRACT accounts : public contract {
       };
 
       typedef eosio::multi_index<"flags"_n, flags_table,
+        indexed_by<"byfrom"_n,
+        const_mem_fun<flags_table, uint64_t, &flags_table::by_from>>,
         indexed_by<"byto"_n,
         const_mem_fun<flags_table, uint64_t, &flags_table::by_to>>,
         indexed_by<"byfromto"_n,
@@ -428,6 +431,6 @@ EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)(delegateflag)(undlgateflag)(mimicflag)
 (refinfo)(unban)
 (testmvouch)
-(migflags)
+(migflags)(migflags1)
 (addcbs)
 );

@@ -1614,6 +1614,10 @@ void accounts::mimicflag (name delegatee, name to, name action, uint64_t chunksi
 
 }
 
+ACTION accounts::migflags1() {
+    utils::delete_table<flags_tables>(contracts::accounts, contracts::accounts.value);
+}
+
 ACTION accounts::migflags(name to) {
 
   require_auth(get_self());
@@ -1638,9 +1642,6 @@ ACTION accounts::migflags(name to) {
       }
       flag_itr++;
   }
-
-
-
 }
 
 
