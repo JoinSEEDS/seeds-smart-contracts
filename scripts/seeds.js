@@ -151,13 +151,35 @@ const updateSchedulerAction = async () => {
   console.log(`${scheduler} stop`)
   await contract.stop({ authorization: `${scheduler}@active` })
 
-  console.log(`${scheduler} updateops`)
-  await contract.updateops({ authorization: `${scheduler}@active` })
+  //console.log(`${scheduler} updateops`)
+  //await contract.updateops({ authorization: `${scheduler}@active` })
 
   console.log(`${scheduler} start`)
   await contract.start({ authorization: `${scheduler}@active` })
 
   console.log(`Success: Scheduler was updated and restarted: ${scheduler}`)
+}
+
+const pauseOpAction = async (opname) => {
+  console.log(`Pause op ${opname}`)
+  const name = "scheduler"
+
+  const contract = await eos.contract(scheduler)
+
+  await contract.pauseop(opname, 1, { authorization: `${scheduler}@active` })
+
+  console.log(`Success: Operatioon paused: ${opname}`)
+}
+
+const unpauseOpAction = async (opname) => {
+  console.log(`Unpause op ${opname}`)
+  const name = "scheduler"
+
+  const contract = await eos.contract(scheduler)
+
+  await contract.pauseop(opname, 0, { authorization: `${scheduler}@active` })
+
+  console.log(`Success: Operatioon unpaused: ${opname}`)
 }
 
 program
@@ -273,6 +295,20 @@ program
   .description('Deploy and refresh scheduler: stop, updateops, start')
   .action(async function() {
     await updateSchedulerAction()
+  })
+
+  program
+  .command('pauseop <op>')
+  .description('Pause an operation on the scheduler')
+  .action(async function(op) {
+    await pauseOpAction(op)
+  })
+
+  program
+  .command('unpauseop <op>')
+  .description('Unause an operation on the scheduler')
+  .action(async function(op) {
+    await unpauseOpAction(op)
   })
 
   program
