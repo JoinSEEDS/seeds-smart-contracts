@@ -100,20 +100,16 @@ using namespace eosio;
 
 
          /**
-          * Allows `issuer` account to create or reconfigure a staking relationship for a token. If 
-          * the relationship does not exist, a new entry in the stakes table for token symbol scope gets created. If there
-          * is no row of the stakes table in that scope associated with the issuer, a new row gets created
-          * with the specified characteristics. If a token of this symbol and issuer does exist and update
-          * is permitted, the characteristics are updated.
+          * Allows `issuer` account to create a staking relationship for a token. A new row in the
+          * stakes table for token symbol scope gets created with the specified characteristics.
           *
           * @param token_bucket - a reference quantity of the token,
           * @param stake_per_bucket - the number of stake tokens (e.g. Seeds) staked per "bucket" of tokens,
           * @param stake_token_contract - the staked token contract account (e.g. token.seeds),
-          * @param stake_to - the escrow account where stake is held, or `deletestake`
-          *   to remove a row from the stakes table
-          * // TODO replace encoded deferral with explicit lock_id and deferral contract name fields
-          * @param deferral - if == 0, no deferral, stake is in liquid tokens; otherwise
-          *   a concatenation of a lock_id with the deferral contract (e.g. escrow.seeds) holding the lock
+          * @param stake_to - the escrow account where stake is held
+          * @param deferral_contract - if == "", no deferral, stake is in liquid tokens; otherwise
+          *   the name of the deferral contract (e.g. escrow.seeds) holding the lock
+          * @param lock_id - lock_id of the parent lock in the deferral contract
           * @param proportional - redeem by proportion of escrow rather than by staking ratio.
           * @param memo - the memo string to accompany the transaction.
           *
@@ -128,9 +124,26 @@ using namespace eosio;
                           const asset&      stake_per_bucket,
                           const name&       stake_token_contract,
                           const name&       stake_to,
-                          const uint128_t&  deferral,
+                          const name&       deferral_contract,
+                          const uint64_t&   lock_id,
                           const bool&       proportional,
                           const string&     memo);
+
+         /**
+          * Allows `issuer` account to delete a staking relationship. Staked tokens are returned
+          * to the issuer account. Deferred stake relationships are reverted. The row is removed
+          * from the stakes table.
+          *
+          * @param stake_index - the index field in the `stakes` table
+          * @param symbolcode - the staked token
+          * @param memo - memo string
+          *
+          * @pre the config_locked_until field in the configs table must be in the past
+          */
+         ACTION deletestake( const uint64_t& stake_index,
+                             const symbol_code& symbolcode,
+                             const string& memo );
+
 
          /**
           * Allows `issuer` account to create or update display metadata for a token. All fields

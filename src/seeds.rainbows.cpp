@@ -135,7 +135,8 @@ void rainbows::setstake( const asset&    token_bucket,
                       const asset&    stake_per_bucket,
                       const name&     stake_token_contract,
                       const name&     stake_to,
-                      const uint128_t& deferral,
+                      const name&     deferral_contract,
+                      const uint64_t& lock_id,
                       const bool&     proportional,
                       const string&   memo )
 {
@@ -164,7 +165,8 @@ void rainbows::setstake( const asset&    token_bucket,
            "token reconfiguration is locked" );
     deferrals defertable( get_self(), sym_code_raw);
     uint64_t defer_idx = no_index;
-    if ( deferral ) {
+    uint128_t deferral = (uint128_t)lock_id<<64 | deferral_contract.value;
+    if ( deferral_contract != ""_n ) {
        auto lockid_index = defertable.get_index<"lockid"_n>();
        auto defer_existing = lockid_index.find( deferral );
        if ( defer_existing != lockid_index.end() ) {
@@ -176,46 +178,8 @@ void rainbows::setstake( const asset&    token_bucket,
        }
     }
     stakes stakestable( get_self(), sym_code_raw );
-    auto stake_token_index = stakestable.get_index<"staketoken"_n>();
-    auto existing = stake_token_index.find( stake_token );
-    if( existing != stake_token_index.end() ) {
-       // stake token exists in stakes table
-       const auto& sk = *existing;
-       bool restaking = token_bucket != sk.token_bucket ||
-                        stake_per_bucket != sk.stake_per_bucket ||
-                        stake_to != sk.stake_to ||
-                        defer_idx != sk.deferral_index ||
-                        proportional != sk.proportional;
-       bool destaking = stake_to == sk.stake_to &&
-                        stake_per_bucket.amount == 0;
-       if( destaking && st.supply.amount != 0 ) {
-          unstake_one( sk, st.issuer, st.supply );
-       } else if ( restaking ) {
-          check( sk.stake_per_bucket.amount == 0, "must destake before restaking");
-          if( stake_to == deletestakeacct ) {
-             stakestable.erase( sk );
-          }
-       }
-       if( defer_idx != no_index ) {
-          check( false, "deferral restaking unimplemented" );
-       }
-       stakestable.modify (sk, st.issuer, [&]( auto& s ) {
-          s.token_bucket = token_bucket;
-          s.stake_per_bucket = stake_per_bucket;
-          s.stake_token_contract = stake_token_contract;
-          s.stake_to = stake_to;
-          s.deferral_index = defer_idx;
-          s.proportional = proportional;
-       });
-       if( restaking && st.supply.amount != 0 ) {
-          stake_one( sk, st.issuer, st.supply );
-       }
-       return;
-    }
-    // new stake token
     int existing_stake_count = std::distance(stakestable.cbegin(),stakestable.cend());
     check( existing_stake_count <= max_stake_count, "stake count exceeded" );
-    check( stake_to != deletestakeacct, "invalid stake_to account" );
     if( defer_idx != no_index ) {
        check( false, "deferral creation unimplemented" );
        // TODO move defdeferral( symbolcode, deferral_contract, parent_lock_id ) functionality here
@@ -223,7 +187,7 @@ void rainbows::setstake( const asset&    token_bucket,
     const auto& sk = *stakestable.emplace( st.issuer, [&]( auto& s ) {
        s.index                = stakestable.available_primary_key();
        s.token_bucket         = token_bucket;
-       s.stake_per_bucket      = stake_per_bucket;
+       s.stake_per_bucket     = stake_per_bucket;
        s.stake_token_contract = stake_token_contract;
        s.stake_to             = stake_to;
        s.deferral_index       = defer_idx;
@@ -235,8 +199,28 @@ void rainbows::setstake( const asset&    token_bucket,
 
 }
 
+void rainbows::deletestake( const uint64_t& stake_index,
+                            const symbol_code& symbolcode,
+                            const string& memo )
+{
+    auto sym_code_raw = symbolcode.raw();
+    stats statstable( get_self(), sym_code_raw );
+    const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
+    stakes stakestable( get_self(), sym_code_raw );
+    const auto& sk = stakestable.get( stake_index, "stake index does not exist" );
+    configs configtable( get_self(), sym_code_raw );
+    const auto& cf = configtable.get();
+    check( cf.config_locked_until.time_since_epoch() < current_time_point().time_since_epoch(),
+           "token reconfiguration is locked" );
+    require_auth( st.issuer );
+    if( st.supply.amount != 0 ) {
+        unstake_one( sk, st.issuer, st.supply );
+    }
+    stakestable.erase( sk );
+}
+
 void rainbows::setdisplay( const symbol_code&  symbolcode,
-                        const string&       json_meta )
+                           const string&       json_meta )
 {
     auto sym_code_raw = symbolcode.raw();
     stats statstable( get_self(), sym_code_raw );
@@ -561,7 +545,7 @@ void rainbows::defdeferral( const symbol_code&  symbolcode,
        s.index             = defertable.available_primary_key();
        s.deferral_contract = deferral_contract;
        s.parent_lock_id    = parent_lock_id;
-       s.child_lock_id     = static_cast<uint64_t>(-1);
+       s.child_lock_id     = no_index;
     });
 }
 
