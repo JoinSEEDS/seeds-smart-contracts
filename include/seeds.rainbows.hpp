@@ -34,6 +34,10 @@ using namespace eosio;
    CONTRACT rainbows : public contract {
       public:
          using contract::contract;
+         rainbows( name receiver, name code, datastream<const char*> ds )
+         : contract( receiver, code, ds ),
+         symboltable( receiver, receiver.value )
+         {}
 
          /**
           * The ` create` action allows `issuer` account to create or reconfigure a token with the
@@ -253,15 +257,21 @@ using namespace eosio;
          ACTION freeze( const symbol_code& symbolcode, const bool& freeze, const string& memo );
 
          /**
-          * This action clears a RAM table (development use only!)
+          * This action clears RAM tables for one or all tokens. For a large deployment,
+          * attempting to erase all table entries in one action might fail by exceeding the
+          * chain execution time limit. The `limit` parameter protects against this. It is
+          * advisable for the application to check the contract status (get_scope) to
+          * discover whether a follow-up `reset` action is required.
           *
-          * @param table - name of table
-          * @param scope - string
+          * @param symbolcode - the token to reset; if empty string, reset all tokens
+          * @param all - if true, clear all tables within the token scope;
+          *              if false, keep accounts, stats, and symbols
           * @param limit - max number of erasures (for time control)
           *
-          * @pre Transaction must have the contract account authority 
+          * @pre To reset all tokens, transaction must have the contract account authority 
+          * @pre To reset one token, transaction must have the token issuer authority 
           */
-         ACTION resetram( const name& table, const string& scope, const uint32_t& limit = 10 );
+         ACTION reset( const symbol_code symbolcode, const bool all, const uint32_t limit );
 
          /**
           * This action defines a deferred stake (assumes escrow.seeds deferral contract)
@@ -341,6 +351,12 @@ using namespace eosio;
             }
          };
 
+         TABLE symbol { // scoped on get_self()
+            symbol_code  symbolcode;
+
+            uint64_t primary_key()const { return symbolcode.raw(); };
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
          typedef eosio::singleton< "configs"_n, currency_config > configs;
@@ -357,6 +373,9 @@ using namespace eosio;
                  const_mem_fun<deferral_stats, uint128_t, &deferral_stats::by_secondary >
                >
             > deferrals;
+         typedef eosio::multi_index< "symbols"_n, symbol > symbols;
+
+         symbols symboltable;
 
          void sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol );
          void add_balance( const name& owner, const asset& value, const name& ram_payer,
@@ -365,6 +384,7 @@ using namespace eosio;
          void unstake_all( const name& owner, const asset& quantity );
          void stake_one( const stake_stats& sk, const name& owner, const asset& quantity );
          void unstake_one( const stake_stats& sk, const name& owner, const asset& quantity );
+         void reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter );
          /**
           * Causes ownership transfer of deferred tokens under highly restricted conditions.
           * Works in cooperation with a separate deferred-token management contract (e.g. `escrow.seeds`)
@@ -392,6 +412,6 @@ using namespace eosio;
 
 EOSIO_DISPATCH(rainbows,
    (create)(approve)(setstake)(setdisplay)(issue)(retire)(transfer)
-   (open)(close)(freeze)(resetram)
+   (open)(close)(freeze)(reset)
 );
 

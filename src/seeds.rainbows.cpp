@@ -82,6 +82,10 @@ void rainbows::create( const name&    issuer,
     return;
     }
     // new token
+    symbols symboltable( get_self(), get_self().value );
+    symboltable.emplace( issuer, [&]( auto& s ) {
+       s.symbolcode = sym.code();
+    });
     statstable.emplace( issuer, [&]( auto& s ) {
        s.supply.symbol = maximum_supply.symbol;
        s.max_supply    = maximum_supply;
@@ -124,6 +128,9 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
        configtable.remove( );
        displaytable.remove( );
        statstable.erase( statstable.iterator_to(st) );
+       symbols symboltable( get_self(), get_self().value );
+       const auto& sym = symboltable.get( sym_code_raw );
+       symboltable.erase( sym );
     } else {
        cf.approved = true;
        configtable.set (cf, st.issuer );
@@ -492,6 +499,87 @@ void rainbows::freeze( const symbol_code& symbolcode, const bool& freeze, const 
    configtable.set (cf, st.issuer );
 }
 
+void rainbows::reset( const symbol_code symbolcode, const bool all, const uint32_t limit )
+{
+   auto sym_code_raw = symbolcode.raw();
+   uint32_t counter= 0;
+   if( sym_code_raw == 0 ) {
+     require_auth2( get_self().value, "active"_n.value );
+     auto sym = symboltable.begin();
+     while (sym != symboltable.end()) {
+       reset_one(sym->symbolcode, all, limit, counter);
+       if( counter > limit ) { return; }
+       if( all ) {
+         sym = symboltable.erase(sym);
+       } else {
+         ++sym;
+       }
+     }
+   } else {
+     const auto& sym = symboltable.get( sym_code_raw, "symbol does not exist" );
+     stats statstable( get_self(), sym_code_raw );
+     const auto& st = statstable.get( sym_code_raw );
+     check( has_auth(st.issuer) || has_auth(get_self()) , "not authorized" );
+     reset_one(symbolcode, all, limit, counter);
+     if( counter > limit ) { return; }
+     if( all ) {
+       symboltable.erase(sym);
+     }
+   }
+}
+  
+
+void rainbows::reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter )
+{
+     auto scope = symbolcode.raw();
+     {
+       configs tbl(get_self(),scope);
+       tbl.remove();
+       if( ++counter > limit ) { goto CountedOut; }
+     }
+     {
+       displays tbl(get_self(),scope);
+       tbl.remove();
+       if( ++counter > limit ) { goto CountedOut; }
+     }
+     {
+       stakes tbl(get_self(),scope);
+       auto itr = tbl.begin();
+       while (itr != tbl.end()) {
+         itr = tbl.erase(itr);
+         if( ++counter > limit ) { goto CountedOut; }
+       }
+     }
+     {
+       deferrals tbl(get_self(),scope);
+       auto itr = tbl.begin();
+       while (itr != tbl.end()) {
+         itr = tbl.erase(itr);
+         if( ++counter > limit ) { goto CountedOut; }
+       }
+     }
+     if( all ) {
+       {
+         accounts tbl(get_self(),scope);
+         auto itr = tbl.begin();
+         while (itr != tbl.end()) {
+           itr = tbl.erase(itr);
+           if( ++counter > limit ) { goto CountedOut; }
+         }
+       }
+       {
+         stats tbl(get_self(),scope);
+         auto itr = tbl.begin();
+         while (itr != tbl.end()) {
+           itr = tbl.erase(itr);
+           if( ++counter > limit ) { goto CountedOut; }
+         }
+       }
+     }
+     CountedOut: return;
+}
+
+/*
 void rainbows::resetram( const name& table, const string& scope, const uint32_t& limit )
 {
    require_auth2( get_self().value, "active"_n.value );
@@ -525,6 +613,7 @@ void rainbows::resetram( const name& table, const string& scope, const uint32_t&
     }
   }
 }
+*/
 
 void rainbows::defdeferral( const symbol_code&  symbolcode,
                          const name&         deferral_contract,
