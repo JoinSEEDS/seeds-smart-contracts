@@ -257,21 +257,19 @@ using namespace eosio;
          ACTION freeze( const symbol_code& symbolcode, const bool& freeze, const string& memo );
 
          /**
-          * This action clears RAM tables for one or all tokens. For a large deployment,
+          * This action clears RAM tables for all tokens. For a large deployment,
           * attempting to erase all table entries in one action might fail by exceeding the
           * chain execution time limit. The `limit` parameter protects against this. It is
           * advisable for the application to check the contract status (get_scope) to
           * discover whether a follow-up `reset` action is required.
           *
-          * @param symbolcode - the token to reset; if empty string, reset all tokens
           * @param all - if true, clear all tables within the token scope;
           *              if false, keep accounts, stats, and symbols
           * @param limit - max number of erasures (for time control)
           *
-          * @pre To reset all tokens, transaction must have the contract account authority 
-          * @pre To reset one token, transaction must have the token issuer authority 
+          * @pre Transaction must have the contract account authority 
           */
-         ACTION reset( const symbol_code symbolcode, const bool all, const uint32_t limit );
+         ACTION reset( const bool all, const uint32_t limit );
 
          /**
           * This action defines a deferred stake (assumes escrow.seeds deferral contract)

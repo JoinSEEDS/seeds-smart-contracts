@@ -17,7 +17,7 @@ describe('rainbows', async assert => {
 
   console.log('--Normal operations--')
   console.log('reset')
-  await contract.reset('', true, 100, { authorization: `${rainbows}@active` })
+  await contract.reset(true, 100, { authorization: `${rainbows}@active` })
 
 })
 

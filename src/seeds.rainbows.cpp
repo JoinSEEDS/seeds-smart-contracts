@@ -499,33 +499,20 @@ void rainbows::freeze( const symbol_code& symbolcode, const bool& freeze, const 
    configtable.set (cf, st.issuer );
 }
 
-void rainbows::reset( const symbol_code symbolcode, const bool all, const uint32_t limit )
+void rainbows::reset( const bool all, const uint32_t limit )
 {
-   auto sym_code_raw = symbolcode.raw();
-   uint32_t counter= 0;
-   if( sym_code_raw == 0 ) {
-     require_auth2( get_self().value, "active"_n.value );
-     auto sym = symboltable.begin();
-     while (sym != symboltable.end()) {
-       reset_one(sym->symbolcode, all, limit, counter);
-       if( counter > limit ) { return; }
-       if( all ) {
-         sym = symboltable.erase(sym);
-       } else {
-         ++sym;
-       }
-     }
-   } else {
-     const auto& sym = symboltable.get( sym_code_raw, "symbol does not exist" );
-     stats statstable( get_self(), sym_code_raw );
-     const auto& st = statstable.get( sym_code_raw );
-     check( has_auth(st.issuer) || has_auth(get_self()) , "not authorized" );
-     reset_one(symbolcode, all, limit, counter);
-     if( counter > limit ) { return; }
-     if( all ) {
-       symboltable.erase(sym);
-     }
-   }
+  uint32_t counter= 0;
+  require_auth2( get_self().value, "active"_n.value );
+  auto sym = symboltable.begin();
+  while (sym != symboltable.end()) {
+    reset_one(sym->symbolcode, all, limit, counter);
+    if( counter > limit ) { return; }
+    if( all ) {
+      sym = symboltable.erase(sym);
+    } else {
+      ++sym;
+    }
+  }
 }
   
 
@@ -578,42 +565,6 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
      }
      CountedOut: return;
 }
-
-/*
-void rainbows::resetram( const name& table, const string& scope, const uint32_t& limit )
-{
-   require_auth2( get_self().value, "active"_n.value );
-   uint64_t scope_raw;
-   check( !scope.empty(), "scope string is empty" );
-   if( isupper(scope.c_str()[0]) ) {
-      symbol_code code(scope);
-      check( code.is_valid(), "invalid symbol code" );
-      scope_raw = code.raw();
-   } else {
-      name n(scope);
-      scope_raw = n.value;
-   }
-   uint32_t counter = 0;
-   if( table == "stakes"_n ) {
-      stakes stakestable( get_self(), scope_raw );
-      for( auto itr = stakestable.begin(); itr != stakestable.end() && counter<limit; counter++ ) {
-         itr = stakestable.erase(itr);
-      }
-   } else if( table == "configs"_n ) {
-      configs configtable( get_self(), scope_raw );
-      configtable.remove();
-   } else {
-     // generic erase for tables with no secondary indices
-     auto it = internal_use_do_not_use::db_lowerbound_i64(_self.value, scope_raw, table.value, 0);
-     while (it >= 0) {
-        auto del = it;
-        uint64_t dummy;
-        it = internal_use_do_not_use::db_next_i64(it, &dummy);
-        internal_use_do_not_use::db_remove_i64(del);
-    }
-  }
-}
-*/
 
 void rainbows::defdeferral( const symbol_code&  symbolcode,
                          const name&         deferral_contract,
