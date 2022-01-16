@@ -2633,7 +2633,7 @@ describe("invite campaigns", async assert => {
 
 })
 
-describe('Alliance campaigns', async assert => {
+describe.only('Alliance campaigns', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
