@@ -1,9 +1,29 @@
 const { describe } = require("riteway")
-const { eos, names, getTableRows, isLocal, sleep, initContracts } = require("../scripts/helper")
+const { eos, names, getTableRows, isLocal, sleep, initContracts, httpEndpoint, getBalance } = require("../scripts/helper")
+const { addActorPermission } = require("../scripts/deploy")
 const { equals } = require("ramda")
+const fetch = require("node-fetch");
 const { escrow, accounts, token, firstuser, seconduser, thirduser, pool, fourthuser, settings, rainbows } = names
 const moment = require('moment')
 
+const get_scope = async ( code ) => {
+  const url = httpEndpoint + '/v1/chain/get_table_by_scope'
+  const params = {
+    json: "true",
+    code: code
+  }
+  const rawResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+  });
+
+  const res = await rawResponse.json();
+  return res
+}
 
 describe('rainbows', async assert => {
 
@@ -13,12 +33,127 @@ describe('rainbows', async assert => {
     }
 
   console.log('installed at '+rainbows)
-  const contract = await eos.contract(rainbows)
+  const contracts = await Promise.all([
+    eos.contract(rainbows),
+    eos.contract(escrow),
+    eos.contract(accounts),
+    eos.contract(token),
+  ]).then(([rainbows, escrow, accounts, token]) => ({
+    rainbows, escrow, accounts, token
+  }))
+
+
+  const issuer = firstuser
+  const toke_escrow = seconduser
+  const withdraw_to = thirduser
+
+  const starttime = new Date()
 
   console.log('--Normal operations--')
-  console.log('reset')
-  await contract.reset(true, 100, { authorization: `${rainbows}@active` })
 
+  console.log('add eosio.code permissions')
+  await addActorPermission(issuer, 'active', rainbows, 'eosio.code')
+  await addActorPermission(toke_escrow, 'active', rainbows, 'eosio.code')
+
+  console.log('reset')
+  await contracts.rainbows.reset(true, 100, { authorization: `${rainbows}@active` })
+
+  const accts = [ firstuser, seconduser, thirduser, fourthuser ]
+  for( const acct of accts ) {
+    await contracts.rainbows.resetacct( acct, { authorization: `${rainbows}@active` })
+  }  
+
+  assert({
+    given: 'reset all',
+    should: 'clear table RAM',
+    actual: await get_scope(rainbows),
+    expected: { rows: [], more: '' }
+  })
+
+  const issuerInitialBalance = await getBalance(issuer)
+
+  console.log('create token')
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '',
+                          { authorization: `${issuer}@active` } )
+
+  console.log('set stake')
+  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, '', 0, false, '',
+                          { authorization: `${issuer}@active` } )
+
+  console.log('approve token')
+  await contracts.rainbows.approve('TOKES', false, { authorization: `${rainbows}@active` })
+
+  console.log('issue tokens')
+  await contracts.rainbows.issue('500.00 TOKES', '', { authorization: `${issuer}@active` })
+
+  assert({
+    given: 'create & issue token',
+    should: 'token created & issued',
+    actual: await get_scope(rainbows),
+    expected: {
+      rows: [ {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"configs","payer":"seedsuseraaa","count":1},
+              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"displays","payer":"seedsuseraaa","count":1},
+              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stakes","payer":"seedsuseraaa","count":2},
+              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stat","payer":"seedsuseraaa","count":1},
+              {"code":"rainbo.seeds","scope":"rainbo.seeds","table":"symbols","payer":"seedsuseraaa","count":1},
+              {"code":"rainbo.seeds","scope":"seedsuseraaa","table":"accounts","payer":"seedsuseraaa","count":1} ],
+      more: '' }
+  })
+
+  console.log('open accounts')
+  await contracts.rainbows.open(fourthuser, 'TOKES', issuer, { authorization: `${issuer}@active` })
+  await contracts.rainbows.open(withdraw_to, 'TOKES', issuer, { authorization: `${issuer}@active` })
+
+  console.log('transfer tokens')
+  await contracts.rainbows.transfer(issuer, fourthuser, '100.00 TOKES', 'test 1', { authorization: `${issuer}@active` })
+
+  console.log('withdraw tokens')
+  await contracts.rainbows.transfer(fourthuser, withdraw_to, '80.00 TOKES', 'withdraw', { authorization: `${issuer}@active` })
+
+  assert({
+    given: 'transfer token to new user',
+    should: 'see tokens in users account',
+    actual: [ await eos.getCurrencyBalance(token, toke_escrow, 'SEEDS'),
+              await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+            ],
+    expected: [ [ '10000200.0000 SEEDS' ], [ '20.00 TOKES' ] ]
+  })
+
+  console.log('redeem & return')
+  await contracts.rainbows.retire(fourthuser, '20.00 TOKES', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(withdraw_to, '80.00 TOKES', 'redeemed by user', { authorization: `${withdraw_to}@active` })  
+  await contracts.rainbows.retire(issuer, '400.00 TOKES', 'redeemed by issuer', { authorization: `${issuer}@active` })  
+  await contracts.token.transfer(fourthuser, issuer, '8.0000 SEEDS', 'restore SEEDS balance',
+                       { authorization: `${fourthuser}@active` })
+  await contracts.token.transfer(withdraw_to, issuer, '32.0000 SEEDS', 'restore SEEDS balance',
+                       { authorization: `${withdraw_to}@active` })
+
+  assert({
+    given: 'redeem & return',
+    should: 'see original seeds quantity in issuer account',
+    actual: await getBalance(issuer),
+    expected: issuerInitialBalance
+  })
+
+  console.log('create credit limit token')
+  await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '',
+                          { authorization: `${issuer}@active` } )
+  await contracts.rainbows.approve('CREDS', false, { authorization: `${rainbows}@active` })
+  await contracts.rainbows.issue('1000000.00 CREDS', '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.freeze('CREDS', true, '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.open(fourthuser, 'CREDS', issuer, { authorization: `${issuer}@active` })
+  await contracts.rainbows.transfer(issuer, fourthuser, '100.00 CREDS', '', { authorization: `${issuer}@active` })
+
+  console.log('reconfigure token')
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), 'CREDS', '',
+                          { authorization: `${issuer}@active` } )
+  console.log('make transfer against credit limit')
+  await contracts.rainbows.transfer(fourthuser, issuer, '50.00 TOKES', '', { authorization: `${fourthuser}@active` })
+
+  
 })
 
 /*
