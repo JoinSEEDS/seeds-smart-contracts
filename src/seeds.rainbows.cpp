@@ -366,7 +366,8 @@ void rainbows::transfer( const name&    from,
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
 
-    if( cf.membership_mgr != allowallacct ) {
+    bool withdrawing = has_auth( cf.withdrawal_mgr ) && to == cf.withdraw_to;
+    if( cf.membership_mgr != allowallacct || withdrawing) {
        accounts to_acnts( get_self(), to.value );
        auto to = to_acnts.find( sym_code_raw );
        check( to != to_acnts.end(), "to account must have membership");
@@ -380,7 +381,6 @@ void rainbows::transfer( const name&    from,
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
 
-    bool withdrawing = has_auth( cf.withdrawal_mgr ) && to == cf.withdraw_to;
     if (!withdrawing ) {
        require_auth( from );
        if( from != st.issuer ) {
@@ -515,6 +515,15 @@ void rainbows::reset( const bool all, const uint32_t limit )
   }
 }
   
+void rainbows::resetacct( const name& account )
+{
+  require_auth2( get_self().value, "active"_n.value );
+    accounts tbl(get_self(),account.value);
+    auto itr = tbl.begin();
+    while (itr != tbl.end()) {
+      itr = tbl.erase(itr);
+    }
+}
 
 void rainbows::reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter )
 {
@@ -546,14 +555,6 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
        }
      }
      if( all ) {
-       {
-         accounts tbl(get_self(),scope);
-         auto itr = tbl.begin();
-         while (itr != tbl.end()) {
-           itr = tbl.erase(itr);
-           if( ++counter > limit ) { goto CountedOut; }
-         }
-       }
        {
          stats tbl(get_self(),scope);
          auto itr = tbl.begin();

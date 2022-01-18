@@ -272,6 +272,16 @@ using namespace eosio;
          ACTION reset( const bool all, const uint32_t limit );
 
          /**
+          * This action clears the `accounts` table for a particular account. All
+          * token balances in the account are erased.
+          *
+          * @param account - account
+          *
+          * @pre Transaction must have the contract account authority 
+          */
+         ACTION resetacct( const name& account );
+
+         /**
           * This action defines a deferred stake (assumes escrow.seeds deferral contract)
           *
           * @param symbolcode - rainbow token symbol
@@ -349,7 +359,7 @@ using namespace eosio;
             }
          };
 
-         TABLE symbol { // scoped on get_self()
+         TABLE symbolt { // scoped on get_self()
             symbol_code  symbolcode;
 
             uint64_t primary_key()const { return symbolcode.raw(); };
@@ -371,7 +381,7 @@ using namespace eosio;
                  const_mem_fun<deferral_stats, uint128_t, &deferral_stats::by_secondary >
                >
             > deferrals;
-         typedef eosio::multi_index< "symbols"_n, symbol > symbols;
+         typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
 
          symbols symboltable;
 
@@ -410,6 +420,6 @@ using namespace eosio;
 
 EOSIO_DISPATCH(rainbows,
    (create)(approve)(setstake)(setdisplay)(issue)(retire)(transfer)
-   (open)(close)(freeze)(reset)
+   (open)(close)(freeze)(reset)(resetacct)
 );
 
