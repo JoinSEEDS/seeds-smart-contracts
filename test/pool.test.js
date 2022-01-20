@@ -231,5 +231,37 @@ describe('Pool transfer and payout', async assert => {
     expected: [ [ -8.3334, 3.3334, -15, 20 ], 0 ]
   })
 
+  console.log('---begin error condition checks---')
+
+  console.log('reset pool')
+  await contracts.pool.reset({ authorization: `${pool}@active` })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('reset token')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('get initial balances')
+  balancesBefore = await Promise.all(allusers.map(user => getBalanceFloat(user)))
+
+  console.log('bad transfer into pool')
+  let actionProperlyBlocked = true
+  try {
+    await contracts.token.transfer(firstuser, `${pool}`, '10.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked = err.toString().includes('the sender is not an allowed account')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying to send user seeds to pool',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
 
 })
