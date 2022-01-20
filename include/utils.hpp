@@ -20,6 +20,7 @@ namespace utils {
   const uint64_t proposal_cycle = moon_cycle;
 
   symbol seeds_symbol = symbol("SEEDS", 4);
+  symbol pool_symbol = symbol("HPOOL", 4);
 
   inline uint64_t linear_rank(uint64_t current, uint64_t total) { 
     /**
