@@ -111,9 +111,6 @@ using namespace eosio;
           * @param stake_per_bucket - the number of stake tokens (e.g. Seeds) staked per "bucket" of tokens,
           * @param stake_token_contract - the staked token contract account (e.g. token.seeds),
           * @param stake_to - the escrow account where stake is held
-          * @param deferral_contract - if == "", no deferral, stake is in liquid tokens; otherwise
-          *   the name of the deferral contract (e.g. escrow.seeds) holding the lock
-          * @param lock_id - lock_id of the parent lock in the deferral contract
           * @param proportional - redeem by proportion of escrow rather than by staking ratio.
           * @param memo - the memo string to accompany the transaction.
           *
@@ -128,8 +125,6 @@ using namespace eosio;
                           const asset&      stake_per_bucket,
                           const name&       stake_token_contract,
                           const name&       stake_to,
-                          const name&       deferral_contract,
-                          const uint64_t&   lock_id,
                           const bool&       proportional,
                           const string&     memo);
 
@@ -281,18 +276,6 @@ using namespace eosio;
           */
          ACTION resetacct( const name& account );
 
-         /**
-          * This action defines a deferred stake (assumes escrow.seeds deferral contract)
-          *
-          * @param symbolcode - rainbow token symbol
-          * @param deferral_contract - contract holding deferred staked tokens
-          * @param parent_lock_id - original record id in deferral contract
-          *
-          * @pre 
-          */
-         ACTION defdeferral( const symbol_code&  symbolcode,
-                             const name&         deferral_contract,
-                             const uint64_t&     parent_lock_id ) ;
 
       private:
          const name allowallacct = "allowallacct"_n;
@@ -338,24 +321,11 @@ using namespace eosio;
             asset    stake_per_bucket;
             name     stake_token_contract;
             name     stake_to;
-            int64_t  deferral_index;
             bool     proportional;
 
             uint64_t primary_key()const { return index; };
             uint128_t by_secondary() const {
                return (uint128_t)stake_per_bucket.symbol.raw()<<64 | stake_token_contract.value;
-            }
-         };
-
-         TABLE deferral_stats {  // scoped on token symbol code
-            uint64_t index;
-            name     deferral_contract;
-            uint64_t parent_lock_id;
-            uint64_t child_lock_id;
-
-            uint64_t primary_key()const { return index; };
-            uint128_t by_secondary() const {
-               return (uint128_t)parent_lock_id<<64 | deferral_contract.value;
             }
          };
 
@@ -376,11 +346,6 @@ using namespace eosio;
                  const_mem_fun<stake_stats, uint128_t, &stake_stats::by_secondary >
                >
             > stakes;
-         typedef eosio::multi_index< "deferrals"_n, deferral_stats, indexed_by
-               < "lockid"_n,
-                 const_mem_fun<deferral_stats, uint128_t, &deferral_stats::by_secondary >
-               >
-            > deferrals;
          typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
 
          symbols symboltable;
@@ -393,28 +358,6 @@ using namespace eosio;
          void stake_one( const stake_stats& sk, const name& owner, const asset& quantity );
          void unstake_one( const stake_stats& sk, const name& owner, const asset& quantity );
          void reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter );
-         /**
-          * Causes ownership transfer of deferred tokens under highly restricted conditions.
-          * Works in cooperation with a separate deferred-token management contract (e.g. `escrow.seeds`)
-          * Within that contract, one locked balance is debited and the other is credited
-          * with quantity tokens.
-          *
-          * @param contract - the deferred-token management contract name,
-          * @param from_lock_id - the account to transfer from,
-          * @param to_lock_id - the account to be transferred to,
-          * @param child - the account to be transferred to,
-          * @param quantity - the quantity of tokens to be transferred,
-          * @param memo - the memo string to accompany the transaction.
-          * 
-          * @pre The contract must have been initialized to accept parent-child transfers
-          */
-         void dtransfer( const name&      contract,
-                         const uint64_t&  from_lock_id,
-                         const uint64_t&  to_lock_id,
-                         const name&      child,
-                         const asset&     quantity,
-                         const string&    memo );
-
  
    };
 

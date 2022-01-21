@@ -142,8 +142,6 @@ void rainbows::setstake( const asset&    token_bucket,
                       const asset&    stake_per_bucket,
                       const name&     stake_token_contract,
                       const name&     stake_to,
-                      const name&     deferral_contract,
-                      const uint64_t& lock_id,
                       const bool&     proportional,
                       const string&   memo )
 {
@@ -170,34 +168,15 @@ void rainbows::setstake( const asset&    token_bucket,
     const auto& cf = configtable.get();
     check( cf.config_locked_until.time_since_epoch() < current_time_point().time_since_epoch(),
            "token reconfiguration is locked" );
-    deferrals defertable( get_self(), sym_code_raw);
-    uint64_t defer_idx = no_index;
-    uint128_t deferral = (uint128_t)lock_id<<64 | deferral_contract.value;
-    if ( deferral_contract != ""_n ) {
-       auto lockid_index = defertable.get_index<"lockid"_n>();
-       auto defer_existing = lockid_index.find( deferral );
-       if ( defer_existing != lockid_index.end() ) {
-          const auto& df = *defer_existing;
-          defer_idx = df.index;
-          check( false, "defer unimplemented, lock_id found" );
-       } else {
-          check( false, "defer unimplemented, no lock_id" );
-       }
-    }
     stakes stakestable( get_self(), sym_code_raw );
     int existing_stake_count = std::distance(stakestable.cbegin(),stakestable.cend());
     check( existing_stake_count <= max_stake_count, "stake count exceeded" );
-    if( defer_idx != no_index ) {
-       check( false, "deferral creation unimplemented" );
-       // TODO move defdeferral( symbolcode, deferral_contract, parent_lock_id ) functionality here
-    }
     const auto& sk = *stakestable.emplace( st.issuer, [&]( auto& s ) {
        s.index                = stakestable.available_primary_key();
        s.token_bucket         = token_bucket;
        s.stake_per_bucket     = stake_per_bucket;
        s.stake_token_contract = stake_token_contract;
        s.stake_to             = stake_to;
-       s.deferral_index       = defer_idx;
        s.proportional         = proportional;
     });
     if( st.supply.amount != 0 ) {
@@ -271,19 +250,15 @@ void rainbows::stake_one( const stake_stats& sk, const name& owner, const asset&
     if( sk.stake_per_bucket.amount > 0 ) {
        asset stake_quantity = sk.stake_per_bucket;
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
-       if( sk.deferral_index == no_index ) {
-          action(
-             permission_level{owner, "active"_n},
-             sk.stake_token_contract,
-             "transfer"_n,
-             std::make_tuple(owner,
-                             sk.stake_to,
-                             stake_quantity,
-                             std::string("rainbow stake"))
-          ).send();
-       } else {
-          // TODO handle deferred stake
-       }
+       action(
+          permission_level{owner, "active"_n},
+          sk.stake_token_contract,
+          "transfer"_n,
+          std::make_tuple(owner,
+                          sk.stake_to,
+                          stake_quantity,
+                          std::string("rainbow stake"))
+       ).send();
     }
 }
 
@@ -301,19 +276,15 @@ void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asse
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
        // TODO (a) if proportional, compute unstake amount based on current escrow balance and note in memo string
        //      (b) if not proportional, check that escrow is fully funded
-       if( sk.deferral_index == no_index ) {
-          action(
-             permission_level{sk.stake_to,"active"_n},
-             sk.stake_token_contract,
-             "transfer"_n,
-             std::make_tuple(sk.stake_to,
-                             owner,
-                             stake_quantity,
-                             std::string("rainbow unstake"))
-          ).send();
-       } else {
-          // TODO handle deferred unstake
-       }
+       action(
+          permission_level{sk.stake_to,"active"_n},
+          sk.stake_token_contract,
+          "transfer"_n,
+          std::make_tuple(sk.stake_to,
+                          owner,
+                          stake_quantity,
+                          std::string("rainbow unstake"))
+       ).send();
     }
 }
 void rainbows::unstake_all( const name& owner, const asset& quantity ) {
@@ -546,14 +517,6 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
          if( ++counter > limit ) { goto CountedOut; }
        }
      }
-     {
-       deferrals tbl(get_self(),scope);
-       auto itr = tbl.begin();
-       while (itr != tbl.end()) {
-         itr = tbl.erase(itr);
-         if( ++counter > limit ) { goto CountedOut; }
-       }
-     }
      if( all ) {
        {
          stats tbl(get_self(),scope);
@@ -565,28 +528,5 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
        }
      }
      CountedOut: return;
-}
-
-void rainbows::defdeferral( const symbol_code&  symbolcode,
-                         const name&         deferral_contract,
-                         const uint64_t&     parent_lock_id )
-{
-   auto sym_code_raw = symbolcode.raw();
-   stats statstable( get_self(), sym_code_raw );
-   const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
-   configs configtable( get_self(), sym_code_raw );
-   auto cf = configtable.get();
-   deferrals defertable( get_self(), sym_code_raw );
-   uint128_t lockid = (uint128_t)parent_lock_id<<64 | deferral_contract.value;
-   auto lockid_index = defertable.get_index<"lockid"_n>();
-   auto existing = lockid_index.find( lockid );
-   // TODO: allow redefinition if supply == 0
-   check( existing == lockid_index.end(), "deferral redefinition not allowed" );
-   const auto& df = *defertable.emplace( st.issuer, [&]( auto& s ) {
-       s.index             = defertable.available_primary_key();
-       s.deferral_contract = deferral_contract;
-       s.parent_lock_id    = parent_lock_id;
-       s.child_lock_id     = no_index;
-    });
 }
 

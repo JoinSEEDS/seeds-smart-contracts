@@ -78,7 +78,7 @@ describe('rainbows', async assert => {
                           { authorization: `${issuer}@active` } )
 
   console.log('set stake')
-  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, '', 0, false, '',
+  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, false, '',
                           { authorization: `${issuer}@active` } )
 
   console.log('approve token')
