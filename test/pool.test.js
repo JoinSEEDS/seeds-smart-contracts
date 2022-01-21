@@ -45,17 +45,21 @@ describe('Pool transfer and payout', async assert => {
     })
   }
 
-  console.log('reset pool')
-  await contracts.pool.reset({ authorization: `${pool}@active` })
+  const setupPool = async () => {
+    console.log('reset pool')
+    await contracts.pool.reset({ authorization: `${pool}@active` })
 
-  console.log('reset accounts')
-  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+    console.log('reset accounts')
+    await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
-  console.log('reset settings')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
+    console.log('reset settings')
+    await contracts.settings.reset({ authorization: `${settings}@active` })
 
-  console.log('reset token')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+    console.log('reset token')
+    await contracts.token.resetweekly({ authorization: `${token}@active` })
+  }
+
+  await setupPool()
 
   console.log('get initial balances')
   let balancesBefore = await Promise.all(users.map(user => getBalanceFloat(user)))
@@ -126,17 +130,7 @@ describe('Pool transfer and payout', async assert => {
   })
 
   console.log('---begin pool token tests---')
-  console.log('reset pool')
-  await contracts.pool.reset({ authorization: `${pool}@active` })
-
-  console.log('reset accounts')
-  await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
-  console.log('reset settings')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
-
-  console.log('reset token')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  await setupPool()
 
   console.log('get initial balances')
   balancesBefore = await Promise.all(allusers.map(user => getBalanceFloat(user)))
@@ -232,18 +226,7 @@ describe('Pool transfer and payout', async assert => {
   })
 
   console.log('---begin error condition checks---')
-
-  console.log('reset pool')
-  await contracts.pool.reset({ authorization: `${pool}@active` })
-
-  console.log('reset accounts')
-  await contracts.accounts.reset({ authorization: `${accounts}@active` })
-
-  console.log('reset settings')
-  await contracts.settings.reset({ authorization: `${settings}@active` })
-
-  console.log('reset token')
-  await contracts.token.resetweekly({ authorization: `${token}@active` })
+  await setupPool()
 
   console.log('get initial balances')
   balancesBefore = await Promise.all(allusers.map(user => getBalanceFloat(user)))
@@ -254,7 +237,7 @@ describe('Pool transfer and payout', async assert => {
     await contracts.token.transfer(firstuser, `${pool}`, '10.0000 SEEDS', '', { authorization: `${firstuser}@active` })
     actionProperlyBlocked = false
   } catch (err) {
-    actionProperlyBlocked = err.toString().includes('the sender is not an allowed account')
+    actionProperlyBlocked &&= err.toString().includes('the sender is not an allowed account')
     console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
   }
   assert({
@@ -263,5 +246,55 @@ describe('Pool transfer and payout', async assert => {
     actual: actionProperlyBlocked,
     expected: true
   })
+
+  console.log(`transfer to ${escrow}`)
+  await Promise.all(users.map((user, index) => contracts.token.transfer(user, escrow, `${10 * (index+1)}.0000 SEEDS`, '', { authorization: `${user}@active` })))
+
+  console.log('bad account name 1')
+  actionProperlyBlocked = true
+  try {
+    await contracts.token.transfer(escrow, `${pool}`, '10.0000 SEEDS', 'BadName', { authorization: `${escrow}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('character is not in allowed character set for names')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+
+  console.log('bad account name 2')
+  try {
+    await contracts.token.transfer(escrow, `${pool}`, '10.0000 SEEDS', 'nosuchacct', { authorization: `${escrow}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('is not an account')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'bad account name in memo field',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+
+  console.log(`transfer ${escrow} to ${pool}`)
+  await Promise.all(users.map((user, index) => contracts.token.transfer(escrow, pool, `${10 * (index+1)}.0000 SEEDS`, user, { authorization: `${escrow}@active` })))
+
+  console.log('transfer bad pool token')
+  actionProperlyBlocked = true
+  try {
+    await contracts.pool.transfer(firstuser, seconduser, '5.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('poolxfr: unknown token')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'bad token name in pool token transfer',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+
+
+
 
 })
