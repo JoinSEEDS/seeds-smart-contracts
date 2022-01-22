@@ -156,6 +156,8 @@ void rainbows::setstake( const asset&    token_bucket,
     check( stake_per_bucket.is_valid(), "invalid stake");
     check( stake_per_bucket.amount >= 0, "stake per token must be non-negative");
     check( is_account( stake_token_contract ), "stake token contract account does not exist");
+    check( stake_sym.code().raw() != sym_code_raw || stake_token_contract != get_self(),
+           "cannot stake own token");
     accounts accountstable( stake_token_contract, st.issuer.value );
     const auto stake_bal = accountstable.find( stake_sym.code().raw() );
     check( stake_bal != accountstable.end(), "issuer must have a stake token balance");
