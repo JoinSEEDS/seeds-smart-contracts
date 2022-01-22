@@ -276,6 +276,12 @@ using namespace eosio;
           */
          ACTION resetacct( const name& account );
 
+         static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
+         {
+            accounts accountstable( token_contract_account, owner.value );
+            const auto& ac = accountstable.get( sym_code.raw() );
+            return ac.balance;
+         }
 
       private:
          const name allowallacct = "allowallacct"_n;

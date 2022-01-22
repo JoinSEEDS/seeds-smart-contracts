@@ -247,7 +247,7 @@ void rainbows::issue( const asset& quantity, const string& memo )
 }
 
 void rainbows::stake_one( const stake_stats& sk, const name& owner, const asset& quantity ) {
-    if( sk.stake_per_bucket.amount > 0 ) {
+    if( sk.stake_per_bucket.amount > 0 ) { // TBD: use stake ratio = 0 as placeholder for proportional?
        asset stake_quantity = sk.stake_per_bucket;
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
        action(
@@ -270,12 +270,29 @@ void rainbows::stake_all( const name& owner, const asset& quantity ) {
 }
 
 void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asset& quantity ) {
-    check( !sk.proportional, "proportional stake not implemented" );
-    if( sk.stake_per_bucket.amount > 0 ) {
-       asset stake_quantity = sk.stake_per_bucket;
+    // get balance in escrow
+    auto stake_in_escrow = get_balance( sk.stake_token_contract, sk.stake_to, sk.stake_per_bucket.symbol.code() );
+    // stake proportion = (qty being unstaked)/(token supply)
+    uint64_t sym_code_raw = sk.token_bucket.symbol.code().raw();
+    stats statstable( get_self(), sym_code_raw );
+    const auto& st = statstable.get( sym_code_raw, "unstake: no symbol" );
+    check( st.supply.amount > 0, "no supply to unstake" );
+    int64_t proportional_amount = (int64_t)((int128_t)stake_in_escrow.amount*quantity.amount/st.supply.amount);
+    asset stake_quantity = sk.stake_per_bucket;
+    string memo;
+    if( sk.proportional) {
+       stake_quantity.amount = proportional_amount;
+       memo = "proportional ";
+    } else {
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
-       // TODO (a) if proportional, compute unstake amount based on current escrow balance and note in memo string
-       //      (b) if not proportional, check that escrow is fully funded
+       if( stake_quantity.amount > proportional_amount ) {
+          // Underfunded. What should we do?
+          check( false, ("can't unstake, escrow underfunded in " +
+                 sk.stake_per_bucket.symbol.code().to_string()).c_str() );
+       }
+    }
+    memo += "rainbow unstake";
+    if( stake_quantity.amount > 0 ) {
        action(
           permission_level{sk.stake_to,"active"_n},
           sk.stake_token_contract,
@@ -283,7 +300,7 @@ void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asse
           std::make_tuple(sk.stake_to,
                           owner,
                           stake_quantity,
-                          std::string("rainbow unstake"))
+                          memo)
        ).send();
     }
 }
@@ -315,12 +332,14 @@ void rainbows::retire( const name& owner, const asset& quantity, const string& m
 
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
 
+    unstake_all( owner, quantity );
+
+    sub_balance( owner, quantity, symbol_code(0) );
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
     });
 
-    sub_balance( owner, quantity, symbol_code(0) );
-    unstake_all( owner, quantity );
+
 }
 
 void rainbows::transfer( const name&    from,
