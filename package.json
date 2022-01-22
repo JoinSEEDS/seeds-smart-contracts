@@ -29,7 +29,7 @@
     "json": "^9.0.6",
     "mocha": "^6.1.4",
     "moment": "^2.24.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^3.1.1",
     "ramda": "^0.26.1",
     "riteway": "^6.0.3",
     "tap-nirvana": "^1.1.0"
