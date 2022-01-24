@@ -997,6 +997,10 @@ void proposals::create_aux (
     }
   }
 
+  // funding campaigns are disabled since proposal 5
+  check(campaign_type != campaign_funding_type, "Funding campaigns are disabled."), 
+
+
   check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
 
