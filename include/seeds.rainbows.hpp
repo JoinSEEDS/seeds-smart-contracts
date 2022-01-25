@@ -279,8 +279,11 @@ using namespace eosio;
          static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );
-            const auto& ac = accountstable.get( sym_code.raw() );
-            return ac.balance;
+            const auto ac = accountstable.find( sym_code.raw() );
+            if( ac == accountstable.end() ) {
+               return null_asset;
+            }
+            return ac->balance;
          }
 
       private:
@@ -288,6 +291,7 @@ using namespace eosio;
          const name deletestakeacct = "deletestake"_n;
          const int max_stake_count = 8; // don't use too much cpu time to complete transaction
          const uint64_t no_index = static_cast<uint64_t>(-1); // flag for nonexistent defer_table link
+         static const asset null_asset;
 
          TABLE account { // scoped on account name
             asset    balance;

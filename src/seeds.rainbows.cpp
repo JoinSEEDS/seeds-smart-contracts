@@ -551,3 +551,4 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
      CountedOut: return;
 }
 
+const asset rainbows::null_asset = asset();
