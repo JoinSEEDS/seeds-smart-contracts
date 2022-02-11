@@ -128,6 +128,8 @@ CONTRACT proposals : public contract {
       ACTION fixcycstat(uint64_t delete_round);
       ACTION testisbanned(name account);
 
+      ACTION migcampaign ( uint64_t start, uint64_t chunksize );
+
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
       name trust = "trust"_n;
@@ -143,6 +145,7 @@ CONTRACT proposals : public contract {
       name status_evaluate = name("evaluate");
       name status_passed = name("passed");
       name status_rejected = name("rejected");
+      name status_inactive = name("inactive");
 
       // stages
       name stage_staged = name("staged"); // 1 staged: can be cancelled, edited
@@ -476,7 +479,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
         (reevalprop)
-        (testalliance)(migalliances)
+        (testalliance)(migalliances)(migcampaign)
         (fixdesc)(applyfixprop)(backfixprop)
         (revertvote)(mimicrevert)
         (rewind)(fixcycstat)
