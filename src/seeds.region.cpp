@@ -196,6 +196,25 @@ ACTION region::create(
     });
 }
 
+
+ACTION region::update(
+    name region, 
+    string description, 
+    string locationJson, 
+    float latitude, 
+    float longitude) 
+    {
+        auto ritr = regions.require_find(region.value, "The region does not exist.");
+        require_auth(ritr->founder);
+
+        regions.modify(ritr, _self, [&](auto& item) {
+            item.description = description;
+            item.locationjson = locationJson;
+            item.latitude = latitude;
+            item.longitude = longitude;
+        });
+}
+
 ACTION region::createacct(name region, string publicKey) {
     auto ritr = regions.require_find(region.value, "region not found");
 

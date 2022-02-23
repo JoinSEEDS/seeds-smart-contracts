@@ -36,6 +36,13 @@ CONTRACT region : public contract {
             float latitude, 
             float longitude);
 
+        ACTION update(
+            name rgnaccount, 
+            string description, 
+            string locationJson, 
+            float latitude, 
+            float longitude);
+
         ACTION createacct(name region, string publicKey);
 
         ACTION join(name region, name account);
@@ -196,7 +203,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   } else if (code == receiver) {
       switch (action) {
           EOSIO_DISPATCH_HELPER(region, (reset)(create)(createacct)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removergn))
+          (removemember)(leaverole)(setfounder)(removergn)(update))
       }
   }
 }
