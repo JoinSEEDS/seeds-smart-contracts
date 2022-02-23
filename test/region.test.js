@@ -265,9 +265,6 @@ describe("regions general", async assert => {
     actual: onlyCreateOnce,
     expected: true
   })
-
-  console.log("regionsAfterUpdate " + JSON.stringify(regionsAfterUpdate, null, 2))
-
   
   assert({
     given: 'region updated',
