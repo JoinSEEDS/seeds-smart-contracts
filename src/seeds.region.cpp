@@ -144,6 +144,7 @@ void region::deposit(name from, name to, asset quantity, string memo) {
 ACTION region::create(
     name founder, 
     name rgnaccount, 
+    string title, 
     string description, 
     string locationJson, 
     float latitude, 
@@ -180,6 +181,7 @@ ACTION region::create(
         item.id = rgnaccount;
         item.founder = founder;
         item.status = status_inactive;
+        item.title = title;
         item.description = description;
         item.locationjson = locationJson;
         item.latitude = latitude;
@@ -199,6 +201,7 @@ ACTION region::create(
 
 ACTION region::update(
     name region, 
+    string title, 
     string description, 
     string locationJson, 
     float latitude, 
@@ -208,6 +211,7 @@ ACTION region::update(
         require_auth(ritr->founder);
 
         regions.modify(ritr, _self, [&](auto& item) {
+            item.title = title;
             item.description = description;
             item.locationjson = locationJson;
             item.latitude = latitude;

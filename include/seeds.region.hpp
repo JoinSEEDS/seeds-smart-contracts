@@ -31,6 +31,7 @@ CONTRACT region : public contract {
         ACTION create(
             name founder, 
             name rgnaccount, 
+            string title, 
             string description, 
             string locationJson, 
             float latitude, 
@@ -38,6 +39,7 @@ CONTRACT region : public contract {
 
         ACTION update(
             name rgnaccount, 
+            string title, 
             string description, 
             string locationJson, 
             float latitude, 
@@ -92,6 +94,7 @@ CONTRACT region : public contract {
             name id;
             name founder;
             name status; // "active" "inactive"
+            string title;
             string description;
             string locationjson; // json description of the area
             float latitude;
