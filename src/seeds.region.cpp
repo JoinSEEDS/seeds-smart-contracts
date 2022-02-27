@@ -147,8 +147,8 @@ ACTION region::create(
     string title, 
     string description, 
     string locationJson, 
-    float latitude, 
-    float longitude) 
+    double latitude, 
+    double longitude) 
 {
     require_auth(founder);
     check_user(founder);
@@ -204,8 +204,8 @@ ACTION region::update(
     string title, 
     string description, 
     string locationJson, 
-    float latitude, 
-    float longitude) 
+    double latitude, 
+    double longitude) 
     {
         auto ritr = regions.require_find(region.value, "The region does not exist.");
         require_auth(ritr->founder);

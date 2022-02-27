@@ -34,16 +34,16 @@ CONTRACT region : public contract {
             string title, 
             string description, 
             string locationJson, 
-            float latitude, 
-            float longitude);
+            double latitude, 
+            double longitude);
 
         ACTION update(
             name rgnaccount, 
             string title, 
             string description, 
             string locationJson, 
-            float latitude, 
-            float longitude);
+            double latitude, 
+            double longitude);
 
         ACTION createacct(name region, string publicKey);
 
@@ -97,8 +97,8 @@ CONTRACT region : public contract {
             string title;
             string description;
             string locationjson; // json description of the area
-            float latitude;
-            float longitude;
+            double latitude;
+            double longitude;
             uint64_t members_count;
             time_point created_at = current_block_time().to_time_point();
 
