@@ -678,7 +678,7 @@ program
     })
   })
 
-program
+  program
   .command('hypha')
   .description('Get HYPHA balances for all accounts')
   .action(async function () {
@@ -687,6 +687,18 @@ program
       contract: "token.hypha",
       symbol: "HYPHA",
       prefix: "HYPHA_"
+    })
+  })
+
+  program
+  .command('husd')
+  .description('Get HUSD balances for all accounts')
+  .action(async function () {
+    console.log("getting HUSD balances");
+    await getAnyTokenHolders({
+      contract: "husd.hypha",
+      symbol: "HUSD",
+      prefix: "HUSD_"
     })
   })
 
