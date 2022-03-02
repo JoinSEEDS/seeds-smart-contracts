@@ -16,19 +16,45 @@ using namespace eosio;
     * https://rieki-cordon.medium.com/1fb713efd9b1 .
     * In the development process we are building on the eosio.token code. 
     *
-    * The token contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains. It exemplifies one way to implement a smart contract which allows for creation and management of tokens.
+    * The token contract defines the structures and actions that allow users to create, issue, and manage
+    * tokens for EOSIO based blockchains. It exemplifies one way to implement a smart contract which
+    * allows for creation and management of tokens.
     * 
-    * The `rainbows` contract class also implements two useful public static methods: `get_supply` and `get_balance`. The first allows one to check the total supply of a specified token, created by an account and the second allows one to check the balance of a token for a specified account (the token creator account has to be specified as well).
+    * The `rainbows` contract class also implements a public static method: `get_balance`. This allows
+    * one to check the balance of a token for a specified account.
     * 
-    * The `rainbows` contract manages the set of tokens, stakes, accounts and their corresponding balances, by using four internal multi-index structures: the `accounts`, `stats`, `configs`, and `stakes`. The `accounts` multi-index table holds, for each row, instances of `account` object and the `account` object holds information about the balance of one token. The `accounts` table is scoped to an eosio account, and it keeps the rows indexed based on the token's symbol.  This means that when one queries the `accounts` multi-index table for an account name the result is all the tokens that account holds at the moment.
+    * The `rainbows` contract manages the set of tokens, stakes, accounts and their corresponding balances,
+    * by using four internal tables: the `accounts`, `stats`, `configs`, and `stakes`. The `accounts`
+    * multi-index table holds, for each row, instances of `account` object and the `account` object
+    * holds information about the balance of one token. The `accounts` table is scoped to an eosio
+    * account, and it keeps the rows indexed based on the token's symbol.  This means that when one
+    * queries the `accounts` multi-index table for an account name the result is all the tokens under
+    * this contract that account holds at the moment.
     * 
-    * Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each row, which contains information about current supply, maximum supply, and the creator account. The `stats` table is scoped to the token symbol_code. Therefore, when one queries the `stats` table for a token symbol the result is one single entry/row corresponding to the queried symbol token if it was previously created, or nothing, otherwise.
+    * Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each
+    * row, which contains information about current supply, maximum supply, and the creator account.
+    * The `stats` table is scoped to the token symbol_code. Therefore, when one queries the `stats`
+    * table for a token symbol the result is one single entry/row corresponding to the queried symbol
+    * token if it was previously created, or nothing, otherwise.
     *
-    * The first two tables (`accounts` and `stats`) are structured identically to the `eosio.token` tables, making "rainbow tokens" compatible with most EOSIO wallet and block explorer applications. The two remaining tables (`configs` and `stakes`) provide additional data specific to the rainbow token.
+    * The first two tables (`accounts` and `stats`) are structured identically to the `eosio.token`
+    * tables, making "rainbow tokens" compatible with most EOSIO wallet and block explorer applications.
+    * The two remaining tables (`configs` and `stakes`) provide additional data specific to the rainbow
+    * token.
     *
-    * The `configs` table contains names of administration accounts (e.g. membership_mgr, freeze_mgr) and some configuration flags. The `configs` table is scoped to the token symbol_code and has a single row per scope.
+    * The `configs` singleton table contains names of administration accounts (e.g. membership_mgr,
+    * freeze_mgr) and some configuration flags. The `configs` table is scoped to the token symbol_code
+    * and has a single row per scope.
     *
-    * The `stakes` table contains staking relationships (staked currency, staking ratio, escrow account). It is scoped by the token symbol_code and may contain 1 or more rows. It has a secondary index based on the staked currency type.
+    * The `stakes` table contains staking relationships (staked currency, staking ratio, escrow account).
+    * It is scoped by the token symbol_code and may contain 1 or more rows. It has a secondary index
+    * based on the staked currency type.
+    *
+    * In addition, the `displays` singleton table contains json metadata intended for applications
+    * (e.g. wallets) to use in UI display, such as a logo symbol url. It is scoped by token symbol_code.
+    *
+    * The `symbols` table is a housekeeping list of all the tokens managed by the contract. It is
+    * scoped to the contract.
     */
 
    CONTRACT rainbows : public contract {
@@ -49,7 +75,7 @@ using namespace eosio;
           *
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token,
-          * @param membership_mgr - the account with authority to whitelist accounts to send tokens,
+          * @param membership_mgr - the account with authority to whitelist accounts to transfer tokens,
           * @param withdrawal_mgr - the account with authority to withdraw tokens from any account,
           * @param withdraw_to - the account to which withdrawn tokens are deposited,
           * @param freeze_mgr - the account with authority to freeze transfer actions,
@@ -67,11 +93,10 @@ using namespace eosio;
           *   the config_locked field in the configtable row must be in the past,
           * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 2^62 - 1.
           * @pre Maximum supply must be positive,
-          * @pre membership manager must be an existing account,
+          * @pre membership manager must be an existing account, or the reserved "allow all" account name
           * @pre withdrawal manager must be an existing account,
           * @pre withdraw_to must be an existing account,
           * @pre freeze manager must be an existing account,
-          * @pre membership manager must be an existing account;
           * @pre redeem_locked_until must specify a time within +100/-10 yrs of now;
           * @pre config_locked_until must specify a time within +100/-10 yrs of now;
           * @pre cred_limit_symbol must be an existing token of matching precision on this contract, or empty
@@ -120,6 +145,8 @@ using namespace eosio;
           * @pre stake_per_bucket must be non-negative
           * @pre issuer active permissions must include rainbowcontract@eosio.code
           * @pre stake_to active permissions must include rainbowcontract@eosio.code
+          *
+          * Note: the contract cannot internally check the required permissions status
           */
          ACTION setstake( const asset&      token_bucket,
                           const asset&      stake_per_bucket,
@@ -145,12 +172,12 @@ using namespace eosio;
 
 
          /**
-          * Allows `issuer` account to create or update display metadata for a token. All fields
-          * except `name` and `json_meta` are expected to be urls. Issuer pays for RAM.
+          * Allows `issuer` account to create or update display metadata for a token.
+          * Issuer pays for RAM.
           * The currency_display table is intended for apps to access (e.g. via nodeos chain API).
           *
-          * @param symbol_code - the token,
-          * @param metadata - json string of metadata. Minimum expected fields are
+          * @param symbolcode - the token,
+          * @param json_meta - json string of metadata. Minimum expected fields are
           *      name - human friendly name of token, max 32 char
           *      logo - url pointing to a small png or gif image (typ. 128x128 with transparency)
           *   Recommended fields are
@@ -171,7 +198,6 @@ using namespace eosio;
           *  This action issues a `quantity` of tokens to the issuer account, and transfers
           *  a proportional amount of stake to escrow if staking is configured.
           *
-          * @param to - the account to issue tokens to, it must be the same as the issuer,
           * @param quantity - the amount of tokens to be issued,
           * @memo - the memo string that accompanies the token issue transaction.
           * 
