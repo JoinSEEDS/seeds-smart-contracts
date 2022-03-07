@@ -375,6 +375,84 @@ const getAllHistory = async () => {
 
 }
 
+const get_tlos_history = async (
+  account,
+  skip,
+  limit,
+) => {
+
+const url = `https://api.telosfoundation.io/v2/history/get_actions?account=${account}&act.account=eosio.token&act.name=transfer&skip=${skip}&limit=${limit}&sort=desc`
+
+const rawResponse = await fetch(url, {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    },
+    //body: JSON.stringify(params)
+});
+const res = await rawResponse.json();
+return res
+
+}
+
+const getTelosHistory = async (account, minimum = 0) => {
+
+  items = []
+  skip = 0
+  limit = 400
+  hasMoreData = true
+
+  transfers = ""
+
+  while (hasMoreData) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_tlos_history(account, skip, limit)
+    newItems = newItems.actions
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
+    newItems.forEach(item => {
+      items.push(item)
+      const act = item.act
+      const data = act.data
+      if (
+        act.account == "eosio.token" &&
+        act.name == "transfer" &&
+        data.from == account) {
+          line = 
+            item.global_sequence + "," +
+            item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          var txid = data.amount > 2.5 ? item.trx_id : ""
+
+          console.log(data.quantity + " " + data.from + " ==> "+ data.to + " " + item.timestamp + " " + data.memo + " " + txid)
+
+          //console.log("line: "+line)
+        }
+    });
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+
+
+  }
+
+  console.log("=========================================================================")
+  console.log("all transfers: ")
+  console.log(transfers)
+
+  fs.writeFileSync(snapshotDirPath + `telos_history_transfers.csv`, transfers)
+
+}
+
 const getDAOHistory = async () => {
 
   items = []
@@ -716,6 +794,14 @@ program
   .action(async function () {
     console.log("getting DAO history");
     await getDAOHistory()
+  })
+
+program
+  .command('telos <account>')
+  .description('Get TLOS token history')
+  .action(async function (account) {
+    console.log("getting TLOS token history");
+    await getTelosHistory(account)
   })
 
 
