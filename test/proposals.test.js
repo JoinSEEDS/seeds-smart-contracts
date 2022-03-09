@@ -2633,7 +2633,7 @@ describe("invite campaigns", async assert => {
 
 })
 
-describe.only('Alliance campaigns', async assert => {
+describe('Alliance campaigns', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -3308,6 +3308,61 @@ describe('Stake burn in rejected proposals', async assert => {
     should: 'burn stake',
     actual: finalBalances[1] - stakeBalances[1],
     expected: 0
+  })
+
+})
+
+describe.only('Alliance proposals max ask', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('set settings')
+  await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  await contracts.proposals.createx(firstuser, firstuser, '300000.0000 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  var canCreateAllianceBelowMax = true
+
+  var canCreateAllianceOverMax = false
+  try {
+    await contracts.proposals.createx(firstuser, firstuser, '300000.7777 SEEDS', '4', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+    canCreateAllianceOverMax = true
+  } catch (err) {
+    console.log("can't create alliance over max ask - expected.")
+  }
+
+  assert({
+    given: 'try to create alliance exceeding max ask',
+    should: 'not work',
+    actual: canCreateAllianceOverMax,
+    expected: false
+  })
+
+  assert({
+    given: 'try to create alliance',
+    should: 'work',
+    actual: canCreateAllianceBelowMax,
+    expected: true
   })
 
 })

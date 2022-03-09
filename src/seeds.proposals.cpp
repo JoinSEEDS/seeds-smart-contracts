@@ -995,6 +995,12 @@ void proposals::create_aux (
     } else {
       check_percentages(pay_percentages);
     }
+
+    // enforce max limit
+    if (campaign_type == alliance_type) {
+      asset max_alliance_quantity =  asset(uint64_t(3000000000), seeds_symbol);
+      check(quantity <= max_alliance_quantity, "Alliance grants quantity cannot be greater than 300,000 SEEDS");
+    }
   }
 
   // funding campaigns are disabled since proposal 5
