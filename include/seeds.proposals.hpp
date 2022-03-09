@@ -164,6 +164,10 @@ CONTRACT proposals : public contract {
       name campaign_funding_type = "cmp.funding"_n;
       name milestone_type = "milestone"_n;
 
+      asset max_alliance_quantity = asset(uint64_t(3000000000), seeds_symbol);
+      asset max_invite_campaign_quantity = asset(uint64_t(3330000000), seeds_symbol);
+      asset max_max_amount_per_invite = asset(uint64_t(10000000), seeds_symbol);
+
       std::vector<name> scopes = {
         alliance_type,
         get_self(),
