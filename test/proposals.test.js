@@ -3312,7 +3312,7 @@ describe('Stake burn in rejected proposals', async assert => {
 
 })
 
-describe.only('Alliance proposals max ask', async assert => {
+describe.only('Alliance and invite proposals max ask', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -3336,12 +3336,18 @@ describe.only('Alliance proposals max ask', async assert => {
 
   console.log('join users')
   await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
-
-  console.log('create proposal')
   await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
 
+  console.log('create proposal')
   await contracts.proposals.createx(firstuser, firstuser, '300000.0000 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
   var canCreateAllianceBelowMax = true
+
+  console.log('create invite proposal')
+  await contracts.proposals.createinvite(
+    firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+    campaignbank, '1000.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+  
+  var canCreateInviteBelowMax = true
 
   var canCreateAllianceOverMax = false
   try {
@@ -3349,6 +3355,39 @@ describe.only('Alliance proposals max ask', async assert => {
     canCreateAllianceOverMax = true
   } catch (err) {
     console.log("can't create alliance over max ask - expected.")
+  }
+
+  var canCreateInviteOverMaxTotal = false
+  try {
+    console.log('create invite proposal over max total')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333001.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '1000.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInviteOverMaxTotal = true
+  } catch (err) {
+    console.log("create invite proposal over max total fails - expected.")
+  }
+
+  var canCreateInviteOverMaxInviteMax = false
+  try {
+    console.log('create invite proposal over max invite')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '1001.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInviteOverMaxInviteMax = true
+  } catch (err) {
+    console.log("create invite proposal over max invite fails - expected.")
+  }
+  
+  var canCreateInvitePlantedOverMaxInvite = false
+  try {
+    console.log('create invite proposal over max invite')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '100.0000 SEEDS', '101.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInvitePlantedOverMaxInvite = true
+  } catch (err) {
+    console.log("create invite proposal over max invite fails - expected.")
   }
 
   assert({
@@ -3363,6 +3402,25 @@ describe.only('Alliance proposals max ask', async assert => {
     should: 'work',
     actual: canCreateAllianceBelowMax,
     expected: true
+  })
+  
+  assert({
+    given: 'try to create invite exceeding max ask',
+    should: 'not work',
+    actual: canCreateInviteOverMaxTotal,
+    expected: false
+  })
+  assert({
+    given: 'try to create invite exceeding max invite',
+    should: 'not work',
+    actual: canCreateInviteOverMaxInviteMax,
+    expected: false
+  })
+  assert({
+    given: 'try to create invite planted > invite',
+    should: 'not work',
+    actual: canCreateInvitePlantedOverMaxInvite,
+    expected: false
   })
 
 })
