@@ -995,6 +995,15 @@ void proposals::create_aux (
     } else {
       check_percentages(pay_percentages);
     }
+
+    // enforce max limit
+    if (campaign_type == alliance_type) {
+      check(quantity <= max_alliance_quantity, "Alliance grants quantity cannot be greater than 300,000 SEEDS");
+    }
+  } else {
+    // enforce max on invite campaigns
+    check(quantity <= max_invite_campaign_quantity, "Invite campaign quantity cannot be greater than 333,000 SEEDS");
+    check(max_amount_per_invite <= max_max_amount_per_invite, "Invite max amount per invite is 1,000 SEEDS");
   }
 
   // funding campaigns are disabled since proposal 5
@@ -1096,6 +1105,8 @@ void proposals::createinvite (
   uint64_t max_reward = config_get("inv.max.rwrd"_n);
   check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
   
+  check(max_amount_per_invite >= planted, "max amount must be >= planted");
+
   std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0, 0};
   create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
 
