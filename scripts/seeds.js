@@ -18,6 +18,12 @@ const { deployAllContracts, updatePermissions, resetByName,
 
 
 const getContractLocation = (contract) => {
+    if (contract == 'sale') {
+      return {
+        source: `./src/hypha.${contract}.cpp`,
+        include: ""
+      }  
+    }
     return {
       source: `./src/seeds.${contract}.cpp`,
       include: ""
