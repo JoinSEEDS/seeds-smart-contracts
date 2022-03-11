@@ -90,6 +90,14 @@ const exchangeKeys = {
 
 const exchangePublicKey = exchangeKeys[chainId]
 
+const saleKeys = {
+  [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
+  [networks.telosTestnet]: 'EOS7yHExhTMu1m23vAXHzMSBG632ry7yeas73TwBvFf13bEZCXfPP',
+  [networks.telosMainnet]: 'EOS5BQFjd2cSg9d7gWQ2cYzn6GyhzapKkzPG2m5V3Q7A9tt2vkHDm', 
+}
+
+const salePublicKey = saleKeys[chainId]
+
 const freePublicKey = 'EOS8UAPG5qSWetotJjZizQKbXm8dkRF2BGFyZdub8GbeRbeXeDrt9'
 
 const account = (accountName, quantity = '0.0000 SEEDS', pubkey = activePublicKey) => ({
@@ -178,6 +186,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      sale: contract('buy.hypha', 'sale'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -219,6 +228,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      sale: contract('buy.hypha', 'sale'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -268,6 +278,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      sale: contract('buy.hypha', 'sale'),
     }
   } else {
     throw new Error(`${network} deployment not supported`)
@@ -314,6 +325,9 @@ var permissions = [{
 }, {
   target: `${accounts.exchange.account}@active`,
   actor: `${accounts.exchange.account}@eosio.code`
+}, {
+  target: `${accounts.sale.account}@active`,
+  actor: `${accounts.sale.account}@eosio.code`
 }, {
   target: `${accounts.accounts.account}@owner`, // probably don't need this
   actor: `${accounts.accounts.account}@eosio.code`
@@ -369,6 +383,15 @@ var permissions = [{
   key: exchangePublicKey,
   parent: 'active'
 }, {
+  target: `${accounts.sale.account}@purchase`,
+  key: salePublicKey,
+  parent: 'active'
+  // commenting out update - not sure what hat is for, I don't think it's used.
+// }, {
+//   target: `${accounts.sale.account}@update`, // TODO what is this?
+//   key: salePublicKey,
+//   parent: 'active'
+}, {
   target: `${accounts.accounts.account}@api`,
   action: 'subrep'
 }, {
@@ -398,6 +421,12 @@ var permissions = [{
 }, {
   target: `${accounts.exchange.account}@update`,
   action: 'updatetlos'
+}, {
+  target: `${accounts.sale.account}@purchase`,
+  action: 'newpayment'
+// }, {
+//   target: `${accounts.sale.account}@update`,
+//   action: 'updatetlos'
 }, {
   target: `${accounts.onboarding.account}@active`,
   actor: `${accounts.onboarding.account}@eosio.code`
@@ -494,6 +523,10 @@ var permissions = [{
   target: `${accounts.exchange.account}@execute`,
   key: activePublicKey,
   parent: 'active'
+// }, {
+//   target: `${accounts.sale.account}@execute`, // permission for the scheduler - not needed TODO
+//   key: activePublicKey,
+//   parent: 'active'
 }, {
   target: `${accounts.harvest.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
@@ -510,6 +543,10 @@ var permissions = [{
   target: `${accounts.exchange.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
+  // TODO - do we need scheduler? Probably not.
+//   target: `${accounts.sale.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
   target: `${accounts.scheduler.account}@execute`,
   actor: `${accounts.scheduler.account}@active`
 }, {
@@ -531,9 +568,18 @@ var permissions = [{
   target: `${accounts.exchange.account}@execute`,
   action: 'onperiod'
 }, {
-  target: `${accounts.exchange.account}@execute`,
-  action: 'incprice'
-}, {
+
+// Scheduler disabled for hypha sale  
+//   target: `${accounts.sale.account}@execute`,
+//   action: 'onperiod'
+// }, {
+//   target: `${accounts.exchange.account}@execute`,
+//   action: 'incprice'
+// NOTE: comment this back in if we want our scheduler to be able to call incprice. 
+// }, {
+//   target: `${accounts.sale.account}@execute`, // comment this out for now, we don't want to automate this
+//   action: 'incprice'
+// }, {
   target: `${accounts.scheduler.account}@execute`,
   action: 'test1'
 }, {
