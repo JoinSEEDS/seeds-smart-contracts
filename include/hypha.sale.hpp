@@ -30,7 +30,7 @@ CONTRACT sale : public contract {
 
     ACTION onhusd(name from, name to, asset quantity, string memo);
     
-    ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue);
+    ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentQuantity, string paymentId, uint64_t multipliedUsdValue);
 
     ACTION updatetlos(asset tlos_per_usd);
     
@@ -94,6 +94,7 @@ CONTRACT sale : public contract {
       uint64_t id;
       name recipientAccount;
       string paymentSymbol;
+      string paymentQuantity;
       string paymentId;
       uint64_t multipliedUsdValue;
 

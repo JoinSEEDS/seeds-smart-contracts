@@ -1,4 +1,4 @@
-#include <seeds.sale.hpp>
+#include <hypha.sale.hpp>
 #include <cmath>
 
 void sale::reset() {
@@ -18,7 +18,7 @@ void sale::reset() {
   unpause();
   setflag(tlos_paused_flag, 1);
 
-  check(false, "Comment this out- safety stop. Always check in uncommented. ");
+  // check(false, "Comment this out- safety stop. Always check in uncommented. ");
   
   sold.remove();
 
@@ -193,6 +193,7 @@ void sale::ontransfer(name buyer, name contract, asset tlos_quantity, string mem
       item.id = payhistory.available_primary_key();
       item.recipientAccount = buyer;
       item.paymentSymbol = "TLOS";
+      item.paymentQuantity = tlos_quantity.to_string();
       item.paymentId = paymentId;
       item.multipliedUsdValue = usd_asset.amount;
     });
@@ -232,6 +233,7 @@ void sale::on_husd(name from, name to, asset quantity, string memo) {
       item.id = payhistory.available_primary_key();
       item.recipientAccount = from;
       item.paymentSymbol = "HUSD";
+      item.paymentQuantity = quantity.to_string();
       item.paymentId = paymentId;
       item.multipliedUsdValue = usd_asset.amount;
     });
@@ -249,7 +251,7 @@ void sale::on_husd(name from, name to, asset quantity, string memo) {
 
 
 
-void sale::newpayment(name recipientAccount, string paymentSymbol, string paymentId, uint64_t multipliedUsdValue) {
+void sale::newpayment(name recipientAccount, string paymentSymbol, string paymentQuantity, string paymentId, uint64_t multipliedUsdValue) {
 
     require_auth(get_self());
  
@@ -269,6 +271,7 @@ void sale::newpayment(name recipientAccount, string paymentSymbol, string paymen
       item.id = payhistory.available_primary_key();
       item.recipientAccount = recipientAccount;
       item.paymentSymbol = paymentSymbol;
+      item.paymentQuantity = paymentQuantity;
       item.paymentId = paymentId;
       item.multipliedUsdValue = multipliedUsdValue;
     });

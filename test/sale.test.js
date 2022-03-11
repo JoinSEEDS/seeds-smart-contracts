@@ -32,11 +32,14 @@ describe('Sale', async assert => {
   let seeds_per_usd = 100
   //await contracts.sale.updateusd(""+seeds_per_usd + ".0000 SEEDS", { authorization: `${sale}@active` })
 
-  console.log(`update TLOS rate - tlos per usd`)
+  console.log(`update TLOS rate - tlos per usd 1`)
   await contracts.sale.updatetlos("3.0000 SEEDS", { authorization: `${sale}@active` })
+
+  console.log(`onperiod`)
 
   await contracts.sale.onperiod({ authorization: `${sale}@active` })
 
+  console.log(`initrounds`)
   await contracts.sale.initrounds( (1100000) * 10000, "100.0000 SEEDS", { authorization: `${sale}@active` })
 
   //console.log(`transfer ${tlosQuantity} from ${firstuser} to ${sale}`)
@@ -197,7 +200,7 @@ describe('Token Sale Rounds', async assert => {
   console.log(`update daily limits`)
   await contracts.sale.updatelimit("2500000.0000 SEEDS", "10000.0000 SEEDS", "3.0000 SEEDS", { authorization: `${sale}@active` })
   
-  console.log(`update TLOS rate - tlos per usd`)
+  console.log(`update TLOS rate - tlos per usd 2`)
   await contracts.sale.updatetlos("3.0000 SEEDS", { authorization: `${sale}@active` })
       
   console.log(`init token sale rounds`)
