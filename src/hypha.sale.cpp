@@ -170,6 +170,8 @@ void sale::ontransfer(name buyer, name contract, asset tlos_quantity, string mem
     tlos_quantity.symbol == tlos_symbol                 // TLOS symbol
   ) {
 
+    check(false, "TLOS sale disabled - need to implement use of oracle for price");
+
     check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
     configtable c = config.get();
@@ -218,6 +220,8 @@ void sale::onhusd(name from, name to, asset quantity, string memo) {
 
 void sale::on_husd(name from, name to, asset quantity, string memo) {
     uint64_t usd_amount = quantity.amount * 100;
+
+    check(false, "HUSD sale disabled");
 
     check(quantity.symbol == husd_symbol, "wrong symbol");
 
