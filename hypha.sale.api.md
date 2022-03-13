@@ -174,3 +174,112 @@ Connection: close
 }
 
 ```
+
+## Price History
+
+Shows historic prices - the last entry is the current price. 
+
+Date shows when the price changed - date is in UTC
+
+```
+cleost --print-request get table buy.hypha buy.hypha pricehistory
+REQUEST:
+---------------------
+POST /v1/chain/get_table_rows HTTP/1.0
+Host: test.hypha.earth
+content-length: 277
+Accept: */*
+Connection: close
+
+{
+  "json": true,
+  "code": "buy.hypha",
+  "scope": "buy.hypha",
+  "table": "pricehistory",
+  "table_key": "",
+  "lower_bound": "",
+  "upper_bound": "",
+  "limit": 10,
+  "key_type": "",
+  "index_position": "",
+  "encode_type": "dec",
+  "reverse": false,
+  "show_payer": false
+}
+---------------------
+{
+  "rows": [{
+      "id": 0,
+      "hypha_usd": "1.00 USD",
+      "date": "2022-03-13T16:05:39.500"
+    },{
+      "id": 1,
+      "hypha_usd": "1.10 USD",
+      "date": "2022-03-13T16:17:07.000"
+    }
+  ],
+  "more": false,
+  "next_key": ""
+}
+
+```
+
+## Pay History
+
+A history of payments made
+
+```
+❯ cleost --print-request get table buy.hypha buy.hypha payhistory  
+REQUEST:
+---------------------
+POST /v1/chain/get_table_rows HTTP/1.0
+Host: test.hypha.earth
+content-length: 275
+Accept: */*
+Connection: close
+
+{
+  "json": true,
+  "code": "buy.hypha",
+  "scope": "buy.hypha",
+  "table": "payhistory",
+  "table_key": "",
+  "lower_bound": "",
+  "upper_bound": "",
+  "limit": 10,
+  "key_type": "",
+  "index_position": "",
+  "encode_type": "dec",
+  "reverse": false,
+  "show_payer": false
+}
+---------------------
+{
+  "rows": [{
+      "id": 0,
+      "recipientAccount": "seedsuserccc",
+      "paymentSymbol": "BTC",
+      "paymentQuantity": "0.000005",
+      "paymentId": "1e52352fbe556cb4179fa2e0e71e968c7af3f3cfcbc4c49008b7f0c60bb3d9c36",
+      "multipliedUsdValue": 10000
+    },{
+      "id": 1,
+      "recipientAccount": "seedsuserccc",
+      "paymentSymbol": "BTC",
+      "paymentQuantity": "0.000005",
+      "paymentId": "2e52352fbe556cb4179fa2e0e71e968c7af3f3cfcbc4c49008b7f0c60bb3d9c36",
+      "multipliedUsdValue": 1000000000
+    },{
+      "id": 2,
+      "recipientAccount": "seedsuserccc",
+      "paymentSymbol": "BTC",
+      "paymentQuantity": "0.000005",
+      "paymentId": "3e52352fbe556cb4179fa2e0e71e968c7af3f3cfcbc4c49008b7f0c60bb3d9c36",
+      "multipliedUsdValue": 11000
+    }
+  ],
+  "more": false,
+  "next_key": ""
+}
+
+```
