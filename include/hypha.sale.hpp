@@ -5,6 +5,7 @@
 #include <contracts.hpp>
 #include <tables.hpp>
 #include <tables/price_history_table.hpp>
+#include <cmath>
 
 using namespace eosio;
 using std::string;
@@ -36,9 +37,9 @@ CONTRACT sale : public contract {
     
     ACTION updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit);
 
-    ACTION addround(uint64_t volume, asset seeds_per_usd);
+    ACTION addround(uint64_t volume, asset token_per_usd);
 
-    ACTION initrounds(uint64_t volume_per_round, asset initial_seeds_per_usd);
+    ACTION initrounds(uint64_t volume_per_round, asset initial_token_per_usd, double increment_factor, uint64_t num_rounds);
 
     ACTION initsale();
 
@@ -52,8 +53,6 @@ CONTRACT sale : public contract {
 
     ACTION setflag(name flagname, uint64_t value);
 
-    ACTION migrate();
-
     ACTION reset();
 
     ACTION updatevol(uint64_t round_id, uint64_t volume);
@@ -65,7 +64,7 @@ CONTRACT sale : public contract {
     void purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo); 
     void on_husd(name from, name to, asset quantity, string memo);
 
-    asset seeds_for_usd(asset usd_quantity);
+    asset token_for_usd(asset usd_quantity, asset token_asset);
     void update_price(); 
     void price_update_aux();
     bool is_paused();
@@ -76,13 +75,29 @@ CONTRACT sale : public contract {
     symbol tlos_symbol = symbol("TLOS", 4);
     symbol husd_symbol = symbol("HUSD", 2);
     symbol seeds_symbol = symbol("SEEDS", 4);
+    symbol hypha_symbol = symbol("HYPHA", 2);
     symbol usd_symbol = symbol("USD", 4);
     name paused_flag = "paused"_n;
     name tlos_paused_flag = "tlos.paused"_n;
     name husd_contract = "husd.hypha"_n;
+    name hypha_contract = "token.hypha"_n;
+
+    uint64_t asset_factor(asset quantity) {
+      //return 100;
+      return pow(10, quantity.symbol.precision());
+    }
+
+    double asset_factor_d(asset quantity) {
+      //return 100.0;
+      return double(pow(10, quantity.symbol.precision()));
+    }
+
+    double asset_token_amount(asset quantity) {
+      return quantity.amount / double(pow(10, quantity.symbol.precision()));
+    }
 
     TABLE configtable {
-      asset seeds_per_usd;
+      asset token_per_usd;
       asset tlos_per_usd;
       asset citizen_limit;
       asset resident_limit;
@@ -105,14 +120,14 @@ CONTRACT sale : public contract {
     TABLE round_table {
       uint64_t id;
       uint64_t max_sold;
-      asset seeds_per_usd;
+      asset token_per_usd;
 
       uint64_t primary_key()const { return id; }
     };
     
     TABLE stattable {
       name buyer_account;
-      uint64_t seeds_purchased;
+      uint64_t tokens_purchased;
       
       uint64_t primary_key()const { return buyer_account.value; }
     };
@@ -126,7 +141,7 @@ CONTRACT sale : public contract {
     TABLE price_table {
       uint64_t id;
       uint64_t current_round_id;
-      asset current_seeds_per_usd;
+      asset current_token_per_usd;
       uint64_t remaining;
 
       uint64_t primary_key()const { return id; }
@@ -189,7 +204,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           EOSIO_DISPATCH_HELPER(sale, 
           (reset)(onperiod)(updatetlos)(updatelimit)(newpayment)
           (addround)(initsale)(initrounds)(priceupdate)
-          (migrate)(pause)(unpause)(setflag)
+          (pause)(unpause)(setflag)
           (incprice)
           (updatevol)
           //(testhusd)

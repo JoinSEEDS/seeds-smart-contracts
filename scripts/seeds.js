@@ -23,6 +23,12 @@ const getContractLocation = (contract) => {
         source: `./src/hypha.${contract}.cpp`,
         include: ""
       }  
+    } else if (contract == 'hyphatoken') {
+      return {
+        source: `./src/seeds.startoken.cpp`,
+        include: "",
+        contractSourceName: "startoken"
+      }  
     }
     return {
       source: `./src/seeds.${contract}.cpp`,
@@ -33,11 +39,12 @@ const getContractLocation = (contract) => {
 
 const compileAction = async (contract) => {
     try {
-      var { source, include } = getContractLocation(contract)
+      var { source, include, contractSourceName } = getContractLocation(contract)
       await compile({
         contract: contract,
         source,
-        include
+        include,
+        contractSourceName
       })
       console.log(`${contract} compiled`)
     } catch (err) {

@@ -117,7 +117,7 @@ const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
         ]
       })
     } catch (error) {
-      console.error("unknown delegatebw action")
+      console.error("unknown delegatebw action"+error)
     }
 
     console.log(`${account} created`)
@@ -394,6 +394,8 @@ const changeExistingKeyPermission = async (account, role, parentRole = 'active',
 const createCoins = async (token) => {
   const { account, issuer, supply } = token
 
+  console.log("creating coins "+JSON.stringify(token, null, 2))
+
   try {
     await eos.transaction({
       actions: [
@@ -560,6 +562,7 @@ const updatePermissions = async () => {
 
 const createTestToken = async () => {
   await createCoins(accounts.testtoken)
+  await createCoins(accounts.hyphatoken)
 }
 
 const deployAllContracts = async () => {
@@ -576,6 +579,9 @@ const deployAllContracts = async () => {
 
   if (accounts.testtoken) {
     await createCoins(accounts.testtoken)
+  }
+  if (accounts.hyphatoken) {
+    await createCoins(accounts.hyphatoken)
   }
 
   const accountNames = Object.keys(accounts)
