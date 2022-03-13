@@ -33,13 +33,13 @@ CONTRACT sale : public contract {
     
     ACTION newpayment(name recipientAccount, string paymentSymbol, string paymentQuantity, string paymentId, uint64_t multipliedUsdValue);
 
-    ACTION updatetlos(asset tlos_per_usd);
+    ACTION updatetlos(asset tlos_usd);
     
     ACTION updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit);
 
     ACTION addround(uint64_t volume, asset token_per_usd);
 
-    ACTION initrounds(uint64_t volume_per_round, asset initial_token_per_usd, double increment_factor, uint64_t num_rounds);
+    ACTION initrounds(uint64_t volume_per_round, asset initial_token_per_usd, asset linear_increment, uint64_t num_rounds);
 
     ACTION initsale();
 
@@ -77,6 +77,7 @@ CONTRACT sale : public contract {
     symbol seeds_symbol = symbol("SEEDS", 4);
     symbol hypha_symbol = symbol("HYPHA", 2);
     symbol usd_symbol = symbol("USD", 4);
+    symbol usd_symbol_2 = symbol("USD", 2);
     name paused_flag = "paused"_n;
     name tlos_paused_flag = "tlos.paused"_n;
     name husd_contract = "husd.hypha"_n;
@@ -97,8 +98,8 @@ CONTRACT sale : public contract {
     }
 
     TABLE configtable {
-      asset token_per_usd;
-      asset tlos_per_usd;
+      asset hypha_usd;
+      asset tlos_usd;
       asset citizen_limit;
       asset resident_limit;
       asset visitor_limit;
@@ -120,7 +121,7 @@ CONTRACT sale : public contract {
     TABLE round_table {
       uint64_t id;
       uint64_t max_sold;
-      asset token_per_usd;
+      asset hypha_usd;
 
       uint64_t primary_key()const { return id; }
     };
@@ -141,16 +142,22 @@ CONTRACT sale : public contract {
     TABLE price_table {
       uint64_t id;
       uint64_t current_round_id;
-      asset current_token_per_usd;
+      asset hypha_usd;
       uint64_t remaining;
 
       uint64_t primary_key()const { return id; }
     };
 
-    DEFINE_PRICE_HISTORY_TABLE
+    TABLE price_history_table { 
+      uint64_t id; 
+      asset hypha_usd; 
+      time_point date; 
+      
+      uint64_t primary_key()const { return id; } 
+    }; 
 
-    DEFINE_PRICE_HISTORY_TABLE_MULTI_INDEX
-
+    typedef eosio::multi_index<"pricehistory"_n, price_history_table> price_history_tables;
+    
     TABLE flags_table { 
         name param; 
         uint64_t value; 

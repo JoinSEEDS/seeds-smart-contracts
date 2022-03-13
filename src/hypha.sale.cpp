@@ -6,14 +6,14 @@ void sale::reset() {
   config.remove();
 
   // legacy code
-  // asset citizen_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  // asset resident_limit =  asset(uint64_t(2500000000), seeds_symbol);
-  // asset visitor_limit =  asset(26000 * 10000, seeds_symbol);
+  // asset citizen_limit =  asset(uint64_t(2500000000), hypha_symbol);
+  // asset resident_limit =  asset(uint64_t(2500000000), hypha_symbol);
+  // asset visitor_limit =  asset(26000 * 10000, hypha_symbol);
   // updatelimit(citizen_limit, resident_limit, visitor_limit);
 
-  asset tlos_per_usd =  asset(0.03 * 10000, tlos_symbol);
+  asset tlos_usd =  asset(0.03 * 10000, tlos_symbol);
 
-  updatetlos(tlos_per_usd);
+  updatetlos(tlos_usd);
 
   unpause();
   setflag(tlos_paused_flag, 1);
@@ -44,34 +44,48 @@ void sale::reset() {
 
 }
 
+// TODO fix this up for inverse table - storing token_usd now, used to be usd_token!
 asset sale::token_for_usd(asset usd_quantity, asset token) {
   update_price();
 
   soldtable s = sold.get_or_create(get_self(), soldtable());
  
-  double usd_total = double(usd_quantity.amount);
-  double usd_remaining = usd_total;
+  double usd_total = double(usd_quantity.amount) / asset_factor_d(usd_quantity);
+  double usd_remaining = usd_total * asset_factor_d(token);
   double token_amount = 0.0;
 
   auto ritr = rounds.begin(); //rounds.find(p -> current_round);
 
   uint64_t round_start_volume = 0;
 
+  print("token for usd_quantity "+usd_quantity.to_string());
+
   while(ritr != rounds.end() && usd_remaining > 0) {
     uint64_t round_end_volume = ritr->max_sold;
 
     if (s.total_sold < round_end_volume) {
-      double usd_per_token = asset_factor_d(ritr->token_per_usd) / double(ritr->token_per_usd.amount);
+
+      // TODO fix
+      double hypha_usd = double(ritr->hypha_usd.amount) / asset_factor_d(ritr->hypha_usd);
+      print(" | "+std::to_string(ritr->id) + " | ");
+
+      print(" hypha_usd "+std::to_string(hypha_usd));
 
       // num available
       double available_in_round = round_end_volume - std::max(round_start_volume, s.total_sold);
 
+      print(" available_in_round "+std::to_string(available_in_round));
+
       // price of available tokens
-      double usd_available = available_in_round * usd_per_token;
+      double usd_available = available_in_round * hypha_usd;
+
+      print(" usd_available "+std::to_string(usd_available));
+      print(" usd_remaining "+std::to_string(usd_remaining));
 
       // if < usd amount remaining -> calculate, add, and exit
       if (usd_available >= usd_remaining) {
-        token_amount += (usd_remaining * ritr->token_per_usd.amount) / asset_factor(ritr->token_per_usd);
+        token_amount += usd_remaining / hypha_usd;
+        print(" done token_amount "+std::to_string(token_amount));
         usd_remaining = 0;
         break;
       } else {
@@ -83,14 +97,14 @@ asset sale::token_for_usd(asset usd_quantity, asset token) {
     round_start_volume = round_end_volume;
     ritr++;
 
-    double asset_factor = asset_factor_d(usd_quantity);
+    double asset_factor = asset_factor_d(token);
 
-    check(ritr != rounds.end(), "not enough funds available. requested USD value: "+std::to_string(usd_total/asset_factor) + 
-    " available USD value: "+std::to_string( (usd_total - usd_remaining) / asset_factor) + " max vol: " + std::to_string(round_end_volume));
+    check(ritr != rounds.end(), "sale: not enough funds available. requested USD value: "+std::to_string(usd_total) + 
+    " available USD value: "+std::to_string( (usd_total * asset_factor - usd_remaining) / asset_factor) + " max vol: " + std::to_string(round_end_volume));
 
   }
 
-  return asset(token_amount, seeds_symbol);
+  return asset(token_amount, hypha_symbol);
 }
 
 void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, string memo) {
@@ -105,24 +119,8 @@ void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, st
 
   configtable c = config.get();
 
-  asset token_per_usd = c.token_per_usd;
+  asset hypha_usd = c.hypha_usd;
   uint64_t tokens_purchased = 0;
-
-  asset seeds_limit;
-  switch (uitr->status) {
-    case "citizen"_n:
-      seeds_limit = c.citizen_limit;
-      break;
-    case "resident"_n:
-      seeds_limit = c.resident_limit;
-      break;
-    case "visitor"_n:
-      seeds_limit = c.visitor_limit;
-      break;
-    case "inactive"_n:
-      seeds_limit = c.visitor_limit;
-      break;
-  }
   
   auto token_symbol = hypha_symbol;
   asset token_asset = asset(0, token_symbol);
@@ -140,16 +138,16 @@ void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, st
     tokens_purchased = sitr->tokens_purchased;
   }
   
-  uint64_t price_volatility_leeway = seeds_limit.amount / 20; // 5% leeway
+  // uint64_t price_volatility_leeway = seeds_limit.amount / 20; // 5% leeway
 
-  check( (seeds_limit.amount + price_volatility_leeway) >= tokens_purchased + token_amount, 
-   "account: " + buyer.to_string() + 
-   " symbol: " + paymentSymbol + 
-   " tx_id: " + memo + 
-   " usd_quantity: " + usd_quantity.to_string() + 
-   " purchase limit overdrawn, tried to buy " + token_quantity.to_string() + 
-   " limit: " + seeds_limit.to_string() + 
-   " new total would be: " + std::to_string( (tokens_purchased + token_amount) / asset_factor_d(token_asset)));
+  // check( (seeds_limit.amount + price_volatility_leeway) >= tokens_purchased + token_amount, 
+  //  "account: " + buyer.to_string() + 
+  //  " symbol: " + paymentSymbol + 
+  //  " tx_id: " + memo + 
+  //  " usd_quantity: " + usd_quantity.to_string() + 
+  //  " purchase limit overdrawn, tried to buy " + token_quantity.to_string() + 
+  //  " limit: " + seeds_limit.to_string() + 
+  //  " new total would be: " + std::to_string( (tokens_purchased + token_amount) / asset_factor_d(token_asset)));
 
   if (sitr == dailystats.end()) {
     dailystats.emplace(get_self(), [&](auto& s) {
@@ -188,12 +186,12 @@ void sale::ontransfer(name buyer, name contract, asset tlos_quantity, string mem
 
     configtable c = config.get();
   
-    asset tlos_per_usd = c.tlos_per_usd;
+    asset tlos_usd = c.tlos_usd;
 
     double tlos_q_double = tlos_quantity.amount / 10000.0;
-    double tlos_per_usd_double = tlos_per_usd.amount / 10000.0;
+    double tlos_usd_double = tlos_usd.amount / 10000.0;
 
-    uint64_t usd_amount = (tlos_q_double * tlos_per_usd_double) * 10000;
+    uint64_t usd_amount = (tlos_q_double * tlos_usd_double) * 10000;
 
     asset usd_asset = asset(usd_amount, usd_symbol);
 
@@ -307,6 +305,8 @@ void sale::onperiod() {
 
 void sale::updatelimit(asset citizen_limit, asset resident_limit, asset visitor_limit) {
   require_auth(get_self());
+
+  check(false, "update limit is disabled");
   
   configtable c = config.get_or_create(get_self(), configtable());
   
@@ -318,23 +318,12 @@ void sale::updatelimit(asset citizen_limit, asset resident_limit, asset visitor_
   config.set(c, get_self());
 }
 
-// void sale::updateusd(asset token_per_usd) {
-//   require_auth(get_self());
-
-//   configtable c = config.get_or_create(get_self(), configtable());
-  
-//   c.token_per_usd = token_per_usd;
-//   c.timestamp = current_time_point().sec_since_epoch();
-  
-//   config.set(c, get_self());
-// }
-
-void sale::updatetlos(asset tlos_per_usd) {
+void sale::updatetlos(asset tlos_usd) {
   require_auth(get_self());
 
   configtable c = config.get_or_create(get_self(), configtable());
   
-  c.tlos_per_usd = tlos_per_usd;
+  c.tlos_usd = tlos_usd;
   c.timestamp = current_time_point().sec_since_epoch();
   
   config.set(c, get_self());
@@ -357,12 +346,12 @@ void sale::update_price() {
 
     if (total_sold < ritr -> max_sold) {
       p.current_round_id = ritr -> id;
-      p.current_token_per_usd = ritr -> token_per_usd;
+      p.hypha_usd = ritr -> hypha_usd;
       p.remaining = ritr->max_sold - total_sold;
 
       price.set(p, get_self());
 
-      c.token_per_usd = ritr -> token_per_usd;
+      c.hypha_usd = ritr -> hypha_usd;
       c.timestamp = current_time_point().sec_since_epoch();
 
       config.set(c, get_self());
@@ -377,13 +366,13 @@ void sale::update_price() {
 
 }
 
-ACTION sale::addround(uint64_t volume, asset token_per_usd) {
+ACTION sale::addround(uint64_t volume, asset hypha_usd) {
   require_auth(get_self());
 
-  check(token_per_usd.amount > 0, "seeds per usd must be > 0");
+  check(hypha_usd.amount > 0, "hypha_usd per usd must be > 0");
   check(volume > 0, "volume must be > 0");
 
-  check(token_per_usd.symbol.precision() == 2, "expected precision 2 for HYPHA sale");
+  check(hypha_usd.symbol.precision() == 2, "expected precision 2 for HYPHA sale");
 
   uint64_t prev_vol = 0;
 
@@ -398,7 +387,7 @@ ACTION sale::addround(uint64_t volume, asset token_per_usd) {
 
   rounds.emplace(_self, [&](auto& item) {
     item.id = rounds_number;
-    item.token_per_usd = token_per_usd;
+    item.hypha_usd = hypha_usd;
     item.max_sold = prev_vol + volume; 
   });
 }
@@ -435,32 +424,29 @@ ACTION sale::initsale() {
   require_auth(get_self());
   initrounds(
       uint64_t(100000) * uint64_t(100), // "100,000.00 HYPHA"
-      asset(100, hypha_symbol), // 1.00 USD / HYPHA  ==> 1.00 HYPHA / USD  
-      1.1, // 10% increase per round
+      asset(100, usd_symbol_2), // 1.00 USD / HYPHA  ==> 1.00 HYPHA / USD  
+      asset(10, usd_symbol_2), // "0.10 HYPHA"
       9 // 9 rounds
   );
 }
 
-ACTION sale::initrounds(uint64_t volume_per_round, asset initial_token_per_usd, double increment_factor, uint64_t num_rounds) {
+ACTION sale::initrounds(uint64_t volume_per_round, asset initial_hypha_usd, asset linear_increment, uint64_t num_rounds) {
   require_auth(get_self());
 
-  check(initial_token_per_usd.symbol == hypha_symbol, "Only HYPHA allowed - example '1.00 HYPHA'");
+  check(initial_hypha_usd.symbol == usd_symbol_2, "Only USD allowed - example '1.00 USD'");
 
   auto ritr = rounds.begin();
   while(ritr != rounds.end()){
     ritr = rounds.erase(ritr);
   }
 
-  uint64_t token_per_usd = initial_token_per_usd.amount;
-  double asset_factor =  asset_factor_d(initial_token_per_usd);
-
-
-  double usd_per_token = 1.0 / (token_per_usd / asset_factor);
+  uint64_t hypha_usd = initial_hypha_usd.amount;
+  double asset_factor =  asset_factor_d(initial_hypha_usd);
 
   for(int i=0; i<num_rounds; i++) {
-    addround(volume_per_round, asset(token_per_usd, hypha_symbol));
-    usd_per_token *= increment_factor;
-    token_per_usd = uint64_t(round( asset_factor / usd_per_token));
+    addround(volume_per_round, asset(hypha_usd, usd_symbol_2));
+    //hypha_usd = asset(hypha_usd.amount * increment_factor, hypha_usd.symbol);
+    hypha_usd += linear_increment.amount;
   }
 
   update_price();
@@ -478,17 +464,11 @@ ACTION sale::incprice() {
 
   print(std::to_string(p.current_round_id)+ " XX" );
 
-  double asset_factor = asset_factor_d(asset(0, hypha_symbol));
-
   while(ritr != rounds.end()) {
-    double usd_per_token = 1.0 / (ritr->token_per_usd.amount / asset_factor);
-    usd_per_token *= increment_factor;
-    uint64_t token_per_usd = uint64_t(round( asset_factor / usd_per_token));
-    asset val = asset(token_per_usd, hypha_symbol);
-
-    //print(std::to_string(ritr->id) + ": " + ritr->token_per_usd.to_string() + "---> " + val.to_string() + "\n ");
+    //print(std::to_string(ritr->id) + ": " + ritr->hypha_usd.to_string() + "---> " + val.to_string() + "\n ");
     rounds.modify(ritr, _self, [&](auto& item) {
-      item.token_per_usd = val;
+      //item.hypha_usd = asset(item.hypha_usd.amount * increment_factor, hypha_usd.symbol);
+      item.hypha_usd *= increment_factor;
     });
     ritr++;
   }
@@ -508,12 +488,12 @@ void sale::price_history_update() {
   auto phitr = pricehistory.rbegin();
 
   if (
-    (phitr != pricehistory.rend() && p.current_token_per_usd != phitr -> seeds_usd) ||
+    (phitr != pricehistory.rend() && p.hypha_usd != phitr -> hypha_usd) ||
     (phitr == pricehistory.rend())
   ) {
     pricehistory.emplace(_self, [&](auto & ph){
       ph.id = pricehistory.available_primary_key();
-      ph.seeds_usd = p.current_token_per_usd;
+      ph.hypha_usd = p.hypha_usd;
       ph.date = eosio::current_time_point();
     });
   }
