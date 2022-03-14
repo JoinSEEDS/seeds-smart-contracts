@@ -127,12 +127,8 @@ void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, st
 
   uint64_t token_amount = token_for_usd(usd_quantity, token_asset).amount;
 
-  print(" token amount: "+std::to_string(token_amount));
-
   asset token_quantity = asset(token_amount, token_symbol);
   
-  print(" token quantity: "+token_quantity.to_string());
-
   auto sitr = dailystats.find(buyer.value);
   if (sitr != dailystats.end()) {
     tokens_purchased = sitr->tokens_purchased;
