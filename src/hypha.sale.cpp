@@ -421,7 +421,7 @@ ACTION sale::initsale() {
   initrounds(
       uint64_t(100000) * uint64_t(100), // "100,000.00 HYPHA"
       asset(100, usd_symbol_2), // 1.00 USD / HYPHA  ==> 1.00 HYPHA / USD  
-      asset(10, usd_symbol_2), // "0.10 HYPHA"
+      asset(3, usd_symbol_2), // "0.03 HYPHA"
       9 // 9 rounds
   );
 }
