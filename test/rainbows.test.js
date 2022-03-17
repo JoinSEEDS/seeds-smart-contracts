@@ -93,12 +93,12 @@ describe('rainbows', async assert => {
   const issuerInitialBalance = await getBalance(issuer)
 
   console.log('create token')
-  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, issuer, withdraw_to, issuer,
-                         starttime.toISOString(), starttime.toISOString(), '', '',
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
 
   console.log('set stake')
-  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, false, '',
+  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, false, 100, '',
                           { authorization: `${issuer}@active` } )
 
   console.log('approve token')
@@ -157,8 +157,8 @@ describe('rainbows', async assert => {
   })
 
   console.log('create credit limit token')
-  await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer, issuer,
-                         starttime.toISOString(), starttime.toISOString(), '', '',
+  await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
   await contracts.rainbows.approve('CREDS', false, { authorization: `${rainbows}@active` })
   await contracts.rainbows.issue('1000000.00 CREDS', '', { authorization: `${issuer}@active` })
@@ -167,8 +167,8 @@ describe('rainbows', async assert => {
   await contracts.rainbows.transfer(issuer, fourthuser, '100.00 CREDS', '', { authorization: `${issuer}@active` })
 
   console.log('reconfigure token')
-  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, issuer, withdraw_to, issuer,
-                         starttime.toISOString(), starttime.toISOString(), 'CREDS', '',
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', 'CREDS', '',
                           { authorization: `${issuer}@active` } )
   console.log('make transfer against credit limit')
   await contracts.rainbows.transfer(fourthuser, issuer, '50.00 TOKES', '', { authorization: `${fourthuser}@active` })
@@ -189,8 +189,8 @@ describe('rainbows', async assert => {
 
   console.log('create proportional staked token')
 
-  await contracts.rainbows.create(issuer, '1000000.0000 PROPS', 'allowallacct', issuer, withdraw_to, issuer,
-                         starttime.toISOString(), starttime.toISOString(), '', '',
+  await contracts.rainbows.create(issuer, '1000000.0000 PROPS', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
   await setSeedsBalance(fourthuser, '10000000.0000 SEEDS')
 
@@ -200,7 +200,7 @@ describe('rainbows', async assert => {
 
 
   console.log('set stake')
-  await contracts.rainbows.setstake('1.0000 PROPS', '2.0000 SEEDS', 'token.seeds', fifthuser, true, '',
+  await contracts.rainbows.setstake('1.0000 PROPS', '2.0000 SEEDS', 'token.seeds', fifthuser, true, 100, '',
                           { authorization: `${issuer}@active` } )
   await addActorPermission(fifthuser, 'active', rainbows, 'eosio.code')
 
@@ -329,8 +329,8 @@ describe('rainbows', async assert => {
 
   console.log('create dSeed-staked token ARCOS')
 
-  await contracts.rainbows.create(issuer, '1000000.0000 ARCOS', 'allowallacct', issuer, withdraw_to, issuer,
-                         starttime.toISOString(), starttime.toISOString(), '', '',
+  await contracts.rainbows.create(issuer, '1000000.0000 ARCOS', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
   await setSeedsBalance(issuer, '10000000.0000 SEEDS')
   await setSeedsBalance(seconduser, '10000000.0000 SEEDS')
@@ -380,12 +380,12 @@ describe('rainbows', async assert => {
   await contracts.pool.transfer(thirduser, issuer, '500.0000 HPOOL', '', { authorization: `${thirduser}@active` })
 
   console.log('set placeholder Seeds stake')
-  await contracts.rainbows.setstake('1.0000 ARCOS', '0.0000 SEEDS', 'token.seeds', dseed_escrow, true, '',
+  await contracts.rainbows.setstake('1.0000 ARCOS', '0.0000 SEEDS', 'token.seeds', dseed_escrow, true, 100, '',
                           { authorization: `${issuer}@active` } )
   await addActorPermission(dseed_escrow, 'active', rainbows, 'eosio.code')
 
   console.log('set dSeeds stake')
-  await contracts.rainbows.setstake('1.0000 ARCOS', '1.0000 HPOOL', 'pool.seeds', dseed_escrow, true, '',
+  await contracts.rainbows.setstake('1.0000 ARCOS', '1.0000 HPOOL', 'pool.seeds', dseed_escrow, true, 100, '',
                           { authorization: `${issuer}@active` } )
 
   console.log('approve token')
