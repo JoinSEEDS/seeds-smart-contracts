@@ -7,7 +7,7 @@ const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAc
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
-const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions } = require('./propose_deploy')
+const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha } = require('./propose_deploy')
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, 
     changeOwnerAndActivePermission, 
@@ -366,11 +366,18 @@ program
   })
 
 
-program
+  program
   .command('docsgen <contract> [moreContracts...]')
   .description('Exports SDK docs for contract')
   .action(async function(contract, moreContracts) {
     await batchCallFunc(contract, moreContracts, docsgen)
+  })
+
+  program
+  .command('issue_hypha <quantity> <proposerAccount> <proposalName>')
+  .description('Exports SDK docs for contract')
+  .action(async function(quantity, proposerAccount, proposalName) {
+    await issueHypha(quantity, proposerAccount, proposalName)
   })
 
 program.parse(process.argv)
