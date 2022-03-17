@@ -276,6 +276,126 @@ describe('rainbows', async assert => {
     expected: issuerInitialBalance
   })
 
+  console.log('---begin error condition checks---')
+
+  console.log('reset')
+  await contracts.rainbows.reset(true, 100, { authorization: `${rainbows}@active` })
+
+  for( const acct of accts ) {
+    await contracts.rainbows.resetacct( acct, { authorization: `${rainbows}@active` })
+  }  
+
+  assert({
+    given: 'reset all',
+    should: 'clear table RAM',
+    actual: await get_scope(rainbows),
+    expected: { rows: [], more: '' }
+  })
+
+  console.log('create token')
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
+                          { authorization: `${issuer}@active` } )
+
+  console.log('issue tokens without approval')
+  let actionProperlyBlocked = true
+  try {
+    await contracts.rainbows.issue('500.00 TOKES', '', { authorization: `${issuer}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('cannot issue until token is approved')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying to issue tokens without approval',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+
+  console.log('create membership token with erroneous decimals')
+  await contracts.rainbows.create(issuer, '1000.00 MEMBERS', issuer, issuer, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
+                          { authorization: `${issuer}@active` } )
+  await contracts.rainbows.approve('MEMBERS', false, { authorization: `${rainbows}@active` })
+  await contracts.rainbows.freeze('MEMBERS', true, '', { authorization: `${issuer}@active` })
+
+  console.log('update token with member token errors')
+  actionProperlyBlocked = true
+  try {
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), 'MEMBERS', '', '', '',
+                          { authorization: `${issuer}@active` } )
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('MEMBERS token precision must be 0')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  try {
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), 'BADNAME', '', '', '',
+                          { authorization: `${issuer}@active` } )
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('BADNAME token does not exist')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying to create token with bad membership',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+ 
+  console.log('create good membership token')
+  await contracts.rainbows.create(issuer, '1000 MEMBERS', issuer, issuer, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
+                          { authorization: `${issuer}@active` } )
+  await contracts.rainbows.approve('MEMBERS', false, { authorization: `${rainbows}@active` })
+  await contracts.rainbows.freeze('MEMBERS', true, '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.issue('100 MEMBERS', '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), 'MEMBERS', '', '', '',
+                          { authorization: `${issuer}@active` } )
+  await contracts.rainbows.approve('TOKES', false, { authorization: `${rainbows}@active` })
+  await contracts.rainbows.issue('1000.00 TOKES', '', { authorization: `${issuer}@active` })
+
+  console.log('send tokens against membership rules')
+  actionProperlyBlocked = true
+  try {
+    await contracts.rainbows.transfer(issuer, fourthuser, '100.00 TOKES', '', { authorization: `${issuer}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('to account must have membership')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  try {
+    await contracts.rainbows.transfer(issuer, fourthuser, '1 MEMBERS', '', { authorization: `${issuer}@active` })
+    await contracts.rainbows.transfer(issuer, fifthuser, '1 MEMBERS', '', { authorization: `${issuer}@active` })
+    await contracts.rainbows.transfer(issuer, fourthuser, '100.00 TOKES', '', { authorization: `${issuer}@active` })
+    await contracts.rainbows.transfer(fourthuser, fifthuser, '100.00 TOKES', '', { authorization: `${fourthuser}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('cannot transfer visitor to visitor')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying to send tokens against membership rules',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+
+  console.log('send tokens between visitor and member')
+    await contracts.rainbows.transfer(issuer, fifthuser, '1 MEMBERS', '', { authorization: `${issuer}@active` })
+    await contracts.rainbows.transfer(fourthuser, fifthuser, '100.00 TOKES', '', { authorization: `${fourthuser}@active` })
+    await contracts.rainbows.transfer(fifthuser, fourthuser, '40.00 TOKES', '', { authorization: `${fifthuser}@active` })
+  assert({
+    given: 'valid transfers',
+    should: 'see correct token balance in recipient account',
+    actual: await eos.getCurrencyBalance(rainbows, fifthuser, 'TOKES'),
+    expected: [ '60.00 TOKES' ]
+  })
 
   console.log('---begin dSeeds stake tests---')
 
