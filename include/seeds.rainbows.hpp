@@ -75,7 +75,6 @@ using namespace eosio;
           *
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token,
-          * @param membership_mgr - the account with authority to whitelist accounts to transfer tokens,
           * @param withdrawal_mgr - the account with authority to withdraw tokens from any account,
           * @param withdraw_to - the account to which withdrawn tokens are deposited,
           * @param freeze_mgr - the account with authority to freeze transfer actions,
@@ -83,9 +82,13 @@ using namespace eosio;
           *   disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
           * @param config_locked_until - an ISO8601 date string; changes to token characteristics
           *   are disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
-          * @param cred_limit_symbol - a "sister" token (typically "frozen"), also managed by this contract;
+          * @param membership_symbol - a frozen "sister" token, also managed by this contract;
+          *   a balance of 1 or 2 sister tokens classifies an account as "visitor" or "regular" member
+          * @param broker_symbol - a frozen "sister" token, also managed by this contract;
+          *   a balance of the sister token qualifies an account as holding the "broker" badge
+          * @param cred_limit_symbol - a frozen "sister" token, also managed by this contract;
           *   a positive balance in the sister token will permit a user to overspend to that amount
-          * @param pos_limit_symbol - a "sister" token (typically "frozen"), also managed by this contract;
+          * @param pos_limit_symbol - a frozen "sister" token, also managed by this contract;
           *   no user transfer is allowed to increase the user balance over the sister token balance.
           *
           * @pre Token symbol has to be valid,
@@ -93,24 +96,26 @@ using namespace eosio;
           *   the config_locked field in the configtable row must be in the past,
           * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 2^62 - 1.
           * @pre Maximum supply must be positive,
-          * @pre membership manager must be an existing account, or the reserved "allow all" account name
           * @pre withdrawal manager must be an existing account,
           * @pre withdraw_to must be an existing account,
           * @pre freeze manager must be an existing account,
           * @pre redeem_locked_until must specify a time within +100/-10 yrs of now;
           * @pre config_locked_until must specify a time within +100/-10 yrs of now;
-          * @pre cred_limit_symbol must be an existing token of matching precision on this contract, or empty
-          * @pre pos_limit_symbol must be an existing token of matching precision on this contract, or empty
+          * @pre membership_symbol must be an existing frozen token of zero precision on this contract, or empty
+          * @pre broker_symbol must be an existing frozen token of zero precision on this contract, or empty
+          * @pre cred_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
+          * @pre pos_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
           
           */
          ACTION create( const name&   issuer,
                         const asset&  maximum_supply,
-                        const name&   membership_mgr,
                         const name&   withdrawal_mgr,
                         const name&   withdraw_to,
                         const name&   freeze_mgr,
                         const string& redeem_locked_until,
                         const string& config_locked_until,
+                        const string& membership_symbol,
+                        const string& broker_symbol,
                         const string& cred_limit_symbol,
                         const string& pos_limit_symbol );
 
@@ -137,12 +142,14 @@ using namespace eosio;
           * @param stake_token_contract - the staked token contract account (e.g. token.seeds),
           * @param stake_to - the escrow account where stake is held
           * @param proportional - redeem by proportion of escrow rather than by staking ratio.
+          * @param reserve_fraction - minimum reserve ratio (as percent) of escrow balance to redemption liability.
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre Token symbol must have already been created by this issuer
           * @pre The config_locked_until field in the configs table must be in the past,
           * @pre issuer must have a (possibly zero) balance of the stake token,
           * @pre stake_per_bucket must be non-negative
+          * @param reserve_fraction must be non-negative
           * @pre issuer active permissions must include rainbowcontract@eosio.code
           * @pre stake_to active permissions must include rainbowcontract@eosio.code
           *
@@ -153,6 +160,7 @@ using namespace eosio;
                           const name&       stake_token_contract,
                           const name&       stake_to,
                           const bool&       proportional,
+                          const uint32_t&   reserve_fraction,
                           const string&     memo);
 
          /**
@@ -216,6 +224,9 @@ using namespace eosio;
           *
           * @pre the redeem_locked_until configuration must be in the past (except that
           *   this action is always permitted to the issuer.)
+          * @pre If any staking relationships exist, for each relationship :
+          *   1. the proportional unstaking flag must be configured true, OR
+          *   2. the balance in the escrow account must meet the reserve_fraction criterion
           */
          ACTION retire( const name& owner, const asset& quantity, const string& memo );
 
@@ -230,6 +241,8 @@ using namespace eosio;
           * 
           * @pre The transfers_frozen flag in the configs table must be false, except for
           *   administrative-account transfers
+          * @pre If configured with a membership_symbol in `create` operation, the sender and
+          *   receiver must both be members, and at least one of them must be a regular member
           * @pre The `from` account balance must be sufficient for the transfer (allowing for
           *   credit if configured with credit_limit_symbol in `create` operation)
           * @pre If configured with positive_limit_symbol in `create` operation, the transfer
@@ -313,11 +326,11 @@ using namespace eosio;
          }
 
       private:
-         const name allowallacct = "allowallacct"_n;
-         const name deletestakeacct = "deletestake"_n;
          const int max_stake_count = 8; // don't use too much cpu time to complete transaction
          const uint64_t no_index = static_cast<uint64_t>(-1); // flag for nonexistent defer_table link
          static const asset null_asset;
+         const uint32_t VISITOR = 1;
+         const uint32_t REGULAR = 2;
 
          TABLE account { // scoped on account name
             asset    balance;
@@ -342,6 +355,8 @@ using namespace eosio;
             time_point  config_locked_until;
             bool        transfers_frozen;
             bool        approved;
+            symbol_code membership;
+            symbol_code broker;
             symbol_code cred_limit;
             symbol_code positive_limit;
          };
@@ -357,6 +372,7 @@ using namespace eosio;
             asset    stake_per_bucket;
             name     stake_token_contract;
             name     stake_to;
+            uint32_t reserve_fraction;
             bool     proportional;
 
             uint64_t primary_key()const { return index; };
@@ -389,6 +405,7 @@ using namespace eosio;
          void sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol );
          void add_balance( const name& owner, const asset& value, const name& ram_payer,
                            const symbol_code& limit_symbol );
+         void sister_check(const string& sym_name, uint32_t precision);
          void stake_all( const name& owner, const asset& quantity );
          void unstake_all( const name& owner, const asset& quantity );
          void stake_one( const stake_stats& sk, const name& owner, const asset& quantity );

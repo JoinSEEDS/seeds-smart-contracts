@@ -3,12 +3,13 @@
 
 void rainbows::create( const name&    issuer,
                     const asset&   maximum_supply,
-                    const name&    membership_mgr,
                     const name&    withdrawal_mgr,
                     const name&    withdraw_to,
                     const name&    freeze_mgr,
                     const string&  redeem_locked_until_string,
                     const string&  config_locked_until_string,
+                    const string&  membership_symbol,
+                    const string&  broker_symbol,
                     const string&  cred_limit_symbol,
                     const string&  pos_limit_symbol )
 {
@@ -17,8 +18,6 @@ void rainbows::create( const name&    issuer,
     check( sym.is_valid(), "invalid symbol name" );
     check( maximum_supply.is_valid(), "invalid supply");
     check( maximum_supply.amount > 0, "max-supply must be positive");
-    check( is_account( membership_mgr ) || membership_mgr == allowallacct,
-        "membership_mgr account does not exist");
     check( is_account( withdrawal_mgr ), "withdrawal_mgr account does not exist");
     check( is_account( withdraw_to ), "withdraw_to account does not exist");
     check( is_account( freeze_mgr ), "freeze_mgr account does not exist");
@@ -36,18 +35,10 @@ void rainbows::create( const name&    issuer,
                              current_time_point().time_since_epoch()).count()/days(1).count();
        check( days_from_now < 100*365 && days_from_now > -10*365, "config lock date out of range" );
     }
-    symbol_code credlim = symbol_code( cred_limit_symbol );
-    if( credlim != symbol_code(0) ) {
-       stats statstable_cl( get_self(), credlim.raw() );
-       auto cl = statstable_cl.get( credlim.raw(), "credit limit token does not exist" );
-       check( cl.max_supply.symbol.precision()==maximum_supply.symbol.precision(), "credit limit token precision does not match" );
-    }
-    symbol_code poslim = symbol_code( pos_limit_symbol );
-    if( poslim != symbol_code(0) ) {
-       stats statstable_pl( get_self(), poslim.raw() );
-       auto pl = statstable_pl.get( poslim.raw(), "positive limit token does not exist" );
-       check( pl.max_supply.symbol.precision()==maximum_supply.symbol.precision(), "credit limit token precision does not match" );
-    }
+    sister_check( membership_symbol, 0);
+    sister_check( broker_symbol, 0);
+    sister_check( cred_limit_symbol, maximum_supply.symbol.precision());
+    sister_check( pos_limit_symbol, maximum_supply.symbol.precision());
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
     if( existing != statstable.end()) {
@@ -70,14 +61,15 @@ void rainbows::create( const name&    issuer,
           s.max_supply    = maximum_supply;
           s.issuer        = issuer;
        });
-       cf.membership_mgr = membership_mgr;
        cf.withdrawal_mgr = withdrawal_mgr;
        cf.withdraw_to   = withdraw_to;
        cf.freeze_mgr    = freeze_mgr;
        cf.redeem_locked_until = redeem_locked_until;
        cf.config_locked_until = config_locked_until;
-       cf.cred_limit = credlim;
-       cf.positive_limit = poslim;
+       cf.membership = symbol_code( membership_symbol );
+       cf.broker = symbol_code( broker_symbol );
+       cf.cred_limit = symbol_code( cred_limit_symbol );
+       cf.positive_limit = symbol_code( pos_limit_symbol );
        configtable.set( cf, issuer );
     return;
     }
@@ -93,7 +85,6 @@ void rainbows::create( const name&    issuer,
     });
     configs configtable( get_self(), sym.code().raw() );
     currency_config new_config{
-       .membership_mgr = membership_mgr,
        .withdrawal_mgr = withdrawal_mgr,
        .withdraw_to   = withdraw_to,
        .freeze_mgr    = freeze_mgr,
@@ -101,13 +92,27 @@ void rainbows::create( const name&    issuer,
        .config_locked_until = config_locked_until,
        .transfers_frozen = false,
        .approved      = false,
-       .cred_limit = credlim,
-       .positive_limit = poslim
+       .membership = symbol_code( membership_symbol ),
+       .broker = symbol_code( broker_symbol ),
+       .cred_limit = symbol_code( cred_limit_symbol ),
+       .positive_limit = symbol_code( pos_limit_symbol )
     };
     configtable.set( new_config, issuer );
     displays displaytable( get_self(), sym.code().raw() );
     currency_display new_display{ "" };
     displaytable.set( new_display, issuer );
+}
+
+void rainbows::sister_check(const string& sym_name, uint32_t precision) {
+    symbol_code sym = symbol_code( sym_name );
+    if( sym != symbol_code(0) ) {
+       stats statstable_s( get_self(), sym.raw() );
+       auto s = statstable_s.get( sym.raw(), (sym_name+" token does not exist").c_str() );
+       check( s.max_supply.symbol.precision()==precision, sym_name+" token precision must be "+std::to_string(precision) );
+       configs configtable( get_self(), sym.raw() );
+       auto cf = configtable.get();
+       check( cf.transfers_frozen, sym_name+" token must be frozen" );
+    }
 }
 
 void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_clear )
@@ -143,6 +148,7 @@ void rainbows::setstake( const asset&    token_bucket,
                       const name&     stake_token_contract,
                       const name&     stake_to,
                       const bool&     proportional,
+                      const uint32_t& reserve_fraction,
                       const string&   memo )
 {
     auto sym_code_raw = token_bucket.symbol.code().raw();
@@ -162,9 +168,7 @@ void rainbows::setstake( const asset&    token_bucket,
     const auto stake_bal = accountstable.find( stake_sym.code().raw() );
     check( stake_bal != accountstable.end(), "issuer must have a stake token balance");
     check( stake_bal->balance.symbol == stake_sym, "mismatched stake token precision" );
-    if( stake_to != deletestakeacct ) {
-       check( is_account( stake_to ), "stake_to account does not exist");
-    }
+    check( is_account( stake_to ), "stake_to account does not exist");
     check( token_bucket.amount > 0, "token bucket must be > 0" );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
@@ -180,6 +184,7 @@ void rainbows::setstake( const asset&    token_bucket,
        s.stake_token_contract = stake_token_contract;
        s.stake_to             = stake_to;
        s.proportional         = proportional;
+       s.reserve_fraction     = reserve_fraction;
     });
     if( st.supply.amount != 0 ) {
        stake_one( sk, st.issuer, st.supply );
@@ -275,6 +280,7 @@ void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asse
     // get balance in escrow
     auto stake_in_escrow = get_balance( sk.stake_token_contract, sk.stake_to, sk.stake_per_bucket.symbol.code() );
     // stake proportion = (qty being unstaked)/(token supply)
+    //  TODO: consider whether negative balances (mutual credit) should count as supply for this calculation
     uint64_t sym_code_raw = sk.token_bucket.symbol.code().raw();
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "unstake: no symbol" );
@@ -287,10 +293,10 @@ void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asse
        memo = "proportional ";
     } else {
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
-       if( stake_quantity.amount > proportional_amount ) {
-          // Underfunded. What should we do?
-          check( false, ("can't unstake, escrow underfunded in " +
-                 sk.stake_per_bucket.symbol.code().to_string()).c_str() );
+       if( (int128_t)stake_quantity.amount*100 > (int128_t)proportional_amount*sk.reserve_fraction ) {
+          check( false, "can't unstake, escrow underfunded in " +
+                 sk.stake_per_bucket.symbol.code().to_string() +
+                 " (" + std::to_string(sk.reserve_fraction) + "% reserve)" );
        }
     }
     memo += "rainbow unstake";
@@ -358,13 +364,6 @@ void rainbows::transfer( const name&    from,
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
 
-    bool withdrawing = has_auth( cf.withdrawal_mgr ) && to == cf.withdraw_to;
-    if( cf.membership_mgr != allowallacct || withdrawing) {
-       accounts to_acnts( get_self(), to.value );
-       auto to = to_acnts.find( sym_code_raw );
-       check( to != to_acnts.end(), "to account must have membership");
-    }
-
     require_recipient( from );
     require_recipient( to );
 
@@ -373,12 +372,22 @@ void rainbows::transfer( const name&    from,
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
 
+    bool withdrawing = has_auth( cf.withdrawal_mgr ) && to == cf.withdraw_to;
     if (!withdrawing ) {
        require_auth( from );
        if( from != st.issuer ) {
           check( !cf.transfers_frozen, "transfers are frozen");
        }
-       // TBD: implement token.seeds check_limit_transactions(from) ?
+       if( cf.membership) {
+          accounts to_acnts( get_self(), to.value );
+          auto to_mbr = to_acnts.find( cf.membership.raw() );
+          check( to_mbr != to_acnts.end() && to_mbr->balance.amount >0, "to account must have membership");
+          accounts from_acnts( get_self(), from.value );
+          auto from_mbr = from_acnts.find( cf.membership.raw() );
+          check( from_mbr != from_acnts.end() && from_mbr->balance.amount > 0, "from account must have membership");
+          bool vis_to_vis = to_mbr->balance.amount == VISITOR && from_mbr->balance.amount == VISITOR;
+          check( !vis_to_vis, "cannot transfer visitor to visitor");
+       }
     }
 
     auto payer = has_auth( to ) ? to : from;
@@ -447,11 +456,7 @@ void rainbows::open( const name& owner, const symbol_code& symbolcode, const nam
    auto sym_code_raw = symbolcode.raw();
    stats statstable( get_self(), sym_code_raw );
    const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
-   configs configtable( get_self(), sym_code_raw );
-   const auto& cf = configtable.get();
-   if( cf.membership_mgr != allowallacct) {
-      require_auth( cf.membership_mgr );
-   }
+   require_auth( st.issuer );
    accounts acnts( get_self(), owner.value );
    auto it = acnts.find( sym_code_raw );
    if( it == acnts.end() ) {
@@ -466,9 +471,7 @@ void rainbows::close( const name& owner, const symbol_code& symbolcode )
    auto sym_code_raw = symbolcode.raw();
    stats statstable( get_self(), sym_code_raw );
    const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
-   configs configtable( get_self(), sym_code_raw );
-   const auto& cf = configtable.get();
-   if( cf.membership_mgr == allowallacct || !has_auth( cf.membership_mgr ) ) {
+   if( !has_auth( st.issuer ) ) {
       require_auth( owner );
    }
    accounts acnts( get_self(), owner.value );
