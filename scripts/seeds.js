@@ -7,7 +7,7 @@ const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAc
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
-const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha } = require('./propose_deploy')
+const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha, sendHypha } = require('./propose_deploy')
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, 
     changeOwnerAndActivePermission, 
@@ -375,9 +375,51 @@ program
 
   program
   .command('issue_hypha <quantity> <proposerAccount> <proposalName>')
-  .description('Exports SDK docs for contract')
+  .description('Issue Hypha tokens to dao.hypha')
   .action(async function(quantity, proposerAccount, proposalName) {
     await issueHypha(quantity, proposerAccount, proposalName)
+  })
+
+  program
+  .command('send_hypha <quantity> <recepient> <proposerAccount> <proposalName>')
+  .description('Send HYPHA tokens from dao.hypha')
+  .action(async function(quantity, recepient, proposerAccount, proposalName) {
+    await sendHypha(quantity, recepient, proposerAccount, proposalName)
+  })
+
+  program
+  .command('approveos <proposerAccount> <proposalName>')
+  .description('Send HYPHA tokens from dao.hypha')
+  .action(async function(proposerAccount, proposalName) {
+
+
+    const createESRWithActions = async ({actions, title = "Generating ESR Code"}) => {
+
+      console.log("========= " + title + " ===========")
+      
+      const esr_uri = "https://api-esr.hypha.earth/qr"
+      const body = {
+        actions
+      }
+    
+      //console.log("actions: "+JSON.stringify(body, null, 2))
+    
+      const rawResponse = await fetch(esr_uri, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+    
+      const parsedResponse = await rawResponse.json();
+    
+      //console.log("parsed response "+JSON.stringify(parsedResponse))
+    
+      return parsedResponse
+    }
+    
   })
 
 program.parse(process.argv)

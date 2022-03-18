@@ -451,6 +451,38 @@ const issueHypha = async (quantity, proposerAccount, propName) => {
 
 }
 
+const sendHypha = async (quantity, recepient, proposerAccount, propName) => {
+
+  const actions = [{
+    account: 'token.hypha',
+    name: 'transfer',
+    authorization: [{
+      "actor": "dao.hypha",
+      "permission": "active"
+    }],
+    data: {
+      "from": "dao.hypha",
+      "to": recepient,
+      "quantity": quantity,
+      "memo": ""
+    },
+  }]
+
+  const proposeESR = await createMultisigProposalESR(propName, proposerAccount, actions, "dao.hypha")
+
+  console.log("Propose ESR: " + JSON.stringify(proposeESR, null, 2))
+
+  const approveESR = await createESRCodeApprove({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("approveESR: " + JSON.stringify(approveESR, null, 2))
+
+  const execESR = await createESRCodeExec({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("execESR: " + JSON.stringify(execESR, null, 2))
+
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("CANCEL: " + JSON.stringify(cancelESR, null, 2))
+
+}
+
 const createMultisigProposalESR = async (proposalName, proposerAccount, actions, permissionAccount, permission = "active") => {
 
   const api = eos.api
@@ -615,4 +647,4 @@ const createESRWithActions = async ({actions, title = "Generating ESR Code"}) =>
   return parsedResponse
 }
 
-module.exports = { proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha }
+module.exports = { proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha, sendHypha }
