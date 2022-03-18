@@ -18,7 +18,7 @@ void sale::reset() {
   unpause();
   setflag(tlos_paused_flag, 1);
 
-  // check(false, "Comment this out- safety stop. Always check in uncommented. ");
+  check(false, "Comment this out- safety stop. Always check in uncommented. ");
   
   sold.remove();
 
