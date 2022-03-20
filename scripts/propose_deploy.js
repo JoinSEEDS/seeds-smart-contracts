@@ -7,6 +7,7 @@ const { Serialize } = eosjs
 const { SigningRequest } = require('eosio-signing-request')
 const { source } = require('./deploy')
 const { accounts, eos } = require('./helper')
+const { proposeMsig } = require('./msig')
 
 const authPlaceholder = "............1"
 const GuardianAccountName = "cg.seeds"
@@ -166,8 +167,15 @@ const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccoun
  * Sets active and owner to GuardianAccountName and msig.seeds
  * @param {*} targetAccount 
  */
-const setCGPermissions = async (targetAccount, permission_name, hot = false) => {
-    console.log('setGuardiansPermissions on ' + targetAccount + " " + (hot ? "hot" : "test mode"))
+const setCGPermissions = async (targetAccount, permission_name, hot = false, propose = false) => {
+  
+  if (hot == "false" || hot == 0) {
+    hot = false
+  }
+
+  console.log('setGuardiansPermissions on ' + targetAccount + " " + (hot ? "hot" : "test mode") + ( propose ? "PROPOSE " : ""))
+
+
 
     assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
 
@@ -235,13 +243,19 @@ const setCGPermissions = async (targetAccount, permission_name, hot = false) => 
     }
   
     if (hot) {
-      let res = await eos.api.transact({
-        actions
-      }, trxConfig)
+
+      if (!propose) {
+        let res = await eos.api.transact({
+          actions
+        }, trxConfig)
+        const newPermissions = await eos.getAccount(targetAccount)
+        console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))  
+      } else {
+        console.log("msig for new permissions: "+JSON.stringify(auth, null, 2))
+
+        proposeMsig("illumination", "prop1111", targetAccount, actions, "owner")
+      }
   
-      const newPermissions = await eos.getAccount(targetAccount)
-  
-      console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))  
     } else {
       console.log("new permissions would be: "+JSON.stringify(auth, null, 2))
     }

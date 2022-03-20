@@ -14,7 +14,9 @@ const { deployAllContracts, updatePermissions, resetByName,
     changeExistingKeyPermission, 
     addActorPermission,
     createTestToken,
-    removeAllActorPermissions } = require('./deploy')
+    removeAllActorPermissions,
+    listPermissions,
+   } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
@@ -224,10 +226,10 @@ program
   })
 
   program
-  .command('set_cg_permissions <contract> <permission> [hot]')
+  .command('set_cg_permissions <contract> <permission> [hot] [propose]')
   .description('Place contract under guardian control')
-  .action(async function (contract, permission, hot) {
-    await setCGPermissions(contract, permission, hot)
+  .action(async function (contract, permission, hot, propose) {
+    await setCGPermissions(contract, permission, hot, propose)
   })
 
   program
@@ -340,6 +342,40 @@ program
     console.print("\nSeeds Contracts\n")
     allContractNames.forEach(item=>console.print(item))
   })
+
+  program
+  .command('list_permissions')
+  .description('List all contracts / accounts permissions')
+  .action(async function() {
+    console.print("Hypha Accounts")
+    hyphaAccounts = [
+      "buy", 
+      "costak",
+      "voice",
+      "msig",
+      "docs",
+      "publish",
+      "husd",
+      "bank",
+      "kv",
+      "token",
+      "dao",
+      "seeds",
+    ]
+    for (var account of hyphaAccounts) {
+      await listPermissions(account + ".hypha")
+    }
+
+    console.print("\nSeeds Bank Accounts\n")
+    for (var account of allBankAccountNames) {
+      await listPermissions(account)
+    }
+    console.print("\nSeeds Contracts\n")
+    for (var account of allContractNames) {
+      await listPermissions(account)
+    }
+  })
+
 
 program
   .command('changekey <contract> <key>')
