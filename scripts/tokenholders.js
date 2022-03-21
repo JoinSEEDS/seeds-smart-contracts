@@ -431,7 +431,7 @@ const getAllHistorySinceReset = async () => {
   console.log("all transfers: ")
   console.log(transfers)
 
-  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `hypha_history_since_reset.csv`, transfers)
 
 }
 
