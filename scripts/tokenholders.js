@@ -380,8 +380,11 @@ const getAllHistorySinceReset = async () => {
 
   items = []
   skip = 0
-  limit = 1000
+  limit = 400
   hasMoreData = true
+
+
+  const cutoff_sequence_number = 9801481669
 
   transfers = ""
 
@@ -399,15 +402,15 @@ const getAllHistorySinceReset = async () => {
       act = item.act
       data = act.data
       
-      console.log("item " + item.global_sequence + " " + (item.global_sequence >= 9802410191))
+      console.log("item " + item.global_sequence + " " + (item.global_sequence >= cutoff_sequence_number))
       
       console.log("got "+JSON.stringify(item, null, 2))
 
-      if (item.global_sequence >= 9802410191)     // first costak transaction
+      if (item.global_sequence >= cutoff_sequence_number)     // first costak transaction
       {
         items.push(item)
 
-          console.log(JSON.stringify(item, null, 2))
+          console.log("adding "+ item.global_sequence)
 
           line = item.global_sequence + "," +item.timestamp + ","+
             data.from + "," + 
@@ -421,7 +424,7 @@ const getAllHistorySinceReset = async () => {
 
           //console.log("line: "+line)
         } else {
-          console.log("Done! Reset started at global action sequence 9802410191")
+          console.log("Done! Reset started at global action sequence " + cutoff_sequence_number)
           resetDateReached = true
         }
     }
