@@ -456,13 +456,18 @@ const getAllHistorySinceReset = async () => {
 
 }
 
-const process_transfers = async ()=> {
+const process_transfers = async (full = false)=> {
 
-  const fileContent = fs.readFileSync(snapshotDirPath + `hypha_history_since_reset.json`, 'utf8')
+try {
+  const fileContent = !full 
+    ? fs.readFileSync(snapshotDirPath + `hypha_history_since_reset.json`, 'utf8')
+    : fs.readFileSync(snapshotDirPath + `hypha_history_transfers.json`, 'utf8')
+
+  console.log("Process history " + (full ? "FULL" : "Since reset"))
 
   const items = JSON.parse(fileContent)
 
-  console.log(JSON.stringify(items, null, 2))
+  //console.log(JSON.stringify(items, null, 2))
 
   var balances = {
     illumination: 0.0
@@ -473,21 +478,42 @@ const process_transfers = async ()=> {
   }
 
   for (item of items) {
-    const data = item.act.data
-    const to = data.to
-    const from = data.from
-    const amount = data.amount
-    const symbol = data.symbol
+    if (item.act.name == "transfer") {
+      const data = item.act.data
+      const to = data.to
+      const from = data.from
+      const amount = data.amount
+      const symbol = data.symbol
+  
+  
+      if (symbol != "HYPHA") {
+        console.log("not hypha error "+JSON.stringify(item, null, 2))
+        // NOTE: Some HUSD were on token.hypha at some point
+        continue
+      }
+      console.log("from "+ from + " to: "+to + " " + amount + " " + symbol + " "+bal(to))
+  
+      balances[to] = bal(to) + amount
+      balances[from] = bal(from) - amount
 
+    } else if (item.act.name == "reduce") {
 
-    if (symbol != "HYPHA") {
-      throw "Error: not hypha"
+      const data = item.act.data
+      const account = data.account
+      const amount = parseFloat(data.quantity.split(" ")[0])
+      const symbol = data.quantity.split(" ")[1]
+  
+      if (symbol != "HYPHA") {
+        console.log("not hypha error "+JSON.stringify(item))
+        throw "Error: not hypha"
+        
+      }
+      console.log("reduce: "+account + " " + amount)
+  
+      balances[account] = bal(account) - amount
+
     }
-    const existingBalance = bal(to)
-    console.log("to: "+to + " " + amount + " " + symbol + " "+bal(to))
 
-    balances[to] = bal(to) + amount
-    balances[from] = bal(from) - amount
     
   }
 
@@ -497,17 +523,23 @@ const process_transfers = async ()=> {
   transferlist = []
   for (key of keys) {
     balancesAsc[key] = balances[key]
-    transferlist.push({
-      account: key,
-      amount: balances[key],
-    })
+    if (balances[key] >= 0.01) {
+      transferlist.push({
+        account: key,
+        amount: balances[key],
+      })  
+    }
   }
 
   //console.log(mapAsc)
 
-  //console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
+  console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
   console.log("transferlist: "+JSON.stringify(transferlist, null, 2))
   
+} catch (err) {
+  console.log(err)
+}
+
 }
 
 const get_tlos_history = async (
@@ -932,11 +964,11 @@ program
   })
 
   program
-  .command('process_history')
+  .command('process_history [full]')
   .description('Process HYPHA token history since HYPHA Reset 2022/01/15 ')
-  .action(async function () {
-    console.log("Process HYPHA token history since HYPHA Reset 2022/01/15");
-    await process_transfers()
+  .action(async function (full = false) {
+    console.log("Process HYPHA token history "+(full ? "full" : "since HYPHA Reset 2022/01/15"));
+    await process_transfers(full)
   })
 
 program
