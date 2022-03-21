@@ -465,6 +465,7 @@ const process_transfers = async ()=> {
   for (item of items) {
     const data = item.act.data
     const to = data.to
+    const from = data.from
     const amount = data.amount
     const symbol = data.symbol
 
@@ -473,11 +474,11 @@ const process_transfers = async ()=> {
       throw "Error: not hypha"
     }
     const existingBalance = bal(to)
-    console.log("to: "+to + " " + amount + " " + symbol + " "+existingBalance)
+    console.log("to: "+to + " " + amount + " " + symbol + " "+bal(to))
 
-
-    balances[to] = existingBalance + amount
-
+    balances[to] = bal(to) + amount
+    balances[from] = bal(from) - amount
+    
   }
 
   var keys = Object.keys(balances);
