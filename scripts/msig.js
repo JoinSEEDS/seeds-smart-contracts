@@ -24,7 +24,7 @@ const transferAction = (beneficiary, amount) => {
       "from": "dao.hypha",
       "to": beneficiary,
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": ""
+      "memo": "Migrate balances"
     },
   }
 
@@ -84,6 +84,10 @@ const proposeMsig = async (proposerAccount, proposalName, contract, actions, per
 
   console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
 
+  const url = `https://eosauthority.com/msig/${proposerAccount}/${proposalName}?network=telos`
+
+  console.log("Proposal URL: " + url)
+
   const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
 
   console.log("ESR for Approve: " + JSON.stringify(approveESR, null, 2))
@@ -91,6 +95,10 @@ const proposeMsig = async (proposerAccount, proposalName, contract, actions, per
   const execESR = await createESRCodeExec({proposerAccount, proposalName})
 
   console.log("ESR for Exec: " + JSON.stringify(execESR, null, 2))
+
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName})
+
+  console.log("ESR for Cancel: " + JSON.stringify(cancelESR, null, 2))
 
 }
 
@@ -202,6 +210,25 @@ const createESRCodeExec = async ({proposerAccount, proposalName}) => {
       proposer: proposerAccount,
       proposal_name: proposalName,
       executer: authPlaceholder
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
+
+  return createESRWithActions({actions: execActions})
+}
+
+const createESRCodeCancel = async ({proposerAccount, proposalName}) => {
+
+  const execActions = [{
+    account: 'eosio.msig',
+    name: 'cancel',
+    data: {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      canceler: authPlaceholder
     },
     authorization: [{
       actor: authPlaceholder,

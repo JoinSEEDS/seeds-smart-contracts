@@ -361,6 +361,7 @@ program
       "token",
       "dao",
       "seeds",
+      "hypha",
     ]
     for (var account of hyphaAccounts) {
       await listPermissions(account + ".hypha")

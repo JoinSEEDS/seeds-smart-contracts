@@ -413,8 +413,10 @@ const getAllHistorySinceReset = async () => {
       data = act.data
       
       console.log("item " + item.global_sequence + " " + (item.global_sequence >= cutoff_sequence_number))
-      
-      console.log("got "+JSON.stringify(item, null, 2))
+
+      console.log(JSON.stringify(item, null, 2))
+
+      console.log("")
 
       if (item.global_sequence >= cutoff_sequence_number)     // first costak transaction
       {
@@ -434,7 +436,7 @@ const getAllHistorySinceReset = async () => {
 
           //console.log("line: "+line)
         } else {
-          console.log("Done! Reset started at global action sequence " + cutoff_sequence_number)
+          console.log("Done! Reset started at global action sequence " + item.global_sequence + " " + cutoff_sequence_number)
           resetDateReached = true
         }
     }
@@ -535,6 +537,14 @@ try {
 
   console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
   console.log("transferlist: "+JSON.stringify(transferlist, null, 2))
+
+  var csv = ""
+
+  for (item of transferlist) {
+    csv = csv + `${item.account},${item.amount.toFixed(2)}` + "\n"
+  }
+
+  console.log("balance csv \n" + csv)
   
 } catch (err) {
   console.log(err)
@@ -1008,28 +1018,8 @@ program
         "amount": 0.1
       },
       {
-        "account": "dao.hypha",
-        "amount": -43871365.42
-      },
-      {
-        "account": "dversityclub",
-        "amount": -1.01
-      },
-      {
-        "account": "gradinagruiu",
-        "amount": 0
-      },
-      {
-        "account": "hyphax.seeds",
-        "amount": -45.370000000000005
-      },
-      {
         "account": "illumination",
         "amount": 3.3899999999999997
-      },
-      {
-        "account": "jcroemer1111",
-        "amount": -0.99
       },
       {
         "account": "leonieherma1",
@@ -1054,16 +1044,9 @@ program
       {
         "account": "rpiesveloces",
         "amount": 41.03
-      },
-      {
-        "account": "stephend1111",
-        "amount": -1.1500000000000004
-      },
-      {
-        "account": "swapx.seeds",
-        "amount": 0
       }
     ]
+    
     
     await migrateTokens(list)
   })
