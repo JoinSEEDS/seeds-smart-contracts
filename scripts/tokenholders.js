@@ -292,7 +292,7 @@ const allPayments = async () => {
     limit,
 ) => {
 
-  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha&act.name=transfer`
+  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha`
 
   const rawResponse = await fetch(url, {
       method: 'GET',
@@ -331,7 +331,7 @@ const getAllHistory = async () => {
 
   items = []
   skip = 0
-  limit = 100
+  limit = 500
   hasMoreData = true
 
   transfers = ""
@@ -344,14 +344,17 @@ const getAllHistory = async () => {
     newItems = newItems.actions
     //console.log("got items "+JSON.stringify(newItems, null, 2))
     newItems.forEach(item => {
-      items.push(item)
       act = item.act
       data = act.data
       if (
         act.account == "token.hypha" &&
-        act.name == "transfer" //&&
-        // data.from == "dao.hypha"
+        act.name == "transfer" || act.name == "reduce"
         ) {
+          if (act.name == "reduce") {
+            console.log("adding reduce action "+JSON.stringify(item))
+          }
+          items.push(item)
+
           line = item.global_sequence + "," +item.timestamp + ","+
             data.from + "," + 
             data.to + "," + 
@@ -362,7 +365,7 @@ const getAllHistory = async () => {
             item.trx_id + "," 
           transfers = transfers + line + "\n";
 
-          console.log("line: "+line)
+          //console.log("line: "+line)
         }
     });
     skip = skip + newItems.length
@@ -373,9 +376,13 @@ const getAllHistory = async () => {
 
   console.log("=========================================================================")
   console.log("all transfers: ")
+  
+  transfers = JSON.stringify(items, null, 2)
+
   console.log(transfers)
 
-  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+  //fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.json`, transfers)
 
 }
 
