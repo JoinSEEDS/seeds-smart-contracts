@@ -346,8 +346,9 @@ const getAllHistory = async () => {
       data = act.data
       if (
         act.account == "token.hypha" &&
-        act.name == "transfer" &&
-        data.from == "dao.hypha") {
+        act.name == "transfer" //&&
+        // data.from == "dao.hypha"
+        ) {
           line = item.global_sequence + "," +item.timestamp + ","+
             data.from + "," + 
             data.to + "," + 
