@@ -135,7 +135,7 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
     if ((""+err).indexOf("as that name is already taken") != -1) {
       console.error(`account ${account} already created`)
     } else {
-      console.error(`account ${account} create error` + err)
+      console.error(`account ${account} create error ` + err)
       throw err
     }
   }
