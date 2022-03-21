@@ -339,7 +339,7 @@ const getAllHistory = async () => {
 
     newItems = await get_history_tx(skip, limit)
     newItems = newItems.actions
-    console.log("got items "+JSON.stringify(newItems, null, 2))
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
     newItems.forEach(item => {
       items.push(item)
       act = item.act
@@ -380,7 +380,7 @@ const getAllHistorySinceReset = async () => {
 
   items = []
   skip = 0
-  limit = 100
+  limit = 1000
   hasMoreData = true
 
   transfers = ""
@@ -389,19 +389,23 @@ const getAllHistorySinceReset = async () => {
 
   while (hasMoreData && !resetDateReached) {
 
-    console.log("skip: "+skip + " limit "+limit)
+    //console.log("skip: "+skip + " limit "+limit)
 
     newItems = await get_history_tx(skip, limit)
     newItems = newItems.actions
-    console.log("got items "+JSON.stringify(newItems, null, 2))
-    newItems.forEach(item => {
-      items.push(item)
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
+
+    for (item of newItems) {
       act = item.act
       data = act.data
-      //console.log("item " + item.global_sequence + " " + (item.global_sequence >= 9802410191))
+      
+      console.log("item " + item.global_sequence + " " + (item.global_sequence >= 9802410191))
+      
+      console.log("got "+JSON.stringify(item, null, 2))
 
       if (item.global_sequence >= 9802410191)     // first costak transaction
       {
+        items.push(item)
 
           console.log(JSON.stringify(item, null, 2))
 
@@ -420,7 +424,7 @@ const getAllHistorySinceReset = async () => {
           console.log("Done! Reset started at global action sequence 9802410191")
           resetDateReached = true
         }
-    });
+    }
     skip = skip + newItems.length
     hasMoreData = newItems.length > 0
     
@@ -428,10 +432,52 @@ const getAllHistorySinceReset = async () => {
   }
 
   console.log("=========================================================================")
-  console.log("all transfers: ")
-  console.log(transfers)
+  //console.log("all transfers: ")
+  //console.log(transfers)
+
+  //console.log("transfer JSON " + items.length)
+  //console.log(JSON.stringify(items, null, 2))
 
   fs.writeFileSync(snapshotDirPath + `hypha_history_since_reset.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `hypha_history_since_reset.json`, JSON.stringify(items, null, 2))
+
+}
+
+const process_transfers = async ()=> {
+
+  const fileContent = fs.readFileSync(snapshotDirPath + `hypha_history_since_reset.json`, 'utf8')
+
+  const items = JSON.parse(fileContent)
+
+  console.log(JSON.stringify(items, null, 2))
+
+  var balances = {
+    illumination: 0.0
+  }
+
+  const bal = (account) => {
+    return balances[account] ?? 0
+  }
+
+  for (item of items) {
+    const data = item.act.data
+    const to = data.to
+    const amount = data.amount
+    const symbol = data.symbol
+
+
+    if (symbol != "HYPHA") {
+      throw "Error: not hypha"
+    }
+    const existingBalance = bal(to)
+    console.log("to: "+to + " " + amount + " " + symbol + " "+existingBalance)
+
+
+    balances[to] = existingBalance + amount
+
+  }
+
+  console.log("balances: "+JSON.stringify(balances, null, 2))
 
 }
 
@@ -854,6 +900,14 @@ program
   .action(async function () {
     console.log("getting HYPHA token history since reset");
     await getAllHistorySinceReset()
+  })
+
+  program
+  .command('process_history')
+  .description('Process HYPHA token history since HYPHA Reset 2022/01/15 ')
+  .action(async function () {
+    console.log("Process HYPHA token history since HYPHA Reset 2022/01/15");
+    await process_transfers()
   })
 
 program
