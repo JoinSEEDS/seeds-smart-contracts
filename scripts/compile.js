@@ -10,13 +10,15 @@ const mkdirAsync = promisify(fs.mkdir)
 const unlinkAsync = promisify(fs.unlink)
 const execAsync = promisify(exec)
 
-const command = ({ contract, source, include, dir }) => {
+const command = ({ contract, source, include, dir, contractSourceName }) => {
     const volume = dir
     let cmd = ""
     let inc = include == "" ? "./include" : include
+
+    contractSourceName = contractSourceName ?? contract
     
     if (process.env.COMPILER === 'local') {
-      cmd = "eosio-cpp -abigen -I "+ inc +" -contract " + contract + " -o ./artifacts/"+contract+".wasm "+source;
+      cmd = "eosio-cpp -abigen -I "+ inc +" -contract " + contractSourceName + " -o ./artifacts/"+contract+".wasm "+source;
     } else {
       cmd = `docker run --rm --name eosio.cdt_v1.7.0-rc1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.7.0-rc1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ${inc} -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
     }
@@ -24,7 +26,7 @@ const command = ({ contract, source, include, dir }) => {
     return cmd
 }
 
-const compile = async ({ contract, source, include = "" }) => {
+const compile = async ({ contract, source, include = "", contractSourceName }) => {
   // make sure source exists
 
   const contractFound = await existsAsync(source)
@@ -78,7 +80,7 @@ const compile = async ({ contract, source, include = "" }) => {
   }
 
   // run compile
-  const execCommand = command({ contract, source, include, dir })
+  const execCommand = command({ contract, source, include, dir, contractSourceName })
   await execAsync(execCommand)
 }
 

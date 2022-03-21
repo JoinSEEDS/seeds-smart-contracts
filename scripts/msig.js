@@ -10,26 +10,6 @@ const { accounts, eos } = require('./helper')
 
 const authPlaceholder = "............1"
 
-
-const beneficiaries = [
-["atmalife2312",	345],
-["gguijarro123",	27],
-["imprvsociety",	236],
-["jasondoh1155",	380],
-["juliomonteir",	323],
-["khempoudel12",	323],
-["leonieherma1",	244],
-["lukegravdent",	1152],
-["markflowfarm",	464],
-["massimohypha",	95],
-["matteotangi1",	57],
-["nomik22kimon",	1102],
-["seedspiyush2",	898],
-["sienaraa3535",	243],
-["thealchemist",	1507],
-]
-
-
 const transferAction = (beneficiary, amount) => {
 
   return  {
@@ -44,7 +24,7 @@ const transferAction = (beneficiary, amount) => {
       "from": "dao.hypha",
       "to": beneficiary,
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": "Hypha payout correction 2021/12"
+      "memo": ""
     },
   }
 
@@ -69,29 +49,9 @@ const issueAction = (amount) => {
 
 }
 
-const proposePayout = async () => {
-  console.log('propose payout ')
+const proposeMsig = async (proposerAccount, proposalName, contract, actions, permission = "active") => {
 
-  const api = eos.api
-
-  var total = 0
-
-  beneficiaries.forEach( (b) => total += b[1])
-
-  console.log("TOTAL: " + total.toFixed(2)  + " HYPHA")
-
-  const actions = []
-  
-  actions.push(issueAction(total))
-
-  beneficiaries.forEach( (b) => actions.push(transferAction(b[0], b[1])))
-
-  proposerAccount = "illumination"
-  proposalName = "amend1"
-
-  console.log("ACTIONS: "+JSON.stringify(actions, null, 2))
-
-  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
+  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, contract, actions, permission)
 
   console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
 
@@ -103,6 +63,17 @@ const proposePayout = async () => {
 
   console.log("ESR for Exec: " + JSON.stringify(execESR, null, 2))
 
+}
+
+const getConstitutionalGuardians = async (permission_name = "active") => {
+  const guardacct = "cg.seeds"
+  const { permissions } = await eos.getAccount(guardacct)
+  const activePerm = permissions.filter(item => item.perm_name == permission_name)
+  const result = activePerm[0].required_auth.accounts
+    .filter(item => item.permission.actor != "msig.seeds")
+    .map(item => item.permission)
+  console.log("CG accounts: "+permission_name+ ": "+JSON.stringify(result, null, 2))
+  return result
 }
 
 const getApprovers = async (account, permission_name = "active") => {
@@ -123,14 +94,16 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 
     const serializedActions = await api.serializeActions(actions)
   
-    requestedApprovals = await getApprovers(contract)
+    //requestedApprovals = await getApprovers(contract, permission)
+
+    requestedApprovals = await getConstitutionalGuardians(permission)
 
     console.log("====== PROPOSING ======")
     
     console.log("requested permissions: "+permission+ " " + JSON.stringify(requestedApprovals))
   
-    const info = await rpc.get_info();
-    const head_block = await rpc.get_block(info.last_irreversible_block_num);
+    const info = await api.rpc.get_info();
+    const head_block = await api.rpc.get_block(info.last_irreversible_block_num);
     const chainId = info.chain_id;
 
     const expiration = Serialize.timePointSecToDate(Serialize.dateToTimePointSec(head_block.timestamp) + 3600 * 24 * 7)
@@ -171,7 +144,7 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 
   const approveActions = [{
-    account: 'msig.seeds',
+    account: 'eosio.msig',
     name: 'approve',
     data: {
       proposer: proposerAccount,
@@ -193,7 +166,7 @@ const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 const createESRCodeExec = async ({proposerAccount, proposalName}) => {
 
   const execActions = [{
-    account: 'msig.seeds',
+    account: 'eosio.msig',
     name: 'exec',
     data: {
       proposer: proposerAccount,
@@ -236,4 +209,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-proposePayout()
+module.exports = { proposeMsig }
