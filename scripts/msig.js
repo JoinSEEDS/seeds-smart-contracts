@@ -108,8 +108,6 @@ const getConstitutionalGuardians = async (permission_name = "active") => {
 const getApprovers = async (account, permission_name = "active") => {
   const { permissions } = await eos.getAccount(account)
 
-console.log("PERM "+JSON.stringify(permissions, null, 2))
-
   const activePerm = permissions.filter(item => item.perm_name == permission_name)
   const result = activePerm[0].required_auth.accounts
     .filter(item => item.permission.actor != account)
