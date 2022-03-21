@@ -480,7 +480,16 @@ const process_transfers = async ()=> {
 
   }
 
-  console.log("balances: "+JSON.stringify(balances, null, 2))
+  var keys = Object.keys(balances);
+  keys = keys.sort()
+  var balancesAsc = {}
+  for (key of keys) {
+    balancesAsc[key] = balances[key]
+  }
+
+//console.log(mapAsc)
+
+  console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
 
 }
 
