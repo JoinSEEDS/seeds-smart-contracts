@@ -6,6 +6,9 @@ const fs = require('fs')
 const host = "https://api.telosfoundation.io"
 
 const { eos, getTableRows } = require("./helper");
+
+const { migrateTokens } = require("./msig");
+
 const { min } = require("ramda");
 const { parse } = require("path");
 
@@ -484,14 +487,20 @@ const process_transfers = async ()=> {
   var keys = Object.keys(balances);
   keys = keys.sort()
   var balancesAsc = {}
+  transferlist = []
   for (key of keys) {
     balancesAsc[key] = balances[key]
+    transferlist.push({
+      account: key,
+      amount: balances[key],
+    })
   }
 
-//console.log(mapAsc)
+  //console.log(mapAsc)
 
-  console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
-
+  //console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
+  console.log("transferlist: "+JSON.stringify(transferlist, null, 2))
+  
 }
 
 const get_tlos_history = async (
@@ -929,6 +938,95 @@ program
   .action(async function () {
     console.log("getting DAO history");
     await getDAOHistory()
+  })
+
+program
+  .command('migrate_tokens')
+  .description('Migrate tokens ESR')
+  .action(async function () {
+
+    console.log("migrate tokens")
+
+    const list = [
+      {
+        "account": "bigorna12345",
+        "amount": 1.1700000000000002
+      },
+      {
+        "account": "blockchain5d",
+        "amount": 1.6400000000000001
+      },
+      {
+        "account": "buy.hypha",
+        "amount": 899059.04
+      },
+      {
+        "account": "costak.hypha",
+        "amount": 42971363.42
+      },
+      {
+        "account": "dangermouse1",
+        "amount": 0.1
+      },
+      {
+        "account": "dao.hypha",
+        "amount": -43871365.42
+      },
+      {
+        "account": "dversityclub",
+        "amount": -1.01
+      },
+      {
+        "account": "gradinagruiu",
+        "amount": 0
+      },
+      {
+        "account": "hyphax.seeds",
+        "amount": -45.370000000000005
+      },
+      {
+        "account": "illumination",
+        "amount": 3.3899999999999997
+      },
+      {
+        "account": "jcroemer1111",
+        "amount": -0.99
+      },
+      {
+        "account": "leonieherma1",
+        "amount": 10
+      },
+      {
+        "account": "markflowfarm",
+        "amount": 827.89
+      },
+      {
+        "account": "mindmonkey12",
+        "amount": 100.58
+      },
+      {
+        "account": "nadimhamdan1",
+        "amount": 5.59
+      },
+      {
+        "account": "pedroteux123",
+        "amount": 0.09
+      },
+      {
+        "account": "rpiesveloces",
+        "amount": 41.03
+      },
+      {
+        "account": "stephend1111",
+        "amount": -1.1500000000000004
+      },
+      {
+        "account": "swapx.seeds",
+        "amount": 0
+      }
+    ]
+    
+    await migrateTokens(list)
   })
 
 program
