@@ -376,6 +376,65 @@ const getAllHistory = async () => {
 
 }
 
+const getAllHistorySinceReset = async () => {
+
+  items = []
+  skip = 0
+  limit = 100
+  hasMoreData = true
+
+  transfers = ""
+
+  var resetDateReached = false
+
+  while (hasMoreData && !resetDateReached) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_history_tx(skip, limit)
+    newItems = newItems.actions
+    console.log("got items "+JSON.stringify(newItems, null, 2))
+    newItems.forEach(item => {
+      items.push(item)
+      act = item.act
+      data = act.data
+      //console.log("item " + item.global_sequence + " " + (item.global_sequence >= 9802410191))
+
+      if (item.global_sequence >= 9802410191)     // first costak transaction
+      {
+
+          console.log(JSON.stringify(item, null, 2))
+
+          line = item.global_sequence + "," +item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          //console.log("line: "+line)
+        } else {
+          console.log("Done! Reset started at global action sequence 9802410191")
+          resetDateReached = true
+        }
+    });
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+    
+
+  }
+
+  console.log("=========================================================================")
+  console.log("all transfers: ")
+  console.log(transfers)
+
+  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+
+}
+
 const get_tlos_history = async (
   account,
   skip,
@@ -787,6 +846,14 @@ program
   .action(async function () {
     console.log("getting HYPHA token history");
     await getAllHistory()
+  })
+
+  program
+  .command('history_since_reset')
+  .description('Get HYPHA token history since HYPHA Reset 2022/01/15 ')
+  .action(async function () {
+    console.log("getting HYPHA token history since reset");
+    await getAllHistorySinceReset()
   })
 
 program
