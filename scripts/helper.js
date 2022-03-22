@@ -178,6 +178,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      sale: contract('buy.hypha', 'sale'),
       rainbows: contract('rainbo.seeds','rainbows'),
     }
   } else if (network == networks.telosMainnet) {
