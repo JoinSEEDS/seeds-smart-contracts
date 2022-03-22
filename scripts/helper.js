@@ -867,7 +867,7 @@ if (isTestnet || isLocalNet) {
 
 const keyProviders = {
   [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
-  [networks.telosMainnet]: ["5Ja5hBaXcfRTvbB2KUUthgpyojRQtwopMrfB1wR8fXFaf2NFJL9",process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY,process.env.PAY_FOR_CPU_MAINNET_KEY,process.env.SCRIPT_KEY],
+  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY,process.env.PAY_FOR_CPU_MAINNET_KEY,process.env.SCRIPT_KEY],
   [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
 }
 
