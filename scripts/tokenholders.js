@@ -991,7 +991,83 @@ program
 
 program
   .command('migrate_tokens')
-  .description('Migrate tokens ESR')
+  .description('Migrate tokens ESR for 1M liquid Hypha')
+  .action(async function () {
+
+    console.log("migrate tokens")
+
+    const list = [
+      {
+        "account": "buy.hypha",
+        "amount": 899059.04
+      },
+      {
+        "account": "dangermouse1",
+        "amount": 0.1
+      },
+      {
+        "account": "illumination",
+        "amount": 3.39
+      },
+      {
+        "account": "leonieherma1",
+        "amount": 10.0
+      },
+      {
+        "account": "markflowfarm",
+        "amount": 827.89
+      },
+      {
+        "account": "mindmonkey12",
+        "amount": 100.58
+      },
+      {
+        "account": "markflowfarm",
+        "amount": 827.89
+      },
+      {
+        "account": "mindmonkey12",
+        "amount": 100.58
+      },
+      {
+        "account": "nadimhamdan1",
+        "amount": 5.59
+      },
+      {
+        "account": "pedroteux123",
+        "amount": 0.09
+      },
+      {
+        "account": "rpiesveloces",
+        "amount": 41.03
+      }
+    ]
+    
+    
+    await migrateTokens(list, "migratehypha")
+  })
+
+  program
+  .command('restore_costake')
+  .description('Migrate costak.hypha ESR')
+  .action(async function () {
+
+    console.log("migrate costak.hypha")
+
+    const list = [
+      {
+        "account": "costak.hypha",
+        "amount": 42971363.42
+      }
+    ]
+    
+    
+    await migrateTokens(list, "migratecostk")
+  })
+
+  program
+  .command('migrate_to_costake_balances')
+  .description('Migrate tokens ESR for 1M liquid Hypha')
   .action(async function () {
 
     console.log("migrate tokens")

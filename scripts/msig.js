@@ -50,7 +50,7 @@ const issueAction = (amount) => {
 }
 
 // expects a list of { account: accountName, amount: N}, N is a number
-const migrateTokens = async (list) => {
+const migrateTokens = async (list, propname) => {
   var total = 0
 
   list = list.filter((item) => item.amount > 0)
@@ -74,7 +74,7 @@ const migrateTokens = async (list) => {
 
   console.log("actions: " + JSON.stringify(actions, null, 2))
 
-  proposeMsig("illumination", "migratehypha", "dao.hypha", actions)
+  proposeMsig("illumination", propname, "dao.hypha", actions)
 
 }
 
