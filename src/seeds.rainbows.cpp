@@ -293,9 +293,15 @@ void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asse
        memo = "proportional ";
     } else {
        stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
-       if( (int128_t)stake_quantity.amount*100 > (int128_t)proportional_amount*sk.reserve_fraction ) {
+       // check whether this redemption would put escrow below reserve fraction
+       auto stake_remaining = stake_in_escrow.amount - stake_quantity.amount;
+       auto supply_remaining = st.supply.amount - quantity.amount;
+       auto escrow_needed = (int64_t)((int128_t)supply_remaining*sk.reserve_fraction*sk.stake_per_bucket.amount/
+                       (100*sk.token_bucket.amount));
+       if( escrow_needed > stake_remaining ) {
           check( false, "can't unstake, escrow underfunded in " +
                  sk.stake_per_bucket.symbol.code().to_string() +
+                 //std::to_string(escrow_needed) +":"+ std::to_string(stake_remaining) +
                  " (" + std::to_string(sk.reserve_fraction) + "% reserve)" );
        }
     }
