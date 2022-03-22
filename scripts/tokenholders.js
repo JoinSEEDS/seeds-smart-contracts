@@ -5,9 +5,9 @@ const fs = require('fs')
 
 const host = "https://api.telosfoundation.io"
 
-const { eos, getTableRows } = require("./helper");
+const { eos, sendTransaction } = require("./helper");
 
-const { migrateTokens } = require("./msig");
+const { migrateTokens, createESRWithActions } = require("./msig");
 
 const { min } = require("ramda");
 const { parse } = require("path");
@@ -292,7 +292,7 @@ const allPayments = async () => {
     limit,
 ) => {
 
-  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha`
+  const url = "http://api.telosfoundation.io" + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha`
 
   const rawResponse = await fetch(url, {
       method: 'GET',
@@ -306,6 +306,26 @@ const allPayments = async () => {
   return res
 
 }
+
+const get_newpayment_tx = async (
+  skip,
+  limit,
+) => {
+
+  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=buy.hypha`
+
+  const rawResponse = await fetch(url, {
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      //body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+  return res
+}
+
 
 const get_dao_history_tx = async (
   skip,
@@ -327,6 +347,91 @@ return res
 
 }
 
+const getNewpaymentHistory = async () => {
+
+  items = []
+  skip = 0
+  limit = 500
+  hasMoreData = true
+
+  transfers = ""
+
+  newPaymentActions = []
+
+  while (hasMoreData) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_newpayment_tx(skip, limit)
+    newItems = newItems.actions
+
+    for (item of newItems) {
+      act = item.act
+      data = act.data
+
+      if (
+        act.account == "buy.hypha" &&
+        act.name == "newpayment" 
+        ) {
+          items.push(item)
+          console.log("got item: "+JSON.stringify(item, null, 2))
+          console.log("got newpayment ")
+          newPaymentActions.push({
+              account: "sale.hypha",
+              name: "newpayment",
+              authorization: [
+                {
+                  actor: "sale.hypha",
+                  permission: "newpayment"
+                }
+              ],
+              data: {
+                recipientAccount: act.data.recipientAccount,
+                paymentSymbol: act.data.paymentSymbol,
+                paymentQuantity: act.data.paymentQuantity,
+                paymentId: act.data.paymentId,
+                multipliedUsdValue: act.data.multipliedUsdValue
+              }
+          })
+
+          console.log("--> "+JSON.stringify(newPaymentActions))
+
+          line = item.global_sequence + "," +item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          //console.log("line: "+line)
+        }
+    }
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+
+
+  }
+
+  console.log("=========================================================================")
+  
+  newPaymentActions = newPaymentActions.reverse()
+
+  const payments = JSON.stringify(newPaymentActions, null, 2)
+
+  console.log(payments)
+
+  fs.writeFileSync(snapshotDirPath + `buy_hypha_newpayment.json`, payments)
+
+  const esr = await createESRWithActions({actions: newPaymentActions})
+
+  console.log("esr: "+JSON.stringify(esr))
+
+  const res = await sendTransaction(newPaymentActions)
+
+}
 const getAllHistory = async () => {
 
   items = []
@@ -981,12 +1086,20 @@ program
     await process_transfers(full)
   })
 
-program
+  program
   .command('dao')
   .description('Get DAO history')
   .action(async function () {
     console.log("getting DAO history");
     await getDAOHistory()
+  })
+
+  program
+  .command('newpayment')
+  .description('Get newpayment history')
+  .action(async function () {
+    console.log("newpayment history");
+    await getNewpaymentHistory()
   })
 
 program
@@ -1069,7 +1182,8 @@ program
   .command('migrate_to_costake_balances')
   .description('Migrate tokens ESR for 1M liquid Hypha')
   .action(async function () {
-
+    
+    throw "to implement"
     console.log("migrate tokens")
     
     // TODO read all values from csv

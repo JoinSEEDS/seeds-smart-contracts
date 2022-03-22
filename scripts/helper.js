@@ -878,6 +878,7 @@ const keyProviders = {
   [networks.telosTestnet]: [
     process.env.TELOS_TESTNET_OWNER_KEY, 
     process.env.TELOS_TESTNET_HYPHA_ACTIVE_KEY, 
+    process.env.TESTNET_NEWPAYMENT_KEY,
     process.env.TELOS_TESTNET_ACTIVE_KEY, 
     process.env.APPLICATION_KEY]
 }
@@ -1001,9 +1002,16 @@ function asset (quantity) {
   }
 }
 
+const sendTransaction = async (actions) => {
+  return await eos.transaction({
+    actions
+  })
+} 
+
 module.exports = {
   keyProvider, httpEndpoint,
   eos, getEOSWithEndpoint, encodeName, decodeName, getBalance, getBalanceFloat, getTableRows, initContracts,
   accounts, names, ownerPublicKey, activePublicKey, apiPublicKey, permissions, sha256, isLocal, ramdom64ByteHexString, createKeypair,
-  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset, isTestnet
+  testnetUserPubkey, getTelosBalance, fromHexString, allContractNames, allContracts, allBankAccountNames, sleep, asset, isTestnet,
+  sendTransaction
 }

@@ -266,4 +266,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-module.exports = { proposeMsig, migrateTokens }
+module.exports = { proposeMsig, migrateTokens, createESRWithActions }
