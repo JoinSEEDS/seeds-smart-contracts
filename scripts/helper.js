@@ -167,7 +167,7 @@ const accountsMetadata = (network) => {
       proposals: contract('funds.seeds', 'proposals'),
       referendums: contract('rules.seeds', 'referendums'),
       token: token('token.seeds', owner, '1500000000.0000 SEEDS'),
-      hyphatoken: token('token.hypha', owner, '1500000000.00 HYPHA'),
+      hyphatoken: token('hypha.hypha', owner, '1500000000.00 HYPHA'),
       testtoken: token('token.seeds', owner, '1500000000.0000 TESTS'),
       policy: contract('policy.seeds', 'policy'),
       onboarding: contract('join.seeds', 'onboarding'),
