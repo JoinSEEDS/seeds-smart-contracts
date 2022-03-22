@@ -397,6 +397,63 @@ describe('rainbows', async assert => {
     expected: [ '60.00 TOKES' ]
   })
 
+  console.log('create fractional staked token')
+
+  await contracts.rainbows.create(issuer, '1000000.0000 FRACS', issuer, withdraw_to, issuer,
+                         starttime.toISOString(), starttime.toISOString(), '', '', '', '',
+                          { authorization: `${issuer}@active` } )
+  await setSeedsBalance(fourthuser, '10000000.0000 SEEDS')
+
+
+  console.log('empty FRACS escrow account')
+  await setSeedsBalance(fifthuser, '0.0000 SEEDS')
+
+
+  console.log('set stake')
+  await contracts.rainbows.setstake('1.0000 FRACS', '2.0000 SEEDS', 'token.seeds', fifthuser, false, 30, '',
+                          { authorization: `${issuer}@active` } )
+  await addActorPermission(fifthuser, 'active', rainbows, 'eosio.code')
+
+  console.log('approve token')
+  await contracts.rainbows.approve('FRACS', false, { authorization: `${rainbows}@active` })
+
+  console.log('issue tokens')
+  await contracts.rainbows.issue('500.0000 FRACS', '', { authorization: `${issuer}@active` })
+
+  console.log('transfer tokens')
+  await contracts.rainbows.transfer(issuer, fourthuser, '100.0000 FRACS', '', { authorization: `${issuer}@active` })
+  await contracts.token.transfer(fifthuser, issuer, '500.0000 SEEDS', '', { authorization: `${fifthuser}@active` })
+
+  console.log('redeem some')
+  await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  
+
+  assert({
+    given: 'create & redeem with fractional reserve',
+    should: 'see correct quantity',
+    actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'FRACS'),
+              await eos.getCurrencyBalance(token, fourthuser, 'SEEDS'),
+              await eos.getCurrencyBalance(token, fifthuser, 'SEEDS') ],
+    expected: [ [ '80.0000 FRACS' ], [ '10000040.0000 SEEDS' ], [ '460.0000 SEEDS' ] ]
+  })
+
+  console.log('redeem with insufficient reserve')
+  actionProperlyBlocked = true
+  try {
+    await contracts.token.transfer(fifthuser, issuer, '145.0000 SEEDS', '', { authorization: `${fifthuser}@active` })
+    await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('can\'t unstake, escrow underfunded in SEEDS')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying to redeem with insufficient reserve',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
+  })
+
   console.log('---begin dSeeds stake tests---')
 
   const dseed_escrow = fifthuser
