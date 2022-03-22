@@ -93,7 +93,7 @@ const exchangePublicKey = exchangeKeys[chainId]
 const saleKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
   [networks.telosTestnet]: 'EOS7yHExhTMu1m23vAXHzMSBG632ry7yeas73TwBvFf13bEZCXfPP',
-  [networks.telosMainnet]: 'EOS5BQFjd2cSg9d7gWQ2cYzn6GyhzapKkzPG2m5V3Q7A9tt2vkHDm', 
+  [networks.telosMainnet]: 'EOS6qQjjYCoTmFha6rUk9ciE9NLTK1pvM7YgG6rnX2BLcRYzb9FWg', 
 }
 
 const salePublicKey = saleKeys[chainId]
@@ -187,7 +187,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      sale: contract('buy.hypha', 'sale'),
+      sale: contract('sale.hypha', 'sale'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -229,7 +229,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      sale: contract('buy.hypha', 'sale'),
+      sale: contract('sale.hypha', 'sale'),
     }
   } else if (network == networks.telosTestnet) {
     return {
@@ -279,7 +279,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      sale: contract('buy.hypha', 'sale'),
+      sale: contract('sale.hypha', 'sale'),
     }
   } else {
     throw new Error(`${network} deployment not supported`)
@@ -867,8 +867,19 @@ if (isTestnet || isLocalNet) {
 
 const keyProviders = {
   [networks.local]: [process.env.LOCAL_PRIVATE_KEY, process.env.LOCAL_PRIVATE_KEY, process.env.APPLICATION_KEY],
-  [networks.telosMainnet]: [process.env.TELOS_MAINNET_OWNER_KEY, process.env.TELOS_MAINNET_ACTIVE_KEY, process.env.APPLICATION_KEY, process.env.EXCHANGE_KEY,process.env.PAY_FOR_CPU_MAINNET_KEY,process.env.SCRIPT_KEY],
-  [networks.telosTestnet]: [process.env.TELOS_TESTNET_OWNER_KEY, process.env.TELOS_TESTNET_ACTIVE_KEY, process.env.APPLICATION_KEY]
+  [networks.telosMainnet]: [
+    process.env.TELOS_MAINNET_OWNER_KEY, 
+    process.env.TELOS_MAINNET_HYPHA_OWNER_KEY, 
+    process.env.TELOS_MAINNET_ACTIVE_KEY, 
+    process.env.APPLICATION_KEY, 
+    process.env.EXCHANGE_KEY,
+    process.env.PAY_FOR_CPU_MAINNET_KEY,
+    process.env.SCRIPT_KEY],
+  [networks.telosTestnet]: [
+    process.env.TELOS_TESTNET_OWNER_KEY, 
+    process.env.TELOS_TESTNET_HYPHA_ACTIVE_KEY, 
+    process.env.TELOS_TESTNET_ACTIVE_KEY, 
+    process.env.APPLICATION_KEY]
 }
 
 const keyProvider = keyProviders[chainId]

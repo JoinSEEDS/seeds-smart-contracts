@@ -998,7 +998,7 @@ program
 
     const list = [
       {
-        "account": "buy.hypha",
+        "account": "sale.hypha",
         "amount": 899059.04
       },
       {
@@ -1071,56 +1071,10 @@ program
   .action(async function () {
 
     console.log("migrate tokens")
-
+    
+    // TODO read all values from csv
     const list = [
-      {
-        "account": "bigorna12345",
-        "amount": 1.1700000000000002
-      },
-      {
-        "account": "blockchain5d",
-        "amount": 1.6400000000000001
-      },
-      {
-        "account": "buy.hypha",
-        "amount": 899059.04
-      },
-      {
-        "account": "costak.hypha",
-        "amount": 42971363.42
-      },
-      {
-        "account": "dangermouse1",
-        "amount": 0.1
-      },
-      {
-        "account": "illumination",
-        "amount": 3.3899999999999997
-      },
-      {
-        "account": "leonieherma1",
-        "amount": 10
-      },
-      {
-        "account": "markflowfarm",
-        "amount": 827.89
-      },
-      {
-        "account": "mindmonkey12",
-        "amount": 100.58
-      },
-      {
-        "account": "nadimhamdan1",
-        "amount": 5.59
-      },
-      {
-        "account": "pedroteux123",
-        "amount": 0.09
-      },
-      {
-        "account": "rpiesveloces",
-        "amount": 41.03
-      }
+
     ]
     
     
