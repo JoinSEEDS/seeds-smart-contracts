@@ -19,6 +19,19 @@ describe('Sale', async assert => {
   await contracts.sale.reset({ authorization: `${sale}@active` })  
 
   console.log(`${owner} transfer token to ${firstuser}`)
+
+  //await contracts.hyphatoken.create(owner, "-1.00 HYPHA", { authorization: `${hyphatoken}@active` })
+
+  console.log(`issue`)
+
+  await contracts.hyphatoken.issue("dao.hypha", '10000000.00 HYPHA', `init`, { authorization: `dao.hypha@active` })
+
+  console.log(`transfer to owner`)
+
+  await contracts.hyphatoken.transfer("dao.hypha", owner, "1000000.00 HYPHA", 'unit test', { authorization: `dao.hypha@active` })
+
+  console.log(`transfer to sale`)
+
   await contracts.hyphatoken.transfer(owner, sale, "1000.00 HYPHA", 'unit test', { authorization: `${owner}@active` })
 
   console.log(`reset accounts`)
@@ -197,7 +210,7 @@ describe('Basic Init Check', async assert => {
 
   initial = 1
   price = initial
-  increment = 0.1
+  increment = 0.03
   volumePerRound = 100000
   initialVolume = 100000
   volume = initialVolume
