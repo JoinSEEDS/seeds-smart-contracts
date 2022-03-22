@@ -162,11 +162,12 @@ void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, st
 
   update_price();
 
-  action(
-    permission_level{get_self(), "active"_n},
-    hypha_contract, "transfer"_n,
-    make_tuple(get_self(), buyer, token_quantity, memo)
-  ).send();    
+  print("send disabled");
+  // action(
+  //   permission_level{get_self(), "active"_n},
+  //   hypha_contract, "transfer"_n,
+  //   make_tuple(get_self(), buyer, token_quantity, memo)
+  // ).send();    
 }
 
 void sale::ontransfer(name buyer, name contract, asset tlos_quantity, string memo) {
