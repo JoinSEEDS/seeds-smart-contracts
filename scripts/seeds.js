@@ -350,6 +350,7 @@ program
     console.print("Hypha Accounts")
     hyphaAccounts = [
       "buy", 
+      "sale",
       "costak",
       "voice",
       "msig",
