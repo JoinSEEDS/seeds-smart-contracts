@@ -347,7 +347,6 @@ using namespace eosio;
          };
 
          TABLE currency_config {  // singleton, scoped on token symbol code
-            name        membership_mgr;
             name        withdrawal_mgr;
             name        withdraw_to;
             name        freeze_mgr;
