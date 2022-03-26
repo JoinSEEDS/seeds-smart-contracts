@@ -1180,7 +1180,7 @@ program
 
   program
   .command('migrate_to_costake_balances')
-  .description('Migrate tokens ESR for 1M liquid Hypha')
+  .description('Migrate tokens ESR')
   .action(async function () {
     
     throw "to implement"
