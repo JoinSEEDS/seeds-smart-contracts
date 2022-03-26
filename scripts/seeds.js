@@ -350,6 +350,7 @@ program
     console.print("Hypha Accounts")
     hyphaAccounts = [
       "buy", 
+      "sale",
       "costak",
       "voice",
       "msig",
@@ -361,6 +362,7 @@ program
       "token",
       "dao",
       "seeds",
+      "hypha",
     ]
     for (var account of hyphaAccounts) {
       await listPermissions(account + ".hypha")

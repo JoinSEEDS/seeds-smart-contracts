@@ -13,7 +13,7 @@ const authPlaceholder = "............1"
 const transferAction = (beneficiary, amount) => {
 
   return  {
-    "account": "token.hypha",
+    "account": "hypha.hypha",
     "name": "transfer",
     "authorization": [{
         "actor": "dao.hypha",
@@ -24,7 +24,7 @@ const transferAction = (beneficiary, amount) => {
       "from": "dao.hypha",
       "to": beneficiary,
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": ""
+      "memo": "Migrate balances"
     },
   }
 
@@ -33,7 +33,7 @@ const transferAction = (beneficiary, amount) => {
 const issueAction = (amount) => {
 
   return  {
-    "account": "token.hypha",
+    "account": "hypha.hypha",
     "name": "issue",
     "authorization": [{
         "actor": "dao.hypha",
@@ -43,9 +43,38 @@ const issueAction = (amount) => {
     "data": {
       "to": "dao.hypha",
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": "Hypha payout correction 2021/12"
+      "memo": "Migrate balances to hypha.hypha"
     },
   }
+
+}
+
+// expects a list of { account: accountName, amount: N}, N is a number
+const migrateTokens = async (list, propname) => {
+  var total = 0
+
+  list = list.filter((item) => item.amount > 0)
+
+  for (item of list) {
+    console.log("item: " + JSON.stringify(item, null, 2))
+
+    total += parseInt (  (parseFloat( item.amount.toFixed(2) ) * 100) + "" )
+  }
+
+  total = total / 100.0
+
+  actions = []
+
+  // issue
+  actions.push(issueAction(total))
+
+  for (item of list) {
+    actions.push(transferAction(item.account, item.amount))
+  }
+
+  console.log("actions: " + JSON.stringify(actions, null, 2))
+
+  proposeMsig("illumination", propname, "dao.hypha", actions)
 
 }
 
@@ -55,6 +84,10 @@ const proposeMsig = async (proposerAccount, proposalName, contract, actions, per
 
   console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
 
+  const url = `https://eosauthority.com/msig/${proposerAccount}/${proposalName}?network=telos`
+
+  console.log("Proposal URL: " + url)
+
   const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
 
   console.log("ESR for Approve: " + JSON.stringify(approveESR, null, 2))
@@ -62,6 +95,10 @@ const proposeMsig = async (proposerAccount, proposalName, contract, actions, per
   const execESR = await createESRCodeExec({proposerAccount, proposalName})
 
   console.log("ESR for Exec: " + JSON.stringify(execESR, null, 2))
+
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName})
+
+  console.log("ESR for Cancel: " + JSON.stringify(cancelESR, null, 2))
 
 }
 
@@ -78,11 +115,12 @@ const getConstitutionalGuardians = async (permission_name = "active") => {
 
 const getApprovers = async (account, permission_name = "active") => {
   const { permissions } = await eos.getAccount(account)
+
   const activePerm = permissions.filter(item => item.perm_name == permission_name)
   const result = activePerm[0].required_auth.accounts
     .filter(item => item.permission.actor != account)
     .map(item => item.permission)
-  console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  console.log(`Approve accounts on ${account}: ${JSON.stringify(result, null, 2)}`)
   return result
 }
 
@@ -94,9 +132,9 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 
     const serializedActions = await api.serializeActions(actions)
   
-    //requestedApprovals = await getApprovers(contract, permission)
+    requestedApprovals = await getApprovers(contract, permission)
 
-    requestedApprovals = await getConstitutionalGuardians(permission)
+    //requestedApprovals = await getConstitutionalGuardians(permission)
 
     console.log("====== PROPOSING ======")
     
@@ -182,6 +220,25 @@ const createESRCodeExec = async ({proposerAccount, proposalName}) => {
   return createESRWithActions({actions: execActions})
 }
 
+const createESRCodeCancel = async ({proposerAccount, proposalName}) => {
+
+  const execActions = [{
+    account: 'eosio.msig',
+    name: 'cancel',
+    data: {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      canceler: authPlaceholder
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
+
+  return createESRWithActions({actions: execActions})
+}
+
 const createESRWithActions = async ({actions}) => {
 
   console.log("========= Generating ESR Code ===========")
@@ -209,4 +266,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-module.exports = { proposeMsig }
+module.exports = { proposeMsig, migrateTokens, createESRWithActions }

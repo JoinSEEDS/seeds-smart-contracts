@@ -81,7 +81,7 @@ CONTRACT sale : public contract {
     name paused_flag = "paused"_n;
     name tlos_paused_flag = "tlos.paused"_n;
     name husd_contract = "husd.hypha"_n;
-    name hypha_contract = "token.hypha"_n;
+    name hypha_contract = "hypha.hypha"_n;
 
     uint64_t asset_factor(asset quantity) {
       //return 100;
