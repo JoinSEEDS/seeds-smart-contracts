@@ -7,7 +7,7 @@ const host = "https://api.telosfoundation.io"
 
 const { eos, sendTransaction } = require("./helper");
 
-const { migrateTokens, createESRWithActions } = require("./msig");
+const { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction } = require("./msig");
 
 const { min } = require("ramda");
 const { parse } = require("path");
@@ -1178,6 +1178,7 @@ program
     await migrateTokens(list, "migratecostk")
   })
 
+
   program
   .command('migrate_to_costake_balances')
   .description('Migrate tokens ESR')
@@ -1194,6 +1195,20 @@ program
     
     await migrateTokens(list)
   })
+
+  program
+  .command('settings')
+  .description('Set settings')
+  .action(async function () {
+    // key: hypha_token_contract
+    // value: ["name", "hypha.hypha"]
+    const action = setSettingsAction("hypha_token_contract", ["name", "hypha.hypha"])
+
+    console.log("issue action: " + JSON.stringify(action, null, 2))
+
+    const esr = await proposeMsig("illumination", "setingtoken", "dao.hypha", [action])
+  })
+
 
 program
   .command('telos <account>')

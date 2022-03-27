@@ -30,6 +30,25 @@ const transferAction = (beneficiary, amount) => {
 
 }
 
+// key: hypha_token_contract
+// value: ["name", "hypha.hypha"]
+const setSettingsAction = (setting, value) => {
+  return  {
+    "account": "dao.hypha",
+    "name": "setsetting",
+    "authorization": [{
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "key": "hypha_token_contract",
+      "value": ["name", "hypha.hypha"],
+    },
+  }
+}
+
+
 const issueAction = (amount) => {
 
   return  {
@@ -266,4 +285,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-module.exports = { proposeMsig, migrateTokens, createESRWithActions }
+module.exports = { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction }
