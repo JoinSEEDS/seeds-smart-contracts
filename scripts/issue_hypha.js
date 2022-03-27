@@ -53,7 +53,7 @@ const transferAction = (beneficiary, amount) => {
 const issueAction = (amount) => {
 
   return  {
-    "account": "token.hypha",
+    "account": "hypha.hypha",
     "name": "issue",
     "authorization": [{
         "actor": "dao.hypha",
