@@ -437,7 +437,7 @@ const createMultisigProposal = async (proposerAccount, proposalName, actions, pe
 const issueHypha = async (quantity, proposerAccount, propName) => {
 
   const actions = [{
-    account: 'token.hypha',
+    account: 'hypha.hypha',
     name: 'issue',
     authorization: [{
       "actor": "dao.hypha",
@@ -468,7 +468,7 @@ const issueHypha = async (quantity, proposerAccount, propName) => {
 const sendHypha = async (quantity, recepient, proposerAccount, propName) => {
 
   const actions = [{
-    account: 'token.hypha',
+    account: 'hypha.hypha',
     name: 'transfer',
     authorization: [{
       "actor": "dao.hypha",
