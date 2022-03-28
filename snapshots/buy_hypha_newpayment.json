@@ -1,0 +1,104 @@
+[
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "illumination",
+      "paymentSymbol": "EOS",
+      "paymentQuantity": "0.2420 EOS",
+      "paymentId": "6d9b147e315dd3f7637d8b79ee5ce578f9630ae5415bdd7e85010d81b5ad7404",
+      "multipliedUsdValue": "5033"
+    }
+  },
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "illumination",
+      "paymentSymbol": "BTC",
+      "paymentQuantity": "2447",
+      "paymentId": "2e1d3fd4d8868861d503c35d8d77672cc4f059ec1b32a9d17d2eb0d4a5df2403",
+      "multipliedUsdValue": "9978"
+    }
+  },
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "markflowfarm",
+      "paymentSymbol": "EOS",
+      "paymentQuantity": "399.9500 EOS",
+      "paymentId": "35fd2f377b0bb28e6286ee1772300f1f8015f692c9582530c2dc1b701b06826d",
+      "multipliedUsdValue": "8278964"
+    }
+  },
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "leonieherma1",
+      "paymentSymbol": "EOS",
+      "paymentQuantity": "4.7170 EOS",
+      "paymentId": "af0430e56c9e5820bb32528978c01eda99ba8b01d1e9409daf7a37fecddf29be",
+      "multipliedUsdValue": "100000"
+    }
+  },
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "bigorna12345",
+      "paymentSymbol": "EOS",
+      "paymentQuantity": "0.4673 EOS",
+      "paymentId": "6f6f54fce106df3db82e2f8c4adff98348b75b65a152563d49a9977f32c9fb5c",
+      "multipliedUsdValue": "10000"
+    }
+  },
+  {
+    "account": "sale.hypha",
+    "name": "newpayment",
+    "authorization": [
+      {
+        "actor": "sale.hypha",
+        "permission": "newpayment"
+      }
+    ],
+    "data": {
+      "recipientAccount": "mindmonkey12",
+      "paymentSymbol": "BTC",
+      "paymentQuantity": "239486",
+      "paymentId": "62eca43ea5fbc7a571315697588229212ca691e72b6a786e4da3d6c8dcdf68d2",
+      "multipliedUsdValue": "1005889"
+    }
+  }
+]
