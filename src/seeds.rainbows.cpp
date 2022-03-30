@@ -1,4 +1,5 @@
 #include <seeds.rainbows.hpp>
+#include <algorithm>
 #include <../capi/eosio/action.h>
 
 void rainbows::create( const name&    issuer,
@@ -401,10 +402,6 @@ void rainbows::transfer( const name&    from,
     sub_balance( from, quantity, cf.cred_limit );
     add_balance( to, quantity, payer, cf.positive_limit );
 
-    // TODO: consider whether tokens transferred from/to accounts in negative balance should be
-    //  taken from/returned to the issuer account. This would ensure that there is stake for
-    //  all the tokens in circulation.
-
 }
 
 void rainbows::sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol ) {
@@ -420,11 +417,19 @@ void rainbows::sub_balance( const name& owner, const asset& value, const symbol_
          limit = lim.balance.amount;
       }
    }
-   check( from.balance.amount + limit >= value.amount, "overdrawn balance" );
-
+   int64_t new_balance = from.balance.amount - value.amount;
+   check( new_balance + limit >= 0, "overdrawn balance" );
+   int64_t credit_increase = std::min( from.balance.amount, 0LL ) - std::min( new_balance, 0LL );
    from_acnts.modify( from, same_payer, [&]( auto& a ) {
-         a.balance -= value;
+         a.balance.amount = new_balance;
       });
+   stats statstable( get_self(), value.symbol.code().raw() );
+   const auto& st = statstable.get( value.symbol.code().raw() );
+   check( credit_increase <= st.max_supply.amount - st.supply.amount, "new credit exceeds available supply");
+   statstable.modify( st, same_payer, [&]( auto& s ) {
+      s.supply.amount += credit_increase;
+   });
+   
 }
 
 void rainbows::add_balance( const name& owner, const asset& value, const name& ram_payer, const symbol_code& limit_symbol )
@@ -446,11 +451,20 @@ void rainbows::add_balance( const name& owner, const asset& value, const name& r
         a.balance = value;
       });
    } else {
-      check( limit >= to->balance.amount + value.amount, "transfer exceeds receiver positive limit" );
+      int64_t new_balance = to->balance.amount + value.amount;
+      check( limit >= new_balance, "transfer exceeds receiver positive limit" );
+      int64_t credit_increase = std::min( to->balance.amount, 0LL ) - std::min( new_balance, 0LL );
       to_acnts.modify( to, same_payer, [&]( auto& a ) {
-        a.balance += value;
+        a.balance.amount = new_balance;
       });
+      stats statstable( get_self(), value.symbol.code().raw() );
+      const auto& st = statstable.get( value.symbol.code().raw() );
+      statstable.modify( st, same_payer, [&]( auto& s ) {
+         s.supply.amount += credit_increase;
+   });
+
    }
+   
 }
 
 void rainbows::open( const name& owner, const symbol_code& symbolcode, const name& ram_payer )
