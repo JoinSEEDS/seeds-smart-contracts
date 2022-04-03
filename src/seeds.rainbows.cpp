@@ -241,7 +241,7 @@ void rainbows::issue( const asset& quantity, const string& memo )
     check( cf.approved, "cannot issue until token is approved" );
     require_auth( st.issuer );
     check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must issue positive quantity" );
+    check( quantity.amount >= 0, "must issue zero or positive quantity" );
 
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
     check( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
@@ -375,7 +375,7 @@ void rainbows::transfer( const name&    from,
     require_recipient( to );
 
     check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must transfer positive quantity" );
+    check( quantity.amount >= 0, "must transfer zero or positive quantity" );
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
 
