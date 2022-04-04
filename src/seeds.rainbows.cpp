@@ -436,7 +436,7 @@ void rainbows::add_balance( const name& owner, const asset& value, const name& r
 {
    accounts to_acnts( get_self(), owner.value );
    auto to = to_acnts.find( value.symbol.code().raw() );
-   uint64_t limit = value.max_amount;
+   int64_t limit = value.max_amount;
    if( limit_symbol != symbol_code(0) ) {
       auto pos = to_acnts.find( limit_symbol.raw() );
       if( pos != to_acnts.end() ) {
