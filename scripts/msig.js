@@ -10,26 +10,6 @@ const { accounts, eos } = require('./helper')
 
 const authPlaceholder = "............1"
 
-
-const beneficiaries = [
-["atmalife2312",	345],
-["gguijarro123",	27],
-["imprvsociety",	236],
-["jasondoh1155",	380],
-["juliomonteir",	323],
-["khempoudel12",	323],
-["leonieherma1",	244],
-["lukegravdent",	1152],
-["markflowfarm",	464],
-["massimohypha",	95],
-["matteotangi1",	57],
-["nomik22kimon",	1102],
-["seedspiyush2",	898],
-["sienaraa3535",	243],
-["thealchemist",	1507],
-]
-
-
 const transferAction = (beneficiary, amount) => {
 
   return  {
@@ -44,11 +24,30 @@ const transferAction = (beneficiary, amount) => {
       "from": "dao.hypha",
       "to": beneficiary,
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": "Hypha payout correction 2021/12"
+      "memo": "Migrate balances"
     },
   }
 
 }
+
+// key: hypha_token_contract
+// value: ["name", "hypha.hypha"]
+const setSettingsAction = (setting, value) => {
+  return  {
+    "account": "dao.hypha",
+    "name": "setsetting",
+    "authorization": [{
+        "actor": "dao.hypha",
+        "permission": "active"
+      }
+    ],
+    "data": {
+      "key": "hypha_token_contract",
+      "value": ["name", "hypha.hypha"],
+    },
+  }
+}
+
 
 const issueAction = (amount) => {
 
@@ -63,37 +62,50 @@ const issueAction = (amount) => {
     "data": {
       "to": "dao.hypha",
       "quantity": amount.toFixed(2) + " HYPHA",
-      "memo": "Hypha payout correction 2021/12"
+      "memo": "Migrate balances to hypha.hypha"
     },
   }
 
 }
 
-const proposePayout = async () => {
-  console.log('propose payout ')
-
-  const api = eos.api
-
+// expects a list of { account: accountName, amount: N}, N is a number
+const migrateTokens = async (list, propname) => {
   var total = 0
 
-  beneficiaries.forEach( (b) => total += b[1])
+  list = list.filter((item) => item.amount > 0)
 
-  console.log("TOTAL: " + total.toFixed(2)  + " HYPHA")
+  for (item of list) {
+    console.log("item: " + JSON.stringify(item, null, 2))
 
-  const actions = []
-  
+    total += parseInt (  (parseFloat( item.amount.toFixed(2) ) * 100) + "" )
+  }
+
+  total = total / 100.0
+
+  actions = []
+
+  // issue
   actions.push(issueAction(total))
 
-  beneficiaries.forEach( (b) => actions.push(transferAction(b[0], b[1])))
+  for (item of list) {
+    actions.push(transferAction(item.account, item.amount))
+  }
 
-  proposerAccount = "illumination"
-  proposalName = "amend1"
+  console.log("actions: " + JSON.stringify(actions, null, 2))
 
-  console.log("ACTIONS: "+JSON.stringify(actions, null, 2))
+  proposeMsig("illumination", propname, "dao.hypha", actions)
 
-  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, "dao.hypha", actions)
+}
+
+const proposeMsig = async (proposerAccount, proposalName, contract, actions, permission = "active") => {
+
+  const proposeESR = await createMultisigPropose(proposerAccount, proposalName, contract, actions, permission)
 
   console.log("ESR for Propose: " + JSON.stringify(proposeESR, null, 2))
+
+  const url = `https://eosauthority.com/msig/${proposerAccount}/${proposalName}?network=telos`
+
+  console.log("Proposal URL: " + url)
 
   const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
 
@@ -103,15 +115,31 @@ const proposePayout = async () => {
 
   console.log("ESR for Exec: " + JSON.stringify(execESR, null, 2))
 
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName})
+
+  console.log("ESR for Cancel: " + JSON.stringify(cancelESR, null, 2))
+
+}
+
+const getConstitutionalGuardians = async (permission_name = "active") => {
+  const guardacct = "cg.seeds"
+  const { permissions } = await eos.getAccount(guardacct)
+  const activePerm = permissions.filter(item => item.perm_name == permission_name)
+  const result = activePerm[0].required_auth.accounts
+    .filter(item => item.permission.actor != "msig.seeds")
+    .map(item => item.permission)
+  console.log("CG accounts: "+permission_name+ ": "+JSON.stringify(result, null, 2))
+  return result
 }
 
 const getApprovers = async (account, permission_name = "active") => {
   const { permissions } = await eos.getAccount(account)
+
   const activePerm = permissions.filter(item => item.perm_name == permission_name)
   const result = activePerm[0].required_auth.accounts
     .filter(item => item.permission.actor != account)
     .map(item => item.permission)
-  console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  console.log(`Approve accounts on ${account}: ${JSON.stringify(result, null, 2)}`)
   return result
 }
 
@@ -123,14 +151,16 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 
     const serializedActions = await api.serializeActions(actions)
   
-    requestedApprovals = await getApprovers(contract)
+    requestedApprovals = await getApprovers(contract, permission)
+
+    //requestedApprovals = await getConstitutionalGuardians(permission)
 
     console.log("====== PROPOSING ======")
     
     console.log("requested permissions: "+permission+ " " + JSON.stringify(requestedApprovals))
   
-    const info = await rpc.get_info();
-    const head_block = await rpc.get_block(info.last_irreversible_block_num);
+    const info = await api.rpc.get_info();
+    const head_block = await api.rpc.get_block(info.last_irreversible_block_num);
     const chainId = info.chain_id;
 
     const expiration = Serialize.timePointSecToDate(Serialize.dateToTimePointSec(head_block.timestamp) + 3600 * 24 * 7)
@@ -171,7 +201,7 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 
   const approveActions = [{
-    account: 'msig.seeds',
+    account: 'eosio.msig',
     name: 'approve',
     data: {
       proposer: proposerAccount,
@@ -193,12 +223,31 @@ const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 const createESRCodeExec = async ({proposerAccount, proposalName}) => {
 
   const execActions = [{
-    account: 'msig.seeds',
+    account: 'eosio.msig',
     name: 'exec',
     data: {
       proposer: proposerAccount,
       proposal_name: proposalName,
       executer: authPlaceholder
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
+
+  return createESRWithActions({actions: execActions})
+}
+
+const createESRCodeCancel = async ({proposerAccount, proposalName}) => {
+
+  const execActions = [{
+    account: 'eosio.msig',
+    name: 'cancel',
+    data: {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      canceler: authPlaceholder
     },
     authorization: [{
       actor: authPlaceholder,
@@ -236,4 +285,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-proposePayout()
+module.exports = { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction }

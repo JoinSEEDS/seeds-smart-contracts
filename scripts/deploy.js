@@ -117,7 +117,7 @@ const createAccount = async ({ account, publicKey, stakes, creator } = {}) => {
         ]
       })
     } catch (error) {
-      console.error("unknown delegatebw action")
+      console.error("unknown delegatebw action"+error)
     }
 
     console.log(`${account} created`)
@@ -391,8 +391,38 @@ const changeExistingKeyPermission = async (account, role, parentRole = 'active',
   }
 }
 
+const keys = (perm) => {
+  return perm.required_auth.keys.map((item) => item.key)
+}
+const pAccounts = (perm) => {
+  return perm.required_auth.accounts.map((item)=>item.permission.actor)
+}
+const listPermissions = async (account) => {
+  try {
+    const { permissions } = await eos.getAccount(account)
+
+    const ownerPermissions = permissions.find(p => p.perm_name === "owner")
+    const activePermissions = permissions.find(p => p.perm_name === "active")
+    
+    const ownerStr = keys(ownerPermissions) + " | " + pAccounts(ownerPermissions)
+    const activerStr = keys(activePermissions) + " | " + pAccounts(activePermissions)
+
+    console.log(account + " owner: "+ JSON.stringify(ownerStr, null, 2))
+    console.log(account + " active: "+ JSON.stringify(activerStr, null, 2))
+  } catch (err) {
+    const accountDoesNotExist = (err + "").startsWith("Error: unknown key (boost::tuples::tuple")
+    if (!accountDoesNotExist) {
+      console.error(`listPermissions error: ${account}: ` + err + `\n`)
+    } else {
+      console.log("account does not exist: "+account)
+    }
+  }
+}
+
 const createCoins = async (token) => {
   const { account, issuer, supply } = token
+
+  console.log("creating coins "+JSON.stringify(token, null, 2))
 
   try {
     await eos.transaction({
@@ -560,6 +590,7 @@ const updatePermissions = async () => {
 
 const createTestToken = async () => {
   await createCoins(accounts.testtoken)
+  await createCoins(accounts.hyphatoken)
 }
 
 const deployAllContracts = async () => {
@@ -576,6 +607,9 @@ const deployAllContracts = async () => {
 
   if (accounts.testtoken) {
     await createCoins(accounts.testtoken)
+  }
+  if (accounts.hyphatoken) {
+    await createCoins(accounts.hyphatoken)
   }
 
   const accountNames = Object.keys(accounts)
@@ -609,5 +643,6 @@ module.exports = {
   source, deployAllContracts, updatePermissions, 
   resetByName, changeOwnerAndActivePermission, 
   changeExistingKeyPermission, addActorPermission, createTestToken,
-  removeAllActorPermissions
+  removeAllActorPermissions,
+  listPermissions
 }

@@ -297,8 +297,8 @@ CONTRACT harvest : public contract {
       name status; // "active" "inactive"
       string description;
       string locationjson; // json description of the area
-      float latitude;
-      float longitude;
+      double latitude;
+      double longitude;
       uint64_t members_count;
       time_point created_at = current_block_time().to_time_point();
 

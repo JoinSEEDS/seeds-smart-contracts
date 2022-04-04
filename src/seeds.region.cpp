@@ -144,10 +144,11 @@ void region::deposit(name from, name to, asset quantity, string memo) {
 ACTION region::create(
     name founder, 
     name rgnaccount, 
+    string title, 
     string description, 
     string locationJson, 
-    float latitude, 
-    float longitude) 
+    double latitude, 
+    double longitude) 
 {
     require_auth(founder);
     check_user(founder);
@@ -180,6 +181,7 @@ ACTION region::create(
         item.id = rgnaccount;
         item.founder = founder;
         item.status = status_inactive;
+        item.title = title;
         item.description = description;
         item.locationjson = locationJson;
         item.latitude = latitude;
@@ -194,6 +196,27 @@ ACTION region::create(
         item.account = founder;
         item.role = founder_role;
     });
+}
+
+
+ACTION region::update(
+    name region, 
+    string title, 
+    string description, 
+    string locationJson, 
+    double latitude, 
+    double longitude) 
+    {
+        auto ritr = regions.require_find(region.value, "The region does not exist.");
+        require_auth(ritr->founder);
+
+        regions.modify(ritr, _self, [&](auto& item) {
+            item.title = title;
+            item.description = description;
+            item.locationjson = locationJson;
+            item.latitude = latitude;
+            item.longitude = longitude;
+        });
 }
 
 ACTION region::createacct(name region, string publicKey) {

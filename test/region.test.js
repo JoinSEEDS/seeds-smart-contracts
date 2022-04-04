@@ -97,6 +97,7 @@ describe("regions general", async assert => {
   await contracts.region.create(
     firstuser, 
     rgnname, 
+    'Title',
     'test rgn region',
     '{lat:0.0111,lon:1.3232}', 
     1.1, 
@@ -123,6 +124,30 @@ describe("regions general", async assert => {
 
   await checkStatus(rgnname, statusInactive, 'region created', 'have the correct status')
   
+  const updatedTitle = 'Updated Title'
+  const updatedDescription = 'Updated Description'
+  const updatedLocJSON = '{lat:2.0,lon:2.2}'
+  const updatedLat = 2.0
+  const updatedLong = 2.2
+
+  console.log('update region')
+  await contracts.region.update(
+    rgnname, 
+    updatedTitle,
+    updatedDescription,
+    updatedLocJSON, 
+    updatedLat, 
+    updatedLong,  
+    { authorization: `${firstuser}@active` })
+
+
+  const regionsAfterUpdate = await getTableRows({
+      code: region,
+      scope: region,
+      table: 'regions',
+      json: true
+    })
+
   console.log('join a region')
   await contracts.region.join(rgnname, seconduser, { authorization: `${seconduser}@active` })
 
@@ -243,7 +268,25 @@ describe("regions general", async assert => {
     actual: onlyCreateOnce,
     expected: true
   })
-
+  
+  assert({
+    given: 'region updated',
+    should: 'have updated description and other data',
+    actual: regionsAfterUpdate.rows.map((item) => ({ 
+      title: item.title,
+      description: item.description,
+      locationjson: item.locationjson,
+      latitude: parseFloat(item.latitude).toFixed(4),
+      longitude: parseFloat(item.longitude).toFixed(4)
+     }))[0],
+    expected: {
+      title: updatedTitle,
+      description: updatedDescription,
+      locationjson: updatedLocJSON,
+      latitude: updatedLat.toFixed(4),
+      longitude: updatedLong.toFixed(4)
+    }
+  })
 
   assert({
     given: 'create region',
@@ -394,6 +437,7 @@ describe("regions Test Delete", async assert => {
   await contracts.region.create(
     firstuser, 
     rgnname, 
+    'TheRegionTitle',
     'test rgn region',
     '{lat:0.0111,lon:1.3232}', 
     1.1, 
@@ -408,6 +452,7 @@ describe("regions Test Delete", async assert => {
     await contracts.region.create(
       seconduser, 
       rgnname2, 
+      'region2 title',
       'test rgn region 1',
       '{lat:0.0111,lon:1.3232}', 
       1.1, 
