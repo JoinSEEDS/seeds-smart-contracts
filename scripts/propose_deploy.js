@@ -7,6 +7,7 @@ const { Serialize } = eosjs
 const { SigningRequest } = require('eosio-signing-request')
 const { source } = require('./deploy')
 const { accounts, eos } = require('./helper')
+const { proposeMsig } = require('./msig')
 
 const authPlaceholder = "............1"
 const GuardianAccountName = "cg.seeds"
@@ -166,8 +167,15 @@ const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccoun
  * Sets active and owner to GuardianAccountName and msig.seeds
  * @param {*} targetAccount 
  */
-const setCGPermissions = async (targetAccount, permission_name, hot = false) => {
-    console.log('setGuardiansPermissions on ' + targetAccount + " " + (hot ? "hot" : "test mode"))
+const setCGPermissions = async (targetAccount, permission_name, hot = false, propose = false) => {
+  
+  if (hot == "false" || hot == 0) {
+    hot = false
+  }
+
+  console.log('setGuardiansPermissions on ' + targetAccount + " " + (hot ? "hot" : "test mode") + ( propose ? "PROPOSE " : ""))
+
+
 
     assert(permission_name == "active" || permission_name == "owner", "permission must be active or owner")
 
@@ -235,13 +243,19 @@ const setCGPermissions = async (targetAccount, permission_name, hot = false) => 
     }
   
     if (hot) {
-      let res = await eos.api.transact({
-        actions
-      }, trxConfig)
+
+      if (!propose) {
+        let res = await eos.api.transact({
+          actions
+        }, trxConfig)
+        const newPermissions = await eos.getAccount(targetAccount)
+        console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))  
+      } else {
+        console.log("msig for new permissions: "+JSON.stringify(auth, null, 2))
+
+        proposeMsig("illumination", "prop1111", targetAccount, actions, "owner")
+      }
   
-      const newPermissions = await eos.getAccount(targetAccount)
-  
-      console.log("new permissions on "+targetAccount+" "+JSON.stringify(newPermissions.permissions, null, 2))  
     } else {
       console.log("new permissions would be: "+JSON.stringify(auth, null, 2))
     }
@@ -344,6 +358,16 @@ const getConstitutionalGuardians = async (permission_name = "active") => {
   return result
 }
 
+const getActivePermissionAccounts = async (account, permission_name = "active") => {
+  const { permissions } = await eos.getAccount(account)
+  const activePerm = permissions.filter(item => item.perm_name == permission_name)
+  const result = activePerm[0].required_auth.accounts
+    .filter(item => item.permission.permission == "active" || item.permission.permission == "owner")
+    .map(item => item.permission)
+  console.log("CG accounts: "+JSON.stringify(result, null, 2))
+  return result
+}
+
 // take any input of actions, create a multisig proposal for guardians from it!
 
 const createMultisigProposal = async (proposerAccount, proposalName, actions, permission = "active") => {
@@ -358,12 +382,18 @@ const createMultisigProposal = async (proposerAccount, proposalName, actions, pe
   
     console.log("requested permissions: "+permission+ " " + JSON.stringify(guardians.map(item => item.actor)))
   
+    const info = await eos.api.rpc.get_info()
+    const head_block = await eos.api.rpc.get_block(info.last_irreversible_block_num)
+    // Note: Only 1 hour expiration - the problem with longer expirations is that we may get a "transaction expiration too far
+    // in the future" error. 
+    const expiration = Serialize.timePointSecToDate(Serialize.dateToTimePointSec(head_block.timestamp) + 3600 )
+  
     const proposeInput = {
       proposer: proposerAccount,
       proposal_name: proposalName,
       requested: guardians,
       trx: {
-        expiration: '2021-09-14T16:39:15',
+        expiration: expiration,
         ref_block_num: 0,
         ref_block_prefix: 0,
         max_net_usage_words: 0,
@@ -404,10 +434,130 @@ const createMultisigProposal = async (proposerAccount, proposalName, actions, pe
     return res
 }
 
-const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
+const issueHypha = async (quantity, proposerAccount, propName) => {
+
+  const actions = [{
+    account: 'hypha.hypha',
+    name: 'issue',
+    authorization: [{
+      "actor": "dao.hypha",
+      "permission": "active"
+    }],
+    data: {
+      "to": "dao.hypha",
+      "quantity": quantity,
+      "memo": "[POLICY] FinFlow Authority to mint 1,000,000 HYPHA tokens"
+    },
+  }]
+
+  const proposeESR = await createMultisigProposalESR(propName, proposerAccount, actions, "dao.hypha")
+
+  console.log("Propose ESR: " + JSON.stringify(proposeESR, null, 2))
+
+  const approveESR = await createESRCodeApprove({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("approveESR: " + JSON.stringify(approveESR, null, 2))
+
+  const execESR = await createESRCodeExec({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("execESR: " + JSON.stringify(execESR, null, 2))
+
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("CANCEL: " + JSON.stringify(cancelESR, null, 2))
+
+}
+
+const sendHypha = async (quantity, recepient, proposerAccount, propName) => {
+
+  const actions = [{
+    account: 'hypha.hypha',
+    name: 'transfer',
+    authorization: [{
+      "actor": "dao.hypha",
+      "permission": "active"
+    }],
+    data: {
+      "from": "dao.hypha",
+      "to": recepient,
+      "quantity": quantity,
+      "memo": ""
+    },
+  }]
+
+  const proposeESR = await createMultisigProposalESR(propName, proposerAccount, actions, "dao.hypha")
+
+  console.log("Propose ESR: " + JSON.stringify(proposeESR, null, 2))
+
+  const approveESR = await createESRCodeApprove({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("approveESR: " + JSON.stringify(approveESR, null, 2))
+
+  const execESR = await createESRCodeExec({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("execESR: " + JSON.stringify(execESR, null, 2))
+
+  const cancelESR = await createESRCodeCancel({proposerAccount, proposalName: propName, msigAccount: "eosio.msig"})
+  console.log("CANCEL: " + JSON.stringify(cancelESR, null, 2))
+
+}
+
+const createMultisigProposalESR = async (proposalName, proposerAccount, actions, permissionAccount, permission = "active") => {
+
+  const api = eos.api
+
+  const serializedActions = await api.serializeActions(actions)
+
+  console.log("====== PROPOSING ======")
+
+  console.log("actions: " + JSON.stringify(actions, null, 2))
+
+  const guardians = await getActivePermissionAccounts(permissionAccount, permission)
+
+  console.log("requested permissions: "+permission+ " " + JSON.stringify(guardians.map(item => item.actor)))
+
+  const info = await eos.api.rpc.get_info()
+  const head_block = await eos.api.rpc.get_block(info.last_irreversible_block_num)
+  // Note: Only 1 hour expiration - the problem with longer expirations is that we may get a "transaction expiration too far
+  // in the future" error. 
+  const expiration = Serialize.timePointSecToDate(Serialize.dateToTimePointSec(head_block.timestamp) + 3600 * 24 * 7 )
+  
+  const proposeInput = {
+    proposer: proposerAccount,
+    proposal_name: proposalName,
+    requested: guardians,
+    trx: {
+      expiration: expiration,
+      ref_block_num: 0,
+      ref_block_prefix: 0,
+      max_net_usage_words: 0,
+      max_cpu_usage_ms: 0,
+      delay_sec: 0,
+      context_free_actions: [],
+      actions: serializedActions,
+      transaction_extensions: []
+    }
+  };
+
+  //console.log('send propose ' + JSON.stringify(proposeInput))
+  // console.log("propose action")
+
+  const propActions = [{
+    account: 'eosio.msig',
+    name: 'propose',
+    authorization: [{
+      actor: proposerAccount,
+      permission: "active",
+    }],
+    data: proposeInput
+  }]
+
+  console.log("msig proposal: "+JSON.stringify(propActions, null,2))
+
+  const proposeEsr = await createESRWithActions({actions: propActions, title: "Create proposal " + proposalName})
+
+  return proposeEsr
+}
+
+const createESRCodeApprove = async ({proposerAccount, proposalName, msigAccount = "msig.seeds"}) => {
 
   const approveActions = [{
-    account: 'msig.seeds',
+    account: msigAccount,
     name: 'approve',
     data: {
       proposer: proposerAccount,
@@ -423,13 +573,13 @@ const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
     }]
   }]
 
-  return createESRWithActions({actions: approveActions})
+  return createESRWithActions({actions: approveActions, title: "APPROVE proposal "+proposalName})
 }
 
-const createESRCodeExec = async ({proposerAccount, proposalName}) => {
+const createESRCodeExec = async ({proposerAccount, proposalName, msigAccount = "msig.seeds"}) => {
 
   const execActions = [{
-    account: 'msig.seeds',
+    account: msigAccount,
     name: 'exec',
     data: {
       proposer: proposerAccount,
@@ -442,7 +592,25 @@ const createESRCodeExec = async ({proposerAccount, proposalName}) => {
     }]
   }]
 
-  return createESRWithActions({actions: execActions})
+  return createESRWithActions({actions: execActions, title: "Execute proposal "+proposalName})
+}
+
+const createESRCodeCancel = async ({proposerAccount, proposalName, msigAccount = "msig.seeds"}) => {
+  const execActions = [{
+    account: msigAccount,
+    name: 'cancel',
+    data: {
+      proposer: proposerAccount,
+      proposal_name: proposalName,
+      canceler: authPlaceholder
+    },
+    authorization: [{
+      actor: authPlaceholder,
+      permission: 'active'
+    }]
+  }]
+
+  return createESRWithActions({actions: execActions, title: "Cancel proposal "+proposalName})
 }
 
 const createESRCodeTransfer = async ({recepient, amount, memo}) => {
@@ -466,9 +634,9 @@ const createESRCodeTransfer = async ({recepient, amount, memo}) => {
 }
 
 
-const createESRWithActions = async ({actions}) => {
+const createESRWithActions = async ({actions, title = "Generating ESR Code"}) => {
 
-  console.log("========= Generating ESR Code ===========")
+  console.log("========= " + title + " ===========")
   
   const esr_uri = "https://api-esr.hypha.earth/qr"
   const body = {
@@ -493,4 +661,4 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-module.exports = { proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions }
+module.exports = { proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha, sendHypha }

@@ -5,7 +5,10 @@ const fs = require('fs')
 
 const host = "https://api.telosfoundation.io"
 
-const { eos, getTableRows } = require("./helper");
+const { eos, sendTransaction } = require("./helper");
+
+const { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction } = require("./msig");
+
 const { min } = require("ramda");
 const { parse } = require("path");
 
@@ -289,7 +292,7 @@ const allPayments = async () => {
     limit,
 ) => {
 
-  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha&act.name=transfer`
+  const url = "http://api.telosfoundation.io" + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha`
 
   const rawResponse = await fetch(url, {
       method: 'GET',
@@ -303,6 +306,26 @@ const allPayments = async () => {
   return res
 
 }
+
+const get_newpayment_tx = async (
+  skip,
+  limit,
+) => {
+
+  const url = host + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=buy.hypha`
+
+  const rawResponse = await fetch(url, {
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      //body: JSON.stringify(params)
+  });
+  const res = await rawResponse.json();
+  return res
+}
+
 
 const get_dao_history_tx = async (
   skip,
@@ -324,30 +347,55 @@ return res
 
 }
 
-const getAllHistory = async () => {
+const getNewpaymentHistory = async () => {
 
   items = []
   skip = 0
-  limit = 100
+  limit = 500
   hasMoreData = true
 
   transfers = ""
+
+  newPaymentActions = []
 
   while (hasMoreData) {
 
     console.log("skip: "+skip + " limit "+limit)
 
-    newItems = await get_history_tx(skip, limit)
+    newItems = await get_newpayment_tx(skip, limit)
     newItems = newItems.actions
-    console.log("got items "+JSON.stringify(newItems, null, 2))
-    newItems.forEach(item => {
-      items.push(item)
+
+    for (item of newItems) {
       act = item.act
       data = act.data
+
       if (
-        act.account == "token.hypha" &&
-        act.name == "transfer" &&
-        data.from == "dao.hypha") {
+        act.account == "buy.hypha" &&
+        act.name == "newpayment" 
+        ) {
+          items.push(item)
+          console.log("got item: "+JSON.stringify(item, null, 2))
+          console.log("got newpayment ")
+          newPaymentActions.push({
+              account: "sale.hypha",
+              name: "newpayment",
+              authorization: [
+                {
+                  actor: "sale.hypha",
+                  permission: "newpayment"
+                }
+              ],
+              data: {
+                recipientAccount: act.data.recipientAccount,
+                paymentSymbol: act.data.paymentSymbol,
+                paymentQuantity: act.data.paymentQuantity,
+                paymentId: act.data.paymentId,
+                multipliedUsdValue: act.data.multipliedUsdValue
+              }
+          })
+
+          console.log("--> "+JSON.stringify(newPaymentActions))
+
           line = item.global_sequence + "," +item.timestamp + ","+
             data.from + "," + 
             data.to + "," + 
@@ -358,7 +406,319 @@ const getAllHistory = async () => {
             item.trx_id + "," 
           transfers = transfers + line + "\n";
 
-          console.log("line: "+line)
+          //console.log("line: "+line)
+        }
+    }
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+
+
+  }
+
+  console.log("=========================================================================")
+  
+  newPaymentActions = newPaymentActions.reverse()
+
+  const payments = JSON.stringify(newPaymentActions, null, 2)
+
+  console.log(payments)
+
+  fs.writeFileSync(snapshotDirPath + `buy_hypha_newpayment.json`, payments)
+
+  const esr = await createESRWithActions({actions: newPaymentActions})
+
+  console.log("esr: "+JSON.stringify(esr))
+
+  const res = await sendTransaction(newPaymentActions)
+
+}
+const getAllHistory = async () => {
+
+  items = []
+  skip = 0
+  limit = 500
+  hasMoreData = true
+
+  transfers = ""
+
+  while (hasMoreData) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_history_tx(skip, limit)
+    newItems = newItems.actions
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
+    newItems.forEach(item => {
+      act = item.act
+      data = act.data
+      if (
+        act.account == "token.hypha" &&
+        act.name == "transfer" || act.name == "reduce"
+        ) {
+          if (act.name == "reduce") {
+            console.log("adding reduce action "+JSON.stringify(item))
+          }
+          items.push(item)
+
+          line = item.global_sequence + "," +item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          //console.log("line: "+line)
+        }
+    });
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+
+
+  }
+
+  console.log("=========================================================================")
+  console.log("all transfers: ")
+  
+  transfers = JSON.stringify(items, null, 2)
+
+  console.log(transfers)
+
+  //fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.json`, transfers)
+
+}
+
+const getAllHistorySinceReset = async () => {
+
+  items = []
+  skip = 0
+  limit = 400
+  hasMoreData = true
+
+
+  const cutoff_sequence_number = 9801481669
+
+  transfers = ""
+
+  var resetDateReached = false
+
+  while (hasMoreData && !resetDateReached) {
+
+    //console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_history_tx(skip, limit)
+    newItems = newItems.actions
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
+
+    for (item of newItems) {
+      act = item.act
+      data = act.data
+      
+      console.log("item " + item.global_sequence + " " + (item.global_sequence >= cutoff_sequence_number))
+
+      console.log(JSON.stringify(item, null, 2))
+
+      console.log("")
+
+      if (item.global_sequence >= cutoff_sequence_number)     // first costak transaction
+      {
+        items.push(item)
+
+          console.log("adding "+ item.global_sequence)
+
+          line = item.global_sequence + "," +item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          //console.log("line: "+line)
+        } else {
+          console.log("Done! Reset started at global action sequence " + item.global_sequence + " " + cutoff_sequence_number)
+          resetDateReached = true
+        }
+    }
+    skip = skip + newItems.length
+    hasMoreData = newItems.length > 0
+    
+
+  }
+
+  console.log("=========================================================================")
+  //console.log("all transfers: ")
+  //console.log(transfers)
+
+  //console.log("transfer JSON " + items.length)
+  //console.log(JSON.stringify(items, null, 2))
+
+  fs.writeFileSync(snapshotDirPath + `hypha_history_since_reset.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `hypha_history_since_reset.json`, JSON.stringify(items, null, 2))
+
+}
+
+const process_transfers = async (full = false)=> {
+
+try {
+  const fileContent = !full 
+    ? fs.readFileSync(snapshotDirPath + `hypha_history_since_reset.json`, 'utf8')
+    : fs.readFileSync(snapshotDirPath + `hypha_history_transfers.json`, 'utf8')
+
+  console.log("Process history " + (full ? "FULL" : "Since reset"))
+
+  const items = JSON.parse(fileContent)
+
+  //console.log(JSON.stringify(items, null, 2))
+
+  var balances = {
+    illumination: 0.0
+  }
+
+  const bal = (account) => {
+    return balances[account] ?? 0
+  }
+
+  for (item of items) {
+    if (item.act.name == "transfer") {
+      const data = item.act.data
+      const to = data.to
+      const from = data.from
+      const amount = data.amount
+      const symbol = data.symbol
+  
+  
+      if (symbol != "HYPHA") {
+        console.log("not hypha error "+JSON.stringify(item, null, 2))
+        // NOTE: Some HUSD were on token.hypha at some point
+        continue
+      }
+      console.log("from "+ from + " to: "+to + " " + amount + " " + symbol + " "+bal(to))
+  
+      balances[to] = bal(to) + amount
+      balances[from] = bal(from) - amount
+
+    } else if (item.act.name == "reduce") {
+
+      const data = item.act.data
+      const account = data.account
+      const amount = parseFloat(data.quantity.split(" ")[0])
+      const symbol = data.quantity.split(" ")[1]
+  
+      if (symbol != "HYPHA") {
+        console.log("not hypha error "+JSON.stringify(item))
+        throw "Error: not hypha"
+        
+      }
+      console.log("reduce: "+account + " " + amount)
+  
+      balances[account] = bal(account) - amount
+
+    }
+
+    
+  }
+
+  var keys = Object.keys(balances);
+  keys = keys.sort()
+  var balancesAsc = {}
+  transferlist = []
+  for (key of keys) {
+    balancesAsc[key] = balances[key]
+    if (balances[key] >= 0.01) {
+      transferlist.push({
+        account: key,
+        amount: balances[key],
+      })  
+    }
+  }
+
+  //console.log(mapAsc)
+
+  console.log("balances: "+JSON.stringify(balancesAsc, null, 2))
+  console.log("transferlist: "+JSON.stringify(transferlist, null, 2))
+
+  var csv = ""
+
+  for (item of transferlist) {
+    csv = csv + `${item.account},${item.amount.toFixed(2)}` + "\n"
+  }
+
+  console.log("balance csv \n" + csv)
+  
+} catch (err) {
+  console.log(err)
+}
+
+}
+
+const get_tlos_history = async (
+  account,
+  skip,
+  limit,
+) => {
+
+const url = `https://api.telosfoundation.io/v2/history/get_actions?account=${account}&act.account=eosio.token&act.name=transfer&skip=${skip}&limit=${limit}&sort=desc`
+
+const rawResponse = await fetch(url, {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    },
+    //body: JSON.stringify(params)
+});
+const res = await rawResponse.json();
+return res
+
+}
+
+const getTelosHistory = async (account, minimum = 0) => {
+
+  items = []
+  skip = 0
+  limit = 400
+  hasMoreData = true
+
+  transfers = ""
+
+  while (hasMoreData) {
+
+    console.log("skip: "+skip + " limit "+limit)
+
+    newItems = await get_tlos_history(account, skip, limit)
+    newItems = newItems.actions
+    //console.log("got items "+JSON.stringify(newItems, null, 2))
+    newItems.forEach(item => {
+      items.push(item)
+      const act = item.act
+      const data = act.data
+      if (
+        act.account == "eosio.token" &&
+        act.name == "transfer" &&
+        data.from == account) {
+          line = 
+            item.global_sequence + "," +
+            item.timestamp + ","+
+            data.from + "," + 
+            data.to + "," + 
+            data.amount + "," + 
+            data.symbol + "," +
+            data.quantity + "," +
+            data.memo + "," +
+            item.trx_id + "," 
+          transfers = transfers + line + "\n";
+
+          var txid = data.amount > 2.5 ? item.trx_id : ""
+
+          console.log(data.quantity + " " + data.from + " ==> "+ data.to + " " + item.timestamp + " " + data.memo + " " + txid)
+
+          //console.log("line: "+line)
         }
     });
     skip = skip + newItems.length
@@ -371,7 +731,7 @@ const getAllHistory = async () => {
   console.log("all transfers: ")
   console.log(transfers)
 
-  fs.writeFileSync(snapshotDirPath + `hypha_history_transfers.csv`, transfers)
+  fs.writeFileSync(snapshotDirPath + `telos_history_transfers.csv`, transfers)
 
 }
 
@@ -678,7 +1038,7 @@ program
     })
   })
 
-program
+  program
   .command('hypha')
   .description('Get HYPHA balances for all accounts')
   .action(async function () {
@@ -691,6 +1051,18 @@ program
   })
 
   program
+  .command('husd')
+  .description('Get HUSD balances for all accounts')
+  .action(async function () {
+    console.log("getting HUSD balances");
+    await getAnyTokenHolders({
+      contract: "husd.hypha",
+      symbol: "HUSD",
+      prefix: "HUSD_"
+    })
+  })
+
+  program
   .command('history')
   .description('Get HYPHA token history')
   .action(async function () {
@@ -698,12 +1070,152 @@ program
     await getAllHistory()
   })
 
-program
+  program
+  .command('history_since_reset')
+  .description('Get HYPHA token history since HYPHA Reset 2022/01/15 ')
+  .action(async function () {
+    console.log("getting HYPHA token history since reset");
+    await getAllHistorySinceReset()
+  })
+
+  program
+  .command('process_history [full]')
+  .description('Process HYPHA token history since HYPHA Reset 2022/01/15 ')
+  .action(async function (full = false) {
+    console.log("Process HYPHA token history "+(full ? "full" : "since HYPHA Reset 2022/01/15"));
+    await process_transfers(full)
+  })
+
+  program
   .command('dao')
   .description('Get DAO history')
   .action(async function () {
     console.log("getting DAO history");
     await getDAOHistory()
+  })
+
+  program
+  .command('newpayment')
+  .description('Get newpayment history')
+  .action(async function () {
+    console.log("newpayment history");
+    await getNewpaymentHistory()
+  })
+
+program
+  .command('migrate_tokens')
+  .description('Migrate tokens ESR for 1M liquid Hypha')
+  .action(async function () {
+
+    console.log("migrate tokens")
+
+    const list = [
+      {
+        "account": "sale.hypha",
+        "amount": 899059.04
+      },
+      {
+        "account": "dangermouse1",
+        "amount": 0.1
+      },
+      {
+        "account": "illumination",
+        "amount": 3.39
+      },
+      {
+        "account": "leonieherma1",
+        "amount": 10.0
+      },
+      {
+        "account": "markflowfarm",
+        "amount": 827.89
+      },
+      {
+        "account": "mindmonkey12",
+        "amount": 100.58
+      },
+      {
+        "account": "markflowfarm",
+        "amount": 827.89
+      },
+      {
+        "account": "mindmonkey12",
+        "amount": 100.58
+      },
+      {
+        "account": "nadimhamdan1",
+        "amount": 5.59
+      },
+      {
+        "account": "pedroteux123",
+        "amount": 0.09
+      },
+      {
+        "account": "rpiesveloces",
+        "amount": 41.03
+      }
+    ]
+    
+    
+    await migrateTokens(list, "migratehypha")
+  })
+
+  program
+  .command('restore_costake')
+  .description('Migrate costak.hypha ESR')
+  .action(async function () {
+
+    console.log("migrate costak.hypha")
+
+    const list = [
+      {
+        "account": "costak.hypha",
+        "amount": 42971363.42
+      }
+    ]
+    
+    
+    await migrateTokens(list, "migratecostk")
+  })
+
+
+  program
+  .command('migrate_to_costake_balances')
+  .description('Migrate tokens ESR')
+  .action(async function () {
+    
+    throw "to implement"
+    console.log("migrate tokens")
+    
+    // TODO read all values from csv
+    const list = [
+
+    ]
+    
+    
+    await migrateTokens(list)
+  })
+
+  program
+  .command('settings')
+  .description('Set settings')
+  .action(async function () {
+    // key: hypha_token_contract
+    // value: ["name", "hypha.hypha"]
+    const action = setSettingsAction("hypha_token_contract", ["name", "hypha.hypha"])
+
+    console.log("issue action: " + JSON.stringify(action, null, 2))
+
+    const esr = await proposeMsig("illumination", "setingtoken", "dao.hypha", [action])
+  })
+
+
+program
+  .command('telos <account>')
+  .description('Get TLOS token history')
+  .action(async function (account) {
+    console.log("getting TLOS token history");
+    await getTelosHistory(account)
   })
 
 

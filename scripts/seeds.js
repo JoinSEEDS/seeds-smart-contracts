@@ -7,17 +7,31 @@ const { eos, isLocal, names, accounts, allContracts, allContractNames, allBankAc
 const docsgen = require('./docsgen')
 const { settings, scheduler } = names
 
-const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions } = require('./propose_deploy')
+const {proposeDeploy, proposeChangeGuardians, setCGPermissions, proposeKeyPermissions, issueHypha, sendHypha } = require('./propose_deploy')
 const deploy = require('./deploy.command')
 const { deployAllContracts, updatePermissions, resetByName, 
     changeOwnerAndActivePermission, 
     changeExistingKeyPermission, 
     addActorPermission,
     createTestToken,
-    removeAllActorPermissions } = require('./deploy')
+    removeAllActorPermissions,
+    listPermissions,
+   } = require('./deploy')
 
 
 const getContractLocation = (contract) => {
+    if (contract == 'sale') {
+      return {
+        source: `./src/hypha.${contract}.cpp`,
+        include: ""
+      }  
+    } else if (contract == 'hyphatoken') {
+      return {
+        source: `./src/seeds.startoken.cpp`,
+        include: "",
+        contractSourceName: "startoken"
+      }  
+    }
     return {
       source: `./src/seeds.${contract}.cpp`,
       include: ""
@@ -27,11 +41,12 @@ const getContractLocation = (contract) => {
 
 const compileAction = async (contract) => {
     try {
-      var { source, include } = getContractLocation(contract)
+      var { source, include, contractSourceName } = getContractLocation(contract)
       await compile({
         contract: contract,
         source,
-        include
+        include,
+        contractSourceName
       })
       console.log(`${contract} compiled`)
     } catch (err) {
@@ -211,10 +226,10 @@ program
   })
 
   program
-  .command('set_cg_permissions <contract> <permission> [hot]')
+  .command('set_cg_permissions <contract> <permission> [hot] [propose]')
   .description('Place contract under guardian control')
-  .action(async function (contract, permission, hot) {
-    await setCGPermissions(contract, permission, hot)
+  .action(async function (contract, permission, hot, propose) {
+    await setCGPermissions(contract, permission, hot, propose)
   })
 
   program
@@ -328,6 +343,42 @@ program
     allContractNames.forEach(item=>console.print(item))
   })
 
+  program
+  .command('list_permissions')
+  .description('List all contracts / accounts permissions')
+  .action(async function() {
+    console.print("Hypha Accounts")
+    hyphaAccounts = [
+      "buy", 
+      "sale",
+      "costak",
+      "voice",
+      "msig",
+      "docs",
+      "publish",
+      "husd",
+      "bank",
+      "kv",
+      "token",
+      "dao",
+      "seeds",
+      "hypha",
+    ]
+    for (var account of hyphaAccounts) {
+      await listPermissions(account + ".hypha")
+    }
+
+    console.print("\nSeeds Bank Accounts\n")
+    for (var account of allBankAccountNames) {
+      await listPermissions(account)
+    }
+    console.print("\nSeeds Contracts\n")
+    for (var account of allContractNames) {
+      await listPermissions(account)
+    }
+  })
+
+
 program
   .command('changekey <contract> <key>')
   .description('Change owner and active key')
@@ -353,11 +404,60 @@ program
   })
 
 
-program
+  program
   .command('docsgen <contract> [moreContracts...]')
   .description('Exports SDK docs for contract')
   .action(async function(contract, moreContracts) {
     await batchCallFunc(contract, moreContracts, docsgen)
+  })
+
+  program
+  .command('issue_hypha <quantity> <proposerAccount> <proposalName>')
+  .description('Issue Hypha tokens to dao.hypha')
+  .action(async function(quantity, proposerAccount, proposalName) {
+    await issueHypha(quantity, proposerAccount, proposalName)
+  })
+
+  program
+  .command('send_hypha <quantity> <recepient> <proposerAccount> <proposalName>')
+  .description('Send HYPHA tokens from dao.hypha')
+  .action(async function(quantity, recepient, proposerAccount, proposalName) {
+    await sendHypha(quantity, recepient, proposerAccount, proposalName)
+  })
+
+  program
+  .command('approveos <proposerAccount> <proposalName>')
+  .description('Send HYPHA tokens from dao.hypha')
+  .action(async function(proposerAccount, proposalName) {
+
+
+    const createESRWithActions = async ({actions, title = "Generating ESR Code"}) => {
+
+      console.log("========= " + title + " ===========")
+      
+      const esr_uri = "https://api-esr.hypha.earth/qr"
+      const body = {
+        actions
+      }
+    
+      //console.log("actions: "+JSON.stringify(body, null, 2))
+    
+      const rawResponse = await fetch(esr_uri, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+    
+      const parsedResponse = await rawResponse.json();
+    
+      //console.log("parsed response "+JSON.stringify(parsedResponse))
+    
+      return parsedResponse
+    }
+    
   })
 
 program.parse(process.argv)
