@@ -28,7 +28,7 @@
     "handlebars": "^4.7.6",
     "json": "^9.0.6",
     "mocha": "^6.1.4",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "node-fetch": "^2.6.1",
     "ramda": "^0.26.1",
     "riteway": "^6.0.3",
