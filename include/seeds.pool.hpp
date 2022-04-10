@@ -29,12 +29,17 @@ CONTRACT pool : public contract {
 
     ACTION payout(asset quantity, uint64_t start, uint64_t chunksize, int64_t old_total_balance);
 
+    ACTION transfer(name from, name to, asset quantity, const string& memo);
+
 
   private:
 
     const name total_balance_size = "total.sz"_n;
 
     void send_transfer(const name & to, const asset & quantity, const string & memo);
+    void update_pool_token( const name& owner, const asset& quantity, const symbol sym = utils::pool_symbol);
+    void add_balance( const name& owner, const asset& value, const name& ram_payer );
+    bool sub_balance( const name& owner, const asset& value );
 
     DEFINE_CONFIG_TABLE
     DEFINE_CONFIG_TABLE_MULTI_INDEX
@@ -53,7 +58,14 @@ CONTRACT pool : public contract {
       uint64_t primary_key () const { return account.value; }
     };
 
+    TABLE account {
+      asset    balance;
+
+      uint64_t primary_key()const { return balance.symbol.code().raw(); }
+    };
+
     typedef eosio::multi_index<"balances"_n, balances_table> balances_tables;
+    typedef eosio::multi_index< "accounts"_n, account > accounts;
 
     balances_tables balances;
     size_tables sizes;
@@ -70,7 +82,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
         EOSIO_DISPATCH_HELPER(pool, 
           (reset)
-          (payouts)(payout)
+          (payouts)(payout)(transfer)
         )
       }
   }
