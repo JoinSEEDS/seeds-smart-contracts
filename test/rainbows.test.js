@@ -28,6 +28,16 @@ const get_scope = async ( code ) => {
   return res
 }
 
+const get_supply = async( code, symbol ) => {
+  const resp = await getTableRows({
+    code: code,
+    scope: symbol,
+    table: 'stat',
+    json: true
+  })
+  const res = await resp;
+  return res.rows[0].supply;
+}
 
 describe('rainbows', async assert => {
 
@@ -133,11 +143,12 @@ describe('rainbows', async assert => {
 
   assert({
     given: 'transfer token to new user',
-    should: 'see tokens in users account',
+    should: 'see tokens in users account, correct supply',
     actual: [ await eos.getCurrencyBalance(token, toke_escrow, 'SEEDS'),
               await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+              await get_supply(rainbows, 'TOKES'),
             ],
-    expected: [ [ '10000200.0000 SEEDS' ], [ '20.00 TOKES' ] ]
+    expected: [ [ '10000200.0000 SEEDS' ], [ '20.00 TOKES' ], '500.00 TOKES' ]
   })
 
   console.log('redeem & return')
@@ -176,8 +187,19 @@ describe('rainbows', async assert => {
   assert({
     given: 'transfer tokens',
     should: 'see negative currency balance',
-    actual: await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
-    expected: [ '-50.00 TOKES' ]
+    actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+              await get_supply(rainbows, 'TOKES') ],
+    expected: [ [ '-50.00 TOKES' ], '50.00 TOKES' ]
+  })
+
+  console.log('return some TOKES')
+  await contracts.rainbows.transfer(issuer, fourthuser, '20.00 TOKES', '', { authorization: `${issuer}@active` })
+  assert({
+    given: 'transfer tokens back',
+    should: 'see expected currency balance and supply',
+    actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+              await get_supply(rainbows, 'TOKES') ],
+    expected: [ [ '-30.00 TOKES' ], '30.00 TOKES' ]
   })
 
   console.log('reset CREDS')
