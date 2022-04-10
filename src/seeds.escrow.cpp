@@ -218,6 +218,16 @@ void escrow::cancellock (const uint64_t& lock_id) {
     locks.erase (l_itr);
 }
 
+void escrow::childlock( const uint64_t& lock_id,
+                          const asset&    limit,
+                          const name&     recipient,
+                          const name&     contract ) {
+}
+
+void escrow::approvechild( const uint64_t& lock_id, const name&     approver ) {
+}
+
+
 void escrow::ontransfer(name from, name to, asset quantity, string memo) {
    
     // only catch transfer to self of the SEEDS symbol (could be opened up, but would require other data structure changes)
@@ -240,6 +250,11 @@ void escrow::ontransfer(name from, name to, asset quantity, string memo) {
         }
     }   
 }
+
+void escrow::onchildtransfer(uint64_t child_lock_id, asset quantity_to_child, string memo) {
+}
+
+
 
 // TODO: should not allow withdraw with funds that have associated locks
 void escrow::withdraw(name sponsor, asset quantity) {

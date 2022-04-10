@@ -187,7 +187,8 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      tokensmaster: contract('modls.seeds', 'tokensmaster'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
+      rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
   } else if (network == networks.telosMainnet) {
@@ -230,7 +231,8 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      tokensmaster: contract('modls.seeds', 'tokensmaster'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
+      rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
   } else if (network == networks.telosTestnet) {
@@ -281,7 +283,8 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
-      tokensmaster: contract('modls.seeds', 'tokensmaster'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
+      rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
   } else {
