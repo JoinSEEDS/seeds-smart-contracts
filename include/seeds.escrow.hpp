@@ -17,6 +17,7 @@ CONTRACT escrow : public contract {
         : contract(receiver, code, ds),
         locks(receiver, receiver.value),
         sponsors(receiver, receiver.value),
+        children(receiver, receiver.value),
         config(contracts::settings, contracts::settings.value)
         {}
 
@@ -51,8 +52,38 @@ CONTRACT escrow : public contract {
                             const name&     event_name,
                             const string&   notes);
 
+       /**
+        * This action creates a new "child" lock dependent on an existing lock, and
+        * specifies a contract authorized to transfer locked value between the two
+        * locks.
+        * @param lock_id - the existing lock_id
+        * @param limit - the maxim cumulative locked value which may be transferred
+        *                from the existing lock under this authority
+        * @param recipient - the account which will receive value when the lock expires
+        * @param contract - the contract account which generates transfer requests
+        */
+        ACTION childlock( const uint64_t& lock_id,
+                          const asset&    limit,
+                          const name&     recipient,
+                          const name&     contract );
+
+       /**
+        * This action records an approval. Before any value transfers can occur, approval
+        * actions are required from: original lock sponsor, original lock beneficiary,
+        *   and child lock beneficiary (i.e. recipient)
+        *  
+        * 
+        * @param lock_id - the child lock_id
+        * @param approver - the account giving approval to the child authorization
+        */
+        ACTION approvechild( const uint64_t& lock_id,
+                             const name&     approver );
+
         [[eosio::on_notify("*::transfer")]]
         void ontransfer(name from, name to, asset quantity, string memo);
+
+        [[eosio::on_notify("*::childxfr")]]
+        void onchildtransfer(uint64_t child_lock_id, asset quantity_to_child, string memo);
 
     private:
         const name trigger_source_hypha_dao = "dao.hypha"_n;
@@ -123,9 +154,27 @@ CONTRACT escrow : public contract {
         };
 
         typedef eosio::multi_index<"sponsors"_n, sponsors_table> sponsors_tables;
-        
+
+        // scoped by get_self()
+        TABLE child_table {
+            uint64_t       child_id;
+            uint64_t       parent_id;
+            asset          limit;
+            int64_t        transferred;
+            name           contract;
+            uint8_t        approval_flags;
+            uint8_t        approval_required;
+
+            uint64_t primary_key() const { return child_id; }
+        };
+        const std::map<string, uint8_t> child_flags = {
+            {"sponsor", 0x01}, {"beneficiary", 0x02}, {"recipient",0x04}  };
+
+        typedef eosio::multi_index<"children"_n, child_table> child_tables;
+   
         token_lock_table locks;
         sponsors_tables sponsors;
+        child_tables children;
         config_tables config;
 
         void check_asset(asset quantity);

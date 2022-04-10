@@ -466,3 +466,4 @@ var NO_COMMAND_SPECIFIED = program.args.length === 0;
 if (NO_COMMAND_SPECIFIED) {
   program.help();
 }
+
