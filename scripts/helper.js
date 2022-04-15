@@ -187,6 +187,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
@@ -230,6 +231,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
@@ -281,6 +283,7 @@ const accountsMetadata = (network) => {
       pool: contract('pool.seeds', 'pool'),
       dao: contract('dao.seeds', 'dao'),
       startoken: contract('star.seeds', 'startoken'),
+      tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
     }
