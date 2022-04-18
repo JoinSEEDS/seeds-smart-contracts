@@ -247,9 +247,6 @@ using namespace eosio;
           *   credit if configured with credit_limit_symbol in `create` operation)
           * @pre If configured with positive_limit_symbol in `create` operation, the transfer
           *   must not put the `to` account over its maximum limit
-          *
-          * Note: Transfer of zero tokens can effectively "open" an account (create a new
-          * balance entry in the `accounts` table) using `from` acct's ram.
           */
          ACTION transfer( const name&    from,
                           const name&    to,

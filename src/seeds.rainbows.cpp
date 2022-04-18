@@ -402,13 +402,17 @@ void rainbows::transfer( const name&    from,
     sub_balance( from, quantity, cf.cred_limit );
     add_balance( to, quantity, payer, cf.positive_limit );
 
+    stats statstable2( get_self(), sym_code_raw ); // use updated statstable for supply value
+    const auto& st2 = statstable2.get( sym_code_raw );
+    check( st2.max_supply.amount >= st2.supply.amount, "new credit exceeds available supply");
+
 }
 
 void rainbows::sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol ) {
    accounts from_acnts( get_self(), owner.value );
 
    const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
-   uint64_t limit = 0;
+   int64_t limit = 0;
    if( limit_symbol != symbol_code(0) ) {
       auto cred = from_acnts.find( limit_symbol.raw() );
       if( cred != from_acnts.end() ) {
@@ -425,7 +429,6 @@ void rainbows::sub_balance( const name& owner, const asset& value, const symbol_
       });
    stats statstable( get_self(), value.symbol.code().raw() );
    const auto& st = statstable.get( value.symbol.code().raw() );
-   check( credit_increase <= st.max_supply.amount - st.supply.amount, "new credit exceeds available supply");
    statstable.modify( st, same_payer, [&]( auto& s ) {
       s.supply.amount += credit_increase;
    });

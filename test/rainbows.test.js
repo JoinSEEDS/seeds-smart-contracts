@@ -175,37 +175,69 @@ describe('rainbows', async assert => {
   await contracts.rainbows.issue('1000000.00 CREDS', '', { authorization: `${issuer}@active` })
   await contracts.rainbows.freeze('CREDS', true, '', { authorization: `${issuer}@active` })
   await contracts.rainbows.open(fourthuser, 'CREDS', issuer, { authorization: `${issuer}@active` })
-  await contracts.rainbows.transfer(issuer, fourthuser, '100.00 CREDS', '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.transfer(issuer, fourthuser, '50.00 CREDS', '', { authorization: `${issuer}@active` })
+  await contracts.rainbows.transfer(issuer, fifthuser, '100.00 CREDS', '', { authorization: `${issuer}@active` })
 
   console.log('reconfigure token')
-  await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
+  await contracts.rainbows.create(issuer, '100.00 TOKES', issuer, withdraw_to, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', 'CREDS', '',
                           { authorization: `${issuer}@active` } )
-  console.log('make transfer against credit limit')
+  console.log('make transfers against credit limit')
   await contracts.rainbows.transfer(fourthuser, issuer, '50.00 TOKES', '', { authorization: `${fourthuser}@active` })
+   await contracts.rainbows.open(fifthuser, 'TOKES', issuer, { authorization: `${issuer}@active` })
+ await contracts.rainbows.transfer(fifthuser, issuer, '50.00 TOKES', '', { authorization: `${fifthuser}@active` })
 
   assert({
     given: 'transfer tokens',
     should: 'see negative currency balance',
     actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
               await get_supply(rainbows, 'TOKES') ],
-    expected: [ [ '-50.00 TOKES' ], '50.00 TOKES' ]
+    expected: [ [ '-50.00 TOKES' ], '100.00 TOKES' ]
   })
 
   console.log('return some TOKES')
+  await contracts.rainbows.transfer(fifthuser, fourthuser, '20.00 TOKES', '', { authorization: `${fifthuser}@active` })
   await contracts.rainbows.transfer(issuer, fourthuser, '20.00 TOKES', '', { authorization: `${issuer}@active` })
   assert({
     given: 'transfer tokens back',
     should: 'see expected currency balance and supply',
     actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+              await eos.getCurrencyBalance(rainbows, fifthuser, 'TOKES'),
               await get_supply(rainbows, 'TOKES') ],
-    expected: [ [ '-30.00 TOKES' ], '30.00 TOKES' ]
+    expected: [ [ '-10.00 TOKES' ], [ '-70.00 TOKES' ], '80.00 TOKES' ]
+  })
+
+  console.log('overdraw credits')
+  let actionProperlyBlocked = true
+  try {
+    await contracts.rainbows.transfer(fourthuser, fifthuser, '41.00 TOKES', '', { authorization: `${fourthuser}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('overdrawn balance')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  try {
+    await contracts.rainbows.transfer(fourthuser, issuer, '21.00 TOKES', '', { authorization: `${fourthuser}@active` })
+    actionProperlyBlocked = false
+  } catch (err) {
+    actionProperlyBlocked &&= err.toString().includes('new credit exceeds available supply')
+    console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
+  }
+  assert({
+    given: 'trying use too much credit',
+    should: 'fail',
+    actual: actionProperlyBlocked,
+    expected: true
   })
 
   console.log('reset CREDS')
   let bal = await eos.getCurrencyBalance(rainbows, fourthuser, 'CREDS')
   if( bal[0] != '0.00 CREDS' ) {
     await contracts.rainbows.transfer(fourthuser, issuer, bal[0], 'withdraw CREDS', { authorization: `${issuer}@active` } )
+  }
+  bal = await eos.getCurrencyBalance(rainbows, fifthuser, 'CREDS')
+  if( bal[0] != '0.00 CREDS' ) {
+    await contracts.rainbows.transfer(fifthuser, issuer, bal[0], 'withdraw CREDS', { authorization: `${issuer}@active` } )
   }
 
 
@@ -251,7 +283,8 @@ describe('rainbows', async assert => {
               { code: 'rainbo.seeds', scope: 'rainbo.seeds', table: 'symbols', payer: 'seedsuseraaa', count: 3 },
               { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'accounts', payer: 'seedsuseraaa', count: 3 },
               { code: 'rainbo.seeds', scope: 'seedsuserccc', table: 'accounts', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: 'seedsuserxxx', table: 'accounts', payer: 'seedsuseraaa', count: 2 }
+              { code: 'rainbo.seeds', scope: 'seedsuserxxx', table: 'accounts', payer: 'seedsuseraaa', count: 2 },
+              { code: 'rainbo.seeds', scope: 'seedsuseryyy', table: 'accounts', payer: 'seedsuseraaa', count: 2 }
             ],
       more: '' }
   })
@@ -320,7 +353,7 @@ describe('rainbows', async assert => {
                           { authorization: `${issuer}@active` } )
 
   console.log('issue tokens without approval')
-  let actionProperlyBlocked = true
+  actionProperlyBlocked = true
   try {
     await contracts.rainbows.issue('500.00 TOKES', '', { authorization: `${issuer}@active` })
     actionProperlyBlocked = false
