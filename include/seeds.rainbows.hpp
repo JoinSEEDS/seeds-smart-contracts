@@ -414,7 +414,7 @@ using namespace eosio;
    };
 
 EOSIO_DISPATCH(rainbows,
-   (create)(approve)(setstake)(setdisplay)(issue)(retire)(transfer)
+   (create)(approve)(setstake)(deletestake)(setdisplay)(issue)(retire)(transfer)
    (open)(close)(freeze)(reset)(resetacct)
 );
 
