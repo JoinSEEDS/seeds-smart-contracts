@@ -184,8 +184,7 @@ describe('rainbows', async assert => {
                           { authorization: `${issuer}@active` } )
   console.log('make transfers against credit limit')
   await contracts.rainbows.transfer(fourthuser, issuer, '50.00 TOKES', '', { authorization: `${fourthuser}@active` })
-   await contracts.rainbows.open(fifthuser, 'TOKES', issuer, { authorization: `${issuer}@active` })
- await contracts.rainbows.transfer(fifthuser, issuer, '50.00 TOKES', '', { authorization: `${fifthuser}@active` })
+  await contracts.rainbows.transfer(fifthuser, issuer, '50.00 TOKES', '', { authorization: `${fifthuser}@active` })
 
   assert({
     given: 'transfer tokens',

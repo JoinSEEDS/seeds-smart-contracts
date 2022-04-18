@@ -411,7 +411,6 @@ void rainbows::transfer( const name&    from,
 void rainbows::sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol ) {
    accounts from_acnts( get_self(), owner.value );
 
-   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
    int64_t limit = 0;
    if( limit_symbol != symbol_code(0) ) {
       auto cred = from_acnts.find( limit_symbol.raw() );
@@ -421,12 +420,23 @@ void rainbows::sub_balance( const name& owner, const asset& value, const symbol_
          limit = lim.balance.amount;
       }
    }
-   int64_t new_balance = from.balance.amount - value.amount;
-   check( new_balance + limit >= 0, "overdrawn balance" );
-   int64_t credit_increase = std::min( from.balance.amount, 0LL ) - std::min( new_balance, 0LL );
-   from_acnts.modify( from, same_payer, [&]( auto& a ) {
-         a.balance.amount = new_balance;
+   int64_t new_amount, old_amount;
+   const auto fr = from_acnts.find( value.symbol.code().raw() );
+   if( fr == from_acnts.end() ) {
+      old_amount = 0;
+      new_amount = -value.amount;
+      from_acnts.emplace( owner, [&]( auto& a ){
+        a.balance = asset{new_amount, value.symbol};
       });
+   } else {
+      old_amount = fr->balance.amount;
+      new_amount = old_amount - value.amount;
+      from_acnts.modify( fr, same_payer, [&]( auto& a ) {
+         a.balance.amount = new_amount;
+      });
+   }
+   check( new_amount + limit >= 0, "overdrawn balance" );
+   int64_t credit_increase = std::min( old_amount, 0LL ) - std::min( new_amount, 0LL );
    stats statstable( get_self(), value.symbol.code().raw() );
    const auto& st = statstable.get( value.symbol.code().raw() );
    statstable.modify( st, same_payer, [&]( auto& s ) {
