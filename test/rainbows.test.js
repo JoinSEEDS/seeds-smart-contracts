@@ -167,6 +167,21 @@ describe('rainbows', async assert => {
     expected: issuerInitialBalance
   })
 
+  console.log('delete stake')
+  await contracts.rainbows.deletestake(0, 'TOKES', '', { authorization: `${issuer}@active` })
+  assert({
+    given: 'delete stake',
+    should: 'see stake entry gone',
+    actual: (await getTableRows({
+      code: rainbows,
+      scope: 'TOKES',
+      table: 'stakes',
+      json: true
+    }))['rows'],
+    expected: []
+  })
+
+
   console.log('create credit limit token')
   await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
@@ -273,7 +288,6 @@ describe('rainbows', async assert => {
               { code: 'rainbo.seeds', scope: '.....ou4cpd43', table: 'stat', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'displays', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'stakes', payer: 'seedsuseraaa', count: 2 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'stat', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'displays', payer: 'seedsuseraaa', count: 1 },
