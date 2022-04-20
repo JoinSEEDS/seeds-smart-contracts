@@ -372,9 +372,9 @@ var permissions = [{
 //   target: `${accounts.harvest.account}@active`,
 //   actor: `${accounts.history.account}@eosio.code`
 // }, {
-//   target: `${accounts.token.account}@active`,
-//   actor: `${accounts.token.account}@eosio.code`
-// }, {
+  target: `${accounts.token.account}@active`,
+  actor: `${accounts.token.account}@eosio.code`
+}, {
 //   target: `${accounts.history.account}@active`,
 //   actor: `${accounts.accounts.account}@active`
 // }, {
@@ -466,9 +466,9 @@ var permissions = [{
 // }, {
 //   target: `${accounts.guardians.account}@application`,
 //   action: 'claim'
-// }, {
-//   target: `${accounts.history.account}@active`,
-//   actor: `${accounts.token.account}@active`
+}, {
+  target: `${accounts.history.account}@active`,
+  actor: `${accounts.token.account}@active`
 // }, {
 //   target: `${accounts.acctcreator.account}@active`,
 //   actor: `${accounts.acctcreator.account}@eosio.code`
@@ -750,9 +750,9 @@ var permissions = [{
 // }, {
 //   target: `${accounts.accounts.account}@addcbs`,
 //   action: 'addcbs'
-// }, {
-//   target: `${accounts.pool.account}@active`,
-//   actor: `${accounts.pool.account}@eosio.code`
+}, {
+  target: `${accounts.pool.account}@active`,
+  actor: `${accounts.pool.account}@eosio.code`
 // }, {
 //   target: `${accounts.pool.account}@hrvst.pool`,
 //   actor: `${accounts.harvest.account}@eosio.code`,
