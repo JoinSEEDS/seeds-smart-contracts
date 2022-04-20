@@ -152,9 +152,9 @@ describe('rainbows', async assert => {
   })
 
   console.log('redeem & return')
-  await contracts.rainbows.retire(fourthuser, '20.00 TOKES', 'redeemed by user', { authorization: `${fourthuser}@active` })  
-  await contracts.rainbows.retire(withdraw_to, '80.00 TOKES', 'redeemed by user', { authorization: `${withdraw_to}@active` })  
-  await contracts.rainbows.retire(issuer, '400.00 TOKES', 'redeemed by issuer', { authorization: `${issuer}@active` })  
+  await contracts.rainbows.retire(fourthuser, '20.00 TOKES', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(withdraw_to, '80.00 TOKES', false, 'redeemed by user', { authorization: `${withdraw_to}@active` })  
+  await contracts.rainbows.retire(issuer, '400.00 TOKES', false, 'redeemed by issuer', { authorization: `${issuer}@active` })  
   await contracts.token.transfer(fourthuser, issuer, '8.0000 SEEDS', 'restore SEEDS balance',
                        { authorization: `${fourthuser}@active` })
   await contracts.token.transfer(withdraw_to, issuer, '32.0000 SEEDS', 'restore SEEDS balance',
@@ -306,7 +306,7 @@ describe('rainbows', async assert => {
   await contracts.rainbows.transfer(issuer, fourthuser, '100.0000 PROPS', 'test nonmember', { authorization: `${issuer}@active` })
 
   console.log('redeem some')
-  await contracts.rainbows.retire(fourthuser, '20.0000 PROPS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(fourthuser, '20.0000 PROPS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
   
 
   assert({
@@ -321,7 +321,7 @@ describe('rainbows', async assert => {
   await contracts.token.transfer(issuer, fifthuser, '480.0000 SEEDS', '+50% escrow', { authorization: `${issuer}@active` })
 
   console.log('redeem some more')
-  await contracts.rainbows.retire(fourthuser, '20.0000 PROPS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(fourthuser, '20.0000 PROPS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
 
   assert({
     given: 'proportional reedeem',
@@ -332,8 +332,8 @@ describe('rainbows', async assert => {
   })
 
   console.log('redeem & return')
-  await contracts.rainbows.retire(fourthuser, '60.0000 PROPS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
-  await contracts.rainbows.retire(issuer, '400.0000 PROPS', 'redeemed by issuer', { authorization: `${issuer}@active` })  
+  await contracts.rainbows.retire(fourthuser, '60.0000 PROPS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(issuer, '400.0000 PROPS', false, 'redeemed by issuer', { authorization: `${issuer}@active` })  
   await contracts.token.transfer(fourthuser, issuer, '280.0000 SEEDS', 'restore SEEDS balance',
                        { authorization: `${fourthuser}@active` })
 
@@ -493,7 +493,7 @@ describe('rainbows', async assert => {
   await contracts.token.transfer(fifthuser, issuer, '500.0000 SEEDS', '', { authorization: `${fifthuser}@active` })
 
   console.log('redeem some')
-  await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
   
 
   assert({
@@ -509,7 +509,7 @@ describe('rainbows', async assert => {
   actionProperlyBlocked = true
   try {
     await contracts.token.transfer(fifthuser, issuer, '145.0000 SEEDS', '', { authorization: `${fifthuser}@active` })
-    await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+    await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
     actionProperlyBlocked = false
   } catch (err) {
     actionProperlyBlocked &&= err.toString().includes('can\'t unstake, escrow underfunded in SEEDS')
@@ -673,7 +673,7 @@ describe('rainbows', async assert => {
   })
 
   console.log('user redeem some')
-  await contracts.rainbows.retire(fourthuser, '150.0000 ARCOS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(fourthuser, '150.0000 ARCOS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
   
   assert({
     given: 'user redeem',
@@ -703,8 +703,8 @@ describe('rainbows', async assert => {
   })
 
   console.log('redeem all')
-  await contracts.rainbows.retire(issuer, '200.0000 ARCOS', 'redeemed by issuer', { authorization: `${issuer}@active` })  
-  await contracts.rainbows.retire(fourthuser, '150.0000 ARCOS', 'redeemed by user', { authorization: `${fourthuser}@active` })  
+  await contracts.rainbows.retire(issuer, '200.0000 ARCOS', false, 'redeemed by issuer', { authorization: `${issuer}@active` })  
+  await contracts.rainbows.retire(fourthuser, '150.0000 ARCOS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
 
   assert({
     given: 'all the payouts completed and redeemed',

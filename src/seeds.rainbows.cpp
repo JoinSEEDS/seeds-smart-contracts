@@ -326,7 +326,8 @@ void rainbows::unstake_all( const name& owner, const asset& quantity ) {
     }
 }
 
-void rainbows::retire( const name& owner, const asset& quantity, const string& memo )
+void rainbows::retire( const name& owner, const asset& quantity,
+                       const bool& burn, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -335,20 +336,21 @@ void rainbows::retire( const name& owner, const asset& quantity, const string& m
     stats statstable( get_self(), sym.code().raw() );
     const auto& st = statstable.get( sym.code().raw(), "token with symbol does not exist" );
     configs configtable( get_self(), sym.code().raw() );
-    const auto& cf = configtable.get();
-    if( cf.redeem_locked_until.time_since_epoch() < current_time_point().time_since_epoch() ) {
-       check( !cf.transfers_frozen, "transfers are frozen");
-    } else {
-       check( owner == st.issuer, "bearer redeem is disabled");
-    }
     require_auth( owner );
     check( quantity.is_valid(), "invalid quantity" );
     check( quantity.amount > 0, "must retire positive quantity" );
+    check( quantity.symbol == st.supply.symbol, "symbol or precision mismatch" );
+    if( !burn ) {
+        const auto& cf = configtable.get();
+        if( cf.redeem_locked_until.time_since_epoch() <
+              current_time_point().time_since_epoch() ) {
+           check( !cf.transfers_frozen, "transfers are frozen");
+        } else {
+           check( owner == st.issuer, "bearer redeem is disabled");
+        }
 
-    check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
-
-    unstake_all( owner, quantity );
-
+        unstake_all( owner, quantity );
+    }
     sub_balance( owner, quantity, symbol_code(0) );
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
