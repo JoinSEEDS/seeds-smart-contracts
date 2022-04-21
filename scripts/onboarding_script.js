@@ -413,7 +413,8 @@ const accept = async (newAccount, inviteSecret, newAccountPublicKey = null) => {
     const accept = async () => {
         try {
             console.log(`${onboarding}.accept from ${newAccount}`)
-            await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })        
+            await contracts.onboarding.acceptexist(newAccount, inviteSecret, { authorization: `${newAccount}@active` })        
+            //await contracts.onboarding.accept(newAccount, inviteSecret, newAccountPublicKey, { authorization: `${onboarding}@application` })        
         } catch (err) {
             console.log("Error accept: " + err)
         }

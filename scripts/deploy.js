@@ -167,6 +167,35 @@ const deploy = async ({ name, account }) => {
   }
 }
 
+const deleteCode = async ({ account }) => {
+  try {
+
+    await eos.setcode({
+      account,
+      code: "",
+      vmtype: 0,
+      vmversion: 0
+    }, {
+      authorization: `${account}@active`
+    })
+
+    await eos.setabi({
+      account,
+      abi: "",
+    }, {
+      authorization: `${account}@active`
+    })
+    console.log(`${name} deployed to ${account}`)
+  } catch (err) {
+    let errStr = "" + err
+    if (errStr.toLowerCase().includes("contract is already running this version")) {
+      console.log(`${name} deployed to ${account} already`)
+    } else {
+      console.error(`error deploying account ${name} \n* error: ` + err + `\n`)
+    }
+  }
+}
+
 const createKeyPermission = async (account, role, parentRole = 'active', key) => {
   try {
     const { permissions } = await eos.getAccount(account)
@@ -367,6 +396,39 @@ const changeExistingKeyPermission = async (account, role, parentRole = 'active',
       return;
     }  
     
+    // comment in the below to stake net and cpu
+
+
+    // const stakes = {
+    //   cpu: '0.1000 TLOS',
+    //   net: '0.1000 TLOS',
+    // }
+    // creator = "seed.seeds"
+    
+    // try {
+    //   await eos.transaction({
+    //     actions: [
+    //       {
+    //         account: 'eosio',
+    //         name: 'delegatebw',
+    //         authorization: [{
+    //           actor: creator,
+    //           permission: 'active',
+    //         }],
+    //         data: {
+    //           from: creator,
+    //           receiver: account,
+    //           stake_net_quantity: stakes.net,
+    //           stake_cpu_quantity: stakes.cpu,
+    //           transfer: false,
+    //         }
+    //       }
+    //     ]
+    //   })
+    // } catch (error) {
+    //   console.error("unknown delegatebw action "+error)
+    // }
+
     await eos.updateauth({
       account,
       permission: role,
@@ -644,5 +706,6 @@ module.exports = {
   resetByName, changeOwnerAndActivePermission, 
   changeExistingKeyPermission, addActorPermission, createTestToken,
   removeAllActorPermissions,
-  listPermissions
+  listPermissions,
+  deleteCode
 }

@@ -16,6 +16,7 @@ const { deployAllContracts, updatePermissions, resetByName,
     createTestToken,
     removeAllActorPermissions,
     listPermissions,
+    deleteCode
    } = require('./deploy')
 
 
@@ -456,6 +457,119 @@ program
       //console.log("parsed response "+JSON.stringify(parsedResponse))
     
       return parsedResponse
+    }
+    
+  })
+
+
+  program
+  .command('changekeys')
+  .description('changekeys')
+  .action(async function() {
+
+    const accounts = [
+      "seedsinvitex",
+      "giftingseeds",
+      "hyphasseedsx",
+      "mlstoneseeds",
+      "partnerseeds",
+      "refrralseeds",
+      "seedsaccnts3",
+      "seedsaccntsx",
+      "seedsbank222",
+      "seedsbanksys",
+      "seedsettings",
+      "seedsettingx",
+      "seedsharvest",
+      "seedshistorx",
+      "seedshistory",
+      "seedshrvestx",
+      "seedshrvst11",
+      "seedsinvites",
+      "seedsinvitex",
+      "seedsjoinusx",
+      "seedspolicy1",
+      "seedspolicyx",
+      "seedsprops12",
+      "seedsprpslsx",
+      "seedsrfrndms",
+      "seedsrfrndmx",
+      "seedssubs222",
+      "seedstoken12",
+      "seedstokennx", 
+      "seedsuser333",
+      "seedsuser444",
+      "seedsuser555",
+      "theseedsbank"
+    ]
+  
+    key = "EOS8MERxCsjRzwjUjF6XLES7Gh9Com5gL1HBoJuvgHwLCNwFVT1T8"
+    
+    for (account of accounts) {
+      try {
+        console.log("account "+account )
+        resActive = await changeExistingKeyPermission(account, "active", "owner", key)
+        resOwner = await changeExistingKeyPermission(account, "owner", "", key)
+
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    
+  })
+
+  program
+  .command('delete')
+  .description('delete accounts')
+  .action(async function() {
+
+    const accounts = [
+      "seedsinvitex",
+      "giftingseeds",
+      "hyphasseedsx",
+      "mlstoneseeds",
+      "partnerseeds",
+      "refrralseeds",
+      "seedsaccnts3",
+      "seedsaccntsx",
+      "seedsbank222",
+      "seedsbanksys",
+      "seedsettings",
+      "seedsettingx",
+      "seedsharvest",
+      "seedshistorx",
+      "seedshistory",
+      "seedshrvestx",
+      "seedshrvst11",
+      "seedsinvites",
+      "seedsinvitex",
+      "seedsjoinusx",
+      "seedspolicy1",
+      "seedspolicyx",
+      "seedsprops12",
+      "seedsprpslsx",
+      "seedsrfrndms",
+      "seedsrfrndmx",
+      "seedssubs222",
+      "seedstoken12",
+      "seedstokennx", 
+      "seedsuser333",
+      "seedsuser444",
+      "seedsuser555",
+      "theseedsbank"
+    ]
+  
+    key = "EOS8MERxCsjRzwjUjF6XLES7Gh9Com5gL1HBoJuvgHwLCNwFVT1T8"
+    
+    for (account of accounts) {
+      try {
+        console.log("del account "+account )
+        resActive = await deleteCode({account})
+        resOwner = await changeExistingKeyPermission(account, "owner", "", key)
+
+      } catch (err) {
+        console.error(err)
+      }
     }
     
   })
