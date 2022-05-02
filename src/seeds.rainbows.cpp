@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <../capi/eosio/action.h>
 
+
 void rainbows::create( const name&    issuer,
                     const asset&   maximum_supply,
                     const name&    withdrawal_mgr,
@@ -127,9 +128,9 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
     displays displaytable( get_self(), sym_code_raw );
     if( reject_and_clear ) {
        check( st.supply.amount == 0, "cannot clear with outstanding tokens" );
-       stakes stakestable( get_self(), sym_code_raw );
-       for( auto itr = stakestable.begin(); itr != stakestable.end(); ) {
-          itr = stakestable.erase(itr);
+       backs backingtable( get_self(), sym_code_raw );
+       for( auto itr = backingtable.begin(); itr != backingtable.end(); ) {
+          itr = backingtable.erase(itr);
        }
        configtable.remove( );
        displaytable.remove( );
@@ -145,9 +146,9 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
 }
 
 void rainbows::setstake( const asset&    token_bucket,
-                      const asset&    stake_per_bucket,
-                      const name&     stake_token_contract,
-                      const name&     stake_to,
+                      const asset&    backs_per_bucket,
+                      const name&     backing_token_contract,
+                      const name&     escrow,
                       const bool&     proportional,
                       const uint32_t& reserve_fraction,
                       const string&   memo )
@@ -157,60 +158,59 @@ void rainbows::setstake( const asset&    token_bucket,
     const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
     require_auth( st.issuer );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
-    auto stake_sym = stake_per_bucket.symbol;
-    uint128_t stake_token = (uint128_t)stake_sym.raw()<<64 | stake_token_contract.value;
-    check( stake_sym.is_valid(), "invalid stake symbol name" );
-    check( stake_per_bucket.is_valid(), "invalid stake");
-    check( stake_per_bucket.amount >= 0, "stake per token must be non-negative");
-    check( is_account( stake_token_contract ), "stake token contract account does not exist");
-    check( stake_sym.code().raw() != sym_code_raw || stake_token_contract != get_self(),
+    auto backing_sym = backs_per_bucket.symbol;
+    check( backing_sym.is_valid(), "invalid stake symbol name" );
+    check( backs_per_bucket.is_valid(), "invalid stake");
+    check( backs_per_bucket.amount >= 0, "stake per token must be non-negative");
+    check( is_account( backing_token_contract ), "stake token contract account does not exist");
+    check( backing_sym.code().raw() != sym_code_raw || backing_token_contract != get_self(),
            "cannot stake own token");
-    accounts accountstable( stake_token_contract, st.issuer.value );
-    const auto stake_bal = accountstable.find( stake_sym.code().raw() );
-    check( stake_bal != accountstable.end(), "issuer must have a stake token balance");
-    check( stake_bal->balance.symbol == stake_sym, "mismatched stake token precision" );
-    check( is_account( stake_to ), "stake_to account does not exist");
+    accounts accountstable( backing_token_contract, st.issuer.value );
+    const auto backing_bal = accountstable.find( backing_sym.code().raw() );
+    check( backing_bal != accountstable.end(), "issuer must have a stake token balance");
+    check( backing_bal->balance.symbol == backing_sym, "mismatched stake token precision" );
+    check( is_account( escrow ), "stake_to account does not exist");
     check( token_bucket.amount > 0, "token bucket must be > 0" );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
     check( cf.config_locked_until.time_since_epoch() < current_time_point().time_since_epoch(),
            "token reconfiguration is locked" );
-    stakes stakestable( get_self(), sym_code_raw );
-    int existing_stake_count = std::distance(stakestable.cbegin(),stakestable.cend());
-    check( existing_stake_count <= max_stake_count, "stake count exceeded" );
-    const auto& sk = *stakestable.emplace( st.issuer, [&]( auto& s ) {
-       s.index                = stakestable.available_primary_key();
+    backs backingtable( get_self(), sym_code_raw );
+    int existing_backing_count = std::distance(backingtable.cbegin(),backingtable.cend());
+    check( existing_backing_count <= max_backings_count, "stake count exceeded" );
+    const auto& bk = *backingtable.emplace( st.issuer, [&]( auto& s ) {
+       s.index                = backingtable.available_primary_key();
        s.token_bucket         = token_bucket;
-       s.stake_per_bucket     = stake_per_bucket;
-       s.stake_token_contract = stake_token_contract;
-       s.stake_to             = stake_to;
+       s.backs_per_bucket     = backs_per_bucket;
+       s.backing_token_contract = backing_token_contract;
+       s.escrow             = escrow;
        s.proportional         = proportional;
        s.reserve_fraction     = reserve_fraction;
     });
     if( st.supply.amount != 0 ) {
-       stake_one( sk, st.issuer, st.supply );
+       set_one_backing( bk, st.issuer, st.supply );
     }
 
 }
 
-void rainbows::deletestake( const uint64_t& stake_index,
+void rainbows::deletestake( const uint64_t& back_index,
                             const symbol_code& symbolcode,
                             const string& memo )
 {
     auto sym_code_raw = symbolcode.raw();
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
-    stakes stakestable( get_self(), sym_code_raw );
-    const auto& sk = stakestable.get( stake_index, "stake index does not exist" );
+    backs backingtable( get_self(), sym_code_raw );
+    const auto& bk = backingtable.get( back_index, "stake index does not exist" );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
     check( cf.config_locked_until.time_since_epoch() < current_time_point().time_since_epoch(),
            "token reconfiguration is locked" );
     require_auth( st.issuer );
     if( st.supply.amount != 0 ) {
-        unstake_one( sk, st.issuer, st.supply );
+        redeem_one_backing( bk, st.issuer, st.supply );
     }
-    stakestable.erase( sk );
+    backingtable.erase( bk );
 }
 
 void rainbows::setdisplay( const symbol_code&  symbolcode,
@@ -250,79 +250,81 @@ void rainbows::issue( const asset& quantity, const string& memo )
        s.supply += quantity;
     });
 
-    stake_all( st.issuer, quantity );
+    set_all_backings( st.issuer, quantity );
     add_balance( st.issuer, quantity, st.issuer, cf.positive_limit );
 }
 
-void rainbows::stake_one( const stake_stats& sk, const name& owner, const asset& quantity ) {
-    if( sk.stake_per_bucket.amount > 0 ) { // TBD: use stake ratio = 0 as placeholder for proportional?
-       asset stake_quantity = sk.stake_per_bucket;
-       stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
+void rainbows::set_one_backing(
+   const backing_stats& bk,
+   const name& owner,
+   const asset& quantity ) {
+    if( bk.backs_per_bucket.amount > 0 ) { 
+       asset backing_quantity = bk.backs_per_bucket;
+       backing_quantity.amount = (int64_t)((int128_t)quantity.amount*bk.backs_per_bucket.amount/bk.token_bucket.amount);
        action(
           permission_level{owner, "active"_n},
-          sk.stake_token_contract,
+          bk.backing_token_contract,
           "transfer"_n,
           std::make_tuple(owner,
-                          sk.stake_to,
-                          stake_quantity,
+                          bk.escrow,
+                          backing_quantity,
                           std::string("rainbow stake"))
        ).send();
     }
 }
 
-void rainbows::stake_all( const name& owner, const asset& quantity ) {
-    stakes stakestable( get_self(), quantity.symbol.code().raw() );
-    for( auto itr = stakestable.begin(); itr != stakestable.end(); itr++ ) {
-       stake_one( *itr, owner, quantity );
+void rainbows::set_all_backings( const name& owner, const asset& quantity ) {
+    backs backingtable( get_self(), quantity.symbol.code().raw() );
+    for( auto itr = backingtable.begin(); itr != backingtable.end(); itr++ ) {
+       set_one_backing( *itr, owner, quantity );
     }
 }
 
-void rainbows::unstake_one( const stake_stats& sk, const name& owner, const asset& quantity ) {
+void rainbows::redeem_one_backing( const backing_stats& bk, const name& owner, const asset& quantity ) {
     // get balance in escrow
-    auto stake_in_escrow = get_balance( sk.stake_token_contract, sk.stake_to, sk.stake_per_bucket.symbol.code() );
-    // stake proportion = (qty being unstaked)/(token supply)
-    //  TODO: consider whether negative balances (mutual credit) should count as supply for this calculation
-    uint64_t sym_code_raw = sk.token_bucket.symbol.code().raw();
+    auto backing_in_escrow = get_balance( bk.backing_token_contract, bk.escrow, bk.backs_per_bucket.symbol.code() );
+    // backing proportion = (qty being redeemed)/(token supply)
+    uint64_t sym_code_raw = bk.token_bucket.symbol.code().raw();
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "unstake: no symbol" );
     check( st.supply.amount > 0, "no supply to unstake" );
-    int64_t proportional_amount = (int64_t)((int128_t)stake_in_escrow.amount*quantity.amount/st.supply.amount);
-    asset stake_quantity = sk.stake_per_bucket;
+    int64_t proportional_amount = (int64_t)((int128_t)backing_in_escrow.amount*quantity.amount/st.supply.amount);
+    asset backing_quantity = bk.backs_per_bucket;
     string memo;
-    if( sk.proportional) {
-       stake_quantity.amount = proportional_amount;
+    if( bk.proportional) {
+       backing_quantity.amount = proportional_amount;
        memo = "proportional ";
     } else {
-       stake_quantity.amount = (int64_t)((int128_t)quantity.amount*sk.stake_per_bucket.amount/sk.token_bucket.amount);
+       backing_quantity.amount = (int64_t)((int128_t)quantity.amount*bk.backs_per_bucket.amount/bk.token_bucket.amount);
        // check whether this redemption would put escrow below reserve fraction
-       auto stake_remaining = stake_in_escrow.amount - stake_quantity.amount;
+       auto backing_remaining = backing_in_escrow.amount - backing_quantity.amount;
        auto supply_remaining = st.supply.amount - quantity.amount;
-       auto escrow_needed = (int64_t)((int128_t)supply_remaining*sk.reserve_fraction*sk.stake_per_bucket.amount/
-                       (100*sk.token_bucket.amount));
-       if( escrow_needed > stake_remaining ) {
+       auto escrow_needed = (int64_t)((int128_t)supply_remaining*bk.reserve_fraction*bk.backs_per_bucket.amount/
+                       (100*bk.token_bucket.amount));
+       if( escrow_needed > backing_remaining ) {
           check( false, "can't unstake, escrow underfunded in " +
-                 sk.stake_per_bucket.symbol.code().to_string() +
-                 //std::to_string(escrow_needed) +":"+ std::to_string(stake_remaining) +
-                 " (" + std::to_string(sk.reserve_fraction) + "% reserve)" );
+                 bk.backs_per_bucket.symbol.code().to_string() +
+                 //std::to_string(escrow_needed) +":"+ std::to_string(backing_remaining) +
+                 " (" + std::to_string(bk.reserve_fraction) + "% reserve)" );
        }
     }
     memo += "rainbow unstake";
-    if( stake_quantity.amount > 0 ) {
+    if( backing_quantity.amount > 0 ) {
        action(
-          permission_level{sk.stake_to,"active"_n},
-          sk.stake_token_contract,
+          permission_level{bk.escrow,"active"_n},
+          bk.backing_token_contract,
           "transfer"_n,
-          std::make_tuple(sk.stake_to,
+          std::make_tuple(bk.escrow,
                           owner,
-                          stake_quantity,
+                          backing_quantity,
                           memo)
        ).send();
     }
 }
-void rainbows::unstake_all( const name& owner, const asset& quantity ) {
-    stakes stakestable( get_self(), quantity.symbol.code().raw() );
-    for( auto itr = stakestable.begin(); itr != stakestable.end(); itr++ ) {
-       unstake_one( *itr, owner, quantity );
+void rainbows::redeem_all_backings( const name& owner, const asset& quantity ) {
+    backs backingtable( get_self(), quantity.symbol.code().raw() );
+    for( auto itr = backingtable.begin(); itr != backingtable.end(); itr++ ) {
+       redeem_one_backing( *itr, owner, quantity );
     }
 }
 
@@ -349,7 +351,7 @@ void rainbows::retire( const name& owner, const asset& quantity,
            check( owner == st.issuer, "bearer redeem is disabled");
         }
 
-        unstake_all( owner, quantity );
+        redeem_all_backings( owner, quantity );
     }
     sub_balance( owner, quantity, symbol_code(0) );
     statstable.modify( st, same_payer, [&]( auto& s ) {
@@ -569,7 +571,7 @@ void rainbows::reset_one( const symbol_code symbolcode, const bool all, const ui
        if( ++counter > limit ) { goto CountedOut; }
      }
      {
-       stakes tbl(get_self(),scope);
+       backs tbl(get_self(),scope);
        auto itr = tbl.begin();
        while (itr != tbl.end()) {
          itr = tbl.erase(itr);

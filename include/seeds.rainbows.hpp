@@ -7,6 +7,27 @@
 
 #include <string>
 
+
+//#define backs stakes
+//#define backingtable stakestable
+//#define backs_per_bucket stake_per_bucket
+//#define backing_token_contract stake_token_contract
+//#define backing_token stake_token
+//#define backing_sym stake_sym
+//#define escrow stake_to
+//#define bk sk
+//#define set_one_backing stake_one
+//#define redeem_one_backing unstake_one
+//#define back_index stake_index
+//#define backing_stats stake_stats
+//#define backing_quantity stake_quantity
+//#define set_all_backings stake_all
+//#define backing_in_escrow stake_in_escrow
+//#define backing_remaining stake_remaining
+//#define redeem_all_backings unstake_all
+
+
+
 using namespace eosio;
 
    using std::string;
@@ -23,8 +44,8 @@ using namespace eosio;
     * The `rainbows` contract class also implements a public static method: `get_balance`. This allows
     * one to check the balance of a token for a specified account.
     * 
-    * The `rainbows` contract manages the set of tokens, stakes, accounts and their corresponding balances,
-    * by using four internal tables: the `accounts`, `stats`, `configs`, and `stakes`. The `accounts`
+    * The `rainbows` contract manages the set of tokens, backingss, accounts and their corresponding balances,
+    * by using four internal tables: the `accounts`, `stats`, `configs`, and `backings`. The `accounts`
     * multi-index table holds, for each row, instances of `account` object and the `account` object
     * holds information about the balance of one token. The `accounts` table is scoped to an eosio
     * account, and it keeps the rows indexed based on the token's symbol.  This means that when one
@@ -39,16 +60,16 @@ using namespace eosio;
     *
     * The first two tables (`accounts` and `stats`) are structured identically to the `eosio.token`
     * tables, making "rainbow tokens" compatible with most EOSIO wallet and block explorer applications.
-    * The two remaining tables (`configs` and `stakes`) provide additional data specific to the rainbow
+    * The two remaining tables (`configs` and `backings`) provide additional data specific to the rainbow
     * token.
     *
     * The `configs` singleton table contains names of administration accounts (e.g. membership_mgr,
     * freeze_mgr) and some configuration flags. The `configs` table is scoped to the token symbol_code
     * and has a single row per scope.
     *
-    * The `stakes` table contains staking relationships (staked currency, staking ratio, escrow account).
+    * The `backings` table contains staking relationships (backing currency, staking ratio, escrow account).
     * It is scoped by the token symbol_code and may contain 1 or more rows. It has a secondary index
-    * based on the staked currency type.
+    * based on the backing currency type.
     *
     * In addition, the `displays` singleton table contains json metadata intended for applications
     * (e.g. wallets) to use in UI display, such as a logo symbol url. It is scoped by token symbol_code.
@@ -78,7 +99,7 @@ using namespace eosio;
           * @param withdrawal_mgr - the account with authority to withdraw tokens from any account,
           * @param withdraw_to - the account to which withdrawn tokens are deposited,
           * @param freeze_mgr - the account with authority to freeze transfer actions,
-          * @param redeem_locked_until - an ISO8601 date string; user redemption of stake is
+          * @param redeem_locked_until - an ISO8601 date string; user redemption of backings is
           *   disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
           * @param config_locked_until - an ISO8601 date string; changes to token characteristics
           *   are disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
@@ -135,46 +156,45 @@ using namespace eosio;
 
          /**
           * Allows `issuer` account to create a staking relationship for a token. A new row in the
-          * stakes table for token symbol scope gets created with the specified characteristics.
+          * backings table for token symbol scope gets created with the specified characteristics.
           *
           * @param token_bucket - a reference quantity of the token,
-          * @param stake_per_bucket - the number of stake tokens (e.g. Seeds) staked per "bucket" of tokens,
-          * @param stake_token_contract - the staked token contract account (e.g. token.seeds),
-          * @param stake_to - the escrow account where stake is held
+          * @param backs_per_bucket - the number of backing tokens (e.g. Seeds) placed in escrow per "bucket" of tokens,
+          * @param backing_token_contract - the backing token contract account (e.g. token.seeds),
+          * @param escrow - the escrow account where backing tokens are held
           * @param proportional - redeem by proportion of escrow rather than by staking ratio.
           * @param reserve_fraction - minimum reserve ratio (as percent) of escrow balance to redemption liability.
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre Token symbol must have already been created by this issuer
           * @pre The config_locked_until field in the configs table must be in the past,
-          * @pre issuer must have a (possibly zero) balance of the stake token,
-          * @pre stake_per_bucket must be non-negative
+          * @pre issuer must have a (possibly zero) balance of the backing token,
+          * @pre backs_per_bucket must be non-negative
           * @param reserve_fraction must be non-negative
           * @pre issuer active permissions must include rainbowcontract@eosio.code
-          * @pre stake_to active permissions must include rainbowcontract@eosio.code
+          * @pre escrow active permissions must include rainbowcontract@eosio.code
           *
           * Note: the contract cannot internally check the required permissions status
           */
          ACTION setstake( const asset&      token_bucket,
-                          const asset&      stake_per_bucket,
-                          const name&       stake_token_contract,
-                          const name&       stake_to,
+                          const asset&      backs_per_bucket,
+                          const name&       backing_token_contract,
+                          const name&       escrow,
                           const bool&       proportional,
                           const uint32_t&   reserve_fraction,
                           const string&     memo);
 
          /**
-          * Allows `issuer` account to delete a staking relationship. Staked tokens are returned
-          * to the issuer account. Deferred stake relationships are reverted. The row is removed
-          * from the stakes table.
+          * Allows `issuer` account to delete a staking relationship. Backing tokens are returned
+          * to the issuer account. The row is removed from the backings table.
           *
-          * @param stake_index - the index field in the `stakes` table
-          * @param symbolcode - the staked token
+          * @param backing_index - the index field in the `backings` table
+          * @param symbolcode - the backing token
           * @param memo - memo string
           *
           * @pre the config_locked_until field in the configs table must be in the past
           */
-         ACTION deletestake( const uint64_t& stake_index,
+         ACTION deletestake( const uint64_t& backing_index,
                              const symbol_code& symbolcode,
                              const string& memo );
 
@@ -204,7 +224,7 @@ using namespace eosio;
 
          /**
           *  This action issues a `quantity` of tokens to the issuer account, and transfers
-          *  a proportional amount of stake to escrow if staking is configured.
+          *  a proportional amount of backing tokens to escrow if staking is configured.
           *
           * @param quantity - the amount of tokens to be issued,
           * @memo - the memo string that accompanies the token issue transaction.
@@ -216,12 +236,12 @@ using namespace eosio;
          /**
           * The opposite for issue action, if all validations succeed,
           * it debits the statstable.supply amount. If `burn` flag is false,
-          * any staked tokens are released from escrow in proportion to the
+          * any backing tokens are released from escrow in proportion to the
           * quantity of tokens retired.
           *
           * @param owner - the account containing tokens to retire,
           * @param quantity - the quantity of tokens to retire,
-          * @param burn - if true, staked tokens are left in escrow,
+          * @param burn - if true, backing tokens are left in escrow,
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre the redeem_locked_until configuration must be in the past (except that
@@ -329,7 +349,7 @@ using namespace eosio;
          }
 
       private:
-         const int max_stake_count = 8; // don't use too much cpu time to complete transaction
+         const int max_backings_count = 8; // don't use too much cpu time to complete transaction
          const uint64_t no_index = static_cast<uint64_t>(-1); // flag for nonexistent defer_table link
          static const asset null_asset;
          const uint32_t VISITOR = 1;
@@ -368,18 +388,19 @@ using namespace eosio;
          };
 
 
-         TABLE stake_stats {  // scoped on token symbol code
+         TABLE backing_stats {  // scoped on token symbol code
             uint64_t index;
             asset    token_bucket;
-            asset    stake_per_bucket;
-            name     stake_token_contract;
-            name     stake_to;
+            asset    backs_per_bucket;
+            name     backing_token_contract;
+            name     escrow;
             uint32_t reserve_fraction;
             bool     proportional;
 
             uint64_t primary_key()const { return index; };
             uint128_t by_secondary() const {
-               return (uint128_t)stake_per_bucket.symbol.raw()<<64 | stake_token_contract.value;
+               return (uint128_t)backs_per_bucket.symbol.raw()<<64 |
+                        backing_token_contract.value;
             }
          };
 
@@ -395,11 +416,11 @@ using namespace eosio;
          typedef eosio::multi_index< "configs"_n, currency_config >  dump_for_config;
          typedef eosio::singleton< "displays"_n, currency_display > displays;
          typedef eosio::multi_index< "displays"_n, currency_display >  dump_for_display;
-         typedef eosio::multi_index< "stakes"_n, stake_stats, indexed_by
+         typedef eosio::multi_index< "stakes"_n, backing_stats, indexed_by
                < "staketoken"_n,
-                 const_mem_fun<stake_stats, uint128_t, &stake_stats::by_secondary >
+                 const_mem_fun<backing_stats, uint128_t, &backing_stats::by_secondary >
                >
-            > stakes;
+            > backs;
          typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
 
          symbols symboltable;
@@ -408,10 +429,10 @@ using namespace eosio;
          void add_balance( const name& owner, const asset& value, const name& ram_payer,
                            const symbol_code& limit_symbol );
          void sister_check(const string& sym_name, uint32_t precision);
-         void stake_all( const name& owner, const asset& quantity );
-         void unstake_all( const name& owner, const asset& quantity );
-         void stake_one( const stake_stats& sk, const name& owner, const asset& quantity );
-         void unstake_one( const stake_stats& sk, const name& owner, const asset& quantity );
+         void set_all_backings( const name& owner, const asset& quantity );
+         void redeem_all_backings( const name& owner, const asset& quantity );
+         void set_one_backing( const backing_stats& bk, const name& owner, const asset& quantity );
+         void redeem_one_backing( const backing_stats& bk, const name& owner, const asset& quantity );
          void reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter );
  
    };
