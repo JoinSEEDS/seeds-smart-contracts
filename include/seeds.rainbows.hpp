@@ -215,13 +215,14 @@ using namespace eosio;
 
          /**
           * The opposite for issue action, if all validations succeed,
-          * it debits the statstable.supply amount. If `burn` flag is false,
+          * it debits the statstable.supply amount. If `do_redeem` flag is true,
           * any backing tokens are released from escrow in proportion to the
           * quantity of tokens retired.
           *
           * @param owner - the account containing tokens to retire,
           * @param quantity - the quantity of tokens to retire,
-          * @param burn - if true, backing tokens are left in escrow,
+          * @param do_redeem - if true, send backing tokens to owner,
+          *                    if false, they remain in escrow,
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre the redeem_locked_until configuration must be in the past (except that
@@ -231,7 +232,7 @@ using namespace eosio;
           *   2. the balance in the escrow account must meet the reserve_fraction criterion
           */
          ACTION retire( const name& owner, const asset& quantity,
-                        const bool& burn, const string& memo );
+                        const bool& do_redeem, const string& memo );
 
          /**
           * Allows `from` account to transfer to `to` account the `quantity` tokens.

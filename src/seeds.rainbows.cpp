@@ -328,7 +328,7 @@ void rainbows::redeem_all_backings( const name& owner, const asset& quantity ) {
 }
 
 void rainbows::retire( const name& owner, const asset& quantity,
-                       const bool& burn, const string& memo )
+                       const bool& do_redeem, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -341,7 +341,7 @@ void rainbows::retire( const name& owner, const asset& quantity,
     check( quantity.is_valid(), "invalid quantity" );
     check( quantity.amount > 0, "must retire positive quantity" );
     check( quantity.symbol == st.supply.symbol, "symbol or precision mismatch" );
-    if( !burn ) {
+    if( do_redeem ) {
         const auto& cf = configtable.get();
         if( cf.redeem_locked_until.time_since_epoch() <
               current_time_point().time_since_epoch() ) {
