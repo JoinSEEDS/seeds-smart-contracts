@@ -145,7 +145,7 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
 
 }
 
-void rainbows::setstake( const asset&    token_bucket,
+void rainbows::setbacking( const asset&    token_bucket,
                       const asset&    backs_per_bucket,
                       const name&     backing_token_contract,
                       const name&     escrow,
@@ -159,17 +159,17 @@ void rainbows::setstake( const asset&    token_bucket,
     require_auth( st.issuer );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
     auto backing_sym = backs_per_bucket.symbol;
-    check( backing_sym.is_valid(), "invalid stake symbol name" );
-    check( backs_per_bucket.is_valid(), "invalid stake");
-    check( backs_per_bucket.amount >= 0, "stake per token must be non-negative");
-    check( is_account( backing_token_contract ), "stake token contract account does not exist");
+    check( backing_sym.is_valid(), "invalid backing symbol name" );
+    check( backs_per_bucket.is_valid(), "invalid backing");
+    check( backs_per_bucket.amount >= 0, "backing per token must be non-negative");
+    check( is_account( backing_token_contract ), "backing token contract account does not exist");
     check( backing_sym.code().raw() != sym_code_raw || backing_token_contract != get_self(),
-           "cannot stake own token");
+           "cannot back with own token");
     accounts accountstable( backing_token_contract, st.issuer.value );
     const auto backing_bal = accountstable.find( backing_sym.code().raw() );
-    check( backing_bal != accountstable.end(), "issuer must have a stake token balance");
-    check( backing_bal->balance.symbol == backing_sym, "mismatched stake token precision" );
-    check( is_account( escrow ), "stake_to account does not exist");
+    check( backing_bal != accountstable.end(), "issuer must have a backing token balance");
+    check( backing_bal->balance.symbol == backing_sym, "mismatched backing token precision" );
+    check( is_account( escrow ), "escrow account does not exist");
     check( token_bucket.amount > 0, "token bucket must be > 0" );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
@@ -177,7 +177,7 @@ void rainbows::setstake( const asset&    token_bucket,
            "token reconfiguration is locked" );
     backs backingtable( get_self(), sym_code_raw );
     int existing_backing_count = std::distance(backingtable.cbegin(),backingtable.cend());
-    check( existing_backing_count <= max_backings_count, "stake count exceeded" );
+    check( existing_backing_count <= max_backings_count, "max backings count exceeded" );
     const auto& bk = *backingtable.emplace( st.issuer, [&]( auto& s ) {
        s.index                = backingtable.available_primary_key();
        s.token_bucket         = token_bucket;
@@ -193,7 +193,7 @@ void rainbows::setstake( const asset&    token_bucket,
 
 }
 
-void rainbows::deletestake( const uint64_t& back_index,
+void rainbows::deletebacking( const uint64_t& back_index,
                             const symbol_code& symbolcode,
                             const string& memo )
 {
@@ -201,7 +201,7 @@ void rainbows::deletestake( const uint64_t& back_index,
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
     backs backingtable( get_self(), sym_code_raw );
-    const auto& bk = backingtable.get( back_index, "stake index does not exist" );
+    const auto& bk = backingtable.get( back_index, "backing index does not exist" );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
     check( cf.config_locked_until.time_since_epoch() < current_time_point().time_since_epoch(),
@@ -268,7 +268,7 @@ void rainbows::set_one_backing(
           std::make_tuple(owner,
                           bk.escrow,
                           backing_quantity,
-                          std::string("rainbow stake"))
+                          std::string("rainbow backing"))
        ).send();
     }
 }
@@ -286,8 +286,8 @@ void rainbows::redeem_one_backing( const backing_stats& bk, const name& owner, c
     // backing proportion = (qty being redeemed)/(token supply)
     uint64_t sym_code_raw = bk.token_bucket.symbol.code().raw();
     stats statstable( get_self(), sym_code_raw );
-    const auto& st = statstable.get( sym_code_raw, "unstake: no symbol" );
-    check( st.supply.amount > 0, "no supply to unstake" );
+    const auto& st = statstable.get( sym_code_raw, "redeem backing: no symbol" );
+    check( st.supply.amount > 0, "no backing supply to redeem" );
     int64_t proportional_amount = (int64_t)((int128_t)backing_in_escrow.amount*quantity.amount/st.supply.amount);
     asset backing_quantity = bk.backs_per_bucket;
     string memo;
@@ -302,13 +302,12 @@ void rainbows::redeem_one_backing( const backing_stats& bk, const name& owner, c
        auto escrow_needed = (int64_t)((int128_t)supply_remaining*bk.reserve_fraction*bk.backs_per_bucket.amount/
                        (100*bk.token_bucket.amount));
        if( escrow_needed > backing_remaining ) {
-          check( false, "can't unstake, escrow underfunded in " +
+          check( false, "can't redeem, escrow underfunded in " +
                  bk.backs_per_bucket.symbol.code().to_string() +
-                 //std::to_string(escrow_needed) +":"+ std::to_string(backing_remaining) +
                  " (" + std::to_string(bk.reserve_fraction) + "% reserve)" );
        }
     }
-    memo += "rainbow unstake";
+    memo += "rainbow redeem";
     if( backing_quantity.amount > 0 ) {
        action(
           permission_level{bk.escrow,"active"_n},

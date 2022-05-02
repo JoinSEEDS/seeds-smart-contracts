@@ -107,8 +107,8 @@ describe('rainbows', async assert => {
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
 
-  console.log('set stake')
-  await contracts.rainbows.setstake('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, false, 100, '',
+  console.log('set backing')
+  await contracts.rainbows.setbacking('5.00 TOKES', '2.0000 SEEDS', 'token.seeds', toke_escrow, false, 100, '',
                           { authorization: `${issuer}@active` } )
 
   console.log('approve token')
@@ -122,9 +122,9 @@ describe('rainbows', async assert => {
     should: 'see token created & issued',
     actual: await get_scope(rainbows),
     expected: {
-      rows: [ {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"configs","payer":"seedsuseraaa","count":1},
+      rows: [ {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"backings","payer":"seedsuseraaa","count":2},
+{"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"configs","payer":"seedsuseraaa","count":1},
               {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"displays","payer":"seedsuseraaa","count":1},
-              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stakes","payer":"seedsuseraaa","count":2},
               {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stat","payer":"seedsuseraaa","count":1},
               {"code":"rainbo.seeds","scope":"rainbo.seeds","table":"symbols","payer":"seedsuseraaa","count":1},
               {"code":"rainbo.seeds","scope":"seedsuseraaa","table":"accounts","payer":"seedsuseraaa","count":1} ],
@@ -167,15 +167,15 @@ describe('rainbows', async assert => {
     expected: issuerInitialBalance
   })
 
-  console.log('delete stake')
-  await contracts.rainbows.deletestake(0, 'TOKES', '', { authorization: `${issuer}@active` })
+  console.log('delete backing')
+  await contracts.rainbows.deletebacking(0, 'TOKES', '', { authorization: `${issuer}@active` })
   assert({
-    given: 'delete stake',
-    should: 'see stake entry gone',
+    given: 'delete backing',
+    should: 'see backing entry gone',
     actual: (await getTableRows({
       code: rainbows,
       scope: 'TOKES',
-      table: 'stakes',
+      table: 'backings',
       json: true
     }))['rows'],
     expected: []
@@ -255,7 +255,7 @@ describe('rainbows', async assert => {
   }
 
 
-  console.log('create proportional staked token')
+  console.log('create proportional backed token')
 
   await contracts.rainbows.create(issuer, '1000000.0000 PROPS', issuer, withdraw_to, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
@@ -267,8 +267,8 @@ describe('rainbows', async assert => {
   await setSeedsBalance(fifthuser, '0.0000 SEEDS')
 
 
-  console.log('set stake')
-  await contracts.rainbows.setstake('1.0000 PROPS', '2.0000 SEEDS', 'token.seeds', fifthuser, true, 100, '',
+  console.log('set backing')
+  await contracts.rainbows.setbacking('1.0000 PROPS', '2.0000 SEEDS', 'token.seeds', fifthuser, true, 100, '',
                           { authorization: `${issuer}@active` } )
   await addActorPermission(fifthuser, 'active', rainbows, 'eosio.code')
 
@@ -289,9 +289,9 @@ describe('rainbows', async assert => {
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'displays', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'stat', payer: 'seedsuseraaa', count: 1 },
+              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'backings', payer: 'seedsuseraaa', count: 2 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'displays', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'stakes', payer: 'seedsuseraaa', count: 2 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'stat', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: 'rainbo.seeds', table: 'symbols', payer: 'seedsuseraaa', count: 3 },
               { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'accounts', payer: 'seedsuseraaa', count: 3 },
@@ -465,7 +465,7 @@ describe('rainbows', async assert => {
     expected: [ '60.00 TOKES' ]
   })
 
-  console.log('create fractional staked token')
+  console.log('create fractional backed token')
 
   await contracts.rainbows.create(issuer, '1000000.0000 FRACS', issuer, withdraw_to, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
@@ -477,8 +477,8 @@ describe('rainbows', async assert => {
   await setSeedsBalance(fifthuser, '0.0000 SEEDS')
 
 
-  console.log('set stake')
-  await contracts.rainbows.setstake('1.0000 FRACS', '2.0000 SEEDS', 'token.seeds', fifthuser, false, 30, '',
+  console.log('set backing')
+  await contracts.rainbows.setbacking('1.0000 FRACS', '2.0000 SEEDS', 'token.seeds', fifthuser, false, 30, '',
                           { authorization: `${issuer}@active` } )
   await addActorPermission(fifthuser, 'active', rainbows, 'eosio.code')
 
@@ -512,7 +512,7 @@ describe('rainbows', async assert => {
     await contracts.rainbows.retire(fourthuser, '20.0000 FRACS', false, 'redeemed by user', { authorization: `${fourthuser}@active` })  
     actionProperlyBlocked = false
   } catch (err) {
-    actionProperlyBlocked &&= err.toString().includes('can\'t unstake, escrow underfunded in SEEDS')
+    actionProperlyBlocked &&= err.toString().includes('can\'t redeem, escrow underfunded in SEEDS')
     console.log( (actionProperlyBlocked ? "" : "un") + "expected error "+err)
   }
   assert({
@@ -522,7 +522,7 @@ describe('rainbows', async assert => {
     expected: true
   })
 
-  console.log('---begin dSeeds stake tests---')
+  console.log('---begin dSeeds redemption tests---')
 
   const dseed_escrow = fifthuser
 
@@ -572,7 +572,7 @@ describe('rainbows', async assert => {
     expected: { rows: [], more: '' }
   })
 
-  console.log('create dSeed-staked token ARCOS')
+  console.log('create dSeed-backed token ARCOS')
 
   await contracts.rainbows.create(issuer, '1000000.0000 ARCOS', issuer, withdraw_to, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
@@ -624,13 +624,13 @@ describe('rainbows', async assert => {
   console.log('transfer HPOOL to issuer')
   await contracts.pool.transfer(thirduser, issuer, '500.0000 HPOOL', '', { authorization: `${thirduser}@active` })
 
-  console.log('set placeholder Seeds stake')
-  await contracts.rainbows.setstake('1.0000 ARCOS', '0.0000 SEEDS', 'token.seeds', dseed_escrow, true, 100, '',
+  console.log('set placeholder Seeds backing')
+  await contracts.rainbows.setbacking('1.0000 ARCOS', '0.0000 SEEDS', 'token.seeds', dseed_escrow, true, 100, '',
                           { authorization: `${issuer}@active` } )
   await addActorPermission(dseed_escrow, 'active', rainbows, 'eosio.code')
 
-  console.log('set dSeeds stake')
-  await contracts.rainbows.setstake('1.0000 ARCOS', '1.0000 HPOOL', 'pool.seeds', dseed_escrow, true, 100, '',
+  console.log('set dSeeds backing')
+  await contracts.rainbows.setbacking('1.0000 ARCOS', '1.0000 HPOOL', 'pool.seeds', dseed_escrow, true, 100, '',
                           { authorization: `${issuer}@active` } )
 
   console.log('approve token')

@@ -8,43 +8,23 @@
 #include <string>
 
 
-//#define backs stakes
-//#define backingtable stakestable
-//#define backs_per_bucket stake_per_bucket
-//#define backing_token_contract stake_token_contract
-//#define backing_token stake_token
-//#define backing_sym stake_sym
-//#define escrow stake_to
-//#define bk sk
-//#define set_one_backing stake_one
-//#define redeem_one_backing unstake_one
-//#define back_index stake_index
-//#define backing_stats stake_stats
-//#define backing_quantity stake_quantity
-//#define set_all_backings stake_all
-//#define backing_in_escrow stake_in_escrow
-//#define backing_remaining stake_remaining
-//#define redeem_all_backings unstake_all
-
-
 
 using namespace eosio;
 
    using std::string;
 
    /**
-    * The `rainbows` experimental contract implements the functionality described in the design document
+    * The `rainbows` contract implements the functionality described in the design document
     * https://rieki-cordon.medium.com/1fb713efd9b1 .
     * In the development process we are building on the eosio.token code. 
     *
     * The token contract defines the structures and actions that allow users to create, issue, and manage
-    * tokens for EOSIO based blockchains. It exemplifies one way to implement a smart contract which
-    * allows for creation and management of tokens.
+    * tokens for EOSIO based blockchains.
     * 
     * The `rainbows` contract class also implements a public static method: `get_balance`. This allows
     * one to check the balance of a token for a specified account.
     * 
-    * The `rainbows` contract manages the set of tokens, backingss, accounts and their corresponding balances,
+    * The `rainbows` contract manages the set of tokens, backings, accounts and their corresponding balances,
     * by using four internal tables: the `accounts`, `stats`, `configs`, and `backings`. The `accounts`
     * multi-index table holds, for each row, instances of `account` object and the `account` object
     * holds information about the balance of one token. The `accounts` table is scoped to an eosio
@@ -67,7 +47,7 @@ using namespace eosio;
     * freeze_mgr) and some configuration flags. The `configs` table is scoped to the token symbol_code
     * and has a single row per scope.
     *
-    * The `backings` table contains staking relationships (backing currency, staking ratio, escrow account).
+    * The `backings` table contains backing relationships (backing currency, backing ratio, escrow account).
     * It is scoped by the token symbol_code and may contain 1 or more rows. It has a secondary index
     * based on the backing currency type.
     *
@@ -155,14 +135,14 @@ using namespace eosio;
 
 
          /**
-          * Allows `issuer` account to create a staking relationship for a token. A new row in the
+          * Allows `issuer` account to create a backing relationship for a token. A new row in the
           * backings table for token symbol scope gets created with the specified characteristics.
           *
           * @param token_bucket - a reference quantity of the token,
           * @param backs_per_bucket - the number of backing tokens (e.g. Seeds) placed in escrow per "bucket" of tokens,
           * @param backing_token_contract - the backing token contract account (e.g. token.seeds),
           * @param escrow - the escrow account where backing tokens are held
-          * @param proportional - redeem by proportion of escrow rather than by staking ratio.
+          * @param proportional - redeem by proportion of escrow rather than by backing ratio.
           * @param reserve_fraction - minimum reserve ratio (as percent) of escrow balance to redemption liability.
           * @param memo - the memo string to accompany the transaction.
           *
@@ -176,7 +156,7 @@ using namespace eosio;
           *
           * Note: the contract cannot internally check the required permissions status
           */
-         ACTION setstake( const asset&      token_bucket,
+         ACTION setbacking( const asset&      token_bucket,
                           const asset&      backs_per_bucket,
                           const name&       backing_token_contract,
                           const name&       escrow,
@@ -185,7 +165,7 @@ using namespace eosio;
                           const string&     memo);
 
          /**
-          * Allows `issuer` account to delete a staking relationship. Backing tokens are returned
+          * Allows `issuer` account to delete a backing relationship. Backing tokens are returned
           * to the issuer account. The row is removed from the backings table.
           *
           * @param backing_index - the index field in the `backings` table
@@ -194,7 +174,7 @@ using namespace eosio;
           *
           * @pre the config_locked_until field in the configs table must be in the past
           */
-         ACTION deletestake( const uint64_t& backing_index,
+         ACTION deletebacking( const uint64_t& backing_index,
                              const symbol_code& symbolcode,
                              const string& memo );
 
@@ -224,7 +204,7 @@ using namespace eosio;
 
          /**
           *  This action issues a `quantity` of tokens to the issuer account, and transfers
-          *  a proportional amount of backing tokens to escrow if staking is configured.
+          *  a proportional amount of backing tokens to escrow if backing is configured.
           *
           * @param quantity - the amount of tokens to be issued,
           * @memo - the memo string that accompanies the token issue transaction.
@@ -246,8 +226,8 @@ using namespace eosio;
           *
           * @pre the redeem_locked_until configuration must be in the past (except that
           *   this action is always permitted to the issuer.)
-          * @pre If any staking relationships exist, for each relationship :
-          *   1. the proportional unstaking flag must be configured true, OR
+          * @pre If any backing relationships exist, for each relationship :
+          *   1. the proportional redemption flag must be configured true, OR
           *   2. the balance in the escrow account must meet the reserve_fraction criterion
           */
          ACTION retire( const name& owner, const asset& quantity,
@@ -416,8 +396,8 @@ using namespace eosio;
          typedef eosio::multi_index< "configs"_n, currency_config >  dump_for_config;
          typedef eosio::singleton< "displays"_n, currency_display > displays;
          typedef eosio::multi_index< "displays"_n, currency_display >  dump_for_display;
-         typedef eosio::multi_index< "stakes"_n, backing_stats, indexed_by
-               < "staketoken"_n,
+         typedef eosio::multi_index< "backings"_n, backing_stats, indexed_by
+               < "backingtoken"_n,
                  const_mem_fun<backing_stats, uint128_t, &backing_stats::by_secondary >
                >
             > backs;
@@ -438,7 +418,7 @@ using namespace eosio;
    };
 
 EOSIO_DISPATCH(rainbows,
-   (create)(approve)(setstake)(deletestake)(setdisplay)(issue)(retire)(transfer)
+   (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)
    (open)(close)(freeze)(reset)(resetacct)
 );
 
