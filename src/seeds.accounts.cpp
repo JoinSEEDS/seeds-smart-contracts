@@ -284,6 +284,36 @@ void accounts::vouchreward(name account, name new_status) {
   }
 }
 
+uint64_t accounts::number_of_citizens_vouched(name account, uint64_t maxsearch) 
+{
+  check(maxsearch < 200, "maxsearch parameter needs to be < 200");
+
+  auto vouches_by_account = vouches.get_index<"byaccount"_n>();
+  
+  auto vitr = vouches_by_account.find(account.value);
+
+  uint64_t count = 0;
+  uint64_t num_citizens = 0;
+
+  while (vitr != vouches_by_account.end() && vitr -> account == account && count < maxsearch) {
+    if (is_citizen(vitr->sponsor)) {
+      num_citizens++;
+    }
+    vitr++;
+    count++;
+  }
+
+  return num_citizens;
+}
+
+bool accounts::is_citizen(name account)
+{
+  auto uitr = users.get(account.value, "no user");
+  return uitr.status == citizen;
+}
+
+
+
 void accounts::requestvouch(name account, name sponsor) {
   require_auth(account);
   check_user(sponsor);
@@ -709,11 +739,20 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-    check(uitr->status == resident, "user is not a resident");
 
     auto bitr = balances.find(user.value);
 
     uint64_t min_planted = config_get("cit.plant"_n);
+    check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
+
+    uint64_t citizens_vouched = number_of_citizens_vouched(user, 50);
+    uint64_t citizens_ceremony_number = 3;
+
+    if (citizens_vouched >= citizens_ceremony_number) {
+      // shortcut - citizenship ceremony! 
+      return true;
+    }
+
     uint64_t min_tx = config_get("cit.tx"_n);
     uint64_t min_invited = config_get("cit.referred"_n);
     uint64_t min_residents_invited = config_get("cit.ref.res"_n);
@@ -725,7 +764,7 @@ bool accounts::check_can_make_citizen(name user) {
 
     uint64_t total_transactions = num_transactions(user, min_tx);
 
-    check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
+    check(uitr->status == resident, "user is not a resident");
     check(total_transactions >= min_tx, "user has less than required transactions number has: "+
       std::to_string(total_transactions) + " needed: "+
       std::to_string(min_tx));

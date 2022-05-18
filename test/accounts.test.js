@@ -1017,6 +1017,8 @@ describe('make citizen test', async assert => {
     actual: await userStatus(firstuser),
     expected: 'resident'
   })
+
+  console.log("set age to 0")
   await contracts.settings.configure("cit.age", 0, { authorization: `${settings}@active` })
 
   const bal = await eos.getTableRows({
@@ -1035,6 +1037,112 @@ describe('make citizen test', async assert => {
   await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
 
 
+
+  assert({
+    given: 'does fulfill criteria for citizen',
+    should: 'is citizen',
+    actual: await userStatus(firstuser),
+    expected: 'citizen'
+  })
+
+
+})
+
+
+describe.only('Citizenship ceremony', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, settings, token, harvest })
+
+  console.log('reset settings')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  
+  console.log('reset harvest')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('reset accounts')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('reset token stats')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('add users')
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'Second user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, '3 user', "individual", { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, '4 user', "individual", { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(fourthuser, { authorization: `${accounts}@active` })
+
+  console.log('add rep')
+  await contracts.accounts.testsetrep(seconduser, 100, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrep(thirduser, 4, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrep(fourthuser, 2, { authorization: `${accounts}@active` })
+
+  await contracts.accounts.testsetrs(seconduser, 99, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(thirduser, 50, { authorization: `${accounts}@active` })
+  await contracts.accounts.testsetrs(fourthuser, 50, { authorization: `${accounts}@active` })
+
+  await contracts.accounts.vouch(seconduser, firstuser, { authorization: `${seconduser}@active` })
+  await contracts.accounts.vouch(thirduser, firstuser, { authorization: `${thirduser}@active` })
+
+
+  const vouches = await eos.getTableRows({
+    code: accounts,
+    scope: accounts,
+    table: 'vouches',
+    json: true,
+  })
+  console.log('vouches '+JSON.stringify(vouches, null, 2))
+
+
+  console.log('make citizen - fail')
+  try {
+    await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    //console.log('expected error' + err)
+  }
+
+  console.log('can citizen - fail')
+  var cancitizen = true
+  try {
+    await contracts.accounts.cancitizen(firstuser, { authorization: `${firstuser}@active` })
+  } catch (err) {
+    cancitizen = false
+    //console.log('expected error' + err)
+  }
+
+  assert({
+    given: 'does not fulfill criteria for citizen',
+    should: 'be visitor',
+    actual: await userStatus(firstuser),
+    expected: 'visitor'
+  })
+
+  assert({
+    given: 'does not fulfill criteria for citizen - cancitizen false ',
+    should: 'be false',
+    actual: cancitizen,
+    expected: false
+  })
+
+  await contracts.accounts.vouch(fourthuser, firstuser, { authorization: `${fourthuser}@active` })
+
+  // 2 DO SHIT
+  console.log('plant 200 seeds')
+  await contracts.token.transfer(firstuser, harvest, '200.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+
+  console.log("can citizen - should succeed")
+  await contracts.accounts.cancitizen(firstuser, { authorization: `${firstuser}@active` })
+
+  console.log("make citizen")
+  await contracts.accounts.makecitizen(firstuser, { authorization: `${firstuser}@active` })
 
   assert({
     given: 'does fulfill criteria for citizen',
