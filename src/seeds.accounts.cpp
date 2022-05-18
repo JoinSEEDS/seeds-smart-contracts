@@ -749,7 +749,6 @@ bool accounts::check_can_make_citizen(name user) {
     uint64_t citizens_ceremony_number = 3;
 
     if (citizens_vouched >= citizens_ceremony_number) {
-      // shortcut - citizenship ceremony! 
       return true;
     }
 
