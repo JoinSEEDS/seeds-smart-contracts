@@ -1049,14 +1049,14 @@ describe('make citizen test', async assert => {
 })
 
 
-describe.only('Citizenship ceremony', async assert => {
+describe('Citizenship ceremony', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
     return
   }
 
-  const contracts = await initContracts({ accounts, settings, token, harvest })
+  const contracts = await initContracts({ accounts, settings, token, harvest, proposals })
 
   console.log('reset settings')
   await contracts.settings.reset({ authorization: `${settings}@active` })
@@ -1069,6 +1069,9 @@ describe.only('Citizenship ceremony', async assert => {
 
   console.log('reset token stats')
   await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('reset proposals')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
 
   console.log('add users')
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
