@@ -1,0 +1,111 @@
+## Create Seeds Org
+
+Choose name of org (12 letters)
+
+hyphadaoorg1
+
+Choose public key you have private key for
+
+cleos create key --to-console
+
+Public:
+
+EOS5hK3SBkiy4TS9PsLen1tBfHsioaFSsEMgAyhVdKPG6cge4ETmW
+
+
+1 - Check Fee
+
+cleosm get table settgs.seeds settgs.seeds config --limit 1000 --lower org.minplant --upper org.minplant
+{
+  "rows": [{
+      "param": "org.minplant",
+      "value": 2000000,
+      "description": "Minimum amount to create an organization (in Seeds)",
+      "impact": "high"
+    }
+  ],
+  "more": false,
+  "next_key": ""
+}
+
+2 - Transfer Fee
+
+cleosm transfer -c token.seeds illumination orgs.seeds "200.0000 SEEDS"
+
+3 - Create org
+
+cleosm push action orgs.seeds create '{ 
+	"sponsor":"illumination", 
+	"orgaccount":"hyphadaoorg1", 
+	"orgfullname":"The Hypha DAO", 
+	"publicKey":"EOS5hK3SBkiy4TS9PsLen1tBfHsioaFSsEMgAyhVdKPG6cge4ETmW",
+}' -p illumination@active
+
+
+4 - Done
+
+
+## Create invite campaign
+
+
+1 - Transfer funds to org
+
+cleosm transfer -c token.seeds illumination hyphadaoorg1 "500.0000 SEEDS"
+
+2 - Transfer funds to join.seeds
+
+cleosm transfer -c token.seeds hyphadaoorg1 join.seeds "500.0000 SEEDS"
+
+3 - Create invite campaign
+
+cleosm push action join.seeds createcampg '{ 
+	"origin_account":"hyphadaoorg1", 
+	"owner":"hyphadaoorg1", 
+	"max_amount_per_invite":"5.0000 SEEDS", 
+	"planted":"5.0000 SEEDS",
+	"reward_owner":"hyphadaoorg1",
+	"reward":"0.0000 SEEDS",
+	"total_amount":"500.0000 SEEDS",
+	"proposal_id":"0",
+}' -p hyphadaoorg1@active
+
+4 - check campaign ID
+
+cleosm get table join.seeds join.seeds campaigns
+{
+  "rows": [{
+      "campaign_id": 1,
+      "type": "private",
+      "origin_account": "hyphadaoorg1",
+      "owner": "hyphadaoorg1",
+      "max_amount_per_invite": "5.0000 SEEDS",
+      "planted": "5.0000 SEEDS",
+      "reward_owner": "hyphadaoorg1",
+      "reward": "0.0000 SEEDS",
+      "authorized_accounts": [
+        "hyphadaoorg1"
+      ],
+      "total_amount": "500.0000 SEEDS",
+      "remaining_amount": "500.0000 SEEDS"
+    }
+  ],
+  "more": false,
+  "next_key": ""
+}
+
+5 - create invites
+
+ACTION onboarding::campinvite(
+uint64_t campaign_id, name authorizing_account, asset planted, asset quantity, checksum256 invite_hash)
+
+cleosm push action join.seeds campinvite '{ 
+	"campaign_id":"1", 
+	"authorizing_account":"hyphadaoorg1", 
+	"max_amount_per_invite":"5.0000 SEEDS", 
+	"planted":"5.0000 SEEDS",
+	"reward_owner":"hyphadaoorg1",
+	"reward":"0.0000 SEEDS",
+	"total_amount":"500.0000 SEEDS",
+	"proposal_id":"0",
+}' -p hyphadaoorg1@active
+

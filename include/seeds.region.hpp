@@ -151,6 +151,14 @@ CONTRACT region : public contract {
         };
         typedef eosio::multi_index <"sponsors"_n, sponsors_table> sponsors_tables;
 
+        TABLE fees_table {
+            name account;
+            asset fee;
+
+            uint64_t primary_key() const { return account.value; } 
+        };
+        typedef eosio::multi_index <"fees"_n, fees_table> fees_tables;
+
         TABLE delay_table {
             name account;
             bool apply_vote_delay;
@@ -195,6 +203,7 @@ CONTRACT region : public contract {
         region_tables regions;
         members_tables members;
         sponsors_tables sponsors;
+        fees_tables fees;
         delay_tables regiondelays;
         harvest_balance_tables harvestbalances;
 };

@@ -850,7 +850,9 @@ const keyProviders = {
     process.env.APPLICATION_KEY, 
     process.env.EXCHANGE_KEY,
     process.env.PAY_FOR_CPU_MAINNET_KEY,
-    process.env.SCRIPT_KEY],
+    process.env.TELOS_MAINNET_DELACCT_KEY,
+    process.env.SCRIPT_KEY
+  ],
   [networks.telosTestnet]: [
     process.env.TELOS_TESTNET_OWNER_KEY, 
     process.env.TELOS_TESTNET_HYPHA_ACTIVE_KEY, 

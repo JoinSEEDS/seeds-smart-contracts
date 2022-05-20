@@ -177,6 +177,11 @@ ACTION region::create(
         mbalance.balance -= quantity;           
     });
 
+    auto rgnitr = sponsors.find(rgnaccount.value);
+    sponsors.modify(rgnitr, _self, [&](auto & mbalance) {
+        mbalance.balance += quantity;
+    });
+
     regions.emplace(_self, [&](auto & item) {
         item.id = rgnaccount;
         item.founder = founder;
@@ -350,6 +355,51 @@ ACTION region::setfounder(name region, name founder, name new_founder) {
     regions.modify(ritr, _self, [&](auto& item) {
       item.founder = new_founder;
     });
+}
+
+ACTION region::remove(name region, name founder) {
+    auth_founder(region, founder);
+
+    // the region should have only 1 member, the founder
+    auto rgnmembers = members.get_index<"byregion"_n>();
+    auto mitr = rgnmembers.find(region.value);
+    uint counter = 0;
+    while (mitr != rgnmembers.end() && mitr->region.value == region.value) {
+        counter++;
+        if (counter > 1) {
+            check(false, "Founder must be the only remaining member to remove a region.");
+        }
+    }
+
+    action(
+        permission_level{contracts::region, "active"_n},
+        contracts::region, "removergn"_n,
+        make_tuple(region)
+    ).send();
+
+    // return the money
+    // invoke the withdraw action
+    
+}
+
+// TODO - call this with an action so it's called with eosio.code
+void region::withdraw(name beneficiary, name regionacct, string memo)
+{
+    require_auth(get_self());
+
+    auto rgnitr = sponsors.find(rgnaccount.value);
+    asset quantity = rgnitr -> balance;
+
+    if (quantity.amount == 0) return;
+
+    sponsors.modify(rgnitr, _self, [&](auto & mbalance) {
+        mbalance.balance = 0;
+    });
+
+    auto token_account = contracts::token;
+
+    token::transfer_action action{name(token_account), {get_self(), "active"_n}};
+    action.send(sender, beneficiary, quantity, string("region refund"));
 }
 
 ACTION region::removergn(name region) {
