@@ -49,7 +49,7 @@ const makecitizen = async (user, citizen = true) => {
     }  
 
     if (citizen) {
-        await contracts.accounts.genesis(user, { authorization: `${accounts}@active` })
+        await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
         console.log("success!")
         fs.appendFileSync('citizens.txt', user+"\n");
         

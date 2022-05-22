@@ -4,7 +4,7 @@ const { eos, names, getTableRows, getBalance, initContracts, isLocal, ramdom64By
 const { expect } = require('chai');
 
 const { 
-  harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool,
+  harvest, accounts, proposals, settings, escrow, token, organization, onboarding, pool, scheduler,
   campaignbank, milestonebank, alliancesbank, hyphabank,
   firstuser, seconduser, thirduser, fourthuser, fifthuser
 } = names
@@ -15,7 +15,7 @@ function sleep(ms) {
 
 let eosDevKey = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"
 
-describe.only('Proposals', async assert => {
+describe('Proposals', async assert => {
 
   if (!isLocal()) {
     console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
@@ -858,7 +858,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote1 = false
   try {
-    await contracts.proposals.against(thirduser, 2, 8, { authorization: `${thirduser}@active` })
+    await contracts.proposals.revertvote(thirduser, 2, { authorization: `${thirduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that did not vote, tries to vote in evaluate phase (fails)')
@@ -866,7 +866,7 @@ describe('Evaluation phase', async assert => {
 
   let changeVote2 = false
   try {
-    await contracts.proposals.favour(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
@@ -874,15 +874,15 @@ describe('Evaluation phase', async assert => {
 
   let changeVote3 = false
   try {
-    await contracts.proposals.against(seconduser, 2, 8, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(seconduser, 2, { authorization: `${seconduser}@active` })
     changeVote1 = true
   } catch (err) {
     console.log('user that voted against, tries to vote in evaluate phase (fails)')
   }
 
-  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
-  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
-  await contracts.proposals.against(thirduser, 1, 8, { authorization: `${thirduser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
+  await contracts.proposals.revertvote(thirduser, 1, { authorization: `${thirduser}@active` })
 
   const repsBefore = await eos.getTableRows({
     code: accounts,
@@ -1280,7 +1280,7 @@ describe('Proposals Quorum And Support Levels', async assert => {
     json: true
   })
 
-  // console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
+  console.log("supportForCampaigns "+JSON.stringify(supportForCampaigns, null, 2))
   // console.log("supportForAlliances "+JSON.stringify(supportForAlliances, null, 2))
 
   console.log('execute proposals')
@@ -1304,7 +1304,7 @@ describe('Proposals Quorum And Support Levels', async assert => {
       assert({
         given: 'get quorum called',
         should: 'give the correct quorum threshold',
-        expected: `assertion failure with message: ${expectedValue}`,
+        expected: `assertion failure with message: ${expectedValue}.000000`,
         actual: err.json.error.details[0].message
       })
     }
@@ -2064,9 +2064,15 @@ describe('delegate trust', async assert => {
   console.log('settings reset')
   await contracts.settings.reset({ authorization: `${settings}@active` })
 
+  // users get 2 points for entering into the vote table
   console.log('configure voterep2.ind to 2')
   await contracts.settings.configure('voterep2.ind', 2, { authorization: `${settings}@active` })
 
+  // delegators will get 50% of the points for entering in the vote table
+  // this means voters get 2 points, and users who delegated get 1 point (50% of 2)
+  console.log('configure votedel.mul to 50')
+  await contracts.settings.configure('votedel.mul', 50, { authorization: `${settings}@active` })
+  
   console.log('accounts reset')
   await contracts.accounts.reset({ authorization: `${accounts}@active` })
 
@@ -2178,10 +2184,29 @@ describe('delegate trust', async assert => {
   }
 
   console.log('vote for campaigns')
+  const campBeforeDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campBeforeDelegateVote " + JSON.stringify(campBeforeDelegateVote,null,2))
+
   await contracts.proposals.favour(firstuser, 1, 5, { authorization: `${firstuser}@active` })
   await sleep(5000)
 
+  const campAfterDelegateVote = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateVote " + JSON.stringify(campAfterDelegateVote,null,2))
+
   console.log('vote for alliances')
+
   await contracts.proposals.against(thirduser, 2, 50, { authorization: `${thirduser}@active` })
   await sleep(5000)
 
@@ -2213,9 +2238,33 @@ describe('delegate trust', async assert => {
   console.log('cancel trust delegation')
   await contracts.proposals.undelegate(fourthuser, scopeCampaigns, { authorization: `${fourthuser}@active` })
   
+  const votesBeforeDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
   console.log('change opinion')
-  await contracts.proposals.against(firstuser, 1, 10, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+
   await sleep(3000)
+
+  const campAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: scopeCampaigns,
+    table: 'props',
+    json: true,
+  })
+  
+  const votesAfterDelegateRevert = await eos.getTableRows({
+    code: proposals,
+    scope: 1,
+    table: 'votes',
+    json: true,
+  })
+
+  //console.log("campAfterDelegateRevert " + JSON.stringify(campAfterDelegateRevert,null,2))
 
   const voicesAfterOnperiod = await getVoices()
 
@@ -2301,33 +2350,98 @@ describe('delegate trust', async assert => {
   })
 
   assert({
-    given: 'trust delegated and opinion changed',
-    should: 'decrease the voice of delegators',
-    actual: voicesAfterOnperiod,
-    expected: {
-      campaigns: [
-        { account: firstuser, balance: 10 },
-        { account: seconduser, balance: 5 },
-        { account: thirduser, balance: 25 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ],
-      alliances: [
-        { account: firstuser, balance: 20 },
-        { account: seconduser, balance: 10 },
-        { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ],
-      hypha: [
-        { account: firstuser, balance:20 },
-        { account: seconduser, balance: 10 },
-        { account: thirduser, balance: 50 },
-        { account: fourthuser, balance: 35 },
-        { account: fifthuser, balance: 22 }
-      ]
+    given: 'vote table after delegatee has voted',
+    should: 'have delegate votes in it',
+    actual: votesBeforeDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 1
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
     }
+  ]
   })
+
+  assert({
+    given: 'vote table after delegatee has reverted their vote, but seedsuserxxx has canceled their delegation',
+    should: 'delegate votes are now against, except seedsuserxxx',
+    actual: votesAfterDelegateRevert.rows,
+    expected: [{
+      "proposal_id": 1,
+      "account": "seedsuseraaa",
+      "amount": 5,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserbbb",
+      "amount": 2,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserccc",
+      "amount": 12,
+      "favour": 0
+    },{
+      "proposal_id": 1,
+      "account": "seedsuserxxx",
+      "amount": 8,
+      "favour": 1
+    }
+  ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate vote',
+    should: 'have all delegates voices counted',
+    actual: [
+      campAfterDelegateVote.rows[0].total,
+      campAfterDelegateVote.rows[0].favour,
+      campAfterDelegateVote.rows[0].against,
+    ],
+    expected: [
+      27,
+      27,
+      0,
+    ]
+  })
+
+  assert({
+    given: 'proposal votes after delegate reverse vote',
+    should: 'have all delegates voices reversed, except one with 8 votes',
+    actual: [
+      campAfterDelegateRevert.rows[0].total,
+      campAfterDelegateRevert.rows[0].favour,
+      campAfterDelegateRevert.rows[0].against,
+    ],
+    expected: [
+      27,
+      8,
+      19,
+    ]
+  })
+
+  assert({
+    given: 'total delegated voted before reverse trust',
+    should: 'have all delegates voices counted',
+    actual: delCampaigns.rows,
+    expected: []
+  })
+
 
   assert({
     given: 'trust canceled by delegatee',
@@ -2475,8 +2589,8 @@ describe("invite campaigns", async assert => {
   await sleep(1000)
 
   console.log('downvoting the first proposal')
-  await contracts.proposals.against(firstuser, 1, 8, { authorization: `${firstuser}@active` })
-  await contracts.proposals.against(seconduser, 1, 8, { authorization: `${seconduser}@active` })
+  await contracts.proposals.revertvote(firstuser, 1, { authorization: `${firstuser}@active` })
+  await contracts.proposals.revertvote(seconduser, 1, { authorization: `${seconduser}@active` })
 
   console.log('running on period 4')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2591,6 +2705,12 @@ describe('Alliance campaigns', async assert => {
     await vote(thirduser, propId, 8, { authorization: `${thirduser}@active` })
   }
 
+  const revertVote = async (propId) => {
+    await contracts.proposals.revertvote(firstuser, propId, { authorization: `${firstuser}@active` })
+    await contracts.proposals.revertvote(seconduser, propId, { authorization: `${seconduser}@active` })
+    await contracts.proposals.revertvote(thirduser, propId, { authorization: `${thirduser}@active` })
+  }
+
   const checkEscrowLocks = async (expectedLocks) => {
     const lockTable = await eos.getTableRows({
       code: escrow,
@@ -2676,7 +2796,7 @@ describe('Alliance campaigns', async assert => {
   await sleep(2000)
 
   console.log('downvote prop 3')
-  await voteProp(3, false)
+  await revertVote(3)
 
   console.log('running onperiod 3')
   await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
@@ -2686,7 +2806,7 @@ describe('Alliance campaigns', async assert => {
   await checkEscrowLocks(expectedLocks)
 
   console.log('downvote prop 4')
-  await voteProp(4, false)
+  await revertVote(4)
 
   console.log('going live')
   await contracts.escrow.triggertest(eventSource, eventName, 'test event', { authorization: `${escrow}@active` })
@@ -2924,3 +3044,451 @@ describe('Hypha proposals', async assert => {
   })
 
 })
+
+
+describe('Check Banned', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+  
+  const contracts = await initContracts({ token, harvest, accounts, proposals })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(thirduser, { authorization: `${accounts}@active` })
+  // proposal.recipient = recipient;
+
+  console.log('create proposal '+milestonebank)
+
+  await contracts.proposals.createx(seconduser, firstuser, '55.7000 SEEDS', 'title', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+
+  console.log('deposit stake')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+
+  console.log('update contribution score of citizens')
+  await contracts.harvest.testupdatecs(firstuser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(seconduser, 90, { authorization: `${harvest}@active` })
+  await contracts.harvest.testupdatecs(thirduser, 90, { authorization: `${harvest}@active` })
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  await contracts.proposals.favour(firstuser, 1, 30, { authorization: `${firstuser}@active` })
+  await contracts.proposals.favour(seconduser, 1, 30, { authorization: `${seconduser}@active` })
+  await contracts.proposals.favour(thirduser, 1, 30, { authorization: `${thirduser}@active` })
+
+  console.log('ban user')
+  await contracts.accounts.bantree(firstuser, true, { authorization: `${accounts}@active` })
+
+  console.log('eval proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  //console.log('props '+JSON.stringify(props, null, 2))
+
+  var status = props.rows[0].status
+
+  //console.log('status '+status)
+
+  assert({
+    given: 'recepient banned but proposal passed',
+    should: 'proposal failed',
+    actual: status,
+    expected: "rejected"
+  })
+
+
+  // console.log('test 1')
+  // tx = await contracts.proposals.testisbanned(firstuser, { authorization: `${proposals}@active` })
+  // console.log(JSON.stringify(tx, null, 2))
+  // console.log('test 2')
+  // tx2 = await contracts.proposals.testisbanned(seconduser, { authorization: `${proposals}@active` })
+  // console.log(JSON.stringify(tx2, null, 2))
+
+})
+
+describe('Stake burn in rejected proposals', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+  console.log('set settings')
+  await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
+  await contracts.settings.configure("propquorum", 33, { authorization: `${settings}@active` }) 
+  await contracts.settings.configure("propmajority", 50, { authorization: `${settings}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fifthuser, 'fifthuser', 'individual', { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+
+  await contracts.proposals.createx(firstuser, firstuser, '200.0000 SEEDS', '0', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(firstuser, firstuser, '250.0000 SEEDS', '1', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '140.0000 SEEDS', '2', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '177.7777 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+
+  const testStake = async (expectedValues) => {
+    const proposalsTable = await eos.getTableRows({
+      code: proposals,
+      scope: proposals,
+      table: 'props',
+      json: true,
+    })
+    assert({
+      given: 'onperiod ran',
+      should: 'have correct stake amount',
+      actual: proposalsTable.rows.map(r => r.staked),
+      expected: expectedValues
+    })    
+  }
+
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+
+  const firstBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
+  console.log('deposit stake (memo 1)')
+  await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '1', { authorization: `${firstuser}@active` })
+  console.log('deposit stake (memo 2)')
+  await contracts.token.transfer(firstuser, proposals, '100.0000 SEEDS', '2', { authorization: `${firstuser}@active` })
+  console.log('deposit stake 3')
+  await contracts.token.transfer(seconduser, proposals, '100.0000 SEEDS', '3', { authorization: `${seconduser}@active` })
+  console.log('deposit stake 4')
+  await contracts.token.transfer(seconduser, proposals, '100.0000 SEEDS', '4', { authorization: `${seconduser}@active` })
+
+  let users = [firstuser, seconduser, thirduser, fourthuser, fifthuser]
+  for (i = 0; i<users.length; i++ ) {
+    let user = users[i]
+    console.log('make citizen '+user)
+    await contracts.accounts.testcitizen(user, { authorization: `${accounts}@active` })
+  }
+
+  await testStake(['100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS', '100.0000 SEEDS' ])
+
+  const stakeBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
+  console.log('move proposals to active')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(2000)
+
+  await sleep(1000)
+
+  for (i = 0; i<users.length; i++ ) {
+    let user = users[i]
+    console.log('add voice '+user)
+    await contracts.proposals.addvoice(user, 44, { authorization: `${proposals}@active` })
+  }
+
+  console.log('vote on first proposal') // unity but not quorum (loses 5% of stake)
+  await contracts.proposals.favour(seconduser, 1, 10, { authorization: `${seconduser}@active` })
+
+  console.log('vote on second proposal') // not unity but quorum (loses 100% of stake)
+  await contracts.proposals.favour(seconduser, 2, 20, { authorization: `${seconduser}@active` })
+  await contracts.proposals.against(firstuser, 2, 30, { authorization: `${firstuser}@active` })
+
+  console.log('vote on 4th proposal') // not quorum either unity (loses 100% of stake)
+  await contracts.proposals.against(seconduser, 4, 11, { authorization: `${seconduser}@active` })
+
+  console.log('execute proposals')
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+  await sleep(3000)
+
+  const props = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true
+  })
+
+  await testStake(['0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS', '0.0000 SEEDS' ])
+
+  const finalBalances = [
+    await getBalance(firstuser),
+    await getBalance(seconduser),
+    await getBalance(campaignbank),
+    await getBalance(alliancesbank)
+  ]
+
+  await contracts.proposals.initnumprop({ authorization: `${proposals}@active` })
+
+  const proposalsInit = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+  assert({
+    given: 'firstuser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[0] - stakeBalances[0],
+    expected: 200
+  })
+
+  assert({
+    given: 'seconduser transfer to proposals',
+    should: 'have correct balance',
+    actual: firstBalances[1] - stakeBalances[1],
+    expected: 200
+  })
+
+  assert({
+    given: 'failed proposal quorum',
+    should: 'be rejected',
+    actual: props.rows[0].status,
+    expected: 'rejected'
+  })
+
+  assert({
+    given: 'failed proposal quorum majority',
+    should: 'be rejected',
+    actual: props.rows[1].status,
+    expected: "rejected"
+  })
+
+  assert({
+    given: 'unity met with invalid quorum',
+    should: 'return 0.95 of stake',
+    actual: finalBalances[0] - stakeBalances[0],
+    expected: 95
+  })
+
+  assert({
+    given: 'unity not met',
+    should: 'burn stake',
+    actual: finalBalances[1] - stakeBalances[1],
+    expected: 0
+  })
+
+})
+
+describe.only('Alliance and invite proposals max ask', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('set settings')
+  await contracts.settings.configure("prop.cmp.min", 2 * 10000, { authorization: `${settings}@active` })
+  await contracts.settings.configure("prop.al.min", 2 * 10000, { authorization: `${settings}@active` })
+  
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(firstuser, { authorization: `${accounts}@active` })
+
+  console.log('create proposal')
+  await contracts.proposals.createx(firstuser, firstuser, '300000.0000 SEEDS', '3', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  var canCreateAllianceBelowMax = true
+
+  console.log('create invite proposal')
+  await contracts.proposals.createinvite(
+    firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+    campaignbank, '1000.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+  
+  var canCreateInviteBelowMax = true
+
+  var canCreateAllianceOverMax = false
+  try {
+    await contracts.proposals.createx(firstuser, firstuser, '300000.7777 SEEDS', '4', 'summary', 'description', 'image', 'url', alliancesbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+    canCreateAllianceOverMax = true
+  } catch (err) {
+    console.log("can't create alliance over max ask - expected.")
+  }
+
+  var canCreateInviteOverMaxTotal = false
+  try {
+    console.log('create invite proposal over max total')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333001.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '1000.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInviteOverMaxTotal = true
+  } catch (err) {
+    console.log("create invite proposal over max total fails - expected.")
+  }
+
+  var canCreateInviteOverMaxInviteMax = false
+  try {
+    console.log('create invite proposal over max invite')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '1001.0000 SEEDS', '6.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInviteOverMaxInviteMax = true
+  } catch (err) {
+    console.log("create invite proposal over max invite fails - expected.")
+  }
+  
+  var canCreateInvitePlantedOverMaxInvite = false
+  try {
+    console.log('create invite proposal over max invite')
+    await contracts.proposals.createinvite(
+      firstuser, firstuser, '333000.0000 SEEDS', 'title', 'summary', 'description', 'image', 'url', 
+      campaignbank, '100.0000 SEEDS', '101.0000 SEEDS', '2.0000 SEEDS', { authorization: `${firstuser}@active` })
+      canCreateInvitePlantedOverMaxInvite = true
+  } catch (err) {
+    console.log("create invite proposal over max invite fails - expected.")
+  }
+
+  assert({
+    given: 'try to create alliance exceeding max ask',
+    should: 'not work',
+    actual: canCreateAllianceOverMax,
+    expected: false
+  })
+
+  assert({
+    given: 'try to create alliance',
+    should: 'work',
+    actual: canCreateAllianceBelowMax,
+    expected: true
+  })
+  
+  assert({
+    given: 'try to create invite exceeding max ask',
+    should: 'not work',
+    actual: canCreateInviteOverMaxTotal,
+    expected: false
+  })
+  assert({
+    given: 'try to create invite exceeding max invite',
+    should: 'not work',
+    actual: canCreateInviteOverMaxInviteMax,
+    expected: false
+  })
+  assert({
+    given: 'try to create invite planted > invite',
+    should: 'not work',
+    actual: canCreateInvitePlantedOverMaxInvite,
+    expected: false
+  })
+
+})
+
+describe('Cycle stats use moon cycle phases as start and end times', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ proposals, scheduler })
+
+  console.log('reset proposals')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('reset scheduler')
+  await contracts.scheduler.reset({ authorization: `${scheduler}@active` })
+
+
+  const moonPhases = ['First Quarter', 'Full Moon', 'Last Quarter', 'New Moon']
+  const now = parseInt(Date.now() / 1000)
+
+  for (let i = 1; i <= 10; i++) {
+    await contracts.scheduler.moonphase(now + (i * 86400), moonPhases[i%4], 0, { authorization: `${scheduler}@active` })
+  }
+
+  await contracts.proposals.onperiod({ authorization: `${proposals}@active` })
+
+  const cycleStatsTable = await getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'cyclestats',
+    json: true
+  })
+
+  const moonPhasesTable = await getTableRows({
+    code: scheduler,
+    scope: scheduler,
+    table: 'moonphases',
+    limit: 1000,
+    json: true
+  })
+
+  const cycleStat = cycleStatsTable.rows[0]
+  const startTimePhase = moonPhasesTable.rows.filter(r => (r.timestamp == cycleStat.start_time))
+  const endTimePhase = moonPhasesTable.rows.filter(r => (r.timestamp == cycleStat.end_time))
+
+  assert({
+    given: 'onperiod ran',
+    should: 'set the start date and end date with a valid moon cycle',
+    expected: [1, 1],
+    actual: [startTimePhase.length, endTimePhase.length]
+  })
+
+  assert({
+    given: 'onperiod ran',
+    should: 'set end date bigger than start date',
+    expected: true,
+    actual: cycleStat.end_time > cycleStat.start_time
+  })
+
+  assert({
+    given: 'onperiod ran',
+    should: 'have the moon phase set to New Moon',
+    expected: true,
+    actual: startTimePhase[0].phase_name == 'New Moon' && endTimePhase[0].phase_name == 'New Moon'
+  })
+
+})
+

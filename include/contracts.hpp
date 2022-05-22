@@ -25,8 +25,12 @@ namespace contracts {
   name region = "region.seeds"_n;
   name gratitude = "gratz.seeds"_n;
   name pouch = "pouch.seeds"_n;
+  name quests = "quests.seeds"_n;
   name pool = "pool.seeds"_n;
   name msig = "msig.seeds"_n;
+  name dao = "dao.seeds"_n;
+  name tokensmaster = "tokensmaster"_n;
+  name rainbows = "rainbo.seeds"_n;
 }
 namespace bankaccts {
   name milestone = "milest.seeds"_n;

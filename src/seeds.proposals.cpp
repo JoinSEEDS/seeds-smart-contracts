@@ -141,13 +141,13 @@ void proposals::update_min_stake(uint64_t prop_id) {
   }
 }
 
-// quorum as integer % value - e.g. 90 == 90%
-uint64_t proposals::get_quorum(uint64_t total_proposals) {
-  uint64_t base_quorum = config_get("quorum.base"_n);
-  uint64_t quorum_min = config_get("quor.min.pct"_n);
-  uint64_t quorum_max = config_get("quor.max.pct"_n);
+// quorum as % value - e.g. 90.0 == 90%
+double proposals::get_quorum(uint64_t total_proposals) {
+  double base_quorum = config_get("quorum.base"_n);
+  double quorum_min = config_get("quor.min.pct"_n);
+  double quorum_max = config_get("quor.max.pct"_n);
 
-  uint64_t quorum = total_proposals ? base_quorum / total_proposals : 0;
+  double quorum = total_proposals ? (double)base_quorum / (double)total_proposals : 0;
   quorum = std::max(quorum_min, quorum);
   return std::min(quorum_max, quorum);
 }
@@ -285,7 +285,15 @@ void proposals::add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type) {
 }
 
 uint64_t proposals::calc_voice_needed(uint64_t total_voice, uint64_t num_proposals) {
-  return ceil(total_voice * (get_quorum(num_proposals) / 100.0));
+  // note the factor -0.000000001 at the end is needed because ceil() for a perfectly even number like 20.0 will return the 
+  // number + 1, like 21 in this case. This is a weirdness of ceil().
+  return ceil( total_voice * (get_quorum(num_proposals) / 100.0) - 0.000000001);
+}
+
+void proposals::testvn(uint64_t total_voice, uint64_t num_proposals) {
+  require_auth(_self);
+  uint64_t res = calc_voice_needed(total_voice, num_proposals);
+  print(res);
 }
 
 void proposals::add_num_prop(uint64_t cycle, uint64_t num_prop, name type) {
@@ -446,6 +454,11 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
       valid_quorum = votes_in_favor >= quorum_votes_needed;
     }
 
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
+
     if (passed && valid_quorum) {
 
       if (pitr -> status == status_open) {
@@ -520,8 +533,24 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
       }
 
     } else {
+
+      asset stakeToBurn = asset(0, seeds_symbol);
+      
+      if ( !valid_quorum && passed ){
+        // unity with invaild quorum          
+        stakeToBurn = asset(pitr->staked.amount * 0.05, seeds_symbol);
+        refund_staked(pitr->creator, asset(pitr->staked.amount - stakeToBurn.amount, seeds_symbol) );
+
+      } else {
+
+        stakeToBurn = pitr->staked;
+      }
+      
+      eosio::print(stakeToBurn);
+
       if (pitr->status != status_evaluate) {
-        burn(pitr->staked);
+        burn(stakeToBurn);
+        
       } else {
         send_punish(pitr->creator);
 
@@ -539,7 +568,7 @@ void proposals::evalproposal (uint64_t proposal_id, uint64_t prop_cycle) {
             proposal.passed_cycle = prop_cycle;
           }
           proposal.executed = false;
-          proposal.staked = asset(0, seeds_symbol);
+          proposal.staked = asset(0, utils::seeds_symbol);
           proposal.status = status_rejected;
           proposal.stage = stage_done;
       });
@@ -657,6 +686,11 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 
     bool valid_quorum = false;
 
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
+
     if (pitr->status == status_evaluate) { // in evaluate status, we only check unity. 
       valid_quorum = true;
     } else { // in open status, quorum is calculated
@@ -667,7 +701,8 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
         " prop ID " + std::to_string(pitr->id) +
         " vp favor " + std::to_string(votes_in_favor) +
         " needed: " + std::to_string(quorum_votes_needed) +
-        " valid: " + ( valid_quorum ? "YES " : "NO ") 
+        " quorum: " + ( valid_quorum ? "YES " : "NO ") +
+        " unity: " + ( passed ? "YES " : "NO ") 
       );
     }
 
@@ -690,15 +725,12 @@ void proposals::testevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
 }
 
 void proposals::send_test_eval_prop (uint64_t proposal_id, uint64_t prop_cycle) {
-  transaction trx{};
-  trx.actions.emplace_back(
+  action(
     permission_level(get_self(), "active"_n),
     get_self(),
     "testevalprop"_n,
     std::make_tuple(proposal_id, prop_cycle)
-  );
-  // trx.delay_sec = 1;
-  trx.send(proposal_id, _self);
+  ).send();
 }
 
 void proposals::testperiod() {
@@ -882,13 +914,35 @@ void proposals::update_cycle() {
     cycle.set(c, get_self());
 }
 
+uint64_t proposals::get_new_moon (uint64_t timestamp) {
+
+  moon_phases_tables moonphases_t(contracts::scheduler, contracts::scheduler.value);
+
+  auto mitr = moonphases_t.lower_bound(timestamp);
+
+  while (mitr != moonphases_t.end()) {
+    if (mitr->phase_name == "New Moon") {
+      return mitr->timestamp;
+    }
+    mitr++;
+  }
+
+  return 0;
+
+}
+
 void proposals::init_cycle_new_stats () {
   cycle_table c = cycle.get();
 
+  uint64_t now_minus_5_days = eosio::current_time_point().sec_since_epoch() - (utils::seconds_per_day * 5);
+
+  uint64_t start_time = get_new_moon(now_minus_5_days);
+  uint64_t end_time = get_new_moon(start_time + utils::seconds_per_day);
+
   cyclestats.emplace(_self, [&](auto & item){
     item.propcycle = c.propcycle;
-    item.start_time = c.t_onperiod;
-    item.end_time = c.t_onperiod + config_get("propcyclesec"_n);
+    item.start_time = start_time;
+    item.end_time = end_time;
     // item.num_proposals = 0;
     item.num_votes = 0;
     item.total_voice_cast = 0;
@@ -928,16 +982,33 @@ void proposals::create_aux (
 
   require_auth(creator);
 
+  // check(false, "contract is paused");
+
   // For the time being, organizations are allowed to create alliance type proposals
   check_resident(creator, campaign_type == alliance_type );
   
+  check_values(title, summary, description, image, url);
+
   if (campaign_type != campaign_invite_type) {
     if (campaign_type == alliance_type || campaign_type == milestone_type) {
       pay_percentages = { 100 };
     } else {
       check_percentages(pay_percentages);
     }
+
+    // enforce max limit
+    if (campaign_type == alliance_type) {
+      check(quantity <= max_alliance_quantity, "Alliance grants quantity cannot be greater than 300,000 SEEDS");
+    }
+  } else {
+    // enforce max on invite campaigns
+    check(quantity <= max_invite_campaign_quantity, "Invite campaign quantity cannot be greater than 333,000 SEEDS");
+    check(max_amount_per_invite <= max_max_amount_per_invite, "Invite max amount per invite is 1,000 SEEDS");
   }
+
+  // funding campaigns are disabled since proposal 5
+  check(campaign_type != campaign_funding_type, "Funding campaigns are disabled."), 
+
 
   check(get_type(fund) != "none"_n, 
   "Invalid fund - fund must be one of "+bankaccts::milestone.to_string() + ", "+ bankaccts::alliances.to_string() + ", " + bankaccts::campaigns.to_string() );
@@ -1034,7 +1105,9 @@ void proposals::createinvite (
   uint64_t max_reward = config_get("inv.max.rwrd"_n);
   check(reward.amount <= max_reward, "the reward can not be greater than " + std::to_string(max_reward));
   
-  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0 };
+  check(max_amount_per_invite >= planted, "max amount must be >= planted");
+
+  std::vector<uint64_t> perc = { 100, 0, 0, 0, 0, 0, 0};
   create_aux(creator, recipient, quantity, title, summary, description, image, url, fund, campaign_invite_type, perc, max_amount_per_invite, planted, reward);
 
 }
@@ -1051,7 +1124,16 @@ void proposals::create(
   name fund
 ) {
   require_auth(creator);
+
   std::vector<uint64_t> perc = { 25, 25, 25, 25 };
+
+  if (fund == bankaccts::alliances) {
+    perc = { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  } else if (fund == bankaccts::milestone) {
+    perc = { 100 };
+  } else {
+    perc = { 25, 25, 25, 25 };
+  }
 
   createx(creator, recipient, quantity, title, summary, description, image, url, fund, perc);
 }
@@ -1107,11 +1189,83 @@ void proposals::check_percentages(std::vector<uint64_t> pay_percentages) {
   check(num_cycles <= 24, "the number of cycles is to big, it must be maximum 24, given:" + std::to_string(num_cycles));
 }
 
+void proposals::fixdesc(uint64_t id, string description) {
+  require_auth(get_self());
+
+  auto pitr = props.find(id);
+  check(pitr != props.end(), "prop not found");
+
+  // make backup - only the first time
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.find(id);
+  if (bitr == bprops.end()) {
+    bprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = pitr->description;
+    });
+  } 
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+
+  auto fix_itr = fixprops.find(id);
+
+  if (fix_itr == fixprops.end()) {
+    fixprops.emplace(_self, [&](auto & item){
+      item.prop_id = id;
+      item.description = description;
+    });
+  } else {
+    fixprops.modify(fix_itr, _self, [&](auto& item) {
+      item.description = description;
+    });
+  }
+
+}
+
+void proposals::applyfixprop() {
+  require_auth(get_self());
+
+  fix_props_tables fixprops(get_self(), get_self().value);
+  auto fitr = fixprops.begin();
+  while(fitr != fixprops.end()) {
+    print(" processing "+std::to_string(fitr->prop_id));
+    auto pitr = props.find(fitr->prop_id);
+    if (pitr != props.end()) {
+      print(" replace id "+std::to_string(fitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = fitr->description;
+      });
+    } 
+    fitr++;
+  }
+}
+
+void proposals::backfixprop() {
+  require_auth(get_self());
+
+  fixb_props_tables bprops(get_self(), get_self().value);
+  auto bitr = bprops.begin();
+  while(bitr != bprops.end()) {
+    print(" b processing "+std::to_string(bitr->prop_id));
+    auto pitr = props.find(bitr->prop_id);
+    if (pitr != props.end()) {
+      print(" restore id "+std::to_string(bitr->prop_id));
+      props.modify(pitr, _self, [&](auto& item) {
+        item.description = bitr->description;
+      });
+    } 
+    bitr++;
+  }
+}
+
 void proposals::updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages) {
   auto pitr = props.find(id);
 
   check(pitr != props.end(), "Proposal not found");
   require_auth(pitr->creator);
+  
+  check_values(title, summary, description, image, url);
+
   check(pitr->favour == 0, "Prop has favor votes - cannot alter proposal once voting has started");
   check(pitr->against == 0, "Prop has against votes - cannot alter proposal once voting has started");
   
@@ -1145,6 +1299,9 @@ void proposals::cancel(uint64_t id) {
 }
 
 void proposals::stake(name from, name to, asset quantity, string memo) {
+
+  // check(false, "contract is paused");
+
   if (get_first_receiver() == contracts::token  &&  // from SEEDS token account
         to  ==  get_self() &&                     // to here
         quantity.symbol == seeds_symbol) {        // SEEDS symbol
@@ -1185,17 +1342,21 @@ void proposals::stake(name from, name to, asset quantity, string memo) {
 
 void proposals::erasepartpts(uint64_t active_proposals) {
   uint64_t batch_size = config_get(name("batchsize"));
+
+  // TODO: If there was delegation, this should be multiplied by delegation factor, e.g. 0.8 for example
   uint64_t reward_points = config_get(name("voterep1.ind"));
 
   uint64_t counter = 0;
   auto pitr = participants.begin();
   while (pitr != participants.end() && counter < batch_size) {
     if (pitr -> count == active_proposals && pitr -> nonneutral) {
-      action(
-        permission_level{contracts::accounts, "active"_n},
-        contracts::accounts, "addrep"_n,
-        std::make_tuple(pitr -> account, reward_points)
-      ).send();
+      if (reward_points > 0) {
+        action(
+          permission_level{contracts::accounts, "active"_n},
+          contracts::accounts, "addrep"_n,
+          std::make_tuple(pitr -> account, reward_points)
+        ).send();
+      }
     }
     counter += 1;
     pitr = participants.erase(pitr);
@@ -1215,32 +1376,10 @@ void proposals::erasepartpts(uint64_t active_proposals) {
   }
 }
 
-bool proposals::revert_vote (name voter, uint64_t id) {
-  auto pitr = props.find(id);
-  
-  check(pitr != props.end(), "Proposal not found");
-
-  votes_tables votes(get_self(), id);
-  auto voteitr = votes.find(voter.value);
-
-  if (voteitr != votes.end()) {
-    check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
-    check(voteitr->favour == true && voteitr->amount > 0, "Only trust votes can be changed");
-
-    props.modify(pitr, _self, [&](auto& proposal) {
-      proposal.total -= voteitr->amount;
-      proposal.favour -= voteitr->amount;
-    });
-
-    votes.erase(voteitr);
-    return true;
-  }
-
-  return false;
-}
-
 void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated) {
   check_citizen(voter);
+
+  // check(false, "contract is paused");
 
   auto pitr = props.find(id);
   check(pitr != props.end(), "Proposal not found");
@@ -1271,14 +1410,7 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
     });
   }
 
-  name scope;
-  name fund_type = get_type(pitr -> fund);
-
-  if (fund_type == campaign_type) {
-    scope = get_self();
-  } else {
-    scope = fund_type;
-  }
+  name scope = get_scope(pitr -> fund);
 
   double percenetage_used = voice_change(voter, amount, true, scope);
   
@@ -1302,14 +1434,17 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   if (is_new) {
     auto rep = config_get(name("voterep2.ind"));
     double rep_multiplier = is_delegated ? config_get(name("votedel.mul")) / 100.0 : 1.0;
+    uint64_t rep_int_value = uint64_t(round( rep * rep_multiplier ));
     auto paitr = participants.find(voter.value);
     if (paitr == participants.end()) {
-      // add reputation for entering in the table
-      action(
-        permission_level{contracts::accounts, "active"_n},
-        contracts::accounts, "addrep"_n,
-        std::make_tuple(voter, uint64_t(rep * rep_multiplier))
-      ).send();
+      if (rep_int_value > 0) {
+        // add reputation for entering in the table
+        action(
+          permission_level{contracts::accounts, "active"_n},
+          contracts::accounts, "addrep"_n,
+          std::make_tuple(voter, rep_int_value)
+        ).send();
+      }
       // add the voter to the table
       participants.emplace(_self, [&](auto & participant){
         participant.account = voter;
@@ -1344,8 +1479,21 @@ void proposals::vote_aux (name voter, uint64_t id, uint64_t amount, name option,
   }
 
   add_voted_proposal(pitr->id); // this should happen in onperiod, when status is set to open / active
-  increase_voice_cast(amount, option, fund_type);
+  increase_voice_cast(amount, option, get_type(pitr -> fund));
 
+}
+
+name proposals::get_scope(name fund) {
+  name scope;
+  name fund_type = get_type(fund);
+
+  if (fund_type == campaign_type) {
+    scope = get_self();
+  } else {
+    scope = fund_type;
+  }
+
+  return scope;
 }
 
 void proposals::favour(name voter, uint64_t id, uint64_t amount) {
@@ -1355,8 +1503,7 @@ void proposals::favour(name voter, uint64_t id, uint64_t amount) {
 
 void proposals::against(name voter, uint64_t id, uint64_t amount) {
   require_auth(voter);
-  bool vote_reverted = revert_vote(voter, id);
-  vote_aux(voter, id, amount, distrust, !vote_reverted, false);
+  vote_aux(voter, id, amount, distrust, true, false);
 }
 
 void proposals::neutral(name voter, uint64_t id) {
@@ -1364,18 +1511,98 @@ void proposals::neutral(name voter, uint64_t id) {
   vote_aux(voter, id, (uint64_t)0, abstain, true, false);
 }
 
+void proposals::revertvote(name voter, uint64_t id) {
+  require_auth(voter);
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  check(voteitr != votes.end(), "Voter has not voted on this proposal, can't revert");
+
+  uint64_t amount = voteitr->amount;
+
+  check(voteitr->favour == true && amount > 0, "Only trust votes can be changed");
+
+  votes.modify(voteitr, _self, [&](auto& item) {
+    item.favour = false;
+  });
+
+  props.modify(pitr, _self, [&](auto& proposal) {
+    proposal.against += amount;
+    proposal.favour -= amount;
+  });
+
+  name scope = get_scope(pitr -> fund);
+  if (has_delegates(voter, scope)) {
+
+    action(
+      permission_level{get_self(), "active"_n},
+      get_self(), 
+      "mimicrevert"_n,
+      std::make_tuple(voter, (uint64_t)0, scope, id, (uint64_t)30)
+    ).send();
+
+  }
+
+}
+
+bool proposals::has_delegates(name voter, name scope) {
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee = deltrusts.get_index<"bydelegatee"_n>();
+  auto ditr = deltrusts_by_delegatee.find(voter.value);
+  return ditr != deltrusts_by_delegatee.end();
+}
+
+void proposals::revertvote_delegate(name voter, uint64_t id) {
+
+  auto pitr = props.find(id);
+  
+  check(pitr != props.end(), "Proposal not found");
+  check(pitr->status == status_evaluate, "Proposal is not in evaluate state");
+
+  votes_tables votes(get_self(), id);
+  auto voteitr = votes.find(voter.value);
+
+  if (voteitr != votes.end()) {
+    uint64_t amount = voteitr->amount;
+
+    if (voteitr->favour == true && amount > 0) {
+      votes.modify(voteitr, _self, [&](auto& item) {
+        item.favour = false;
+       });
+
+      props.modify(pitr, _self, [&](auto& proposal) {
+        proposal.against += amount;
+        proposal.favour -= amount;
+      });
+    }
+  }
+}
+
+
 void proposals::voteonbehalf(name voter, uint64_t id, uint64_t amount, name option) {
   require_auth(get_self());
   bool is_new = true;
-  if (option == distrust) {
-    is_new = !(revert_vote(voter, id));
-  }
+  // if (option == distrust) {
+  //   is_new = !(revert_vote(voter, id));
+  // TODO not sure I think revert vote needs to somehow work for delegated votes too
+  // }
   vote_aux(voter, id, amount, option, is_new, true);
 }
 
 void proposals::addvoice(name user, uint64_t amount) {
   require_auth(_self);
   voice_change(user, amount, false, ""_n);
+}
+
+void proposals::questvote (name user, uint64_t amount, bool reduce, name scope) {
+  require_auth(get_self());
+  voice_change(user, amount, reduce, scope);
 }
 
 double proposals::voice_change (name user, uint64_t amount, bool reduce, name scope) {
@@ -1523,12 +1750,13 @@ void proposals::refund_staked(name beneficiary, asset quantity) {
 void proposals::change_rep(name beneficiary, bool passed) {
   if (passed) {
     auto reward_points = config_get(name("proppass.rep"));
-    action(
-      permission_level{contracts::accounts, "active"_n},
-      contracts::accounts, "addrep"_n,
-      std::make_tuple(beneficiary, reward_points)
-    ).send();
-
+    if (reward_points > 0) {
+      action(
+        permission_level{contracts::accounts, "active"_n},
+        contracts::accounts, "addrep"_n,
+        std::make_tuple(beneficiary, reward_points)
+      ).send();
+    }
   }
 
 }
@@ -1895,6 +2123,45 @@ ACTION proposals::mimicvote (name delegatee, name delegator, name scope, uint64_
 
 }
 
+ACTION proposals::mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize) {
+
+  require_auth(get_self());
+
+  delegate_trust_tables deltrusts(get_self(), scope.value);
+  auto deltrusts_by_delegatee_delegator = deltrusts.get_index<"byddelegator"_n>();
+
+  uint128_t id = (uint128_t(delegatee.value) << 64) + delegator;
+
+  auto ditr = delegator == 0 ? deltrusts_by_delegatee_delegator.lower_bound(id) : deltrusts_by_delegatee_delegator.find(id);
+  
+  uint64_t count = 0;
+
+  while (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee && count < chunksize) {
+
+    name voter = ditr -> delegator;
+
+    revertvote_delegate(voter, proposal_id);
+
+    ditr++;
+    count++;
+  }
+
+  if (ditr != deltrusts_by_delegatee_delegator.end() && ditr -> delegatee == delegatee) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "mimicrevert"_n,
+      std::make_tuple(delegatee, ditr -> delegator.value, scope, proposal_id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(delegatee.value + 1, _self);
+  }
+
+}
+
 ACTION proposals::undelegate (name delegator, name scope) {
   check_voice_scope(scope);
 
@@ -2052,6 +2319,11 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
     uint64_t votes_in_favor = pitr->favour; // only votes in favor are counted
     valid_quorum = votes_in_favor >= quorum_votes_needed;
 
+    if (passed && is_banned(pitr -> recipient)) {
+      print("recepient is banned - reject proposal.");
+      passed = false;
+    }
+
     print(" re-eval "+std::to_string(proposal_id) + 
       " passed:  " + (passed ? "YES" : "NO") + 
       " quorum: " + (valid_quorum ? "YES" : "NO") +
@@ -2073,21 +2345,23 @@ void proposals::reevalprop (uint64_t proposal_id, uint64_t prop_cycle) {
       if (is_alliance_type) {
         payout_amount = pitr->quantity;
         send_to_escrow(pitr->fund, pitr->recipient, payout_amount, "proposal id: "+std::to_string(pitr->id));
-      }
-      if (is_milestone_type) {
-        payout_amount = pitr->quantity;
-        withdraw(pitr->recipient, payout_amount, pitr->fund, "");
-      } 
-      else {
-        payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
-        if (pitr->campaign_type == campaign_invite_type) {
-          withdraw(get_self(), payout_amount, pitr->fund, "invites");
-          withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
-          send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
-        } else {
-          withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+      } else {
+        if (is_milestone_type) {
+          payout_amount = pitr->quantity;
+          withdraw(pitr->recipient, payout_amount, pitr->fund, "");
+        } 
+        else {
+          payout_amount = get_payout_amount(pitr->pay_percentages, 0, pitr->quantity, pitr->current_payout);
+          if (pitr->campaign_type == campaign_invite_type) {
+            withdraw(get_self(), payout_amount, pitr->fund, "invites");
+            withdraw(contracts::onboarding, payout_amount, get_self(), "sponsor " + (get_self()).to_string());
+            send_create_invite(get_self(), pitr->creator, pitr->max_amount_per_invite, pitr->planted, pitr->recipient, pitr->reward, payout_amount, pitr->id);
+          } else {
+            withdraw(pitr->recipient, payout_amount, pitr->fund, ""); // TODO limit by amount available
+          }
         }
       }
+
 
       uint64_t num_cycles = pitr->pay_percentages.size() - 1;
 
@@ -2197,4 +2471,117 @@ ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
 }
 
+void proposals::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
 
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
+}
+
+bool proposals::is_banned(name account)
+{
+  DEFINE_BAN_TABLE
+  DEFINE_BAN_TABLE_MULTI_INDEX
+  ban_tables ban(contracts::accounts, contracts::accounts.value);
+
+  auto bitr = ban.find(account.value);
+  return bitr != ban.end();
+}
+
+void proposals::testisbanned(name account) {
+  print("Banned "+account.to_string() + ": "+std::to_string(is_banned(account)));
+}
+
+// rewind to in case there was an error
+void proposals::rewind(uint64_t round) {
+
+        // 214,
+        // 217,
+        // 218,
+        // 220,
+        // 221,
+        // 222,
+        // 225
+//>> restoring 214restoring 217restoring 218restoring 220restoring 221restoring 222restoring 225update cycle table 38
+
+  // 1 - get active props from cyclestats round 38
+  auto citr = cyclestats.find(round);
+
+  auto active_props = citr -> active_props;
+
+  for(std::size_t i = 0; i < active_props.size(); ++i) {
+    uint64_t prop_id = active_props[i];
+    print("restoring "+std::to_string(prop_id));
+
+    auto pitr = props.find(prop_id);
+
+    props.modify(pitr, _self, [&](auto & item){
+      item.executed = false;
+      // 2 - set them to open/active
+      item.status = status_open;
+      item.stage = stage_active;
+      // 3 set passed cycle to 0
+      item.passed_cycle = 0;
+    });
+
+  }
+
+  // update cycle
+
+  print("update cycle table "+std::to_string(round));
+
+  cycle_table c = cycle.get_or_create(get_self(), cycle_table());
+  c.propcycle = round;
+  cycle.set(c, get_self());
+
+  // delete cycle stats
+  // citr++;
+  // if (citr != cyclestats.end()) {
+  //   cyclestats.erase(citr);
+  // }
+}
+// rewind to in case there was an error
+void proposals::fixcycstat(uint64_t delete_round) {
+
+  // 1 - delete cycle stats
+  auto citr = cyclestats.find(delete_round);
+
+  if (citr != cyclestats.end()) {
+    cyclestats.erase(citr);
+  }
+
+  // 2 - delete from support table
+  std::vector<name> support_scopes = {
+        alliance_type,
+        campaign_type,
+        milestone_type,
+        referendum_type,
+    };
+
+  for (auto & s : support_scopes) {
+    support_level_tables support(get_self(), s.value);
+    auto sitr = support.find(delete_round);
+    if (sitr != support.end()) {
+      support.erase(sitr);
+    }
+  }
+
+}

@@ -155,7 +155,7 @@ describe('Exchange', async assert => {
   })
 
   assert({
-    given: `newpurchase called multiple times with same transaction`,
+    given: `newpayment called multiple times with same transaction`,
     should: `fail`,
     actual: allowDuplicateTransaction,
     expected: false

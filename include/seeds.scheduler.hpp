@@ -3,6 +3,7 @@
 #include <contracts.hpp>
 #include <utils.hpp>
 #include <tables/config_table.hpp>
+#include <tables/moon_phases_table.hpp>
 
 using namespace eosio;
 using std::string;
@@ -32,6 +33,8 @@ CONTRACT scheduler : public contract {
 
         ACTION configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime);
 
+        ACTION addmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, string start_phase_name);
+
         ACTION removeop(name id);
 
         ACTION pauseop(name id, uint8_t pause);
@@ -47,11 +50,14 @@ CONTRACT scheduler : public contract {
         ACTION test2();
 
         ACTION testexec(name op);
+        
+        ACTION checknext();
 
     private:
         void exec_op(name id, name contract, name action);
         void cancel_exec();
         void reset_aux(bool destructive);
+        uint64_t next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quarter_moon_cycles);
         bool should_preserve_op(name op_id) {
             return 
                 op_id == "exch.period"_n || 
@@ -70,14 +76,8 @@ CONTRACT scheduler : public contract {
             uint64_t by_timestamp() const { return timestamp; }
         };
 
-        TABLE moon_phases_table {
-            uint64_t timestamp;
-            time_point time;
-            string phase_name;
-            string eclipse;
-
-            uint64_t primary_key() const { return timestamp; }
-        };
+        DEFINE_MOON_PHASES_TABLE
+        DEFINE_MOON_PHASES_TABLE_MULTI_INDEX
 
         TABLE moon_ops_table {
             name id;
@@ -107,7 +107,6 @@ CONTRACT scheduler : public contract {
             const_mem_fun<operations_table, uint64_t, &operations_table::by_timestamp>>
         > operations_tables;
 
-        typedef eosio::multi_index <"moonphases"_n, moon_phases_table> moon_phases_tables;
 
         typedef eosio::multi_index <"moonops"_n, moon_ops_table,
             indexed_by<"bylastcycle"_n,

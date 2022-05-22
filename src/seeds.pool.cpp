@@ -6,6 +6,11 @@ ACTION pool::reset () {
 
   auto bitr = balances.begin();
   while (bitr != balances.end()) {
+    accounts acct(get_self(), bitr->account.value);
+    auto aitr = acct.begin();
+    while (aitr != acct.end()) {
+      aitr = acct.erase(aitr);
+    }
     bitr = balances.erase(bitr);
   }
 
@@ -28,24 +33,85 @@ ACTION pool::ontransfer (name from, name to, asset quantity, string memo) {
     name account = name(memo);
     check(is_account(account), account.to_string() + " is not an account");
 
-    auto bitr = balances.find(account.value);
-
-    if (bitr == balances.end()) {
-      balances.emplace(_self, [&](auto & item){
-        item.account = account;
-        item.balance = quantity;
-      });
-    } else {
-      balances.modify(bitr, _self, [&](auto & item){
-        item.balance += quantity;
-      });
-    }
-    
+    add_balance(account, quantity, get_self());
     size_change(total_balance_size, quantity.amount);
-  }
+  }}
 
+void pool::update_pool_token( const name& owner, const asset& quantity, const symbol sym)
+{
+   accounts acct(get_self(), owner.value);
+   const auto& aitr = acct.get(sym.code().raw(), "update_pool_token: symbol not found");
+   acct.modify( aitr, same_payer, [&]( auto& a ){
+     a.balance.amount = quantity.amount;
+   });
 }
 
+void pool::add_balance( const name& owner, const asset& value, const name& ram_payer )
+{
+   const auto& bal_to = balances.find( owner.value );
+   if( bal_to == balances.end() ) {
+      balances.emplace( get_self(), [&]( auto& a ){
+        a.account = owner;
+        a.balance = value;
+      });
+      accounts acct(get_self(), owner.value);
+      const auto& aitr = acct.find(utils::pool_symbol.raw());
+      if( aitr != acct.end() ) {
+        update_pool_token( owner, value ); // stale accounts table entry?
+      } else {
+        acct.emplace( get_self(), [&]( auto& a ){
+          a.balance = value;
+          a.balance.symbol = utils::pool_symbol;
+        });
+      }
+   } else {
+      check(bal_to->balance.symbol == value.symbol, "incorrect token symbol");
+      auto new_balance = bal_to->balance;
+      new_balance.amount += value.amount;
+      balances.modify( bal_to, same_payer, [&]( auto& a ) {
+        a.balance.amount = new_balance.amount;
+      });
+      update_pool_token( owner, new_balance );
+   }
+}
+
+bool pool::sub_balance( const name& owner, const asset& value )
+{
+   bool emptied = false;
+   const auto& bal_from = balances.find( owner.value );
+   check(bal_from->balance.amount >= value.amount, "poolxfr: overdrawn balance" );
+   if (bal_from->balance.amount == value.amount) {
+      accounts acct(get_self(), owner.value);
+      auto aitr = acct.begin();
+      while (aitr != acct.end()) {
+        aitr = acct.erase(aitr);
+      }
+      emptied = true;
+    } else {
+      asset new_balance = bal_from->balance;
+      new_balance.amount -= value.amount;
+      balances.modify(bal_from, _self, [&](auto & item){
+        item.balance = new_balance;
+      });
+      update_pool_token( owner, new_balance );
+    }
+    return emptied;
+}
+
+ACTION pool::transfer(name from, name to, asset quantity, const string& memo)
+{
+  check(quantity.symbol == utils::pool_symbol, "poolxfr: unknown token");
+  quantity.symbol = utils::seeds_symbol;
+  auto& bal_from = balances.get(from.value, "poolxfr: unknown sender");
+  require_auth(from);
+  check(is_account(to), "poolxfr: " + to.to_string() + " is not an account");
+  check( quantity.amount > 0, "poolxfr: must transfer positive quantity" );
+  check( memo.size() <= 256, "poolxfr: memo has more than 256 bytes" );
+  bool emptied = sub_balance( from, quantity );
+  if( emptied ) { balances.erase(bal_from); }
+  name payer = get_self(); // TBD: make from acct pay ram, or a SEEDS fee?
+  add_balance( to, quantity, payer );
+}
 
 ACTION pool::payouts (asset quantity) {
 
@@ -78,18 +144,16 @@ ACTION pool::payout (asset quantity, uint64_t start, uint64_t chunksize, int64_t
     double percentage = bitr->balance.amount / total_balance_divisor;
     asset amount_to_payout = asset(std::min(bitr->balance.amount, int64_t(percentage * quantity.amount)), utils::seeds_symbol);
     
-    send_transfer(bitr->account, amount_to_payout, memo);
+    name account = bitr->account;
+    send_transfer(account, amount_to_payout, memo);
     size_change(total_balance_size, -1 * amount_to_payout.amount);
 
-    if (bitr->balance == amount_to_payout) {
+    bool emptied = sub_balance( account, amount_to_payout );
+    if( emptied ) {
       bitr = balances.erase(bitr);
     } else {
-      balances.modify(bitr, _self, [&](auto & item){
-        item.balance -= amount_to_payout;
-      });
       bitr++;
     }
-
     current += 8;
   }
 

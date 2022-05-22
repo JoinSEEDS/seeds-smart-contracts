@@ -8,6 +8,8 @@
 #include <tables/cspoints_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/ban_table.hpp>
+#include <tables/moon_phases_table.hpp>
 #include <vector>
 #include <cmath>
 
@@ -45,6 +47,10 @@ CONTRACT proposals : public contract {
       
       ACTION updatex(uint64_t id, string title, string summary, string description, string image, string url, std::vector<uint64_t> pay_percentages);
 
+      ACTION fixdesc(uint64_t id, string description); // temp for fixing description
+      ACTION applyfixprop(); // temp for fixing description
+      ACTION backfixprop(); // revert fixing description
+      
       ACTION stake(name from, name to, asset quantity, string memo);
 
       ACTION addvoice(name user, uint64_t amount);
@@ -56,6 +62,9 @@ CONTRACT proposals : public contract {
       ACTION against(name user, uint64_t id, uint64_t amount);
 
       ACTION neutral(name user, uint64_t id);
+
+      ACTION revertvote(name user, uint64_t id);
+      ACTION mimicrevert(name delegatee, uint64_t delegator, name scope, uint64_t proposal_id, uint64_t chunksize);
 
       ACTION voteonbehalf(name voter, uint64_t id, uint64_t amount, name option);
 
@@ -80,6 +89,7 @@ CONTRACT proposals : public contract {
       ACTION decayvoice(uint64_t start, uint64_t chunksize);
 
       ACTION testquorum(uint64_t total_proposals);
+      ACTION testvn(uint64_t total_voice, uint64_t num_proposals);
 
       ACTION testvdecay(uint64_t timestamp);
 
@@ -93,6 +103,8 @@ CONTRACT proposals : public contract {
       ACTION mimicvote(name delegatee, name delegator, name scope, uint64_t proposal_id, double percentage_used, name option, uint64_t chunksize);
 
       ACTION undelegate(name delegator, name scope);
+
+      ACTION questvote(name user, uint64_t amount, bool reduce, name scope);
 
       ACTION addcampaign(uint64_t proposal_id, uint64_t campaign_id);
 
@@ -111,6 +123,10 @@ CONTRACT proposals : public contract {
 
       ACTION testalliance(uint64_t id, name creator, asset quantity, asset current_payout, name status, name stage, name campaign_type);
       ACTION migalliances(uint64_t start, uint64_t chunksize);
+
+      ACTION rewind(uint64_t round);
+      ACTION fixcycstat(uint64_t delete_round);
+      ACTION testisbanned(name account);
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -148,6 +164,10 @@ CONTRACT proposals : public contract {
       name campaign_funding_type = "cmp.funding"_n;
       name milestone_type = "milestone"_n;
 
+      asset max_alliance_quantity = asset(uint64_t(3000000000), seeds_symbol);
+      asset max_invite_campaign_quantity = asset(uint64_t(3330000000), seeds_symbol);
+      asset max_max_amount_per_invite = asset(uint64_t(10000000), seeds_symbol);
+
       std::vector<name> scopes = {
         alliance_type,
         get_self(),
@@ -174,17 +194,21 @@ CONTRACT proposals : public contract {
       void burn(asset quantity);
       void update_voice_table();
       void vote_aux(name voter, uint64_t id, uint64_t amount, name option, bool is_new, bool is_delegated);
-      bool revert_vote (name voter, uint64_t id);
+      void revertvote_delegate(name voter, uint64_t id);
+
       void change_rep(name beneficiary, bool passed);
       uint64_t get_size(name id);
       void size_change(name id, int64_t delta);
       void size_set(name id, int64_t value);
 
-      uint64_t get_quorum(uint64_t total_proposals);
+      double get_quorum(uint64_t total_proposals);
       void recover_voice(name account);
       void demote_citizen(name account);
       uint64_t calculate_decay(uint64_t voice);
       name get_type (const name & fund);
+      name get_scope(name fund);
+      bool has_delegates(name voter, name scope);
+
       double voice_change (name user, uint64_t amount, bool reduce, name scope);
       void set_voice (name user, uint64_t amount, name scope);
       void erase_voice (name user);
@@ -218,6 +242,9 @@ CONTRACT proposals : public contract {
       void add_voice_cast(uint64_t cycle, uint64_t voice_cast, name type);
       void add_num_prop(uint64_t cycle, uint64_t num_prop, name type);
       uint64_t calc_voice_needed(uint64_t total_voice, uint64_t num_proposals);
+      void check_values(string title, string summary, string description, string image, string url);
+      bool is_banned(name account);
+      uint64_t get_new_moon(uint64_t timestamp);
 
       uint64_t config_get(name key) {
         DEFINE_CONFIG_TABLE
@@ -278,6 +305,20 @@ CONTRACT proposals : public contract {
           uint64_t primary_key()const { return prop_id; }
       };
 
+      TABLE fix_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixprops"_n, fix_props_table> fix_props_tables;
+
+      TABLE fixb_props_table {
+          uint64_t prop_id;
+          string description;
+          uint64_t primary_key()const { return prop_id; }
+      };
+      typedef eosio::multi_index<"fixbprops"_n, fixb_props_table> fixb_props_tables;
+
       DEFINE_USER_TABLE
 
       TABLE vote_table {
@@ -331,6 +372,9 @@ CONTRACT proposals : public contract {
         uint64_t by_delegatee()const { return delegatee.value; }
         uint128_t by_delegatee_delegator() const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
       };
+
+      DEFINE_MOON_PHASES_TABLE
+      DEFINE_MOON_PHASES_TABLE_MULTI_INDEX
 
       TABLE cycle_stats_table {
         uint64_t propcycle; 
@@ -430,12 +474,18 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(proposals, (reset)(create)(createx)(createinvite)(update)(updatex)(addvoice)(changetrust)(favour)(against)
         (neutral)(erasepartpts)(checkstake)(onperiod)(evalproposal)(decayvoice)(cancel)(updatevoices)(updatevoice)(decayvoices)
         (addactive)(testvdecay)(initsz)(testquorum)(initnumprop)
+        (questvote)
         (testsetvoice)(delegate)(mimicvote)(undelegate)(voteonbehalf)
         (calcvotepow)(addcampaign)(checkprop)(doneprop)
         (testperiod)(testevalprop)
         (cleanmig)(testpropquor)
         (reevalprop)
         (testalliance)(migalliances)
+        (fixdesc)(applyfixprop)(backfixprop)
+        (revertvote)(mimicrevert)
+        (rewind)(fixcycstat)
+        (testvn)
+        (testisbanned)
         )
       }
   }

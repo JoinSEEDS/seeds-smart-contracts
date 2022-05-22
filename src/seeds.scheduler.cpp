@@ -10,7 +10,7 @@ uint64_t scheduler::is_ready_op (const name & operation, const uint64_t & timest
     auto itr = operations.find(operation.value);
 
     if(itr -> pause > 0) {
-        print("transaction " + operation.to_string() + " is paused");
+        print(" transaction " + operation.to_string() + " is paused");
         return 0;
     }
 
@@ -81,6 +81,12 @@ void scheduler::reset_aux(bool destructive) {
             itr++;
         }
     }
+    if (destructive) {
+        auto itr = moonops.begin();
+        while(itr != moonops.end()) {
+            itr = moonops.erase(itr);
+        }
+    }
 
     auto titr = test.begin();
     while(titr != test.end()){
@@ -123,6 +129,11 @@ void scheduler::reset_aux(bool destructive) {
         name("org.rankapps"),
 
         name("hstry.ptrxs")
+        name("onbrd.clean"),
+        name("hstry.ptrxs"),
+
+        name("dao.cleanvts"),
+        name("dao.calcdist")
     };
     
     std::vector<name> operations_v = {
@@ -161,6 +172,11 @@ void scheduler::reset_aux(bool destructive) {
         name("rankappuses"),
 
         name("cleanptrxs")
+        name("chkcleanup"),
+        name("cleanptrxs"),
+
+        name("dhocleanvts"),
+        name("dhocalcdists")
     };
 
     std::vector<name> contracts_v = {
@@ -199,6 +215,11 @@ void scheduler::reset_aux(bool destructive) {
         contracts::organization,
 
         contracts::history
+        contracts::onboarding,
+        contracts::history,
+
+        contracts::dao,
+        contracts::dao
     };
 
     std::vector<uint64_t> delay_v = {
@@ -237,6 +258,11 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_day,
 
         utils::seconds_per_day
+        utils::seconds_per_day,
+        utils::seconds_per_day,
+
+        utils::seconds_per_day,
+        utils::seconds_per_hour
     };
 
     uint64_t now = current_time_point().sec_since_epoch();
@@ -277,6 +303,10 @@ void scheduler::reset_aux(bool destructive) {
         now,
         now + 600 - utils::seconds_per_hour, // kicks off 10 minutes later
         
+        now,
+        now,
+
+        now,
         now
     };
 
@@ -299,11 +329,29 @@ void scheduler::reset_aux(bool destructive) {
         }
         i++;
     }
+
+    // Moon Operations
+    // All moon operations need to be preserved, so they need to be added/removed manually.
+    // use addmoonop
+    // example below
+    /**
+    cleos -u "https://test.hypha.earth" push action cycle.seeds addmoonop '{ 
+            "id":"inc.price",
+            "action":"incprice",
+            "contract":"tlosto.seeds",
+            "quarter_moon_cycles":"1",
+            "start_phase_name":"Full Moon"
+    }' -p cycle.seeds@active
+    */
+
 }
 
 
 ACTION scheduler::configop(name id, name action, name contract, uint64_t period, uint64_t starttime) {
     require_auth(_self);
+
+    auto mop_itr = moonops.find(id.value);
+    check(mop_itr == moonops.end(), "op must have unique name, op exists in moon operations table");
 
     auto itr = operations.find(id.value);
     
@@ -334,13 +382,51 @@ ACTION scheduler::configop(name id, name action, name contract, uint64_t period,
     }
 }
 
+ACTION scheduler::addmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, string start_phase_name) {
+    require_auth(_self);
+
+    check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
+
+    check(start_phase_name == "New Moon" ||
+        start_phase_name == "First Quarter" ||
+        start_phase_name == "Last Quarter" ||
+        start_phase_name == "Full Moon", "start_phase_name must be one of New Moon, First Quarter, Last Quarter, Full Moon");
+
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+
+    uint64_t starttime = 0;
+
+    auto mitr = moonphases.upper_bound(now);
+    uint8_t count = 0;
+    while (mitr != moonphases.end() && count < 4) {
+        if (mitr->phase_name == start_phase_name) {
+            starttime = mitr->timestamp;
+            break;
+        }
+        mitr++;
+        count++;
+    }
+
+    check(starttime != 0, "Unable to find moon phase. Must be one of New Moon, First Quarter, Last Quarter, Full Moon");
+
+    configmoonop(id, action, contract, quarter_moon_cycles, starttime);
+}
+
 ACTION scheduler::configmoonop(name id, name action, name contract, uint64_t quarter_moon_cycles, uint64_t starttime) {
     require_auth(_self);
 
     check(quarter_moon_cycles <= 4 && quarter_moon_cycles > 0, "invalid quarter moon cycles, it should be greater than zero and less or equals to 4");
     
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    check(starttime >= now, "start time must be a valid moon phase in the future");
+
     auto mitr = moonphases.find(starttime);
     check(mitr != moonphases.end(), "start time must be a valid moon phase timestamp");
+
+
+
+    auto oitr = operations.find(id.value);
+    check(oitr == operations.end(), "moon op must have unique name, op exists in normal operations table");
 
     auto mop_itr = moonops.find(id.value);
 
@@ -545,6 +631,56 @@ ACTION scheduler::execute() {
 
 }
 
+ACTION scheduler::checknext() {
+
+    require_auth(get_self());
+
+    // =======================
+    // check operations
+    // =======================
+
+    auto ops_by_last_executed = operations.get_index<"bytimestamp"_n>();
+    auto itr = ops_by_last_executed.begin();
+    bool has_executed = false;
+
+    uint64_t timestamp = eosio::current_time_point().sec_since_epoch();
+
+    while(itr != ops_by_last_executed.end()) {
+        print(" checking op " + (itr -> id).to_string());
+        if(is_ready_op(itr -> id, timestamp)){
+
+            print(" next op: " + (itr -> id).to_string());
+
+            has_executed = true;
+            
+            break;
+        }
+        itr++;
+    }
+
+    if (!has_executed) {
+
+        auto moonops_by_last_cycle = moonops.get_index<"bylastcycle"_n>();
+        auto mitr = moonops_by_last_cycle.begin();
+
+        print(" checking moon op " + (mitr -> id).to_string());
+        
+        while (mitr != moonops_by_last_cycle.end()) {
+            uint64_t used_timestamp = is_ready_moon_op(mitr->id, timestamp);
+            if (used_timestamp) {
+                
+                print(" next op: " + (mitr -> id).to_string());
+                
+                has_executed = true;
+                break;
+            }
+            mitr++;
+        }
+    }
+
+
+}
+
 void scheduler::cancel_exec() {
     require_auth(get_self());
     cancel_deferred(contracts::scheduler.value);
@@ -594,10 +730,15 @@ ACTION scheduler::test2() {
 
 ACTION scheduler::testexec(name op) {
     require_auth(get_self());
-    auto operation = operations.get(op.value, "op not found");
-    exec_op(op, operation.contract, operation.operation);
-
+    auto oitr = operations.find(op.value);
+    if (oitr != operations.end()) {
+        exec_op(op, oitr->contract, oitr->operation);
+    } else {
+        auto moonop = moonops.get(op.value, "op not found");
+        exec_op(op, moonop.contract, moonop.action);
+    }
 }
+
 void scheduler::exec_op(name id, name contract, name operation) {
     
     action a = action(
@@ -615,7 +756,25 @@ void scheduler::exec_op(name id, name contract, name operation) {
     a.send();
 }
 
+// not using this
+uint64_t scheduler::next_valid_moon_phase(uint64_t moon_cycle_id, uint64_t quarter_moon_cycles) {
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    uint64_t result = moon_cycle_id;
+
+    if (now > result) {
+        auto mpitr = moonphases.find(result);
+        while(now > result && mpitr != moonphases.end()) {
+            std::advance(mpitr, quarter_moon_cycles);
+            result = mpitr->timestamp;
+        }
+    }
+    return moon_cycle_id;
+}
+
 
 EOSIO_DISPATCH(scheduler,
-    (configop)(configmoonop)(execute)(reset)(pauseop)(removeop)(stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+    (configop)(configmoonop)(addmoonop)
+    (execute)(reset)(pauseop)(removeop)
+    (stop)(start)(moonphase)(test1)(test2)(testexec)(updateops)
+    (checknext)
 );

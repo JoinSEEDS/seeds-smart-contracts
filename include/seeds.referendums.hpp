@@ -62,11 +62,15 @@ CONTRACT referendums : public contract {
         string url
       );
 
+      ACTION cancel(uint64_t id);
+
       ACTION favour(name voter, uint64_t referendum_id, uint64_t amount);
 
       ACTION against(name voter, uint64_t referendum_id, uint64_t amount);
 
       ACTION stake(name from, name to, asset quantity, string memo);
+
+      ACTION refundstake(name sponsor);
 
       ACTION addvoice(name account, uint64_t amount);
 
@@ -75,6 +79,7 @@ CONTRACT referendums : public contract {
       ACTION cancelvote(name voter, uint64_t referendum_id);
 
       ACTION onperiod();
+
   private:
     symbol seeds_symbol = symbol("SEEDS", 4);
 
@@ -82,7 +87,6 @@ CONTRACT referendums : public contract {
     static constexpr name medium_impact = "med"_n;
     static constexpr name low_impact = "low"_n;
 
-    void give_voice();
     void run_testing();
     void run_active();
     void run_staged();
@@ -91,6 +95,7 @@ CONTRACT referendums : public contract {
     void send_burn_stake(asset quantity);
     void send_change_setting(name setting_name, uint64_t setting_value);
     void check_citizen(name account);
+    void check_values(string title, string summary, string description, string image, string url);
 
     uint64_t get_quorum(const name & setting);
     uint64_t get_unity(const name & setting);
@@ -136,6 +141,21 @@ CONTRACT referendums : public contract {
         
     DEFINE_CONFIG_TABLE_MULTI_INDEX
 
+    TABLE fix_refs_table {
+        uint64_t ref_id;
+        string description;
+        uint64_t primary_key()const { return ref_id; }
+    };
+    typedef eosio::multi_index<"fixrefs"_n, fix_refs_table> fix_refs_tables;
+
+    TABLE back_refs_table {
+        uint64_t ref_id;
+        string description;
+        uint64_t primary_key()const { return ref_id; }
+    };
+    typedef eosio::multi_index<"backrefs"_n, back_refs_table> back_refs_tables;
+
+
     typedef multi_index<"balances"_n, balance_table> balance_tables;
     typedef multi_index<"referendums"_n, referendum_table,
       indexed_by<"byname"_n,
@@ -152,7 +172,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<referendums>(name(receiver), name(code), &referendums::stake);
   } else if (code == receiver) {
       switch (action) {
-        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(favour)(against)(cancelvote)(onperiod)(updatevoice))
+        EOSIO_DISPATCH_HELPER(referendums, (reset)(addvoice)(create)(update)(cancel)(favour)(against)(cancelvote)(onperiod)(updatevoice)(refundstake)
+        )
       }
   }
 }

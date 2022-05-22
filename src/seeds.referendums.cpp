@@ -32,18 +32,6 @@ void referendums::send_onperiod() {
   ).send();
 }
 
-void referendums::give_voice() {
-  auto bitr = balances.begin();
-
-  while (bitr != balances.end()) {
-    balances.modify(bitr, get_self(), [&](auto& item) {
-      item.voice = 10;
-    });
-
-    bitr++;
-  }
-}
-
 uint64_t referendums::get_quorum(const name & setting) {
   auto citr = config.find(setting.value);
   if (citr == config.end()) {
@@ -128,9 +116,19 @@ void referendums::run_active() {
 
     voter_tables voters(get_self(), aitr->referendum_id);
     uint64_t voters_number = distance(voters.begin(), voters.end());
+    uint64_t citizens_number = distance(balances.begin(), balances.end());
     
     bool valid_majority = utils::is_valid_majority(aitr->favour, aitr->against, majority);
-    bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, distance(balances.begin(), balances.end()));
+    bool valid_quorum = utils::is_valid_quorum(voters_number, quorum, citizens_number);
+
+// useful for debugging why a proposal failed
+// print(" eval " + std::to_string(aitr->referendum_id));
+// print(" valid_majority " + std::to_string(valid_majority));
+// print(" valid_quorum " + std::to_string(valid_quorum));
+// print(" voters_number " + std::to_string(voters_number));
+// print(" quorum " + std::to_string(quorum));
+// print(" citizens_number " + std::to_string(citizens_number));
+
     bool referendum_passed = valid_majority && valid_quorum;
 
     if (referendum_passed) {
@@ -169,6 +167,9 @@ void referendums::run_staged() {
 }
 
 void referendums::onperiod() {
+
+  require_auth(get_self());
+
   run_testing();
   run_active();
   run_staged();
@@ -177,7 +178,28 @@ void referendums::onperiod() {
 
 }
 
+void referendums::refundstake(name sponsor) {
+
+  require_auth(sponsor);
+
+  auto bitr = balances.find(sponsor.value);
+  check(bitr != balances.end(), "user has no balance");
+  check(bitr->stake.amount > 0, "user has no balance");
+
+  asset quantity = bitr->stake; 
+
+  balances.modify(bitr, get_self(), [&](auto& balance) {
+    balance.stake -= quantity;
+  });
+
+  send_refund_stake(sponsor, quantity);
+
+}
+
 void referendums::reset() {
+
+  require_auth(get_self());
+
   auto bitr = balances.begin();
 
   while (bitr != balances.end()) {
@@ -248,6 +270,8 @@ void referendums::reset() {
 }
 
 void referendums::addvoice(name account, uint64_t amount) {
+  require_auth(get_self());
+
   auto bitr = balances.find(account.value);
 
   if (bitr == balances.end()) {
@@ -351,6 +375,8 @@ void referendums::create(
 
   check_citizen(creator);
 
+  check_values(title, summary, description, image, url);
+
   uint64_t price_amount = config.find(name("refsnewprice").value)->value;
   asset stake_price = asset(price_amount, seeds_symbol);
 
@@ -359,9 +385,18 @@ void referendums::create(
   check(bitr->stake >= stake_price, "user has not sufficient stake");
 
   referendum_tables staged(get_self(), name("staged").value);
+  referendum_tables active(get_self(), name("active").value);
+  referendum_tables testing(get_self(), name("testing").value);
+  referendum_tables passed(get_self(), name("passed").value);
+  referendum_tables failed(get_self(), name("failed").value);
+
+  uint64_t key = std::max(staged.available_primary_key(), active.available_primary_key());
+  key = std::max(key, testing.available_primary_key());
+  key = std::max(key, passed.available_primary_key());
+  key = std::max(key, failed.available_primary_key());
 
   staged.emplace(get_self(), [&](auto& item) {
-    item.referendum_id = staged.available_primary_key();
+    item.referendum_id = key;
     item.favour = 0;
     item.against = 0;
     item.staked = asset(price_amount, seeds_symbol);
@@ -379,6 +414,31 @@ void referendums::create(
   balances.modify(bitr, get_self(), [&](auto& balance) {
     balance.stake -= stake_price;
   });
+}
+
+void referendums::check_values(
+  string title,
+  string summary,
+  string description,
+  string image,
+  string url
+) {
+  // Title
+  check(title.size() <= 128, "title must be less or equal to 128 characters long");
+  check(title.size() > 0, "must have a title");
+
+  // Summary
+  check(summary.size() <= 1024, "summary must be less or equal to 1024 characters long");
+
+  // Description
+  check(description.size() > 0, "must have description");
+
+  // Image
+  check(image.size() <= 512, "image url must be less or equal to 512 characters long");
+  check(image.size() > 0, "must have image");
+
+  // URL
+  check(url.size() <= 512, "url must be less or equal to 512 characters long");
 }
 
 void referendums::update(
@@ -403,8 +463,10 @@ void referendums::update(
     }
     sitr++;
   }
-  
+
   check (sitr != refs.end(), "referendum creator not found " + creator.to_string());
+
+  check_values(title, summary, description, image, url);
 
   require_auth(sitr->creator);
 
@@ -420,6 +482,8 @@ void referendums::update(
 }
 
 void referendums::favour(name voter, uint64_t referendum_id, uint64_t amount) {
+  require_auth(voter);
+
   auto bitr = balances.find(voter.value);
   check(bitr != balances.end(), "user has no voice");
   check(bitr->voice >= amount, "not enough voice");
@@ -507,6 +571,7 @@ void referendums::cancelvote(name voter, uint64_t referendum_id) {
     });
   }
 }
+
 void referendums::check_citizen(name account)
 {
   DEFINE_USER_TABLE;
@@ -518,3 +583,18 @@ void referendums::check_citizen(name account)
   check(uitr->status == name("citizen"), "user is not a citizen");
 }
 
+
+void referendums::cancel(uint64_t id) {
+  
+  referendum_tables staged(get_self(), name("staged").value);
+
+  auto sitr = staged.find(id);
+  check(sitr != staged.end(), "Referendum is not staged or does not exist.");
+
+  require_auth(sitr->creator);
+  
+  send_refund_stake(sitr->creator, sitr->staked);
+
+  staged.erase(sitr);
+
+}

@@ -7,7 +7,9 @@
 #include <tables/cbs_table.hpp>
 #include <tables/user_table.hpp>
 #include <tables/config_table.hpp>
+#include <tables/ban_table.hpp>
 #include <tables/config_float_table.hpp>
+#include <tables/deferred_id_table.hpp>
 #include <utils.hpp>
 
 using namespace eosio;
@@ -24,6 +26,7 @@ CONTRACT accounts : public contract {
           vouches(receiver, receiver.value),
           vouchtotals(receiver, receiver.value),
           reqvouch(receiver, receiver.value),
+          flags(receiver, receiver.value),
           rep(receiver, receiver.value),
           sizes(receiver, receiver.value),
           balances(contracts::harvest, contracts::harvest.value),
@@ -76,9 +79,15 @@ CONTRACT accounts : public contract {
 
       ACTION flag(name from, name to);
       ACTION removeflag(name from, name to);
+      ACTION delegateflag(name delegator, name delegatee);
+      ACTION undlgateflag(name delegator);
+      ACTION mimicflag(name delegatee, name to, name action, uint64_t chunksize);
       ACTION punish(name account, uint64_t points);
       ACTION pnshvouchers(name account, uint64_t points, uint64_t start);
       ACTION evaldemote(name to, uint64_t start_val, uint64_t chunk, uint64_t chunksize);
+      ACTION bantree(name account, bool recurse);
+      ACTION refinfo(name account);
+      ACTION unban(name account);
 
       ACTION testresident(name user);
       ACTION testcitizen(name user);
@@ -90,14 +99,9 @@ CONTRACT accounts : public contract {
       ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
-      ACTION migratevouch(uint64_t start_user, uint64_t start_sponsor, uint64_t batch_size);
 
-      ACTION migorgs(uint64_t start_org);
-      ACTION delcbsreporg(uint64_t start_org);
-      ACTION testmigscope(name account, uint64_t amount);
-
-      ACTION migusersizes(uint64_t start, uint64_t chunksize);
-      ACTION migusrsize(name account);
+      ACTION migflags(name to);
+      ACTION migflags1();
 
   private:
       symbol seeds_symbol = symbol("SEEDS", 4);
@@ -179,9 +183,11 @@ CONTRACT accounts : public contract {
       void calc_vouch_rep(name account);
       name get_scope(name type);
       void send_add_cbs_org(name user, uint64_t amount);
-
-      void migrate_calc_vouch_rep(name account); // migration - remove
-
+      void send_bantree(name account);
+      void check_is_banned(name account);
+      uint64_t number_of_citizens_vouched(name account, uint64_t maxsearch);
+      bool is_citizen(name account);
+      
       DEFINE_USER_TABLE
 
       DEFINE_USER_TABLE_MULTI_INDEX
@@ -197,6 +203,9 @@ CONTRACT accounts : public contract {
       DEFINE_CBS_TABLE
 
       DEFINE_CBS_TABLE_MULTI_INDEX
+
+      DEFINE_BAN_TABLE
+      DEFINE_BAN_TABLE_MULTI_INDEX
 
       TABLE ref_table {
         name referrer;
@@ -256,13 +265,39 @@ CONTRACT accounts : public contract {
 
       typedef eosio::multi_index<"flagpts"_n, flag_points_table> flag_points_tables;
 
-    DEFINE_CONFIG_TABLE
+      // A more complete flags table, scoped one will be deprecated.
+      // for now copying the information
+      TABLE flags_table { 
+        uint64_t id;
+        name from;
+        name to;
+        uint64_t flag_points;
 
-    DEFINE_CONFIG_TABLE_MULTI_INDEX
+        uint64_t primary_key() const { return id; }
+        uint64_t by_from() const { return from.value; }
+        uint64_t by_to() const { return to.value; }
+        uint128_t by_from_to()const { return (uint128_t(from.value) << 64) + to.value; }
 
-    DEFINE_CONFIG_FLOAT_TABLE
+      };
 
-    DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
+      typedef eosio::multi_index<"flags"_n, flags_table,
+        indexed_by<"byfrom"_n,
+        const_mem_fun<flags_table, uint64_t, &flags_table::by_from>>,
+        indexed_by<"byto"_n,
+        const_mem_fun<flags_table, uint64_t, &flags_table::by_to>>,
+        indexed_by<"byfromto"_n,
+        const_mem_fun<flags_table, uint128_t, &flags_table::by_from_to>>
+      > flags_tables;
+      
+      flags_tables flags;
+
+      DEFINE_CONFIG_TABLE
+
+      DEFINE_CONFIG_TABLE_MULTI_INDEX
+
+      DEFINE_CONFIG_FLOAT_TABLE
+
+      DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
 
       // Borrowed from histry.seeds contract
       TABLE citizen_table {
@@ -374,15 +409,30 @@ CONTRACT accounts : public contract {
     typedef eosio::multi_index<"actives"_n, active_table> active_tables;
     active_tables actives;
 
+    DEFINE_DEFERRED_ID_TABLE
+    DEFINE_DEFERRED_ID_SINGLETON
+
+    TABLE delegators_table {
+      name delegator;
+      name delegatee;
+
+      uint64_t primary_key () const { return delegator.value; }
+      uint128_t by_delegatee_delegator () const { return (uint128_t(delegatee.value) << 64) + delegator.value; }
+    };
+    typedef eosio::multi_index<"delegators"_n, delegators_table,
+      indexed_by<"bydelegatee"_n,
+      const_mem_fun<delegators_table, uint128_t, &delegators_table::by_delegatee_delegator>>
+    > delegators_tables;
+
 };
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
 (testreward)(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
-(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)
-(testmvouch)(migratevouch)
-(migorgs)(delcbsreporg)(testmigscope)
+(flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)(delegateflag)(undlgateflag)(mimicflag)
+(refinfo)(unban)
+(testmvouch)
+(migflags)(migflags1)
 (addcbs)
-(migusersizes)(migusrsize)
 );

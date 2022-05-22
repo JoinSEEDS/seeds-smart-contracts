@@ -39,7 +39,7 @@ async function getNonce () {
           backend_user_id: random,
           device_id: random,
           signature: "",
-          policy: ""
+          policy: "CREATED BY UNIT TEST"
         }
       }]
     }
@@ -104,19 +104,12 @@ class Eos {
 
         const data = {}
 
-        if (action.fields.length > 0 && arguments.length == 2 && typeof arguments[0] === 'object') {
-          for (let i = 0; i < action.fields.length; i++) {
-            const { name } = action.fields[i]
-            data[name] = arguments[0][name]
-          }
-        } else {
-          if ((action.fields.length + 1) != arguments.length) {
-            throw new Exception(`Not enough arguments to call ${action.name} action in ${accountName} contract`)
-          }
-          for (let i = 0; i < action.fields.length; i++) {
-            const { name } = action.fields[i]
-            data[name] = arguments[i]
-          }
+        if ((action.fields.length + 1) != arguments.length) {
+          throw new Exception(`Not enough arguments to call ${action.name} action in ${accountName} contract`)
+        }
+        for (let i = 0; i < action.fields.length; i++) {
+          const { name } = action.fields[i]
+          data[name] = arguments[i]
         }
 
         const nonce = await getNonce() 

@@ -31,11 +31,21 @@ CONTRACT region : public contract {
         ACTION create(
             name founder, 
             name rgnaccount, 
+            string title, 
             string description, 
             string locationJson, 
-            float latitude, 
-            float longitude, 
-            string publicKey);
+            double latitude, 
+            double longitude);
+
+        ACTION update(
+            name rgnaccount, 
+            string title, 
+            string description, 
+            string locationJson, 
+            double latitude, 
+            double longitude);
+
+        ACTION createacct(name region, string publicKey);
 
         ACTION join(name region, name account);
         ACTION leave(name region, name account);
@@ -84,10 +94,11 @@ CONTRACT region : public contract {
             name id;
             name founder;
             name status; // "active" "inactive"
+            string title;
             string description;
             string locationjson; // json description of the area
-            float latitude;
-            float longitude;
+            double latitude;
+            double longitude;
             uint64_t members_count;
             time_point created_at = current_block_time().to_time_point();
 
@@ -194,8 +205,8 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       execute_action<region>(name(receiver), name(code), &region::deposit);
   } else if (code == receiver) {
       switch (action) {
-          EOSIO_DISPATCH_HELPER(region, (reset)(create)(join)(leave)(addrole)(removerole)
-          (removemember)(leaverole)(setfounder)(removergn))
+          EOSIO_DISPATCH_HELPER(region, (reset)(create)(createacct)(join)(leave)(addrole)(removerole)
+          (removemember)(leaverole)(setfounder)(removergn)(update))
       }
   }
 }

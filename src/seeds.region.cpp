@@ -144,11 +144,11 @@ void region::deposit(name from, name to, asset quantity, string memo) {
 ACTION region::create(
     name founder, 
     name rgnaccount, 
+    string title, 
     string description, 
     string locationJson, 
-    float latitude, 
-    float longitude, 
-    string publicKey) 
+    double latitude, 
+    double longitude) 
 {
     require_auth(founder);
     check_user(founder);
@@ -173,8 +173,6 @@ ACTION region::create(
     auto mitr = members.find(founder.value);
     check(mitr == members.end(), "Founder is part of another region. Leave the other region first.");
 
-    create_telos_account(founder, rgnaccount, publicKey);
-
     sponsors.modify(sitr, _self, [&](auto & mbalance) {
         mbalance.balance -= quantity;           
     });
@@ -183,6 +181,7 @@ ACTION region::create(
         item.id = rgnaccount;
         item.founder = founder;
         item.status = status_inactive;
+        item.title = title;
         item.description = description;
         item.locationjson = locationJson;
         item.latitude = latitude;
@@ -197,7 +196,38 @@ ACTION region::create(
         item.account = founder;
         item.role = founder_role;
     });
+}
 
+
+ACTION region::update(
+    name region, 
+    string title, 
+    string description, 
+    string locationJson, 
+    double latitude, 
+    double longitude) 
+    {
+        auto ritr = regions.require_find(region.value, "The region does not exist.");
+        require_auth(ritr->founder);
+
+        regions.modify(ritr, _self, [&](auto& item) {
+            item.title = title;
+            item.description = description;
+            item.locationjson = locationJson;
+            item.latitude = latitude;
+            item.longitude = longitude;
+        });
+}
+
+ACTION region::createacct(name region, string publicKey) {
+    auto ritr = regions.require_find(region.value, "region not found");
+
+    require_auth(ritr->founder);
+    
+    check(ritr->status == status_active, "only can create account when the region is active");
+    check(!is_account(region), "region account already exists");
+
+    create_telos_account(ritr->founder, region, publicKey);
 }
 
 ACTION region::join(name region, name account) {

@@ -18,6 +18,13 @@ const deploy = async (name) => {
     if (!abi)
       throw new Error('abi not found')
 
+    await eos.setabi({
+        account: account.account,
+        abi: JSON.parse(abi)
+      }, {
+        authorization: `${account.account}@owner`
+      })
+  
     await eos.setcode({
       account: account.account,
       code,
@@ -28,12 +35,6 @@ const deploy = async (name) => {
     })
     console.log("code deployed")
 
-    await eos.setabi({
-      account: account.account,
-      abi: JSON.parse(abi)
-    }, {
-      authorization: `${account.account}@owner`
-    })
 
   console.log("abi deployed")
 
@@ -134,7 +135,7 @@ const createAccount = async ({ account, publicKey, stakes, creator }) => {
     if ((""+err).indexOf("as that name is already taken") != -1) {
       console.error(`account ${account} already created`)
     } else {
-      console.error(`account ${account} create error` + err)
+      console.error(`account ${account} create error ` + err)
       throw err
     }
   }

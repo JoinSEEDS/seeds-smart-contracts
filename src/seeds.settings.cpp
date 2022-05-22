@@ -27,7 +27,7 @@ void settings::reset() {
   confwithdesc(name("unity.medium"), 85, "Medium unity threshold (in percentage)", high_impact);
   confwithdesc(name("unity.low"), 80, "Low unity threshold (in percentage)", high_impact);
 
-  confwithdesc(name("quorum.high"), 20, "High threshold for quorum (in percentage of total citizens)", high_impact);
+  confwithdesc(name("quorum.high"), 15, "High threshold for quorum (in percentage of total citizens)", high_impact);
   confwithdesc(name("quorum.med"), 10, "Medium threshold for quorum (in percentage total citizens)", high_impact);
   confwithdesc(name("quorum.low"), 5, "Low threshold for quorum (in percentage total citizens)", high_impact);
 
@@ -36,6 +36,10 @@ void settings::reset() {
   confwithdesc(name("refsquorum"), 80, "Quorum referendums threshold", high_impact);
   confwithdesc(name("propmajority"), 90, "Majority proposals threshold", high_impact);
   confwithdesc(name("propquorum"), 5, "Quorum proposals threshold", high_impact); // Deprecated
+
+  confwithdesc(name("refmintest"), 1, "Minimum number of cycles a referendum must be in test state", high_impact);
+  confwithdesc(name("refmineval"), 3, "Minimum number of cycles a referendum must be in evaluate/trial state", high_impact);
+  
 
   confwithdesc(name("quorum.base"), 100, "Quorum base percentage = 90% / number of proposals.", high_impact);
   confwithdesc(name("quor.min.pct"), 7, "Quorum percentage lower cap - quorum required between 5% and 20%", high_impact);
@@ -236,10 +240,10 @@ void settings::reset() {
   confwithdesc(name("maxvouch"), 50, "Maximum number of points a user can gain from others vouching for them", high_impact);
 
   // vouch base reward resident
-  confwithdesc(name("res.vouch"), 10, "Vouch base reward resident", high_impact);
+  confwithdesc(name("res.vouch"), 4, "Vouch base reward resident", high_impact);
   
   // vouch base reward citizen
-  confwithdesc(name("cit.vouch"), 20, "Vouch base reward citizen", high_impact);
+  confwithdesc(name("cit.vouch"), 8, "Vouch base reward citizen", high_impact);
 
   // Reputation point reward for vouchers when user becomes resident
   confwithdesc(name("vouchrep.1"), 1, "Reputation point reward for vouchers when user becomes resident", medium_impact);
@@ -326,17 +330,35 @@ void settings::reset() {
   confwithdesc(name("rgn.cit"), 144, "Number of Citizens required in a region to activate it", high_impact);
 
   // =====================================
+  // quests
+  // =====================================
+  confwithdesc(name("prop.q.mjrty"), 90, "Majority quest proposals threshold", high_impact);
+  confwithdesc(name("qst.exp.appl"), 1209600, "Number of seconds to wait before the applicant can be expired", high_impact);
+  confwithdesc(name("qst.rep.appl"), 3, "Reputation for the quest maker once the owner has reated the applicant", high_impact);
+  confwithdesc(name("qst.rep.qst"), 3, "Reputation for the quest owner once the applicant has rated the quest", high_impact);
+  confwithdesc(name("quest.quorum"), 20, "Quorum required for the quest to be executed", high_impact);
+
+  // =====================================
   // gratitude 
   // =====================================
   confwithdesc(name("gratz1.gen"), 100 * 10000, "Base quantity of gratitude tokens received for residents per cycle", medium_impact);
   confwithdesc(name("gratz2.gen"), 200 * 10000, "Base quantity of gratitude tokens received for citizens per cycle", medium_impact);
   confwithdesc(name("gratz.acks"), 10, "Minumum number of gratitude acks to fully use your tokens", medium_impact);
+  confwithdesc(name("gratz.potkp"), 50, "Percent to keep on Gratitude Pot at new round", medium_impact);
 
   // =====================================
   // onboarding/invite
   // =====================================
-  confwithdesc(name("inv.max.rwrd"), 1000 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
+  confwithdesc(name("inv.max.rwrd"), 1111 * 10000, "Reward the owner of a campaigns receives per invite", high_impact);
   confwithdesc(name("inv.min.plnt"), 5 * 10000, "Minimum amount planted per invite", high_impact);
+
+  // =====================================
+  // dhos
+  // =====================================
+  confwithdesc(name("dho.min.per"), 10, "Minimum percentage a DHO needs to receive its part of the harvest", medium_impact);
+  confwithdesc(name("dho.v.recast"), utils::moon_cycle * 3, "Number of cycles a vote for a dho is valid", medium_impact);
+  
+
 
   // contracts
   setcontract(name("accounts"), "accts.seeds"_n);
@@ -349,6 +371,13 @@ void settings::reset() {
   setcontract(name("policy"), "policy.seeds"_n);
   setcontract(name("token"), "token.seeds"_n);
   setcontract(name("acctcreator"), "free.seeds"_n);
+
+  // =====================================
+  // onboarding/invite
+  // =====================================
+
+  confwithdesc(name("tempsetting"), uint64_t(0), "A capture-all setting for referendums which do not directly impact settings.", high_impact); 
+
 }
 
 void settings::configure(name param, uint64_t value) {
@@ -459,4 +488,18 @@ void settings::setcontract(name contract, name account) {
       item.account = account;
     });
   }
+}
+
+void settings::remove(name param) {
+    require_auth(get_self());
+
+    auto cfitr = configfloat.find(param.value);
+    if (cfitr != configfloat.end()) {
+      configfloat.erase(cfitr);
+    }
+
+    auto citr = config.find(param.value);
+    if (citr != config.end()) {
+      config.erase(citr);
+    }
 }
