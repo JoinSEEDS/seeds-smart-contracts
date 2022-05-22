@@ -850,16 +850,18 @@ const keyProviders = {
     process.env.APPLICATION_KEY, 
     process.env.EXCHANGE_KEY,
     process.env.PAY_FOR_CPU_MAINNET_KEY,
-    process.env.SCRIPT_KEY],
+    process.env.SCRIPT_KEY
+  ],
   [networks.telosTestnet]: [
     process.env.TELOS_TESTNET_OWNER_KEY, 
     process.env.TELOS_TESTNET_HYPHA_ACTIVE_KEY, 
     process.env.TESTNET_NEWPAYMENT_KEY,
     process.env.TELOS_TESTNET_ACTIVE_KEY, 
-    process.env.APPLICATION_KEY]
+    process.env.APPLICATION_KEY
+  ]
 }
 
-const keyProvider = keyProviders[chainId]
+const keyProvider = keyProviders[chainId].filter((item) => item)
 
 
 if (keyProvider.length == 0 || keyProvider[0] == null) {
