@@ -82,7 +82,7 @@ void rainbows::create( const name&    issuer,
        cf.broker = symbol_code( broker_symbol );
        cf.cred_limit = symbol_code( cred_limit_symbol );
        cf.positive_limit = symbol_code( pos_limit_symbol );
-       configtable.set( cf, issuer );
+       configtable.set( cf, ram_payer );
     return;
     }
     // new token
@@ -109,10 +109,10 @@ void rainbows::create( const name&    issuer,
        .cred_limit = symbol_code( cred_limit_symbol ),
        .positive_limit = symbol_code( pos_limit_symbol )
     };
-    configtable.set( new_config, issuer );
+    configtable.set( new_config, ram_payer );
     displays displaytable( get_self(), sym.code().raw() );
     currency_display new_display{ "" };
-    displaytable.set( new_display, issuer );
+    displaytable.set( new_display, ram_payer );
 }
 
 void rainbows::sister_check(const string& sym_name, uint32_t precision) {
@@ -155,10 +155,11 @@ void rainbows::ontransfer(name from, name to, asset quantity, string memo)
     if ( to != get_self() || from == get_self() ) {
        return;
     }
-    check( get_first_receiver() == fee_ext_sym.get_contract() &&
-           quantity.symbol == fee_ext_sym.get_symbol(),
-           "transfer to rainbow contract is not in fee currency" );
-    check(quantity.amount > 0, "transfer must be positive");
+    if( get_first_receiver() != fee_ext_sym.get_contract() ||
+           quantity.symbol != fee_ext_sym.get_symbol() ) {
+       return; // transfer to rainbow contract is not in fee currency
+    }
+    check(quantity.amount > 0, "fee transfer must be positive");
     fees feebals(get_self(), from.value);
     auto f_it = feebals.find(quantity.symbol.code().raw());
     if (f_it != feebals.end())
@@ -194,7 +195,9 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
        symboltable.erase( sym );
     } else {
        cf.approved = true;
-       configtable.set (cf, st.issuer );
+       auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+       name ram_payer = fee_sym_code_raw ? get_self() : st.issuer;
+       configtable.set (cf, ram_payer );
     }
 
 }
@@ -281,7 +284,9 @@ void rainbows::setdisplay( const symbol_code&  symbolcode,
     check( json_meta.size() <= 2048, "json metadata has more than 2048 bytes" );
     // TODO check json_meta string for safety, parse json, and check name length
     dt.json_meta   = json_meta;
-    displaytable.set( dt, st.issuer );
+    auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+    name ram_payer = fee_sym_code_raw ? get_self() : st.issuer;
+    displaytable.set( dt, ram_payer );
 }
 
 void rainbows::issue( const asset& quantity, const string& memo )
@@ -583,7 +588,9 @@ void rainbows::freeze( const symbol_code& symbolcode, const bool& freeze, const 
    check( memo.size() <= 256, "memo has more than 256 bytes" );
    require_auth( cf.freeze_mgr );
    cf.transfers_frozen = freeze;
-   configtable.set (cf, st.issuer );
+   auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+   name ram_payer = fee_sym_code_raw ? get_self() : st.issuer;
+   configtable.set (cf, ram_payer );
 }
 
 void rainbows::reset( const bool all, const uint32_t limit )
