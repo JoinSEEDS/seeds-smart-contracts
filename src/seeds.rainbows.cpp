@@ -21,7 +21,8 @@ void rainbows::create( const name&    issuer,
     if( fee_sym_code_raw && submission_fee.amount>0 ) {
        fees feebals( get_self(), issuer.value );
        const auto& f = feebals.get( fee_sym_code_raw, "no fee has been submitted" );
-       check( f.balance.amount >= submission_fee.amount, "insufficient fee balance" );
+       check( f.balance.amount >= submission_fee.amount,
+              "insufficient balance "+f.balance.to_string()+"; fee is "+submission_fee.to_string() );
        feebals.modify(f, get_self(), [&](auto &s) {
           s.balance.amount -= submission_fee.amount;
        });
