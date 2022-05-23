@@ -4,9 +4,13 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
-
 #include <string>
 
+#ifdef RAINBOW_STANDALONE
+#undef RAINBOW_SEEDS_ECOSYS
+#else
+#define RAINBOW_SEEDS_ECOSYS
+#endif
 
 
 using namespace eosio;
@@ -56,6 +60,11 @@ using namespace eosio;
     *
     * The `symbols` table is a housekeeping list of all the tokens managed by the contract. It is
     * scoped to the contract.
+    *
+    * The contract can require a prepaid fee (defined by the `fee_ext_sym` and `submission_fee` initializers
+    * in the rainbows constructor) in order to create a token. The prepaid balances are
+    * recorded in the `feebalance` table.
+    *
     */
 
    CONTRACT rainbows : public contract {
@@ -63,7 +72,15 @@ using namespace eosio;
          using contract::contract;
          rainbows( name receiver, name code, datastream<const char*> ds )
          : contract( receiver, code, ds ),
-         symboltable( receiver, receiver.value )
+         symboltable( receiver, receiver.value ),
+         approval_required( true ),
+         #if defined RAINBOW_SEEDS_ECOSYS
+         fee_ext_sym( symbol( "SEEDS",4 ), "token.seeds"_n ),
+         submission_fee( 1000000, symbol( "SEEDS",4 ) )
+         #else
+         fee_ext_sym( ),
+         submission_fee( )
+         #endif
          {}
 
          /**
@@ -71,7 +88,8 @@ using namespace eosio;
           * specified characteristics. 
           * If the token does not exist, a new row in the stats table for token symbol scope is created
           * with the specified characteristics. At creation, its' approval flag is false, preventing
-          * tokens from being issued.
+          * tokens from being issued. (The approval requirement can be bypassed by setting the
+          * data member `approval_required` to false.)
           * If a token of this symbol does exist and update is permitted, the characteristics are updated.
           *
           * @param issuer - the account that creates the token,
@@ -106,7 +124,10 @@ using namespace eosio;
           * @pre broker_symbol must be an existing frozen token of zero precision on this contract, or empty
           * @pre cred_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
           * @pre pos_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
-          
+          * @pre if data member `fee_ext_sym` is null, the issuer must provide sufficient RAM resources;
+          *             otherwise, the issuer must have prepaid the required fee to the contract and
+          *               no RAM is required from issuer.  
+          *
           */
          ACTION create( const name&   issuer,
                         const asset&  maximum_supply,
@@ -120,10 +141,26 @@ using namespace eosio;
                         const string& cred_limit_symbol,
                         const string& pos_limit_symbol );
 
+         /**
+          * This action watches for fee transfers into the contract account and updates the
+          * `feebalance` table.
+          */
+         [[eosio::on_notify("*::transfer")]]
+         void ontransfer(name from, name to, asset quantity, string memo);
+
+         /**
+          * This action returns any fee balance associated with an account. This balance is
+          * typically related to an issuance fee.
+          *
+          * @param account - account
+          *
+          */
+         ACTION returnfee( const name& account );
 
          /**
           * By this action the contract owner approves or rejects the creation of the token. Until
-          * this approval, no tokens may be issued. If rejected, and no issued tokens are outstanding,
+          * this approval, no tokens may be issued. (However automatic approval upon creation occurs if
+          * the data member `approval_required` is false.) If rejected, and no issued tokens are outstanding,
           * the table entries for this token are deleted.
           *
           * @param symbolcode - the symbol_code of the token to execute the close action for.
@@ -391,6 +428,12 @@ using namespace eosio;
             uint64_t primary_key()const { return symbolcode.raw(); };
          };
 
+         TABLE feebalance { // scoped on account name
+            asset    balance;
+
+            uint64_t primary_key()const { return balance.symbol.code().raw(); }
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
          typedef eosio::singleton< "configs"_n, currency_config > configs;
@@ -403,8 +446,12 @@ using namespace eosio;
                >
             > backs;
          typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
+         typedef eosio::multi_index< "feebalance"_n, feebalance > fees;
 
          symbols symboltable;
+         extended_symbol fee_ext_sym;
+         asset submission_fee;
+         bool approval_required;
 
          void sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol );
          void add_balance( const name& owner, const asset& value, const name& ram_payer,
@@ -418,8 +465,11 @@ using namespace eosio;
  
    };
 
+/*
 EOSIO_DISPATCH(rainbows,
    (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)
    (open)(close)(freeze)(reset)(resetacct)
 );
+*/
+
 

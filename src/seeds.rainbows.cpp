@@ -16,6 +16,16 @@ void rainbows::create( const name&    issuer,
                     const string&  pos_limit_symbol )
 {
     require_auth( issuer );
+    auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+    name ram_payer = fee_sym_code_raw ? get_self() : issuer;
+    if( fee_sym_code_raw && submission_fee.amount>0 ) {
+       fees feebals( get_self(), issuer.value );
+       const auto& f = feebals.get( fee_sym_code_raw, "no fee has been submitted" );
+       check( f.balance.amount >= submission_fee.amount, "insufficient fee balance" );
+       feebals.modify(f, get_self(), [&](auto &s) {
+          s.balance.amount -= submission_fee.amount;
+       });
+    }
     auto sym = maximum_supply.symbol;
     check( sym.is_valid(), "invalid symbol name" );
     check( maximum_supply.is_valid(), "invalid supply");
@@ -77,10 +87,10 @@ void rainbows::create( const name&    issuer,
     }
     // new token
     symbols symboltable( get_self(), get_self().value );
-    symboltable.emplace( issuer, [&]( auto& s ) {
+    symboltable.emplace( ram_payer, [&]( auto& s ) {
        s.symbolcode = sym.code();
     });
-    statstable.emplace( issuer, [&]( auto& s ) {
+    statstable.emplace( ram_payer, [&]( auto& s ) {
        s.supply.symbol = maximum_supply.symbol;
        s.max_supply    = maximum_supply;
        s.issuer        = issuer;
@@ -93,7 +103,7 @@ void rainbows::create( const name&    issuer,
        .redeem_locked_until = redeem_locked_until,
        .config_locked_until = config_locked_until,
        .transfers_frozen = false,
-       .approved      = false,
+       .approved      = !approval_required,
        .membership = symbol_code( membership_symbol ),
        .broker = symbol_code( broker_symbol ),
        .cred_limit = symbol_code( cred_limit_symbol ),
@@ -115,6 +125,50 @@ void rainbows::sister_check(const string& sym_name, uint32_t precision) {
        auto cf = configtable.get();
        check( cf.transfers_frozen, sym_name+" token must be frozen" );
     }
+}
+
+void rainbows::returnfee( const name& account )
+{
+    auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+    check( fee_sym_code_raw, "no fees in contract" );
+    if( ~has_auth( get_self() ) ) {
+       require_auth( account );
+    }
+    fees feebals( get_self(), account.value );
+    const auto& f = feebals.get( fee_sym_code_raw, "no fee balance to return" );
+    if( f.balance.amount > 0 ) {
+       action(
+          permission_level{get_self(),"active"_n},
+          fee_ext_sym.get_contract(),
+          "transfer"_n,
+          std::make_tuple(get_self(),
+                          account,
+                          f.balance,
+                          std::string("rainbow fee return") )
+       ).send();
+       feebals.erase( f );
+    }
+}
+
+void rainbows::ontransfer(name from, name to, asset quantity, string memo)
+{
+    if ( to != get_self() || from == get_self() ) {
+       return;
+    }
+    check( get_first_receiver() == fee_ext_sym.get_contract() &&
+           quantity.symbol == fee_ext_sym.get_symbol(),
+           "transfer to rainbow contract is not in fee currency" );
+    check(quantity.amount > 0, "transfer must be positive");
+    fees feebals(get_self(), from.value);
+    auto f_it = feebals.find(quantity.symbol.code().raw());
+    if (f_it != feebals.end())
+    feebals.modify(f_it, get_self(), [&](auto &s) {
+      s.balance.amount += quantity.amount;
+    });
+  else
+    feebals.emplace(get_self(), [&](auto &s) {
+      s.balance = quantity;
+    });
 }
 
 void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_clear )
@@ -178,7 +232,9 @@ void rainbows::setbacking( const asset&    token_bucket,
     backs backingtable( get_self(), sym_code_raw );
     int existing_backing_count = std::distance(backingtable.cbegin(),backingtable.cend());
     check( existing_backing_count <= max_backings_count, "max backings count exceeded" );
-    const auto& bk = *backingtable.emplace( st.issuer, [&]( auto& s ) {
+    auto fee_sym_code_raw = fee_ext_sym.get_symbol().code().raw();
+    name ram_payer = fee_sym_code_raw ? get_self() : st.issuer;
+    const auto& bk = *backingtable.emplace( ram_payer, [&]( auto& s ) {
        s.index                = backingtable.available_primary_key();
        s.token_bucket         = token_bucket;
        s.backs_per_bucket     = backs_per_bucket;

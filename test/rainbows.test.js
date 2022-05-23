@@ -79,6 +79,7 @@ describe('rainbows', async assert => {
 
   console.log('add eosio.code permissions')
   await addActorPermission(issuer, 'active', rainbows, 'eosio.code')
+  await addActorPermission(rainbows, 'active', rainbows, 'eosio.code')
   await addActorPermission(toke_escrow, 'active', rainbows, 'eosio.code')
 
   console.log('reset')
@@ -96,13 +97,15 @@ describe('rainbows', async assert => {
     expected: { rows: [], more: '' }
   })
 
-  await setSeedsBalance(issuer, '10000000.0000 SEEDS')
+  await setSeedsBalance(issuer, '10001500.0000 SEEDS')
   await setSeedsBalance(seconduser, '10000000.0000 SEEDS')
   await setSeedsBalance(thirduser, '5000000.0000 SEEDS')
   await setSeedsBalance(fourthuser, '10000000.0000 SEEDS')
-  const issuerInitialBalance = await getBalance(issuer)
 
   console.log('create token')
+  await contracts.token.transfer(issuer, rainbows, '1500.0000 SEEDS', 'fee',
+                                 { authorization: `${issuer}@active` })
+  const issuerInitialBalance = await getBalance(issuer)
   await contracts.rainbows.create(issuer, '1000000.00 TOKES', issuer, withdraw_to, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
@@ -122,12 +125,13 @@ describe('rainbows', async assert => {
     should: 'see token created & issued',
     actual: await get_scope(rainbows),
     expected: {
-      rows: [ {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"backings","payer":"seedsuseraaa","count":2},
+      rows: [ {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"backings","payer":"rainbo.seeds","count":2},
 {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"configs","payer":"seedsuseraaa","count":1},
               {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"displays","payer":"seedsuseraaa","count":1},
-              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stat","payer":"seedsuseraaa","count":1},
-              {"code":"rainbo.seeds","scope":"rainbo.seeds","table":"symbols","payer":"seedsuseraaa","count":1},
-              {"code":"rainbo.seeds","scope":"seedsuseraaa","table":"accounts","payer":"seedsuseraaa","count":1} ],
+              {"code":"rainbo.seeds","scope":".....ou5dhbp4","table":"stat","payer":"rainbo.seeds","count":1},
+              {"code":"rainbo.seeds","scope":"rainbo.seeds","table":"symbols","payer":"rainbo.seeds","count":1},
+              {"code":"rainbo.seeds","scope":"seedsuseraaa","table":"accounts","payer":"seedsuseraaa","count":1},
+              {"code":"rainbo.seeds","scope":"seedsuseraaa","table":"feebalance","payer":"rainbo.seeds","count":1} ],
       more: '' }
   })
 
@@ -183,6 +187,7 @@ describe('rainbows', async assert => {
 
 
   console.log('create credit limit token')
+
   await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer,
                          starttime.toISOString(), starttime.toISOString(), '', '', '', '',
                           { authorization: `${issuer}@active` } )
@@ -285,16 +290,17 @@ describe('rainbows', async assert => {
     expected: {
       rows: [ { code: 'rainbo.seeds', scope: '.....ou4cpd43', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou4cpd43', table: 'displays', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....ou4cpd43', table: 'stat', payer: 'seedsuseraaa', count: 1 },
+              { code: 'rainbo.seeds', scope: '.....ou4cpd43', table: 'stat', payer: 'rainbo.seeds', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'displays', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'stat', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'backings', payer: 'seedsuseraaa', count: 2 },
+              { code: 'rainbo.seeds', scope: '.....ou5dhbp4', table: 'stat', payer: 'rainbo.seeds', count: 1 },
+              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'backings', payer: 'rainbo.seeds', count: 2 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'configs', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'displays', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'stat', payer: 'seedsuseraaa', count: 1 },
-              { code: 'rainbo.seeds', scope: 'rainbo.seeds', table: 'symbols', payer: 'seedsuseraaa', count: 3 },
+              { code: 'rainbo.seeds', scope: '.....oukdxd5', table: 'stat', payer: 'rainbo.seeds', count: 1 },
+              { code: 'rainbo.seeds', scope: 'rainbo.seeds', table: 'symbols', payer: 'rainbo.seeds', count: 3 },
               { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'accounts', payer: 'seedsuseraaa', count: 3 },
+              { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'feebalance', payer: 'rainbo.seeds', count: 1 },
               { code: 'rainbo.seeds', scope: 'seedsuserccc', table: 'accounts', payer: 'seedsuseraaa', count: 1 },
               { code: 'rainbo.seeds', scope: 'seedsuserxxx', table: 'accounts', payer: 'seedsuseraaa', count: 2 },
               { code: 'rainbo.seeds', scope: 'seedsuseryyy', table: 'accounts', payer: 'seedsuseraaa', count: 2 }
@@ -355,9 +361,12 @@ describe('rainbows', async assert => {
 
   assert({
     given: 'reset all',
-    should: 'clear table RAM',
+    should: 'clear table RAM (except feebalance)',
     actual: await get_scope(rainbows),
-    expected: { rows: [], more: '' }
+    expected: { 
+      rows: [ { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'feebalance', payer: 'rainbo.seeds', count: 1 }],
+      more: ''
+    }
   })
 
   console.log('create token')
@@ -567,9 +576,12 @@ describe('rainbows', async assert => {
 
   assert({
     given: 'reset all',
-    should: 'clear table RAM',
+    should: 'clear table RAM (except feebalance)',
     actual: await get_scope(rainbows),
-    expected: { rows: [], more: '' }
+    expected: { 
+      rows: [ { code: 'rainbo.seeds', scope: 'seedsuseraaa', table: 'feebalance', payer: 'rainbo.seeds', count: 1 }],
+      more: ''
+    }
   })
 
   console.log('create dSeed-backed token ARCOS')
@@ -717,7 +729,20 @@ describe('rainbows', async assert => {
                 [ [ '0.0000 ARCOS' ], [], [], [ '0.0000 ARCOS' ], [] ] ]
   })
 
+  assert({
+    given: 'check remaining fee balance',
+    should: 'see correct value',
+    actual: (await getTableRows({
+      code: rainbows,
+      scope: issuer,
+      table: 'feebalance',
+      json: true
+    }))['rows'],
+    expected: [ { balance: '500.0000 SEEDS' } ]
+  })
 
+  console.log('return fee balance')
+  await contracts.rainbows.returnfee(issuer,  { authorization: `${issuer}@active` })  
     
 })
 
