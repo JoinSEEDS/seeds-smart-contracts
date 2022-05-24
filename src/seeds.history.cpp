@@ -912,6 +912,10 @@ void history::cleanptrxs () {
   }
 }
 
+// cleos -u https://api.telosfoundation.io -v push action histry.seeds cleanuserstx '{
+//         "start":0,
+//         "chunksize":30
+// }' -p histry.seeds
 void history::cleanuserstx(uint64_t start, uint64_t chunksize) {
   require_auth(get_self());
 
@@ -923,6 +927,7 @@ void history::cleanuserstx(uint64_t start, uint64_t chunksize) {
     name account = uitr -> account;
 
     count += cleantrxpt(account);
+    count++;
 
     print(" c "+std::to_string(count));
 
@@ -959,7 +964,7 @@ uint64_t history::cleantrxpt(name account) {
   uint64_t count = 0;
 
   auto titr = transactions.begin();
-  while (titr != transactions.end() && titr -> timestamp < cutoffdate && count < 200) {
+  while (titr != transactions.end() && titr -> timestamp < cutoffdate && count < 77) {
     
     titr = transactions.erase(titr);
 
