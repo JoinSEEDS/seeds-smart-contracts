@@ -10,6 +10,8 @@ void tokensmaster::reset() {
   }
   utils::delete_table<usecase_table>(get_self(), get_self().value);
   utils::delete_table<token_tables>(get_self(), get_self().value);
+  utils::delete_table<black_table>(get_self(), get_self().value);
+  utils::delete_table<white_table>(get_self(), get_self().value);
   config_table configs(get_self(), get_self().value);
   configs.remove();
 }
@@ -25,6 +27,29 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   config_entry.verify = verify;
   config_entry.init_time = current_time_point();
   configs.set(config_entry, get_self());
+  symbol_code blacklist_codes[] = {
+    symbol_code("BTC"), symbol_code("ETH"), symbol_code("TLOS"),
+    symbol_code("SEEDS"),
+    symbol_code()
+  };
+  for( symbol_code* b = blacklist_codes; *b; b++ ) {
+    black_table bt( get_self(), get_self().value );
+    bt.emplace(get_self(), [&]( auto& s ) {
+      s.sym_code = *b;
+    });
+  }
+  extended_symbol whitelist_tokens[] = {
+    extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ),
+    extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ),
+    extended_symbol()
+  };
+  for( extended_symbol* w = whitelist_tokens; (*w).get_symbol(); w++ ) {
+    white_table wt( get_self(), get_self().value );
+    wt.emplace(get_self(), [&]( auto& s ) {
+      s.id = wt.available_primary_key();
+      s.ext_sym = *w;
+    });
+  }
 }
 
 void tokensmaster::submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json)

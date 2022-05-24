@@ -139,6 +139,21 @@ CONTRACT tokensmaster : public contract {
 
       };
 
+      TABLE blacklist { // single table, scoped by contract account name
+        symbol_code        sym_code;
+
+        uint64_t primary_key() const { return sym_code.raw(); }
+      };
+
+      TABLE whitelist { // single table, scoped by contract account name
+        uint64_t           id;
+        extended_symbol    ext_sym;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_sym_code() const { return ext_sym.get_symbol().code().raw(); }
+
+      };
+
       TABLE currency_stats {  // from standard token contract
          asset    supply;
          asset    max_supply;
@@ -155,6 +170,13 @@ CONTRACT tokensmaster : public contract {
     typedef eosio::multi_index<"usecases"_n, usecases> usecase_table;
 
     typedef eosio::multi_index<"acceptances"_n, acceptances> acceptance_table;
+
+    typedef eosio::multi_index< "blacklist"_n, blacklist > black_table;
+
+    typedef eosio::multi_index< "whitelist"_n, whitelist, indexed_by
+               < "symcode"_n,
+                 const_mem_fun<whitelist, uint64_t, &whitelist::by_sym_code >
+               > >  white_table;
 
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
