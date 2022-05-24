@@ -912,3 +912,64 @@ void history::cleanptrxs () {
   }
 }
 
+void history::cleanuserstx(uint64_t start, uint64_t chunksize) {
+  require_auth(get_self());
+
+  auto uitr = start == 0 ? users.begin() : users.find(start);
+  uint64_t count = 0;
+
+  while (uitr != users.end() && count < chunksize) {
+
+    name account = uitr -> account;
+
+    count += cleantrxpt(account);
+
+    print(" c "+std::to_string(count));
+
+    uitr++;
+  }
+
+  if (uitr != users.end()) {
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "cleanuserstx"_n,
+      std::make_tuple(uitr -> account.value, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(get_self().value, _self);
+  } 
+
+}
+
+ACTION history::testcleantx(name account) {
+  auto count = cleantrxpt(account);
+  print("cleaned "+std::to_string(count));
+}
+
+// Clean Transaction Points for a single account
+uint64_t history::cleantrxpt(name account) {
+  uint64_t cutoffdate = utils::get_trx_calc_cutoff_date();
+
+  transaction_points_tables transactions(contracts::history, account.value);
+
+  uint64_t count = 0;
+
+  auto titr = transactions.begin();
+  while (titr != transactions.end() && titr -> timestamp < cutoffdate && count < 200) {
+    
+    titr = transactions.erase(titr);
+
+    // DEBUG
+    // print("clean " + std::to_string(cutoffdate) + " " + std::to_string(titr -> timestamp) + " ");
+    // titr++;
+
+    count++;
+  }
+
+  return count;
+}
+
