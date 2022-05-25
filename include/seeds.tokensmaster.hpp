@@ -29,11 +29,12 @@ using std::string;
     * The `whitelist` table contains chain/token entries which are allowed (despite being duplicates or blacklisted).
     *
     * New tokens are submitted to the master list without a vetting process, but spam is discouraged due to a RAM
-    *  requirement. An acceptance may be performed by the manager account. It is expected that an application
-    *  (associated to a usecase) will only recognize "accepted" token entries.
+    *  requirement. An acceptance may be performed by the manager account or by a curator assigned to a specific
+    *  use case. It is expected that an application (associated to a usecase) will only recognize "accepted" token
+    *  entries.
     *
-    * This contract does not accept submission of duplicate token entries. It is the manager's responsibility not
-    * to accept erroneously or maliciously submitted token metadata.
+    * This contract does not accept submission of duplicate token entries. It is the manager's/curator's
+    * responsibility not to accept erroneously or maliciously submitted token metadata.
     */
 
 CONTRACT tokensmaster : public contract {
@@ -69,13 +70,14 @@ CONTRACT tokensmaster : public contract {
           * @pre submitter must be a valid account with authorization for the transaction,
           * @pre submitter account must own sufficient RAM to support the transaction,
           * @pre chain must be <= 32 characters,
-          * @pre if config 'verify' flag is true, contract must be a valid account on this chain
-          *       with a token contract matching symbolcode;
+          * @pre if config 'verify' flag is true, and the token is not on the whitelist, a
+          *        check is made that the contract is a valid account on this chain with a
+          *        token contract matching symbolcode;
           *      if flag is false no contract check is made.
           * @pre json must be <= 2048 characters. Note that the contract does not validate the json.
           * @pre the token must satisfy either
           *       (a) the token is on the whitelist, or
-          *       (b) its symbol is neither (i) on the blacklist, nor (ii) already in the token list
+          *       (b) its symbol neither (i) is on the blacklist, nor (ii) duplicates an existing entry
       */
       ACTION submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json);
 

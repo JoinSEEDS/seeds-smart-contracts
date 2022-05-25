@@ -17,7 +17,7 @@ void tokensmaster::reset() {
 }
 
 void tokensmaster::init(string chain, name manager, bool verify) {
-  require_auth(_self);
+  require_auth(get_self());
   config_table configs(get_self(), get_self().value);
   check(!configs.exists(), "cannot re-initialize configuration");
 
@@ -45,12 +45,6 @@ void tokensmaster::submittoken(name submitter, string chain, name contract, symb
   check(symbolcode.is_valid(), "invalid symbol");
   check(json.size() <= MAXJSONLENGTH, "json string too long, > "+std::to_string(MAXJSONLENGTH));
   token_tables tokentable(get_self(), get_self().value);
-  if(configs.get().verify) {
-    check(chain == configs.get().chain, "mismatched chain name");
-    check(is_account(contract), "no contract account");
-    stats statstable( contract, symbolcode.raw() );
-    const auto& st = statstable.get( symbolcode.raw(), ("no symbol "+symbolcode.to_string()+" in "+contract.to_string()).c_str());
-  }
   white_table wtable(get_self(), get_self().value);
   auto widx = wtable.get_index<"symcode"_n>();
   auto itr = widx.find( symbolcode.raw() );
@@ -68,6 +62,12 @@ void tokensmaster::submittoken(name submitter, string chain, name contract, symb
     auto tidx = tokentable.get_index<"symcode"_n>();
     const auto& tt = tidx.find( symbolcode.raw() );
     check( tt == tidx.end(), "duplicate symbol: "+symbolcode.to_string() );
+    if(configs.get().verify) {
+      check(chain == configs.get().chain, "mismatched chain name");
+      check(is_account(contract), "no contract account");
+      stats statstable( contract, symbolcode.raw() );
+      const auto& st = statstable.get( symbolcode.raw(), ("no symbol "+symbolcode.to_string()+" in "+contract.to_string()).c_str());
+    }
   }
   tokentable.emplace(submitter, [&]( auto& s ) {
     s.id = tokentable.available_primary_key();
@@ -91,9 +91,9 @@ void tokensmaster::accepttoken(uint64_t id, symbol_code symbolcode, name usecase
   usecase_table usecasetable(get_self(), get_self().value);
   const auto& uc = usecasetable.find(usecase.value);
   if(uc == usecasetable.end()) {
-    check(has_auth(manager) || has_auth(get_self()), "not authorized");
+    check(has_auth(manager), "not authorized");
   } else {
-    check(has_auth(manager) || has_auth(get_self()) || has_auth(uc->curator), "not authorized");
+    check(has_auth(manager) || has_auth(uc->curator), "not authorized");
   }
   acceptance_table acceptancetable(get_self(), usecase.value);
   const auto& at = acceptancetable.find(id);
@@ -145,19 +145,18 @@ void tokensmaster::setcurator(name usecase, name curator)
   check(configs.exists(), "contract not initialized yet");
   name manager = configs.get().manager;
   if( usecase == name() ) {
-    check(has_auth(get_self()) || has_auth(manager), "not authorized");
+    require_auth(manager);
     check(is_account(curator), "account "+curator.to_string()+" does not exist");
     auto cf = configs.get();
     cf.manager = curator;
-    name ram_payer = has_auth(manager) ? manager : get_self();
-    configs.set (cf, ram_payer );
+    configs.set( cf, manager );
     return;
   }
   usecase_table usecasetable(get_self(), get_self().value);
   const auto& uc = usecasetable.find(usecase.value);
   check( uc != usecasetable.end(), "usecase "+usecase.to_string()+" does not exist" );
   check(is_account(curator), "account "+curator.to_string()+" does not exist");
-  check(has_auth(get_self()) || has_auth(manager) || has_auth(uc->curator), "not authorized");
+  check( has_auth(manager) || has_auth(uc->curator), "not authorized");
   usecasetable.modify( uc, same_payer, [&]( auto& s ) {
     s.curator = curator;
   });
