@@ -25,8 +25,8 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   updblacklist(symbol_code("ETH"), true);
   updblacklist(symbol_code("TLOS"), true);
   updblacklist(symbol_code("SEEDS"), true);
-  updwhitelist(extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ), true);
-  updwhitelist(extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ), true);
+  updwhitelist("Telos", extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ), true);
+  updwhitelist("Telos", extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ), true);
 
   auto config_entry = configs.get_or_create(get_self(), config_row);
   check(chain.size() <= 32, "chain name too long");
@@ -56,7 +56,7 @@ void tokensmaster::submittoken(name submitter, string chain, name contract, symb
   auto itr = widx.find( symbolcode.raw() );
   bool white_match = false;
   for( ; itr!=widx.end(); ++itr ) {
-    if( itr->token.get_contract() == contract) {
+    if( itr->token.get_contract() == contract && itr->chainName == chain) {
       white_match = true;
       break;
     }
@@ -156,7 +156,7 @@ void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
   }
 }
 
-void tokensmaster::updwhitelist(extended_symbol token, bool add)
+void tokensmaster::updwhitelist(string chain, extended_symbol token, bool add)
 {
   config_table configs(get_self(), get_self().value);
   if( configs.exists() ) {
@@ -170,7 +170,8 @@ void tokensmaster::updwhitelist(extended_symbol token, bool add)
   auto itr = widx.find( token.get_symbol().code().raw() );
   bool white_match = false;
   for( ; itr!=widx.end(); ++itr ) {
-    if( itr->token.get_contract() == token.get_contract() ) {
+    if( itr->token.get_contract() == token.get_contract() &&
+        itr->chainName == chain) {
       white_match = true;
       break;
     }
@@ -179,6 +180,7 @@ void tokensmaster::updwhitelist(extended_symbol token, bool add)
     check( !white_match, "can't add "+token.get_symbol().code().to_string()+", already on whitelist." );
     wtable.emplace(get_self(), [&]( auto& s ) {
       s.id = wtable.available_primary_key();
+      s.chainName = chain;
       s.token = token;
     });
   } else {

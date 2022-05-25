@@ -125,6 +125,7 @@ CONTRACT tokensmaster : public contract {
           * (or by contract account prior to initialization with the `init` action)
           * adds or deletes a token from the whitelist table
           *
+          * @param chain - the blockchain name (e.g Telos)
           * @param token - the token, specified by symbol and contract
           * @param add - if true, add the token to the whitelist
           *              if false, delete the token from the whitelist
@@ -132,7 +133,7 @@ CONTRACT tokensmaster : public contract {
           * @pre if `add` is true, token must not be on the whitelist
           * @pre if `add` is false, token must be on the whitelist
       */
-      ACTION updwhitelist(extended_symbol token, bool add);
+      ACTION updwhitelist(string chain, extended_symbol token, bool add);
 
 
   private:
@@ -179,6 +180,7 @@ CONTRACT tokensmaster : public contract {
 
       TABLE whitelist { // single table, scoped by contract account name
         uint64_t           id;
+        string             chainName;
         extended_symbol    token;
 
         uint64_t primary_key() const { return id; }
