@@ -111,6 +111,20 @@ CONTRACT tokensmaster : public contract {
       ACTION deletetoken(uint64_t id, symbol_code symbolcode);
 
       /**
+          * The `setcurator` action, executed by the manager account or an
+          * existing curator account, sets a new value for the curator account
+          * associated with a specific usecase. (As a special case, this action
+          * will update the manager account name if called with a null usecase.)
+          *
+          * @param usecase - an existing usecase, or null name 
+          * @param curator - the account name 
+          *
+          * @pre usecase must be in the usecases table, or null
+          * @pre curator account must exist on the Telos chain
+      */
+      ACTION setcurator(name usecase, name curator);
+
+      /**
           * The `updblacklist` (update blacklist) action executed by manager account
           * (or by contract account prior to initialization with the `init` action)
           * adds or deletes a symbol from the blacklist table
@@ -164,7 +178,7 @@ CONTRACT tokensmaster : public contract {
 
       TABLE usecases { // single table, scoped by contract account name
         name   usecase;
-
+        name   curator;
         uint64_t primary_key() const { return usecase.value; }
 
       };

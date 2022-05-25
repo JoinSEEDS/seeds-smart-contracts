@@ -84,13 +84,17 @@ void tokensmaster::accepttoken(uint64_t id, symbol_code symbolcode, name usecase
   config_table configs(get_self(), get_self().value);
   check(configs.exists(), "contract not initialized yet");
   name manager = configs.get().manager;
-  check(has_auth(manager) || has_auth(get_self()), "not authorized");
   check(symbolcode.is_valid(), "invalid symbol");
   token_tables tokentable(get_self(), get_self().value);
   const auto& tt = tokentable.get(id, ("no match for token id "+std::to_string(id)).c_str());
   check(tt.symbolcode == symbolcode, "symbol doesn't match id");
   usecase_table usecasetable(get_self(), get_self().value);
   const auto& uc = usecasetable.find(usecase.value);
+  if(uc == usecasetable.end()) {
+    check(has_auth(manager) || has_auth(get_self()), "not authorized");
+  } else {
+    check(has_auth(manager) || has_auth(get_self()) || has_auth(uc->curator), "not authorized");
+  }
   acceptance_table acceptancetable(get_self(), usecase.value);
   const auto& at = acceptancetable.find(id);
   if(accept) {
@@ -98,6 +102,7 @@ void tokensmaster::accepttoken(uint64_t id, symbol_code symbolcode, name usecase
     if(uc == usecasetable.end()) {
       usecasetable.emplace(get_self(), [&]( auto& s ) {
         s.usecase = usecase;
+        s.curator = manager;
       });
     }
     acceptancetable.emplace(get_self(), [&]( auto& s ) {
@@ -132,6 +137,30 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
 
   }
   tokentable.erase(tt);
+}
+
+void tokensmaster::setcurator(name usecase, name curator)
+{
+  config_table configs(get_self(), get_self().value);
+  check(configs.exists(), "contract not initialized yet");
+  name manager = configs.get().manager;
+  if( usecase == name() ) {
+    check(has_auth(get_self()) || has_auth(manager), "not authorized");
+    check(is_account(curator), "account "+curator.to_string()+" does not exist");
+    auto cf = configs.get();
+    cf.manager = curator;
+    name ram_payer = has_auth(manager) ? manager : get_self();
+    configs.set (cf, ram_payer );
+    return;
+  }
+  usecase_table usecasetable(get_self(), get_self().value);
+  const auto& uc = usecasetable.find(usecase.value);
+  check( uc != usecasetable.end(), "usecase "+usecase.to_string()+" does not exist" );
+  check(is_account(curator), "account "+curator.to_string()+" does not exist");
+  check(has_auth(get_self()) || has_auth(manager) || has_auth(uc->curator), "not authorized");
+  usecasetable.modify( uc, same_payer, [&]( auto& s ) {
+    s.curator = curator;
+  });
 }
 
 void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
