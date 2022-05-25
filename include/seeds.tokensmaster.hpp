@@ -104,8 +104,9 @@ CONTRACT tokensmaster : public contract {
       ACTION deletetoken(uint64_t id, symbol_code symbolcode);
 
       /**
-          * The `updblacklist` (update blacklist) action executed by manager account adds
-          * or deletes a symbol from the blacklist table
+          * The `updblacklist` (update blacklist) action executed by manager account
+          * (or by contract account prior to initialization with the `init` action)
+          * adds or deletes a symbol from the blacklist table
           *
           * @param symbolcode - a symbol code for a token
           * @param add - if true, add the symbol code to the blacklist
@@ -117,8 +118,9 @@ CONTRACT tokensmaster : public contract {
       ACTION updblacklist(symbol_code symbolcode, bool add);
 
       /**
-          * The `updwhitelist` (update whitelist) action executed by manager account adds
-          * or deletes a token from the whitelist table
+          * The `updwhitelist` (update whitelist) action executed by manager account
+          * (or by contract account prior to initialization with the `init` action)
+          * adds or deletes a token from the whitelist table
           *
           * @param token - the token, specified by symbol and contract
           * @param add - if true, add the token to the whitelist

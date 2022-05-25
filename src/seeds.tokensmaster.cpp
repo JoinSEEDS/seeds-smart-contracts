@@ -20,6 +20,14 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   require_auth(_self);
   config_table configs(get_self(), get_self().value);
   check(!configs.exists(), "cannot re-initialize configuration");
+
+  updblacklist(symbol_code("BTC"), true);
+  updblacklist(symbol_code("ETH"), true);
+  updblacklist(symbol_code("TLOS"), true);
+  updblacklist(symbol_code("SEEDS"), true);
+  updwhitelist(extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ), true);
+  updwhitelist(extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ), true);
+
   auto config_entry = configs.get_or_create(get_self(), config_row);
   check(chain.size() <= 32, "chain name too long");
   config_entry.chain = chain;
@@ -27,29 +35,6 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   config_entry.verify = verify;
   config_entry.init_time = current_time_point();
   configs.set(config_entry, get_self());
-  symbol_code blacklist_codes[] = {
-    symbol_code("BTC"), symbol_code("ETH"), symbol_code("TLOS"),
-    symbol_code("SEEDS"),
-    symbol_code()
-  };
-  for( symbol_code* b = blacklist_codes; *b; b++ ) {
-    black_table bt( get_self(), get_self().value );
-    bt.emplace(get_self(), [&]( auto& s ) {
-      s.sym_code = *b;
-    });
-  }
-  extended_symbol whitelist_tokens[] = {
-    extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ),
-    extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ),
-    extended_symbol()
-  };
-  for( extended_symbol* w = whitelist_tokens; (*w).get_symbol(); w++ ) {
-    white_table wt( get_self(), get_self().value );
-    wt.emplace(get_self(), [&]( auto& s ) {
-      s.id = wt.available_primary_key();
-      s.token = *w;
-    });
-  }
 }
 
 void tokensmaster::submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json)
@@ -134,9 +119,11 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
 void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
 {
   config_table configs(get_self(), get_self().value);
-  check(configs.exists(), "contract not initialized yet");
-  name manager = configs.get().manager;
-  require_auth( manager );
+  if( configs.exists() ) {
+    require_auth( configs.get().manager );
+  } else {
+    require_auth( get_self() );
+  }
   check(symbolcode.is_valid(), "invalid symbol");
   black_table btable(get_self(), get_self().value);
   const auto& bt = btable.find( symbolcode.raw() );
@@ -154,9 +141,11 @@ void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
 void tokensmaster::updwhitelist(extended_symbol token, bool add)
 {
   config_table configs(get_self(), get_self().value);
-  check(configs.exists(), "contract not initialized yet");
-  name manager = configs.get().manager;
-  require_auth( manager );
+  if( configs.exists() ) {
+    require_auth( configs.get().manager );
+  } else {
+    require_auth( get_self() );
+  }
   check(token.get_symbol().is_valid(), "invalid symbol");
   white_table wtable(get_self(), get_self().value);
   auto widx = wtable.get_index<"symcode"_n>();
