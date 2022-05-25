@@ -103,6 +103,32 @@ CONTRACT tokensmaster : public contract {
       */
       ACTION deletetoken(uint64_t id, symbol_code symbolcode);
 
+      /**
+          * The `updblacklist` (update blacklist) action executed by manager account adds
+          * or deletes a symbol from the blacklist table
+          *
+          * @param symbolcode - a symbol code for a token
+          * @param add - if true, add the symbol code to the blacklist
+          *              if false, delete the symbol code from the blacklist
+          *
+          * @pre if `add` is true, symbol code must not be on the blacklist
+          * @pre if `add` is false, symbol code must be on the blacklist
+      */
+      ACTION updblacklist(symbol_code symbolcode, bool add);
+
+      /**
+          * The `updwhitelist` (update whitelist) action executed by manager account adds
+          * or deletes a token from the whitelist table
+          *
+          * @param token - the token, specified by symbol and contract
+          * @param add - if true, add the token to the whitelist
+          *              if false, delete the token from the whitelist
+          *
+          * @pre if `add` is true, token must not be on the whitelist
+          * @pre if `add` is false, token must be on the whitelist
+      */
+      ACTION updwhitelist(extended_symbol token, bool add);
+
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
@@ -147,10 +173,10 @@ CONTRACT tokensmaster : public contract {
 
       TABLE whitelist { // single table, scoped by contract account name
         uint64_t           id;
-        extended_symbol    ext_sym;
+        extended_symbol    token;
 
         uint64_t primary_key() const { return id; }
-        uint64_t by_sym_code() const { return ext_sym.get_symbol().code().raw(); }
+        uint64_t by_sym_code() const { return token.get_symbol().code().raw(); }
 
       };
 
@@ -182,5 +208,4 @@ CONTRACT tokensmaster : public contract {
 
 };
 
-EOSIO_DISPATCH(tokensmaster, (reset)(init)(submittoken)(accepttoken)(deletetoken));
 

@@ -47,7 +47,7 @@ void tokensmaster::init(string chain, name manager, bool verify) {
     white_table wt( get_self(), get_self().value );
     wt.emplace(get_self(), [&]( auto& s ) {
       s.id = wt.available_primary_key();
-      s.ext_sym = *w;
+      s.token = *w;
     });
   }
 }
@@ -129,5 +129,54 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
 
   }
   tokentable.erase(tt);
+}
+
+void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
+{
+  config_table configs(get_self(), get_self().value);
+  check(configs.exists(), "contract not initialized yet");
+  name manager = configs.get().manager;
+  require_auth( manager );
+  check(symbolcode.is_valid(), "invalid symbol");
+  black_table btable(get_self(), get_self().value);
+  const auto& bt = btable.find( symbolcode.raw() );
+  if( add ) {
+    check( bt == btable.end(), "can't add "+symbolcode.to_string()+", already on blacklist." );
+    btable.emplace(get_self(), [&]( auto& s ) {
+      s.sym_code = symbolcode;
+    });
+  } else {
+    check( bt != btable.end(), "can't delete "+symbolcode.to_string()+", not on blacklist." );
+    btable.erase( bt );
+  }
+}
+
+void tokensmaster::updwhitelist(extended_symbol token, bool add)
+{
+  config_table configs(get_self(), get_self().value);
+  check(configs.exists(), "contract not initialized yet");
+  name manager = configs.get().manager;
+  require_auth( manager );
+  check(token.get_symbol().is_valid(), "invalid symbol");
+  white_table wtable(get_self(), get_self().value);
+  auto widx = wtable.get_index<"symcode"_n>();
+  auto itr = widx.find( token.get_symbol().code().raw() );
+  bool match = false;
+  for( ; itr!=widx.end(); ++itr ) {
+    if( itr->token == token ) {
+      match = true;
+      break;
+    }
+  }
+  if( add ) {
+    check( !match, "can't add "+token.get_symbol().code().to_string()+", already on whitelist." );
+    wtable.emplace(get_self(), [&]( auto& s ) {
+      s.id = wtable.available_primary_key();
+      s.token = token;
+    });
+  } else {
+    check( match, "can't delete "+token.get_symbol().code().to_string()+", not on whitelist." );
+    wtable.erase( *itr );
+  }
 }
 
