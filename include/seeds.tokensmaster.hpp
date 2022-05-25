@@ -18,17 +18,21 @@ using std::string;
     *
     * The `config` table is a singleton identifying the blockchain and the manager account
     *
-    * The `tokens` table contains one row per submitted token with fields for token identity and for each metadata item.
+    * The `tokens` table contains one row per submitted token with fields for token identity and for json metadata.
     *
     * The `usecases` table contains one row per usecase
     *
     * The `acceptances` table contains one row for each token acceptable for a usecase and is scoped to usecase name.
     *
+    * The `blacklist` table contains symbol codes which are not allowed (unless specifically whitelisted)
+    *
+    * The `whitelist` table contains chain/token entries which are allowed (despite being duplicates or blacklisted).
+    *
     * New tokens are submitted to the master list without a vetting process, but spam is discouraged due to a RAM
     *  requirement. An acceptance may be performed by the manager account. It is expected that an application
     *  (associated to a usecase) will only recognize "accepted" token entries.
     *
-    * This contract does not prohibit submission of duplicate token entries; it is the manager's responsibility not
+    * This contract does not accept submission of duplicate token entries. It is the manager's responsibility not
     * to accept erroneously or maliciously submitted token metadata.
     */
 
@@ -77,7 +81,7 @@ CONTRACT tokensmaster : public contract {
 
       /**
           * The `accepttoken` action executed by the manager or contract account adds or removes a
-          * `usecases` table row indicating that a particular token is accepted for that usecase.
+          * `acceptances` table row indicating that a particular token is accepted for that usecase.
           * A new usecase is created if one does not exist; a usecase is deleted if its last token is removed.
           *
           * @param id - token identifier, from the row id of the tokens table,
