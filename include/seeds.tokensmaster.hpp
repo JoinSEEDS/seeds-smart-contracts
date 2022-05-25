@@ -69,6 +69,9 @@ CONTRACT tokensmaster : public contract {
           *       with a token contract matching symbolcode;
           *      if flag is false no contract check is made.
           * @pre json must be <= 2048 characters. Note that the contract does not validate the json.
+          * @pre the token must satisfy either
+          *       (a) the token is on the whitelist, or
+          *       (b) its symbol is neither (i) on the blacklist, nor (ii) already in the token list
       */
       ACTION submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json);
 
@@ -151,6 +154,7 @@ CONTRACT tokensmaster : public contract {
         string json;
 
         uint64_t primary_key() const { return id; }
+        uint64_t by_sym_code() const { return symbolcode.raw(); }
       };
 
       TABLE usecases { // single table, scoped by contract account name
@@ -193,7 +197,10 @@ CONTRACT tokensmaster : public contract {
     typedef eosio::singleton< "config"_n, config > config_table;
     typedef eosio::multi_index< "config"_n, config >  dump_for_config;
 
-    typedef eosio::multi_index<"tokens"_n, token_table > token_tables;
+    typedef eosio::multi_index<"tokens"_n, token_table, indexed_by
+               < "symcode"_n,
+                 const_mem_fun<token_table, uint64_t, &token_table::by_sym_code >
+               >  > token_tables;
     
     typedef eosio::multi_index<"usecases"_n, usecases> usecase_table;
 

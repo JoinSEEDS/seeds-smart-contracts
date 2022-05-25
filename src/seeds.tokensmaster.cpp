@@ -51,6 +51,24 @@ void tokensmaster::submittoken(name submitter, string chain, name contract, symb
     stats statstable( contract, symbolcode.raw() );
     const auto& st = statstable.get( symbolcode.raw(), ("no symbol "+symbolcode.to_string()+" in "+contract.to_string()).c_str());
   }
+  white_table wtable(get_self(), get_self().value);
+  auto widx = wtable.get_index<"symcode"_n>();
+  auto itr = widx.find( symbolcode.raw() );
+  bool white_match = false;
+  for( ; itr!=widx.end(); ++itr ) {
+    if( itr->token.get_contract() == contract) {
+      white_match = true;
+      break;
+    }
+  }
+  if( !white_match ) {
+    black_table btable(get_self(), get_self().value);
+    const auto& bt = btable.find( symbolcode.raw() );
+    check( bt == btable.end(), "symbol "+symbolcode.to_string()+" is blacklisted" );
+    auto tidx = tokentable.get_index<"symcode"_n>();
+    const auto& tt = tidx.find( symbolcode.raw() );
+    check( tt == tidx.end(), "duplicate symbol: "+symbolcode.to_string() );
+  }
   tokentable.emplace(submitter, [&]( auto& s ) {
     s.id = tokentable.available_primary_key();
     s.submitter = submitter;
@@ -150,21 +168,21 @@ void tokensmaster::updwhitelist(extended_symbol token, bool add)
   white_table wtable(get_self(), get_self().value);
   auto widx = wtable.get_index<"symcode"_n>();
   auto itr = widx.find( token.get_symbol().code().raw() );
-  bool match = false;
+  bool white_match = false;
   for( ; itr!=widx.end(); ++itr ) {
-    if( itr->token == token ) {
-      match = true;
+    if( itr->token.get_contract() == token.get_contract() ) {
+      white_match = true;
       break;
     }
   }
   if( add ) {
-    check( !match, "can't add "+token.get_symbol().code().to_string()+", already on whitelist." );
+    check( !white_match, "can't add "+token.get_symbol().code().to_string()+", already on whitelist." );
     wtable.emplace(get_self(), [&]( auto& s ) {
       s.id = wtable.available_primary_key();
       s.token = token;
     });
   } else {
-    check( match, "can't delete "+token.get_symbol().code().to_string()+", not on whitelist." );
+    check( white_match, "can't delete "+token.get_symbol().code().to_string()+", not on whitelist." );
     wtable.erase( *itr );
   }
 }
