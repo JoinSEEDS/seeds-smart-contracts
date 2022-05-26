@@ -1,58 +1,97 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$id": "https://example.com/employee.schema.json",
-    "title": "Record of employee",
-    "description": "This document records the details of an employee",
+    "$id": "https://github.com/chuck-h/seeds-smart-contracts/blob/feature/master_token_list/assets/token_schema.json",
+    "title": "token metadata",
+    "description": "This document holds descriptive metadata (e.g. logo image) for cryptotokens used in the Seeds ecosystem",
     "type": "object",
     "properties": {
-        "id": {
-            "description": "A unique identifier for an employee",
-            "type": "number"
+        "chain": {
+            "description": "blockchain name",
+            "type": "string",
+            "enum": ["Telos","EOS","Wax"]
+        },
+        "symbol": {
+            "description": "symbol ('ticker')",
+            "type": "string",
+            "minLength":1,
+            "maxlength":7
+        },
+        "account": {
+            "description": "account holding token contract",
+            "type": "string",
+            "minLength":3,
+            "maxlength":13
         },
         "name": {
-            "description": "name of the employee",
+            "description": "short name of the token",
             "type": "string",
-            "minLength":2
+            "minLength":3,
+            "maxlength":32
         },
-        "age": {
-            "description": "age of the employee",
-            "type": "number",
-            "minimum": 16
+        "logo": {
+            "description": "url pointing to lo-res logo image",
+            "type": "string",
+            "minLength":3,
+            "maxlength":128
         },
-        "hobbies": {
-            "description": "hobbies of the employee",
+        "logo_lg": {
+            "description": "url pointing to hi-res logo image",
+            "type": "string",
+            "minLength":3,
+            "maxlength":128
+        },
+        "bg_image": {
+            "description": "url pointing to card background image",
+            "type": "string",
+            "minLength":3,
+            "maxlength":128
+        },
+        "subtitle": {
+            "description": "wallet balance subtitle",
+            "type": "string",
+            "minLength":3,
+            "maxlength":32
+        },
+        "precision": {
+            "description": "decimal precision for display",
+            "type": "integer",
+            "minimum":0,
+            "maximum":10
+        },
+        "web_link": {
+            "description": "url to webpage with info about token host project",
+            "type": "string",
+            "minLength":3,
+            "maxlength":128
+        },
+        "contact": {
+            "description": "human contact",
             "type": "object",
             "properties": {
-                "indoor": {
-                    "type": "array",
-                    "items": {
-                        "description": "List of hobbies",
-                        "type": "string"
-                    },
-                    "minItems": 1,
-                    "uniqueItems": true
+                "name": {
+                    "description": "name of person",
+                    "type": "string",
+                    "maxLength": 64
                 },
-                "outdoor": {
-                    "type": "array",
-                    "items": {
-                        "description": "List of hobbies",
-                        "type": "string"
-                    },
-                    "minItems": 1,
-                    "uniqueItems": true
+                "email": {
+                    "description": "email",
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "phone": {
+                    "description": "telephone/text number",
+                    "type": "string",
+                    "maxLength": 32
                 }
-            },
-            "required": [
-                "indoor",
-                "outdoor"
-            ]
+            }
         }
     },
     "required": [
-        "id",
+        "chain",
+        "symbol",
+        "account",
         "name",
-        "age",
-        "hobbies"
+        "logo"
     ],
- "additionalProperties": false
+ "additionalProperties": true
 }
