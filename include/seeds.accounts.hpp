@@ -185,7 +185,9 @@ CONTRACT accounts : public contract {
       void send_add_cbs_org(name user, uint64_t amount);
       void send_bantree(name account);
       void check_is_banned(name account);
-
+      uint64_t number_of_citizens_vouched(name account, uint64_t maxsearch);
+      bool is_citizen(name account);
+      
       DEFINE_USER_TABLE
 
       DEFINE_USER_TABLE_MULTI_INDEX

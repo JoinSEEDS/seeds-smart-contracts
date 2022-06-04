@@ -754,7 +754,7 @@ ACTION onboarding::campinvite(uint64_t campaign_id, name authorizing_account, as
   require_auth(authorizing_account);
 
   check(planted >= citr->planted, "campaign: ``````````the planted amount must be greater or equal than " + citr->planted.to_string());
-  check(quantity.amount > 0, "quantity should me greater than 0");
+  check(quantity.amount >= 0, "quantity should me greater than 0");
 
   _invite(citr->origin_account, citr->owner, quantity, planted, invite_hash, campaign_id);
 }

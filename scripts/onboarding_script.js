@@ -16,6 +16,7 @@ const fs = require('fs')
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
 const { worker } = require('cluster')
 const helper = require('../scripts/helper')
+const { createESRWithActions } = require('./msig')
 
 const { onboarding, token, accounts, organization, harvest, firstuser } = names
 
@@ -605,6 +606,43 @@ program
 
     console.log("accept invite with " + newAccount + " secret: " + result.secret + " pub: " + newPublicKey)
     await accept(newAccount, result.secret, newPublicKey)
+  })
+
+  program
+  .command('onboard_telos <sponsor> <amount>')
+  .description('Onboard existing Telos users')
+  .action(async function (sponsor, amount) {
+      
+    console.log("onboard existing telos user from " + sponsor)
+    
+    // TODO create QR code for invite and transfer
+    // Then we have 1 QR code for creating the secret on chain
+    // And 1 QR code for accepting an existing account
+    let result = await invite(sponsor, amount, true, true)
+        
+    const authPlaceholder = "............1"
+
+    const secret = result.secret
+
+    const res = await createESRWithActions({ 
+      actions: [
+      {
+        "account": "join.seeds",
+        "name": "acceptexist",
+        "authorization": [{
+            "actor": authPlaceholder,
+            "permission": "active"
+          }
+        ],
+        "data": {
+          "account": authPlaceholder,
+          "invite_secret": secret,
+        },
+      }
+    ]})
+    console.log("accept invite ")
+    console.log(JSON.stringify(res, null, 2))
+    
   })
 
   program
