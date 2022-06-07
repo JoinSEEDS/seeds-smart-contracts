@@ -18,18 +18,23 @@ using std::string;
     *
     * The `config` table is a singleton identifying the blockchain and the manager account
     *
-    * The `tokens` table contains one row per submitted token with fields for token identity and for each metadata item.
+    * The `tokens` table contains one row per submitted token with fields for token identity and for json metadata.
     *
     * The `usecases` table contains one row per usecase
     *
     * The `acceptances` table contains one row for each token acceptable for a usecase and is scoped to usecase name.
     *
-    * New tokens are submitted to the master list without a vetting process, but spam is discouraged due to a RAM
-    *  requirement. An acceptance may be performed by the manager account. It is expected that an application
-    *  (associated to a usecase) will only recognize "accepted" token entries.
+    * The `blacklist` table contains symbol codes which are not allowed (unless specifically whitelisted)
     *
-    * This contract does not prohibit submission of duplicate token entries; it is the manager's responsibility not
-    * to accept erroneously or maliciously submitted token metadata.
+    * The `whitelist` table contains chain/token entries which are allowed (despite being duplicates or blacklisted).
+    *
+    * New tokens are submitted to the master list without a vetting process, but spam is discouraged due to a RAM
+    *  requirement. An acceptance may be performed by the manager account or by a curator assigned to a specific
+    *  use case. It is expected that an application (associated to a usecase) will only recognize "accepted" token
+    *  entries.
+    *
+    * This contract does not accept submission of duplicate token entries. It is the manager's/curator's
+    * responsibility not to accept erroneously or maliciously submitted token metadata.
     */
 
 CONTRACT tokensmaster : public contract {
@@ -65,16 +70,20 @@ CONTRACT tokensmaster : public contract {
           * @pre submitter must be a valid account with authorization for the transaction,
           * @pre submitter account must own sufficient RAM to support the transaction,
           * @pre chain must be <= 32 characters,
-          * @pre if config 'verify' flag is true, contract must be a valid account on this chain
-          *       with a token contract matching symbolcode;
+          * @pre if config 'verify' flag is true, and the token is not on the whitelist, a
+          *        check is made that the contract is a valid account on this chain with a
+          *        token contract matching symbolcode;
           *      if flag is false no contract check is made.
           * @pre json must be <= 2048 characters. Note that the contract does not validate the json.
+          * @pre the token must satisfy either
+          *       (a) the token is on the whitelist, or
+          *       (b) its symbol neither (i) is on the blacklist, nor (ii) duplicates an existing entry
       */
       ACTION submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json);
 
       /**
           * The `accepttoken` action executed by the manager or contract account adds or removes a
-          * `usecases` table row indicating that a particular token is accepted for that usecase.
+          * `acceptances` table row indicating that a particular token is accepted for that usecase.
           * A new usecase is created if one does not exist; a usecase is deleted if its last token is removed.
           *
           * @param id - token identifier, from the row id of the tokens table,
@@ -103,6 +112,49 @@ CONTRACT tokensmaster : public contract {
       */
       ACTION deletetoken(uint64_t id, symbol_code symbolcode);
 
+      /**
+          * The `setcurator` action, executed by the manager account or an
+          * existing curator account, sets a new value for the curator account
+          * associated with a specific usecase. (As a special case, this action
+          * will update the manager account name if called with a null usecase.)
+          *
+          * @param usecase - an existing usecase, or null name 
+          * @param curator - the account name 
+          *
+          * @pre usecase must be in the usecases table, or null
+          * @pre curator account must exist on the Telos chain
+      */
+      ACTION setcurator(name usecase, name curator);
+
+      /**
+          * The `updblacklist` (update blacklist) action executed by manager account
+          * (or by contract account prior to initialization with the `init` action)
+          * adds or deletes a symbol from the blacklist table
+          *
+          * @param symbolcode - a symbol code for a token
+          * @param add - if true, add the symbol code to the blacklist
+          *              if false, delete the symbol code from the blacklist
+          *
+          * @pre if `add` is true, symbol code must not be on the blacklist
+          * @pre if `add` is false, symbol code must be on the blacklist
+      */
+      ACTION updblacklist(symbol_code symbolcode, bool add);
+
+      /**
+          * The `updwhitelist` (update whitelist) action executed by manager account
+          * (or by contract account prior to initialization with the `init` action)
+          * adds or deletes a token from the whitelist table
+          *
+          * @param chain - the blockchain name (e.g Telos)
+          * @param token - the token, specified by symbol and contract
+          * @param add - if true, add the token to the whitelist
+          *              if false, delete the token from the whitelist
+          *
+          * @pre if `add` is true, token must not be on the whitelist
+          * @pre if `add` is false, token must be on the whitelist
+      */
+      ACTION updwhitelist(string chain, extended_symbol token, bool add);
+
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
@@ -123,11 +175,12 @@ CONTRACT tokensmaster : public contract {
         string json;
 
         uint64_t primary_key() const { return id; }
+        uint64_t by_sym_code() const { return symbolcode.raw(); }
       };
 
       TABLE usecases { // single table, scoped by contract account name
         name   usecase;
-
+        name   curator;
         uint64_t primary_key() const { return usecase.value; }
 
       };
@@ -136,6 +189,22 @@ CONTRACT tokensmaster : public contract {
         uint64_t   token_id;
  
         uint64_t primary_key() const { return token_id; }
+
+      };
+
+      TABLE blacklist { // single table, scoped by contract account name
+        symbol_code        sym_code;
+
+        uint64_t primary_key() const { return sym_code.raw(); }
+      };
+
+      TABLE whitelist { // single table, scoped by contract account name
+        uint64_t           id;
+        string             chainName;
+        extended_symbol    token;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_sym_code() const { return token.get_symbol().code().raw(); }
 
       };
 
@@ -150,15 +219,24 @@ CONTRACT tokensmaster : public contract {
     typedef eosio::singleton< "config"_n, config > config_table;
     typedef eosio::multi_index< "config"_n, config >  dump_for_config;
 
-    typedef eosio::multi_index<"tokens"_n, token_table > token_tables;
+    typedef eosio::multi_index<"tokens"_n, token_table, indexed_by
+               < "symcode"_n,
+                 const_mem_fun<token_table, uint64_t, &token_table::by_sym_code >
+               >  > token_tables;
     
     typedef eosio::multi_index<"usecases"_n, usecases> usecase_table;
 
     typedef eosio::multi_index<"acceptances"_n, acceptances> acceptance_table;
 
+    typedef eosio::multi_index< "blacklist"_n, blacklist > black_table;
+
+    typedef eosio::multi_index< "whitelist"_n, whitelist, indexed_by
+               < "symcode"_n,
+                 const_mem_fun<whitelist, uint64_t, &whitelist::by_sym_code >
+               > >  white_table;
+
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
 };
 
-EOSIO_DISPATCH(tokensmaster, (reset)(init)(submittoken)(accepttoken)(deletetoken));
 
