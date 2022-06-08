@@ -739,36 +739,34 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-
     auto bitr = balances.find(user.value);
+    uint64_t min_tx = config_get("cit.tx"_n);
+    uint64_t min_rep_score = config_get("cit.rep.sc"_n);
+    uint64_t min_account_age = config_get("cit.age"_n);
+    uint64_t _rep_score = rep_score(user);
+    uint64_t total_transactions = num_transactions(user, min_tx);
 
+    // Minimum planted
     uint64_t min_planted = config_get("cit.plant"_n);
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
 
+    // Citizenship ceremony
     uint64_t citizens_vouched = number_of_citizens_vouched(user, 50);
     uint64_t citizens_ceremony_number = 3;
+    check(citizens_vouched >= citizens_ceremony_number, "user did not complete citizenship ceremony");
 
-    if (citizens_vouched >= citizens_ceremony_number) {
-      return true;
-    }
-
-    uint64_t min_tx = config_get("cit.tx"_n);
-    uint64_t min_invited = config_get("cit.referred"_n);
-    uint64_t min_residents_invited = config_get("cit.ref.res"_n);
-    uint64_t min_rep_score = config_get("cit.rep.sc"_n);
-    uint64_t min_account_age = config_get("cit.age"_n);
-
-    uint64_t invited_users_number = countrefs(user, min_residents_invited);
-    uint64_t _rep_score = rep_score(user);
-
-    uint64_t total_transactions = num_transactions(user, min_tx);
-
+    // Check resident status
     check(uitr->status == resident, "user is not a resident");
+
+    // Check number of transactions
     check(total_transactions >= min_tx, "user has less than required transactions number has: "+
       std::to_string(total_transactions) + " needed: "+
       std::to_string(min_tx));
-    check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
+
+    // Check rep score
     check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
+    
+    // Check account age
     check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;
