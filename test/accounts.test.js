@@ -331,8 +331,8 @@ describe('General accounts', async assert => {
     })
   }
 
-  await checkEscrow("referred became resident", 0, firstuser, "refrwd1.ind")
-  await checkEscrow("referred became citizen", 1, firstuser, "refrwd2.ind")
+  //await checkEscrow("referred became resident", 0, firstuser, "refrwd1.ind")
+  //await checkEscrow("referred became citizen", 1, firstuser, "refrwd2.ind")
 
   assert({
     given: 'changed reputation',
@@ -651,6 +651,9 @@ describe('Ambassador and Org rewards', async assert => {
 
   const checkBalances = async (beneficiary, text, ambassadorSettingName, orgSettingName) => {
 
+    console.log("seeds rewards are disabled on chain")
+    return
+
     const ambassadorReward = await setting_in_seeds(ambassadorSettingName)
     const orgReward = await setting_in_seeds(orgSettingName)
 
@@ -750,6 +753,9 @@ describe('Proportional rewards', async assert => {
   await accept(invited, secret, activePublicKey, contracts)
 
   const checkBalances = async (text, amount) => {
+
+    console.log("seeds rewards are disabled on contract")
+    return
 
     const escrows = await getTableRows({
       code: escrow,
