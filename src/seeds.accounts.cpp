@@ -133,7 +133,15 @@ void accounts::_vouch(name sponsor, name account) {
     if (sponsor_status == resident) vouch_points = resident_basepoints;
     if (sponsor_status == citizen) vouch_points = citizen_basepoints;
 
-    vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
+    vouch_points *= utils::get_rep_multiplier(sponsor);
+
+    // TODO decide if citizenship vouching implies that 3 citizens vouching can lift a user > 50
+    // For now, this creates complications. 
+    // if (sponsor_status == citizen) {
+    //   uint64_t min_rep_score = config_get("res.rep.pt"_n);
+    //   uint64_t min_citizen_vouch_points = ceil(min_rep_score / 3.0);
+    //   vouch_points = std::max(vouch_points, min_citizen_vouch_points);
+    // }
 
     if (vouch_points > 0) {
       vouches.emplace(_self, [&](auto& item) {
@@ -741,7 +749,7 @@ bool accounts::check_can_make_citizen(name user) {
     check(uitr != users.end(), "no user");
     auto bitr = balances.find(user.value);
     uint64_t min_tx = config_get("cit.tx"_n);
-    uint64_t min_rep_score = config_get("cit.rep.sc"_n);
+    //uint64_t min_rep_score = config_get("cit.rep.sc"_n);
     uint64_t min_account_age = config_get("cit.age"_n);
     uint64_t _rep_score = rep_score(user);
     uint64_t total_transactions = num_transactions(user, min_tx);
@@ -764,7 +772,10 @@ bool accounts::check_can_make_citizen(name user) {
       std::to_string(min_tx));
 
     // Check rep score
-    check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
+    // Removed: Rep score depends on everyone else's scores, interferes with cit ceremony
+    // We make sure user has > 50 rep points, other than that, it doesn't matter.
+    // Resident check already checks for this. 
+    // check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
     
     // Check account age
     check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
