@@ -158,6 +158,7 @@ CONTRACT tokensmaster : public contract {
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
+      string json_schema();
 
       TABLE config { // single table, singleton, scoped by contract account name
         string             chain;
@@ -216,6 +217,10 @@ CONTRACT tokensmaster : public contract {
          uint64_t primary_key()const { return supply.symbol.code().raw(); }
       };
 
+      TABLE schema { // single table, singleton, scoped by contract account name
+        string             schema;
+      } schema_row;
+
     typedef eosio::singleton< "config"_n, config > config_table;
     typedef eosio::multi_index< "config"_n, config >  dump_for_config;
 
@@ -236,6 +241,9 @@ CONTRACT tokensmaster : public contract {
                > >  white_table;
 
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+
+    typedef eosio::singleton< "schema"_n, schema > schema_table;
+    typedef eosio::multi_index< "schema"_n, schema >  dump_for_schema;
 
 };
 
