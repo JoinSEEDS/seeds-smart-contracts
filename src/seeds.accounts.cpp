@@ -135,14 +135,6 @@ void accounts::_vouch(name sponsor, name account) {
 
     vouch_points *= utils::get_rep_multiplier(sponsor);
 
-    // TODO decide if citizenship vouching implies that 3 citizens vouching can lift a user > 50
-    // For now, this creates complications. 
-    // if (sponsor_status == citizen) {
-    //   uint64_t min_rep_score = config_get("res.rep.pt"_n);
-    //   uint64_t min_citizen_vouch_points = ceil(min_rep_score / 3.0);
-    //   vouch_points = std::max(vouch_points, min_citizen_vouch_points);
-    // }
-
     if (vouch_points > 0) {
       vouches.emplace(_self, [&](auto& item) {
         item.id = vouches.available_primary_key();
