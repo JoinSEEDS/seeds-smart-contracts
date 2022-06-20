@@ -369,30 +369,12 @@ void accounts::refreward(name account, name new_status) {
       auto min_org = config_get(min_org_reward_param);
       auto dec_org = config_get(dec_org_reward_param);
 
-      auto org_seeds_reward = calc_decaying_rewards(num_users, min_org, max_org, dec_org);
-      asset org_quantity(org_seeds_reward, seeds_symbol);
-
-      // send reward to org
-      send_reward(referrer, org_quantity);
-
       name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
       name min_amb_reward_param = is_citizen ? min_ambassador_seeds_reward_citizen : min_ambassador_seeds_reward_resident;
       name dec_amb_reward_param = is_citizen ? dec_ambassador_seeds_reward_citizen : dec_ambassador_seeds_reward_resident;
       auto max_amb = config_get(amb_reward_param);
       auto min_amb = config_get(min_amb_reward_param);
       auto dec_amb = config_get(dec_amb_reward_param);
-
-      auto amb_seeds_reward = calc_decaying_rewards(num_users, min_amb, max_amb, dec_amb);
-      asset amb_quantity(amb_seeds_reward, seeds_symbol);
-
-      // send reward to ambassador if we have one
-      name org_owner = find_referrer(referrer);
-      if (org_owner != not_found) {
-        name ambassador = find_referrer(org_owner);
-        if (ambassador != not_found) {
-          send_reward(ambassador, amb_quantity);
-        }
-      }
     } 
     else 
     {
@@ -414,7 +396,6 @@ void accounts::refreward(name account, name new_status) {
 
       send_addrep(referrer, rep_points);
 
-      send_reward(referrer, quantity);
     }
 
     add_cbs(referrer, community_building_points); 
@@ -584,21 +565,6 @@ void accounts::update(name user, name type, string nickname, string image, strin
     });
 }
 
-void accounts::send_reward(name beneficiary, asset quantity)
-{
-  // Check balance - if the balance runs out, the rewards run out too.
-  token_accts accts(contracts::token, bankaccts::referrals.value);
-  const auto& acc = accts.get(symbol("SEEDS", 4).code().raw());
-  auto rem_balance = acc.balance;
-  if (quantity > rem_balance) {
-    // Should not fail in case not enough balance
-    // check(false, ("DEBUG: not enough balance on "+bankaccts::referrals.to_string()+" = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
-    return;
-  }
-
-  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
-}
-
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
 {
 
@@ -621,15 +587,6 @@ void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, str
                                  current_time_point().time_since_epoch()), // long time from now
                       memo))
       .send();
-}
-
-void accounts::testreward() {
-  require_auth(get_self());
-
-  asset quantity(1, seeds_symbol);
-
-  send_reward("accts.seeds"_n, quantity);
-
 }
 
 void accounts::canresident(name user) {

@@ -96,7 +96,6 @@ CONTRACT accounts : public contract {
       ACTION testsetrep(name user, uint64_t amount);
       ACTION testsetrs(name user, uint64_t amount);
       ACTION testsetcbs(name user, uint64_t amount);
-      ACTION testreward();
 
       ACTION testmvouch(name sponsor, name account, uint64_t reps);
 
@@ -155,7 +154,6 @@ CONTRACT accounts : public contract {
       void rewards(name account, name new_status);
       void vouchreward(name account, name new_status);
       void refreward(name account, name new_status);
-      void send_reward(name beneficiary, asset quantity);
       void updatestatus(name account, name status);
       void _vouch(name sponsor, name account);
       void history_add_resident(name account);
@@ -428,7 +426,7 @@ CONTRACT accounts : public contract {
 
 EOSIO_DISPATCH(accounts, (reset)(adduser)(canresident)(makeresident)(cancitizen)(makecitizen)(update)(addref)(invitevouch)(addrep)(changesize)
 (subrep)(testsetrep)(testsetrs)(testcitizen)(testresident)(testvisitor)(testremove)(testsetcbs)
-(testreward)(requestvouch)(vouch)(pnishvouched)
+(requestvouch)(vouch)(pnishvouched)
 (rankreps)(rankorgreps)(rankrep)(rankcbss)(rankorgcbss)(rankcbs)
 (flag)(removeflag)(punish)(pnshvouchers)(evaldemote)(bantree)(delegateflag)(undlgateflag)(mimicflag)
 (refinfo)(unban)
