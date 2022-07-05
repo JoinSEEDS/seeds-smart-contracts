@@ -155,10 +155,19 @@ CONTRACT tokensmaster : public contract {
       */
       ACTION updwhitelist(string chain, extended_symbol token, bool add);
 
+      /**
+          * The `setschema` action executed by manager account (or by contract
+          * account prior to initialization with the `init` action) replaces
+          * the existing schema (if any) with a new one.
+          *
+          * @param schema - the JSON schema defining valid metadata
+      */
+      ACTION setschema(const string& schema);
+
 
   private:
       const uint16_t MAXJSONLENGTH = 2048;
-      string json_schema();
+      const string json_schema();
 
       TABLE config { // single table, singleton, scoped by contract account name
         string             chain;
