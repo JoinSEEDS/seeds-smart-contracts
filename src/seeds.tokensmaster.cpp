@@ -271,21 +271,30 @@ const string tokensmaster::json_schema() {
         "logo": {
             "description": "url pointing to lo-res logo image",
             "type": "string",
-            "format": "uri",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
         "logo_lg": {
             "description": "url pointing to hi-res logo image",
             "type": "string",
-            "format": "uri",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
         "bg_image": {
             "description": "url pointing to card background image",
             "type": "string",
-            "format": "uri",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
