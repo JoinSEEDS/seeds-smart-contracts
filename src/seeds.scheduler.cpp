@@ -128,6 +128,7 @@ void scheduler::reset_aux(bool destructive) {
         name("org.appuses"),
         name("org.rankapps"),
 
+        name("hstry.ptrxs")
         name("onbrd.clean"),
         name("hstry.ptrxs"),
 
@@ -170,6 +171,7 @@ void scheduler::reset_aux(bool destructive) {
         name("calcmappuses"),
         name("rankappuses"),
 
+        name("cleanptrxs")
         name("chkcleanup"),
         name("cleanptrxs"),
 
@@ -212,6 +214,7 @@ void scheduler::reset_aux(bool destructive) {
         contracts::organization,
         contracts::organization,
 
+        contracts::history
         contracts::onboarding,
         contracts::history,
 
@@ -254,6 +257,7 @@ void scheduler::reset_aux(bool destructive) {
         utils::seconds_per_day,
         utils::seconds_per_day,
 
+        utils::seconds_per_day
         utils::seconds_per_day,
         utils::seconds_per_day,
 
