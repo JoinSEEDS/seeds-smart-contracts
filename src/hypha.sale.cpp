@@ -227,7 +227,7 @@ void sale::onhusd(name from, name to, asset quantity, string memo) {
 void sale::on_husd(name from, name to, asset quantity, string memo) {
     uint64_t usd_amount = quantity.amount * 100;
 
-    check(false, "HUSD sale disabled");
+    // check(false, "HUSD sale disabled");
 
     check(quantity.symbol == husd_symbol, "wrong symbol");
 
