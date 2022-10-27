@@ -41,7 +41,10 @@ describe('Sale', async assert => {
 
   console.log(`add user`)
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
-  
+
+  console.log(`set limit`)
+  await contracts.sale.setflag("whtlst.limit",  100000 * 100, { authorization: `${sale}@active` })
+
   console.log(`initrounds`)
 
   await contracts.sale.initrounds( (100) * 100, "2.00 USD", "1.00 USD", 10, { authorization: `${sale}@active` })
@@ -434,3 +437,96 @@ describe('Token Sale Price', async assert => {
 //   console.log("b4: "+ balanceBefore)
 //   console.log("after: "+ balanceAfter)
 // })
+
+describe.only('whitelist and limits', async assert => {
+
+  const contracts = await initContracts({ accounts, sale })
+  console.log(`reset exchange`)
+  
+  await contracts.sale.reset({ authorization: `${sale}@active` })  
+
+  console.log(`reset accounts`)
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log(`add user`)
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  console.log(`update daily limits`)
+  await contracts.sale.initrounds( (100) * 100, "1.00 USD", "0.00 USD", 1, { authorization: `${sale}@active` })
+
+  console.log(`test limit`)
+
+  await contracts.sale.setflag("whtlst.limit",  1 * 100, { authorization: `${sale}@active` })
+
+    const balanceBefore = await getBalanceFloat(firstuser)
+
+  let canBuyBelowLimit = false;
+  await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000001", parseInt(1 * 10000), { authorization: `${sale}@active` })
+  canBuyBelowLimit = true;
+
+  let canBuyAboveLimit = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000002", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    canBuyAboveLimit = true;
+  } catch (err) {
+    console.log("expected error, over limit")
+    console.log(err)
+  }
+
+  console.log("whitelist first user")
+  await contracts.sale.addwhitelist(firstuser, { authorization: `${sale}@active` })
+
+  let whiteListBuy = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000003", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    whiteListBuy = true;
+  } catch (err) {
+    console.log("expected error, over limit")
+    console.log(err)
+  }
+
+  console.log("remove whitelist for first user")
+  await contracts.sale.remwhitelist(firstuser, { authorization: `${sale}@active` })
+
+  let noWhiteListBuy = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000004", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    noWhiteListBuy = true;
+  } catch (err) {
+    console.log("expected error, off whitelist")
+    console.log(err)
+  }
+
+  const balanceAfter = await getBalanceFloat(firstuser)
+
+  console.log("before: "+balanceBefore)
+  console.log("after: "+balanceAfter)
+  console.log("delta: "+(balanceAfter - balanceBefore))
+
+  assert({
+    given: 'under limit',
+    should: 'able to buy',
+    actual: canBuyBelowLimit,
+    expected: true
+  })
+
+  assert({
+    given: 'over limit',
+    should: 'unable to buy',
+    actual: canBuyAboveLimit,
+    expected: false
+  })
+  assert({
+    given: 'on whitelist',
+    should: 'can buy',
+    actual: whiteListBuy,
+    expected: true
+  })
+  assert({
+    given: 'off whitelist',
+    should: 'cant buy over limit',
+    actual: noWhiteListBuy,
+    expected: false
+  })
+
+
+})
