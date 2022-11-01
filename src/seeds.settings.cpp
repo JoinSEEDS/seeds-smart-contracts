@@ -67,8 +67,11 @@ void settings::reset() {
   confwithdesc(name("txlimit.min"), 7, "Minimum number of transactions per user", high_impact);
 
   confwithdesc(name("htry.trx.max"), 2, "Maximum number of transactions to take into account for transaction score between to users per day", high_impact);
-  confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum number of seeds to take into account as qualifying volume", high_impact);
+  confwithdesc(name("qev.trx.cap"), uint64_t(1777) * uint64_t(10000), "Maximum qualifying volume", high_impact);
 
+  // QEV calculation
+  conffloatdsc(name("eco.cmp.per"), 3.0, "Economic comparison period in moon cycles - compare economy to [N] moon cycles ago", high_impact);
+  
   conffloatdsc(name("infation.per"), 0.0, "Economic inflation per period. Example 0.01 = 1%", high_impact);
 
   // Harvest distribution
@@ -83,32 +86,43 @@ void settings::reset() {
   // organizations 
   // =====================================
 
-  confwithdesc(name("orgminplnt.5"), 2000 * 10000, "Minimum planted Seeds to become a Thrivable organization (in Seeds)", medium_impact);
-  confwithdesc(name("orgminplnt.4"), 1000 * 10000, "Minimum planted Seeds to become a Regenerative organization (in Seeds)", medium_impact);
-  confwithdesc(name("orgminplnt.3"), 800 * 10000, "Minimum planted Seeds to become a Sustainable organization (in Seeds)", medium_impact);
-  confwithdesc(name("orgminplnt.2"), 400 * 10000, "Minimum planted Seeds to become a Reputable organization (in Seeds)", medium_impact);
-  confwithdesc(name("orgminplnt.1"), 200 * 10000, "Minimum planted Seeds to create a Regular organization (in Seeds)", medium_impact);
+  confwithdesc(name("org.minplant"), 200 * 10000, "Minimum amount to create an organization (in Seeds)", high_impact);
+  confwithdesc(name("orgratecap"), 10000, "Org rate cap - rate cap beyond which the rating no longer affects the score", high_impact);
   
-  confwithdesc(name("orgminrank.5"), 90, "Minimum reputation score to become a Thrivable organization", medium_impact);
-  confwithdesc(name("orgminrank.4"), 75, "Minimum reputation score to become a Regenerative organization", medium_impact);
-  confwithdesc(name("orgminrank.3"), 50, "Minimum reputation score to become a Sustainable organization", medium_impact);
-  confwithdesc(name("orgminrank.2"), 20, "Minimum reputation score to become a Reputable organization", medium_impact);
+  confwithdesc(name("org.rated.2"), 50, "Reputable organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.3"), 100, "Sustainable organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.4"), 200, "Regenerative organization minimum number of rating points required.", low_impact);
+  confwithdesc(name("org.rated.5"), 1000, "Thrivable organization minimum number of rating points required.", low_impact);
 
-  // user rating threshold when an org can become a (reputable/sustainable/regenerative/thrivable) org
-  confwithdesc(name("org.rated.5"), 1000, "Thrivable organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.4"), 200, "Regenerative organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.3"), 100, "Sustainable organization rating threshold", low_impact);
-  confwithdesc(name("org.rated.2"), 50, "Reputable organization rating threshold", low_impact);
+  confwithdesc(name("orgminplnt.1"), 200 * 10000, "Minimum amount planted to become a Status 1 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.2"), 400 * 10000, "Minimum amount planted to become a Status 2 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.3"), 800 * 10000, "Minimum amount planted to become a Status 3 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.4"), 1000 * 10000, "Minimum amount planted to become a Status 4 Organization (in Seeds)", medium_impact);
+  confwithdesc(name("orgminplnt.5"), 2000 * 10000, "Minimum amount planted to become a Status 5 Organization (in Seeds)", medium_impact);
+  
+  confwithdesc(name("orgminrank.2"), 20, "Minimum reputation score an organization must have to become a Status 2 Organization", medium_impact);
+  confwithdesc(name("orgminrank.3"), 50, "Minimum reputation score an organization must have to become a Status 3 Organization", medium_impact);
+  confwithdesc(name("orgminrank.4"), 75, "Minimum reputation score an organization must have to become a Status 4 Organization", medium_impact);
+  confwithdesc(name("orgminrank.5"), 90, "Minimum reputation score an organization must have to become a Status 5 Organization", medium_impact);
 
-  confwithdesc(name("org.visref.5"), 100, "Minimum of visitors invited to become a Thrivable organization", medium_impact);
-  confwithdesc(name("org.visref.4"), 50, "Minimum of visitors invited to become a Regenerative organization", medium_impact);
-  confwithdesc(name("org.visref.3"), 10, "Minimum of visitors invited to become a Sustainable organization", medium_impact);
-  confwithdesc(name("org.visref.2"), 1, "Minimum of visitors invited to become a Reputable organization", medium_impact);
+  // TODO: NOT USED
+  confwithdesc(name("dau.cyc"), 3, "Only use that occurs in the preceding [N] lunar cycles are counted.", high_impact); 
+  // TODO: NOT USED
+  confwithdesc(name("dau.res.pt"), 2, "Base Points an Organisation Receives when a Resident uses their App/Dapp in a given 24/hr period.", high_impact);
+  // TODO: NOT USED
+  confwithdesc(name("dau.cit.pt"), 4, "Base Points an Organisation Receives when a Citizen uses their App/Dapp in a given 24/hr period.", high_impact);
+  // TODO: NOT USED
+  confwithdesc(name("dau.thresh"), 333, "Only applications that would receive at least [N] Use Points within a given 24/hr period qualify for earning those points.", high_impact);
 
-  confwithdesc(name("org.resref.5"), 50, "Minimum of residents invited to become a Thrivable organization", medium_impact);
-  confwithdesc(name("org.resref.4"), 25, "Minimum of residents invited to become a Regenerative organization", medium_impact);
-  confwithdesc(name("org.resref.3"), 5, "Minimum of residents invited to become a Sustainable organization", medium_impact);
+  confwithdesc(name("org.visref.2"), 1, "Minimum number of referrals to become a Status 2 organization", medium_impact);
+  confwithdesc(name("org.visref.3"), 10, "Minimum number of referrals to become a Status 3 organization", medium_impact);
+  confwithdesc(name("org.visref.4"), 50, "Minimum number of referrals to become a Status 4 organization", medium_impact);
+  confwithdesc(name("org.visref.5"), 100, "Minimum number of referrals to become a Status 5 organization", medium_impact);
+
   confwithdesc(name("org.resref.2"), 0, "Minimum of residents invited to become a Reputable organization", medium_impact);
+  confwithdesc(name("org.resref.3"), 5, "Minimum of residents invited to become a Sustainable organization", medium_impact);
+  confwithdesc(name("org.resref.4"), 25, "Minimum of residents invited to become a Regenerative organization", medium_impact);
+  confwithdesc(name("org.resref.5"), 50, "Minimum of residents invited to become a Thrivable organization", medium_impact);
 
   conffloatdsc(name("org5trx.mul"), 2.0, "Multiplier received when exchanging with a Thrivable organization", medium_impact);
   conffloatdsc(name("org4trx.mul"), 1.7, "Multiplier received when exchanging with a Regeneraitve organization", medium_impact);
