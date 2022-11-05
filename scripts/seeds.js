@@ -164,7 +164,6 @@ const updateSettingsAction = async () => {
 
 const updateSchedulerAction = async () => {
   console.log(`UPDATE Scheduler on ${scheduler}`)
-  const name = "scheduler"
 
   const contract = await eos.contract(scheduler)
 
