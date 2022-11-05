@@ -31,6 +31,11 @@ const getContractLocation = (contract) => {
         include: "",
         contractSourceName: "startoken"
       }  
+    } else if (contract == 'joinhypha') {
+      return {
+        source: `./src/hypha.accountcreator.cpp`,
+        include: "",
+      }  
     }
     return {
       source: `./src/seeds.${contract}.cpp`,

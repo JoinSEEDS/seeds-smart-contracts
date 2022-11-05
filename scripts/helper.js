@@ -10,25 +10,29 @@ const eosioLocalChainID = '8a34ec7df1b8cd06ff4a8abbaa7cc50300823350cadc59ab296cb
 const networks = {
   local:  eosioLocalChainID,
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
-  telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
+  telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11',
+  eosMainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
 }
 
 const networkDisplayName = {
   local: 'Local',
   telosTestnet: 'Telos Testnet',
-  telosMainnet: 'Telos Mainnet'
+  telosMainnet: 'Telos Mainnet',
+  eosMainnet: 'EOS Mainnet',
 }
 
 const endpoints = {
   local: 'http://127.0.0.1:8888',
   telosTestnet: 'https://api-test.telosfoundation.io',
-  telosMainnet: 'https://api.telosfoundation.io'
+  telosMainnet: 'https://api.telosfoundation.io',
+  eosMainnet: 'http://eos.greymass.com',
 }
 
 const ownerAccounts = {
   local: 'owner',
   telosTestnet: 'seeds',
-  telosMainnet: 'seed.seeds'
+  telosMainnet: 'seed.seeds',
+  eosMainnet: 'hypha',
 }
 
 const {
@@ -47,22 +51,24 @@ console.log(""+netName)
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR', 'EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR'],
-  [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
-  // NOTE: Testnet seems to use EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm for onwer and active - verify
+  [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm'],
+  [networks.eosMainnet]: []
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
 
 const apiKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9',
-  [networks.telosTestnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9'
+  [networks.telosTestnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9',
+  [networks.eosMainnet]: []
 }
 const apiPublicKey = apiKeys[chainId]
 
 const inviteApiKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS87Wy26MWLJgQYPCzb8aRe9ezjXRDrigkKZMvhHJy27td5F7nZ5',
-  [networks.telosTestnet]: 'EOS8PC16tnMUkUxeuQHWmEWkAtoz6GvvHVWnehk1HPQSYBV4ujT6v'
+  [networks.telosTestnet]: 'EOS8PC16tnMUkUxeuQHWmEWkAtoz6GvvHVWnehk1HPQSYBV4ujT6v',
+  [networks.eosMainnet]: []
 }
 const inviteApiKey = inviteApiKeys[chainId]
 
@@ -70,7 +76,8 @@ const inviteApiKey = inviteApiKeys[chainId]
 const payForCPUKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS8gu3qzDsieAC7ni7o9vdKKnUjQXMEXN1NQNjFFs6M2u2kEyTvz',
-  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE'
+  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE',
+  [networks.eosMainnet]: []
 }
 
 const payForCPUPublicKey = payForCPUKeys[chainId]
@@ -78,14 +85,16 @@ const payForCPUPublicKey = payForCPUKeys[chainId]
 const applicationKeys = {
   [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
-  [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
+  [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.eosMainnet]: []
 }
 const applicationPublicKey = applicationKeys[chainId]
 
 const exchangeKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
   [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo', 
-  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' 
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm',
+  [networks.eosMainnet]: []
 }
 
 const exchangePublicKey = exchangeKeys[chainId]
@@ -94,6 +103,7 @@ const saleKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
   [networks.telosTestnet]: 'EOS7yHExhTMu1m23vAXHzMSBG632ry7yeas73TwBvFf13bEZCXfPP',
   [networks.telosMainnet]: 'EOS6qQjjYCoTmFha6rUk9ciE9NLTK1pvM7YgG6rnX2BLcRYzb9FWg', 
+  [networks.eosMainnet]: []
 }
 
 const salePublicKey = saleKeys[chainId]
@@ -190,6 +200,7 @@ const accountsMetadata = (network) => {
       tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
+      joinhypha: contract('joinhypha111', 'joinhypha'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -286,6 +297,12 @@ const accountsMetadata = (network) => {
       tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
+      joinhypha: contract('joinhypha111', 'joinhypha'),
+    }
+  } else if (network == networks.eosMainnet) {
+    return {
+      // EOS mainnet doesn't have most of the accounts
+      joinhypha: contract('joinhypha111', 'joinhypha'),
     }
   } else {
     throw new Error(`${network} deployment not supported`)
@@ -315,511 +332,514 @@ allAccounts.sort()
 allBankAccountNames.sort()
 
 var permissions = [{
-  target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.milestonebank.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.alliancesbank.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.ambassadorsandreferralsbank.account}@active`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.globaldho.account}@active`,
-  actor: `${accounts.harvest.account}@eosio.code`
-}, {
-  target: `${accounts.exchange.account}@active`,
-  actor: `${accounts.exchange.account}@eosio.code`
-}, {
-  target: `${accounts.sale.account}@active`,
-  actor: `${accounts.sale.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@owner`, // probably don't need this
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.accounts.account}@eosio.code`
-}, {
-  target: `${accounts.harvest.account}@active`,
-  actor: `${accounts.harvest.account}@eosio.code`
-}, {
-  target: `${accounts.proposals.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.bank.account}@active`,
-  actor: `${accounts.harvest.account}@eosio.code`
-}, {
-  target: `${accounts.proposals.account}@active`,
-  actor: `${accounts.accounts.account}@active`
-}, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.bank.account}@active`,
-  actor: `${accounts.proposals.account}@eosio.code`
-}, {
-  target: `${accounts.referendums.account}@active`,
-  actor: `${accounts.referendums.account}@eosio.code`
-}, {
-  target: `${accounts.settings.account}@active`,
-  actor: `${accounts.referendums.account}@eosio.code`
-}, {
-  target: `${accounts.history.account}@active`,
-  actor: `${accounts.harvest.account}@active`
-}, {
-  target: `${accounts.harvest.account}@active`,
-  actor: `${accounts.history.account}@eosio.code`
-}, {
-  target: `${accounts.token.account}@active`,
-  actor: `${accounts.token.account}@eosio.code`
-}, {
-  target: `${accounts.history.account}@active`,
-  actor: `${accounts.accounts.account}@active`
-}, {
-  target: `${accounts.accounts.account}@api`,
-  key: apiPublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.exchange.account}@purchase`,
-  key: exchangePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.exchange.account}@update`,
-  key: exchangePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.sale.account}@newpayment`,
-  key: salePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.accounts.account}@api`,
-  action: 'subrep'
-}, {
-  target: `${accounts.harvest.account}@setorgtxpt`,
-  actor: `${accounts.history.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.harvest.account}@setorgtxpt`,
-  action: 'setorgtxpt'
-}, {
-  target: `${accounts.gratitude.account}@execute`,
-  actor: `${accounts.scheduler.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.gratitude.account}@execute`,
-  action: 'newround'
-}, {
-  target: `${accounts.accounts.account}@api`,
-  action: 'addref'
-}, {
-  target: `${accounts.exchange.account}@purchase`,
-  action: 'newpayment'
-}, {
-  target: `${accounts.exchange.account}@update`,
-  action: 'updatetlos'
-}, {
-  target: `${accounts.sale.account}@newpayment`,
-  action: 'newpayment'
-}, {
-  target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.onboarding.account}@eosio.code`
-}, {
-  target: `${accounts.onboarding.account}@owner`, // should be active
-  actor: `${accounts.onboarding.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.onboarding.account}@active`,
-}, {
-  target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.organization.account}@active`,
-}, {
-  target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.region.account}@active`,
-}, {
-  target: `${accounts.onboarding.account}@application`,
-  key: applicationPublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.onboarding.account}@application`,
-  action: 'numtrx'
-}, {
-  target: `${accounts.onboarding.account}@application`,
-  action: 'accept'
-}, {
-  target: `${accounts.guardians.account}@application`,
-  key: applicationPublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.guardians.account}@application`,
-  action: 'claim'
-}, {
-  target: `${accounts.history.account}@active`,
-  actor: `${accounts.token.account}@active`
-}, {
-  target: `${accounts.acctcreator.account}@active`,
-  actor: `${accounts.acctcreator.account}@eosio.code`
-}, {
-  target: `${accounts.acctcreator.account}@free`,
-  key: freePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.acctcreator.account}@free`,
-  action: 'create'
-}, {
-  target: `${accounts.scheduler.account}@active`,
-  actor: `${accounts.scheduler.account}@eosio.code`
-}, {
-  target: `${accounts.organization.account}@active`,
-  actor: `${accounts.organization.account}@eosio.code`
-}, {
-  target: `${accounts.forum.account}@active`,
-  actor: `${accounts.forum.account}@eosio.code`
-}, {
-  target: `${accounts.forum.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.scheduler.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.forum.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.forum.account}@execute`,
-  action: 'onperiod'
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  action: 'onperiod'
-}, {
-  target: `${accounts.accounts.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.accounts.account}@execute`,
-  action: 'rankreps'
-}, {
-  target: `${accounts.accounts.account}@execute`,
-  action: 'rankcbss'
-}, {
-  target: `${accounts.forum.account}@execute`,
-  action: 'newday'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.exchange.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.accounts.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.rgn.account}@owner`,
-  actor: `${accounts.onboarding.account}@eosio.code`
-}, {
-  target: `${accounts.region.account}@active`,
-  actor: `${accounts.region.account}@eosio.code`
-}, {
-  target: `${accounts.exchange.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.scheduler.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.harvest.account}@execute`, 
-  action: 'ranktxs'
-}, {
-  target: `${accounts.harvest.account}@execute`, 
-  action: 'rankplanteds'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calccss'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'rankcss'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calctrxpts'
-}, {
-  target: `${accounts.exchange.account}@execute`,
-  action: 'onperiod'
-}, {
-  target: `${accounts.scheduler.account}@execute`,
-  action: 'test1'
-}, {
-  target: `${accounts.scheduler.account}@execute`,
-  action: 'test2'
-}, {
-  target: `${accounts.referendums.account}@execute`, // TODO these active keys are not needed?!
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.referendums.account}@execute`,
-  action: 'onperiod'
-}, {
-  target: `${accounts.referendums.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.token.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.token.account}@execute`,
-  action: 'resetweekly',
-}, {
-  target: `${accounts.onboarding.account}@application`,
-  action: 'acceptnew'
-}, {
-  target: `${accounts.onboarding.account}@application`,
-  action: 'acceptexist'
-}, {
-  target: `${accounts.harvest.account}@payforcpu`,
-  key: payForCPUPublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.harvest.account}@payforcpu`,
-  action: 'payforcpu'
-}, {
-  target: `${accounts.escrow.account}@active`,
-  actor: `${accounts.escrow.account}@eosio.code`
-}, {
-  target: `${accounts.organization.account}@execute`,
-  key: activePublicKey,
-  parent: 'active'
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'cleandaus'
-}, { 
-  target: `${accounts.organization.account}@execute`,
-  actor: `${accounts.scheduler.account}@active`
-}, {
-  target: `${accounts.organization.account}@active`,
-  actor: `${accounts.accounts.account}@active`
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'scoretrxs'
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'rankregens'
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'rankcbsorgs'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'rankorgtxs'
-}, {
-  target: `${accounts.proposals.account}@execute`,
-  action: 'decayvoices'
-}, {
-  target: `${accounts.accounts.account}@active`,
-  actor: `${accounts.forum.account}@active`
-}, {
-  target: `${accounts.forum.account}@execute`,
-  action: 'rankforums'
-}, {
-  target: `${accounts.forum.account}@execute`,
-  action: 'givereps'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calcmqevs'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'calcmintrate'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'runharvest'
-}, {
-  target: `${accounts.token.account}@minthrvst`,
-  actor: `${accounts.harvest.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.token.account}@minthrvst`,
-  action: 'minthrvst'
-}, { 
-  target: `${accounts.harvest.account}@active`,
-  actor: `${accounts.organization.account}@active`
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'rankrgncss'
-}, {
-  target: `${accounts.gratitude.account}@active`,
-  actor: `${accounts.gratitude.account}@eosio.code`
-},{
-  target: `${accounts.pouch.account}@active`,
-  actor: `${accounts.pouch.account}@eosio.code`
-}, {
-  target: `${accounts.service.account}@active`,
-  actor: `${accounts.service.account}@eosio.code`
-}, {
-  target: `${accounts.service.account}@invite`,
-  key: inviteApiKey,
-  parent: 'active'
-}, {
-  target: `${accounts.service.account}@invite`,
-  action: 'createinvite'
-},{
-  target: `${accounts.quests.account}@active`,
-  actor: `${accounts.quests.account}@eosio.code`
-}, {
-  target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.quests.account}@active`
-}, {
-  target: `${accounts.proposals.account}@questvote`,
-  actor: `${accounts.quests.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.proposals.account}@questvote`,
-  action: 'questvote'
-}, { 
-  target: `${accounts.accounts.account}@addrep`,
-  actor: `${accounts.quests.account}@eosio.code`,
-  parent: 'api',
-  type: 'createActorPermission'
-}, { 
-  target: `${accounts.accounts.account}@execute`,
-  action: 'rankorgreps'
-}, {
-  target: `${accounts.accounts.account}@execute`,
-  action: 'rankorgcbss'
-}, {
-  target: `${accounts.harvest.account}@execute`,
-  action: 'rankorgcss'
-}, {
-  target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.proposals.account}@active`
-}, {
-  target: `${accounts.proposals.account}@active`,
-  actor: `${accounts.onboarding.account}@active`,
-}, { 
-  target: `${accounts.proposals.account}@active`,
-  actor: `${accounts.escrow.account}@active`
-}, {
-  target: `${accounts.accounts.account}@addcbs`,
-  actor: `${accounts.history.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.accounts.account}@addcbs`,
-  action: 'addcbs'
-}, {
-  target: `${accounts.pool.account}@active`,
-  actor: `${accounts.pool.account}@eosio.code`
-}, {
-  target: `${accounts.pool.account}@hrvst.pool`,
-  actor: `${accounts.harvest.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.pool.account}@hrvst.pool`,
-  action: 'payouts'
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'calcmappuses'
-}, {
-  target: `${accounts.organization.account}@execute`,
-  action: 'rankappuses'
-}, {
-  target: `${accounts.msig.account}@owner`,
-  actor: `${accounts.msig.account}@eosio.code`
-}, {
-  target: `${accounts.msig.account}@active`,
-  actor: `${accounts.msig.account}@eosio.code`
-}, {
-  target: `${accounts.onboarding.account}@execute`,
-  actor: `${accounts.scheduler.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.onboarding.account}@execute`,
-  action: 'chkcleanup'
-}, {
-  target: `${accounts.history.account}@active`,
-  actor: `${accounts.history.account}@eosio.code`
-}, {
-  target: `${accounts.history.account}@execute`,
-  actor: `${accounts.scheduler.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.history.account}@execute`,
-  action: 'cleanptrxs'
-}, {
-  target: `${accounts.dao.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@addrep`,
-  actor: `${accounts.dao.account}@eosio.code`
-}, {
-  target: `${accounts.accounts.account}@addrep`,
-  action: 'addrep'
-}, {
-  target: `${accounts.settings.account}@referendum`,
-  actor: `${accounts.dao.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-}, {
-  target: `${accounts.settings.account}@referendum`,
-  action: 'configure'
-},{
-  target: `${accounts.settings.account}@referendum`,
-  action: 'conffloat'
-},{
-  target: `${accounts.campaignbank.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-}, {
-  target: `${accounts.milestonebank.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-}, {
-  target: `${accounts.alliancesbank.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-},{
-  target: `${accounts.bank.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-},{
-  target: `${accounts.escrow.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-},{
-  target: `${accounts.dao.account}@active`,
-  actor: `${accounts.escrow.account}@eosio.code`
-},{
-  target: `${accounts.dao.account}@active`,
-  actor: `${accounts.onboarding.account}@eosio.code`
-},{
-  target: `${accounts.onboarding.account}@active`,
-  actor: `${accounts.dao.account}@eosio.code`
-},{
-  target: `${accounts.dao.account}@execute`,
-  actor: `${accounts.scheduler.account}@eosio.code`,
-  parent: 'active',
-  type: 'createActorPermission'
-},{
-  target: `${accounts.dao.account}@execute`,
-  action: 'dhocleanvts'
-},{
-  target: `${accounts.dao.account}@execute`,
-  action: 'dhocalcdists'
-}, {
-  target: `${accounts.policy.account}@active`,
-  actor: `${accounts.policy.account}@eosio.code`
+//   target: `${accounts.campaignbank.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.milestonebank.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.alliancesbank.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.ambassadorsandreferralsbank.account}@active`,
+//   actor: `${accounts.accounts.account}@eosio.code`
+// }, {
+//   target: `${accounts.globaldho.account}@active`,
+//   actor: `${accounts.harvest.account}@eosio.code`
+// }, {
+//   target: `${accounts.exchange.account}@active`,
+//   actor: `${accounts.exchange.account}@eosio.code`
+// }, {
+//   target: `${accounts.sale.account}@active`,
+//   actor: `${accounts.sale.account}@eosio.code`
+// }, {
+//   target: `${accounts.accounts.account}@owner`, // probably don't need this
+//   actor: `${accounts.accounts.account}@eosio.code`
+// }, {
+//   target: `${accounts.accounts.account}@active`,
+//   actor: `${accounts.accounts.account}@eosio.code`
+// }, {
+//   target: `${accounts.harvest.account}@active`,
+//   actor: `${accounts.harvest.account}@eosio.code`
+// }, {
+//   target: `${accounts.proposals.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.bank.account}@active`,
+//   actor: `${accounts.harvest.account}@eosio.code`
+// }, {
+//   target: `${accounts.proposals.account}@active`,
+//   actor: `${accounts.accounts.account}@active`
+// }, {
+//   target: `${accounts.accounts.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.bank.account}@active`,
+//   actor: `${accounts.proposals.account}@eosio.code`
+// }, {
+//   target: `${accounts.referendums.account}@active`,
+//   actor: `${accounts.referendums.account}@eosio.code`
+// }, {
+//   target: `${accounts.settings.account}@active`,
+//   actor: `${accounts.referendums.account}@eosio.code`
+// }, {
+//   target: `${accounts.history.account}@active`,
+//   actor: `${accounts.harvest.account}@active`
+// }, {
+//   target: `${accounts.harvest.account}@active`,
+//   actor: `${accounts.history.account}@eosio.code`
+// }, {
+//   target: `${accounts.token.account}@active`,
+//   actor: `${accounts.token.account}@eosio.code`
+// }, {
+//   target: `${accounts.history.account}@active`,
+//   actor: `${accounts.accounts.account}@active`
+// }, {
+//   target: `${accounts.accounts.account}@api`,
+//   key: apiPublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.exchange.account}@purchase`,
+//   key: exchangePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.exchange.account}@update`,
+//   key: exchangePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.sale.account}@newpayment`,
+//   key: salePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.accounts.account}@api`,
+//   action: 'subrep'
+// }, {
+//   target: `${accounts.harvest.account}@setorgtxpt`,
+//   actor: `${accounts.history.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.harvest.account}@setorgtxpt`,
+//   action: 'setorgtxpt'
+// }, {
+//   target: `${accounts.gratitude.account}@execute`,
+//   actor: `${accounts.scheduler.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.gratitude.account}@execute`,
+//   action: 'newround'
+// }, {
+//   target: `${accounts.accounts.account}@api`,
+//   action: 'addref'
+// }, {
+//   target: `${accounts.exchange.account}@purchase`,
+//   action: 'newpayment'
+// }, {
+//   target: `${accounts.exchange.account}@update`,
+//   action: 'updatetlos'
+// }, {
+//   target: `${accounts.sale.account}@newpayment`,
+//   action: 'newpayment'
+// }, {
+//   target: `${accounts.onboarding.account}@active`,
+//   actor: `${accounts.onboarding.account}@eosio.code`
+// }, {
+//   target: `${accounts.onboarding.account}@owner`, // should be active
+//   actor: `${accounts.onboarding.account}@eosio.code`
+// }, {
+//   target: `${accounts.accounts.account}@active`,
+//   actor: `${accounts.onboarding.account}@active`,
+// }, {
+//   target: `${accounts.onboarding.account}@active`,
+//   actor: `${accounts.organization.account}@active`,
+// }, {
+//   target: `${accounts.onboarding.account}@active`,
+//   actor: `${accounts.region.account}@active`,
+// }, {
+//   target: `${accounts.onboarding.account}@application`,
+//   key: applicationPublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.onboarding.account}@application`,
+//   action: 'numtrx'
+// }, {
+//   target: `${accounts.onboarding.account}@application`,
+//   action: 'accept'
+// }, {
+//   target: `${accounts.guardians.account}@application`,
+//   key: applicationPublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.guardians.account}@application`,
+//   action: 'claim'
+// }, {
+//   target: `${accounts.history.account}@active`,
+//   actor: `${accounts.token.account}@active`
+// }, {
+//   target: `${accounts.acctcreator.account}@active`,
+//   actor: `${accounts.acctcreator.account}@eosio.code`
+// }, {
+//   target: `${accounts.acctcreator.account}@free`,
+//   key: freePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.acctcreator.account}@free`,
+//   action: 'create'
+// }, {
+//   target: `${accounts.scheduler.account}@active`,
+//   actor: `${accounts.scheduler.account}@eosio.code`
+// }, {
+//   target: `${accounts.organization.account}@active`,
+//   actor: `${accounts.organization.account}@eosio.code`
+// }, {
+//   target: `${accounts.forum.account}@active`,
+//   actor: `${accounts.forum.account}@eosio.code`
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.scheduler.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   action: 'onperiod'
+// }, {
+//   target: `${accounts.proposals.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.proposals.account}@execute`,
+//   action: 'onperiod'
+// }, {
+//   target: `${accounts.accounts.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.accounts.account}@execute`,
+//   action: 'rankreps'
+// }, {
+//   target: `${accounts.accounts.account}@execute`,
+//   action: 'rankcbss'
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   action: 'newday'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.exchange.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.accounts.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.rgn.account}@owner`,
+//   actor: `${accounts.onboarding.account}@eosio.code`
+// }, {
+//   target: `${accounts.region.account}@active`,
+//   actor: `${accounts.region.account}@eosio.code`
+// }, {
+//   target: `${accounts.exchange.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.scheduler.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.harvest.account}@execute`, 
+//   action: 'ranktxs'
+// }, {
+//   target: `${accounts.harvest.account}@execute`, 
+//   action: 'rankplanteds'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'calccss'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'rankcss'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'calctrxpts'
+// }, {
+//   target: `${accounts.exchange.account}@execute`,
+//   action: 'onperiod'
+// }, {
+//   target: `${accounts.scheduler.account}@execute`,
+//   action: 'test1'
+// }, {
+//   target: `${accounts.scheduler.account}@execute`,
+//   action: 'test2'
+// }, {
+//   target: `${accounts.referendums.account}@execute`, // TODO these active keys are not needed?!
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.referendums.account}@execute`,
+//   action: 'onperiod'
+// }, {
+//   target: `${accounts.referendums.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.proposals.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.token.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.token.account}@execute`,
+//   action: 'resetweekly',
+// }, {
+//   target: `${accounts.onboarding.account}@application`,
+//   action: 'acceptnew'
+// }, {
+//   target: `${accounts.onboarding.account}@application`,
+//   action: 'acceptexist'
+// }, {
+//   target: `${accounts.harvest.account}@payforcpu`,
+//   key: payForCPUPublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.harvest.account}@payforcpu`,
+//   action: 'payforcpu'
+// }, {
+//   target: `${accounts.escrow.account}@active`,
+//   actor: `${accounts.escrow.account}@eosio.code`
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   key: activePublicKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'cleandaus'
+// }, { 
+//   target: `${accounts.organization.account}@execute`,
+//   actor: `${accounts.scheduler.account}@active`
+// }, {
+//   target: `${accounts.organization.account}@active`,
+//   actor: `${accounts.accounts.account}@active`
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'scoretrxs'
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'rankregens'
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'rankcbsorgs'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'rankorgtxs'
+// }, {
+//   target: `${accounts.proposals.account}@execute`,
+//   action: 'decayvoices'
+// }, {
+//   target: `${accounts.accounts.account}@active`,
+//   actor: `${accounts.forum.account}@active`
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   action: 'rankforums'
+// }, {
+//   target: `${accounts.forum.account}@execute`,
+//   action: 'givereps'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'calcmqevs'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'calcmintrate'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'runharvest'
+// }, {
+//   target: `${accounts.token.account}@minthrvst`,
+//   actor: `${accounts.harvest.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.token.account}@minthrvst`,
+//   action: 'minthrvst'
+// }, { 
+//   target: `${accounts.harvest.account}@active`,
+//   actor: `${accounts.organization.account}@active`
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'rankrgncss'
+// }, {
+//   target: `${accounts.gratitude.account}@active`,
+//   actor: `${accounts.gratitude.account}@eosio.code`
+// },{
+//   target: `${accounts.pouch.account}@active`,
+//   actor: `${accounts.pouch.account}@eosio.code`
+// }, {
+//   target: `${accounts.service.account}@active`,
+//   actor: `${accounts.service.account}@eosio.code`
+// }, {
+//   target: `${accounts.service.account}@invite`,
+//   key: inviteApiKey,
+//   parent: 'active'
+// }, {
+//   target: `${accounts.service.account}@invite`,
+//   action: 'createinvite'
+// },{
+//   target: `${accounts.quests.account}@active`,
+//   actor: `${accounts.quests.account}@eosio.code`
+// }, {
+//   target: `${accounts.campaignbank.account}@active`,
+//   actor: `${accounts.quests.account}@active`
+// }, {
+//   target: `${accounts.proposals.account}@questvote`,
+//   actor: `${accounts.quests.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.proposals.account}@questvote`,
+//   action: 'questvote'
+// }, { 
+//   target: `${accounts.accounts.account}@addrep`,
+//   actor: `${accounts.quests.account}@eosio.code`,
+//   parent: 'api',
+//   type: 'createActorPermission'
+// }, { 
+//   target: `${accounts.accounts.account}@execute`,
+//   action: 'rankorgreps'
+// }, {
+//   target: `${accounts.accounts.account}@execute`,
+//   action: 'rankorgcbss'
+// }, {
+//   target: `${accounts.harvest.account}@execute`,
+//   action: 'rankorgcss'
+// }, {
+//   target: `${accounts.onboarding.account}@active`,
+//   actor: `${accounts.proposals.account}@active`
+// }, {
+//   target: `${accounts.proposals.account}@active`,
+//   actor: `${accounts.onboarding.account}@active`,
+// }, { 
+//   target: `${accounts.proposals.account}@active`,
+//   actor: `${accounts.escrow.account}@active`
+// }, {
+//   target: `${accounts.accounts.account}@addcbs`,
+//   actor: `${accounts.history.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.accounts.account}@addcbs`,
+//   action: 'addcbs'
+// }, {
+//   target: `${accounts.pool.account}@active`,
+//   actor: `${accounts.pool.account}@eosio.code`
+// }, {
+//   target: `${accounts.pool.account}@hrvst.pool`,
+//   actor: `${accounts.harvest.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.pool.account}@hrvst.pool`,
+//   action: 'payouts'
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'calcmappuses'
+// }, {
+//   target: `${accounts.organization.account}@execute`,
+//   action: 'rankappuses'
+// }, {
+//   target: `${accounts.msig.account}@owner`,
+//   actor: `${accounts.msig.account}@eosio.code`
+// }, {
+//   target: `${accounts.msig.account}@active`,
+//   actor: `${accounts.msig.account}@eosio.code`
+// }, {
+//   target: `${accounts.onboarding.account}@execute`,
+//   actor: `${accounts.scheduler.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.onboarding.account}@execute`,
+//   action: 'chkcleanup'
+// }, {
+//   target: `${accounts.history.account}@active`,
+//   actor: `${accounts.history.account}@eosio.code`
+// }, {
+//   target: `${accounts.history.account}@execute`,
+//   actor: `${accounts.scheduler.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.history.account}@execute`,
+//   action: 'cleanptrxs'
+// }, {
+//   target: `${accounts.dao.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// }, {
+//   target: `${accounts.accounts.account}@addrep`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// }, {
+//   target: `${accounts.accounts.account}@addrep`,
+//   action: 'addrep'
+// }, {
+//   target: `${accounts.settings.account}@referendum`,
+//   actor: `${accounts.dao.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// }, {
+//   target: `${accounts.settings.account}@referendum`,
+//   action: 'configure'
+// },{
+//   target: `${accounts.settings.account}@referendum`,
+//   action: 'conffloat'
+// },{
+//   target: `${accounts.campaignbank.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// }, {
+//   target: `${accounts.milestonebank.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// }, {
+//   target: `${accounts.alliancesbank.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// },{
+//   target: `${accounts.bank.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// },{
+//   target: `${accounts.escrow.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// },{
+//   target: `${accounts.dao.account}@active`,
+//   actor: `${accounts.escrow.account}@eosio.code`
+// },{
+//   target: `${accounts.dao.account}@active`,
+//   actor: `${accounts.onboarding.account}@eosio.code`
+// },{
+//   target: `${accounts.onboarding.account}@active`,
+//   actor: `${accounts.dao.account}@eosio.code`
+// },{
+//   target: `${accounts.dao.account}@execute`,
+//   actor: `${accounts.scheduler.account}@eosio.code`,
+//   parent: 'active',
+//   type: 'createActorPermission'
+// },{
+//   target: `${accounts.dao.account}@execute`,
+//   action: 'dhocleanvts'
+// },{
+//   target: `${accounts.dao.account}@execute`,
+//   action: 'dhocalcdists'
+// }, {
+//   target: `${accounts.policy.account}@active`,
+//   actor: `${accounts.policy.account}@eosio.code`
+// }, {
+  target: `${accounts.joinhypha.account}@active`,
+  actor: `${accounts.joinhypha.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -858,7 +878,11 @@ const keyProviders = {
     process.env.TESTNET_NEWPAYMENT_KEY,
     process.env.TELOS_TESTNET_ACTIVE_KEY, 
     process.env.APPLICATION_KEY
+  ],
+  [networks.eosMainnet]: [
+    process.env.EOS_MAINNET_ACTIVE_KEY, 
   ]
+
 }
 
 const keyProvider = keyProviders[chainId].filter((item) => item)
