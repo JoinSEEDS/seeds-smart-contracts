@@ -3492,3 +3492,116 @@ describe('Cycle stats use moon cycle phases as start and end times', async asser
 
 })
 
+
+/* just to test the migration works as intented
+describe('migration', async assert => {
+
+  if (!isLocal()) {
+    console.log("only run unit tests on local - don't reset accounts on mainnet or testnet")
+    return
+  }
+
+  const contracts = await initContracts({ accounts, proposals, token, harvest, settings, escrow })
+
+  console.log('settings reset')
+  await contracts.settings.reset({ authorization: `${settings}@active` })
+
+  console.log('set propmajority to 80')
+  await contracts.settings.configure('propmajority', 80, { authorization: `${settings}@active` })
+
+  console.log('token reset')
+  await contracts.token.resetweekly({ authorization: `${token}@active` })
+
+  console.log('accounts reset')
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log('harvest reset')
+  await contracts.harvest.reset({ authorization: `${harvest}@active` })
+
+  console.log('proposals reset')
+  await contracts.proposals.reset({ authorization: `${proposals}@active` })
+
+  console.log('escrow reset')
+  await contracts.escrow.reset({ authorization: `${escrow}@active` })
+
+  console.log('join users')
+  await contracts.accounts.adduser(firstuser, 'firstuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(seconduser, 'seconduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(thirduser, 'thirduser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.adduser(fourthuser, 'fourthuser', 'individual', { authorization: `${accounts}@active` })
+  await contracts.accounts.testcitizen(firstuser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(seconduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(thirduser, { authorization: `${accounts}@active` })
+  await contracts.accounts.testresident(fourthuser, { authorization: `${accounts}@active` })
+
+  console.log('create proposal '+campaignbank)
+  await contracts.proposals.createx(firstuser, firstuser, '1000.0000 SEEDS', '1000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${firstuser}@active` })
+  await contracts.proposals.createx(seconduser, seconduser, '100000.0000 SEEDS', '100,0000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${seconduser}@active` })
+  await contracts.proposals.createx(thirduser, thirduser, '10000000.0000 SEEDS', '1,000,000 seeds please', 'summary', 'description', 'image', 'url', campaignbank, [ 10, 30, 30, 30 ], { authorization: `${thirduser}@active` })
+
+  console.log('stake the minimum')
+  await contracts.token.transfer(firstuser, proposals, '554.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  
+  let expectNotEnough = true
+  try {
+    await contracts.proposals.checkstake(1, { authorization: `${firstuser}@active` })
+    expectNotEnough = false
+  } catch (err) {
+
+  }
+  await contracts.token.transfer(firstuser, proposals, '1.0000 SEEDS', '', { authorization: `${firstuser}@active` })
+  await contracts.proposals.checkstake(1, { authorization: `${firstuser}@active` })
+
+  console.log('stake 5% = 5000')
+  await contracts.token.transfer(seconduser, proposals, '555.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  let expectNotEnough2 = true
+  try {
+    await contracts.proposals.checkstake(2, { authorization: `${firstuser}@active` })
+    expectNotEnough2 = false
+  } catch (error) {
+    //console.log("expected: "+error)
+  }
+  await contracts.token.transfer(seconduser, proposals, (5000-555) + '.0000 SEEDS', '', { authorization: `${seconduser}@active` })
+  await contracts.proposals.checkstake(2, { authorization: `${firstuser}@active` })
+
+  console.log('stake max - not more than 75,000 needed')
+  await contracts.token.transfer(thirduser, proposals, '75000.0000 SEEDS', '', { authorization: `${thirduser}@active` })
+  await contracts.proposals.checkstake(3, { authorization: `${firstuser}@active` })
+
+
+  await contracts.proposals.onperiod( { authorization: `${proposals}@active` } )
+  await sleep(2000)
+
+  const props = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+
+  // console.log(props)
+
+
+  console.log('************************ migrationnnnn')
+
+  await contracts.proposals.migcampaign(0, 10, { authorization: `${proposals}@active` })
+
+  await sleep(2000)
+
+
+  const mig = await eos.getTableRows({
+    code: proposals,
+    scope: proposals,
+    table: 'props',
+    json: true,
+  })
+
+
+  console.log(mig)
+
+
+
+
+})
+*/
