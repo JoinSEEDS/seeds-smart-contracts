@@ -22,7 +22,8 @@ CONTRACT sale : public contract {
         rounds(receiver, receiver.value),
         dailystats(receiver, receiver.value),
         payhistory(receiver, receiver.value),
-        flags(receiver, receiver.value)
+        flags(receiver, receiver.value),
+        whitelist(receiver, receiver.value)
         {}
       
     ACTION onperiod();
@@ -57,6 +58,10 @@ CONTRACT sale : public contract {
 
     ACTION updatevol(uint64_t round_id, uint64_t volume);
 
+    ACTION addwhitelist(name account);
+
+    ACTION remwhitelist(name account);
+
     //ACTION testhusd(name from, name to, asset quantity);
 
   private:
@@ -69,6 +74,9 @@ CONTRACT sale : public contract {
     void price_update_aux();
     bool is_paused();
     bool is_set(name flag);
+    bool is_whitelisted(name account);
+    bool is_less_than_limit(asset hypha_quantity);
+    uint64_t get_limit();
 
     void price_history_update(); 
 
@@ -80,6 +88,8 @@ CONTRACT sale : public contract {
     symbol usd_symbol_2 = symbol("USD", 2);
     name paused_flag = "paused"_n;
     name tlos_paused_flag = "tlos.paused"_n;
+    name whitelist_limit_flag = "whtlst.limit"_n;
+
     name husd_contract = "husd.hypha"_n;
     name hypha_contract = "hypha.hypha"_n;
 
@@ -166,6 +176,13 @@ CONTRACT sale : public contract {
 
     typedef eosio::multi_index<"flags"_n, flags_table> flags_tables; 
 
+    TABLE whitelist_table { 
+        name account; 
+        uint64_t value; 
+        uint64_t primary_key()const { return account.value; } 
+      }; 
+    typedef eosio::multi_index<"whitelist"_n, whitelist_table> whitelist_tables; 
+
     typedef singleton<"config"_n, configtable> configtables;
     typedef eosio::multi_index<"config"_n, configtable> dump_for_config;
 
@@ -199,6 +216,8 @@ CONTRACT sale : public contract {
 
     flags_tables flags;
 
+    whitelist_tables whitelist;
+
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
@@ -214,6 +233,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
           (pause)(unpause)(setflag)
           (incprice)
           (updatevol)
+          (addwhitelist)(remwhitelist)
           //(testhusd)
           )
       }

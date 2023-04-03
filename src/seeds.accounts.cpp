@@ -133,7 +133,7 @@ void accounts::_vouch(name sponsor, name account) {
     if (sponsor_status == resident) vouch_points = resident_basepoints;
     if (sponsor_status == citizen) vouch_points = citizen_basepoints;
 
-    vouch_points *= utils::get_rep_multiplier(sponsor); // REPLACE with local function
+    vouch_points *= utils::get_rep_multiplier(sponsor);
 
     if (vouch_points > 0) {
       vouches.emplace(_self, [&](auto& item) {
@@ -369,30 +369,12 @@ void accounts::refreward(name account, name new_status) {
       auto min_org = config_get(min_org_reward_param);
       auto dec_org = config_get(dec_org_reward_param);
 
-      auto org_seeds_reward = calc_decaying_rewards(num_users, min_org, max_org, dec_org);
-      asset org_quantity(org_seeds_reward, seeds_symbol);
-
-      // send reward to org
-      send_reward(referrer, org_quantity);
-
       name amb_reward_param = is_citizen ? ambassador_seeds_reward_citizen : ambassador_seeds_reward_resident;
       name min_amb_reward_param = is_citizen ? min_ambassador_seeds_reward_citizen : min_ambassador_seeds_reward_resident;
       name dec_amb_reward_param = is_citizen ? dec_ambassador_seeds_reward_citizen : dec_ambassador_seeds_reward_resident;
       auto max_amb = config_get(amb_reward_param);
       auto min_amb = config_get(min_amb_reward_param);
       auto dec_amb = config_get(dec_amb_reward_param);
-
-      auto amb_seeds_reward = calc_decaying_rewards(num_users, min_amb, max_amb, dec_amb);
-      asset amb_quantity(amb_seeds_reward, seeds_symbol);
-
-      // send reward to ambassador if we have one
-      name org_owner = find_referrer(referrer);
-      if (org_owner != not_found) {
-        name ambassador = find_referrer(org_owner);
-        if (ambassador != not_found) {
-          send_reward(ambassador, amb_quantity);
-        }
-      }
     } 
     else 
     {
@@ -414,7 +396,6 @@ void accounts::refreward(name account, name new_status) {
 
       send_addrep(referrer, rep_points);
 
-      send_reward(referrer, quantity);
     }
 
     add_cbs(referrer, community_building_points); 
@@ -584,21 +565,6 @@ void accounts::update(name user, name type, string nickname, string image, strin
     });
 }
 
-void accounts::send_reward(name beneficiary, asset quantity)
-{
-  // Check balance - if the balance runs out, the rewards run out too.
-  token_accts accts(contracts::token, bankaccts::referrals.value);
-  const auto& acc = accts.get(symbol("SEEDS", 4).code().raw());
-  auto rem_balance = acc.balance;
-  if (quantity > rem_balance) {
-    // Should not fail in case not enough balance
-    // check(false, ("DEBUG: not enough balance on "+bankaccts::referrals.to_string()+" = "+rem_balance.to_string()+", required= "+quantity.to_string()).c_str());
-    return;
-  }
-
-  send_to_escrow(bankaccts::referrals, beneficiary, quantity, "referral reward");
-}
-
 void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, string memo)
 {
 
@@ -621,15 +587,6 @@ void accounts::send_to_escrow(name fromfund, name recipient, asset quantity, str
                                  current_time_point().time_since_epoch()), // long time from now
                       memo))
       .send();
-}
-
-void accounts::testreward() {
-  require_auth(get_self());
-
-  asset quantity(1, seeds_symbol);
-
-  send_reward("accts.seeds"_n, quantity);
-
 }
 
 void accounts::canresident(name user) {
@@ -739,36 +696,37 @@ void accounts::makecitizen(name user)
 bool accounts::check_can_make_citizen(name user) {
     auto uitr = users.find(user.value);
     check(uitr != users.end(), "no user");
-
     auto bitr = balances.find(user.value);
+    uint64_t min_tx = config_get("cit.tx"_n);
+    //uint64_t min_rep_score = config_get("cit.rep.sc"_n);
+    uint64_t min_account_age = config_get("cit.age"_n);
+    uint64_t _rep_score = rep_score(user);
+    uint64_t total_transactions = num_transactions(user, min_tx);
 
+    // Minimum planted
     uint64_t min_planted = config_get("cit.plant"_n);
     check(bitr->planted.amount >= min_planted, "user has less than required seeds planted");
 
+    // Citizenship ceremony
     uint64_t citizens_vouched = number_of_citizens_vouched(user, 50);
     uint64_t citizens_ceremony_number = 3;
+    check(citizens_vouched >= citizens_ceremony_number, "user did not complete citizenship ceremony");
 
-    if (citizens_vouched >= citizens_ceremony_number) {
-      return true;
-    }
-
-    uint64_t min_tx = config_get("cit.tx"_n);
-    uint64_t min_invited = config_get("cit.referred"_n);
-    uint64_t min_residents_invited = config_get("cit.ref.res"_n);
-    uint64_t min_rep_score = config_get("cit.rep.sc"_n);
-    uint64_t min_account_age = config_get("cit.age"_n);
-
-    uint64_t invited_users_number = countrefs(user, min_residents_invited);
-    uint64_t _rep_score = rep_score(user);
-
-    uint64_t total_transactions = num_transactions(user, min_tx);
-
+    // Check resident status
     check(uitr->status == resident, "user is not a resident");
+
+    // Check number of transactions
     check(total_transactions >= min_tx, "user has less than required transactions number has: "+
       std::to_string(total_transactions) + " needed: "+
       std::to_string(min_tx));
-    check(invited_users_number >= min_invited, "user has less than required referrals. Required: " + std::to_string(min_invited) + " Actual: " + std::to_string(invited_users_number));
-    check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
+
+    // Check rep score
+    // Removed: Rep score depends on everyone else's scores, interferes with cit ceremony
+    // We make sure user has > 50 rep points, other than that, it doesn't matter.
+    // Resident check already checks for this. 
+    // check(_rep_score >= min_rep_score, "user has less than required reputation. Required: " + std::to_string(min_rep_score) + " Actual: " + std::to_string(_rep_score));
+    
+    // Check account age
     check(uitr->timestamp <= eosio::current_time_point().sec_since_epoch() - min_account_age, "User account must be older than 2 cycles");
 
     return true;

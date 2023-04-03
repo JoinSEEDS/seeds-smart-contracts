@@ -16,6 +16,7 @@ const fs = require('fs')
 const { eos, names, getTableRows, initContracts, sha256, isLocal, ramdom64ByteHexString, fromHexString, createKeypair } = require('../scripts/helper')
 const { worker } = require('cluster')
 const helper = require('../scripts/helper')
+const { createESRWithActions } = require('./msig')
 
 const { onboarding, token, accounts, organization, harvest, firstuser } = names
 
@@ -143,6 +144,7 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
 
     totalAmount = parseInt(totalAmount)
     var secrets = "Secret,Hash,Seeds (total)\n"
+    var invitelist = ""
     const fileName = 'secrets_'+num+'.csv'
     var log = []
 
@@ -203,9 +205,10 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
             actions.push(inv.action)
             log.push(inv)
             secrets = secrets + inv.secret +"," + inv.hashedSecret + "," + totalAmount + "\n"
+            invitelist = invitelist +"https://joinseeds.app.link/accept-invite?invite-secret="+inv.secret+"\n"
         }
     
-        console.log("secrets: "+secrets)
+        //console.log("secrets: "+secrets)
     
         //console.log("actions: " + JSON.stringify(actions, null, 2))
     
@@ -221,7 +224,7 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
     
         fs.writeFileSync(fileName, secrets)
         fs.writeFileSync('invite_log_'+num+'.json', JSON.stringify(log, null,2))
-        
+        fs.writeFileSync('invitelist_'+num+'.txt', invitelist)          
         console.log(num + " secrets written to "+fileName)
     
     } catch (err) {
@@ -308,7 +311,7 @@ const createCPUAction = (sponsor) => {
         authorization: [
             {
                 actor: harvest,
-                permission: 'active',
+                permission: 'payforcpu',
             },
             {
                 actor: sponsor,
@@ -605,6 +608,43 @@ program
 
     console.log("accept invite with " + newAccount + " secret: " + result.secret + " pub: " + newPublicKey)
     await accept(newAccount, result.secret, newPublicKey)
+  })
+
+  program
+  .command('onboard_telos <sponsor> <amount>')
+  .description('Onboard existing Telos users')
+  .action(async function (sponsor, amount) {
+      
+    console.log("onboard existing telos user from " + sponsor)
+    
+    // TODO create QR code for invite and transfer
+    // Then we have 1 QR code for creating the secret on chain
+    // And 1 QR code for accepting an existing account
+    let result = await invite(sponsor, amount, true, true)
+        
+    const authPlaceholder = "............1"
+
+    const secret = result.secret
+
+    const res = await createESRWithActions({ 
+      actions: [
+      {
+        "account": "join.seeds",
+        "name": "acceptexist",
+        "authorization": [{
+            "actor": authPlaceholder,
+            "permission": "active"
+          }
+        ],
+        "data": {
+          "account": authPlaceholder,
+          "invite_secret": secret,
+        },
+      }
+    ]})
+    console.log("accept invite ")
+    console.log(JSON.stringify(res, null, 2))
+    
   })
 
   program

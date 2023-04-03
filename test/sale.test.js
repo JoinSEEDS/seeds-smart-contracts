@@ -20,15 +20,17 @@ describe('Sale', async assert => {
 
   console.log(`${owner} transfer token to ${firstuser}`)
 
-  //await contracts.hyphatoken.create(owner, "-1.00 HYPHA", { authorization: `${hyphatoken}@active` })
+  try {
+    await contracts.hyphatoken.create(owner, "-1.00 HYPHA", { authorization: `${hyphatoken}@active` })
+  } catch (err) {
+    // ignore - token exists
+  }
 
   console.log(`issue`)
+  await contracts.hyphatoken.issue(owner, '10000000.00 HYPHA', `init`, { authorization: owner+`@active` })
 
-  await contracts.hyphatoken.issue("dao.hypha", '10000000.00 HYPHA', `init`, { authorization: `dao.hypha@active` })
-
-  console.log(`transfer to owner`)
-
-  await contracts.hyphatoken.transfer("dao.hypha", owner, "1000000.00 HYPHA", 'unit test', { authorization: `dao.hypha@active` })
+  //console.log(`transfer to owner`)
+  //await contracts.hyphatoken.transfer("dao.hypha", owner, "1000000.00 HYPHA", 'unit test', { authorization: `dao.hypha@active` })
 
   console.log(`transfer to sale`)
 
@@ -39,15 +41,12 @@ describe('Sale', async assert => {
 
   console.log(`add user`)
   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
-  
+
+  console.log(`set limit`)
+  await contracts.sale.setflag("whtlst.limit",  100000 * 100, { authorization: `${sale}@active` })
+
   console.log(`initrounds`)
 
-//   initrounds(
-//     uint64_t(100000) * uint64_t(100), // "100,000.00 HYPHA"
-//     asset(100, hypha_symbol), // 1.00 USD / HYPHA  ==> 1.00 HYPHA / USD  
-//     asset(10, hypha_symbol), // "0.10 HYPHA"
-//     9 // 9 rounds
-// );
   await contracts.sale.initrounds( (100) * 100, "2.00 USD", "1.00 USD", 10, { authorization: `${sale}@active` })
 
   let rounds = await getRounds()
@@ -411,3 +410,123 @@ describe('Token Sale Price', async assert => {
 
 })
 
+// describe('HUSD', async assert => {
+
+//   console.log("README: Comment in 'testhusd' action in the sale contract")
+//   console.log("README: You have to either have a husd.hypha contract deployed")
+//   console.log("or you comment out the husd burn in the on_husd function")
+
+//   const contracts = await initContracts({ accounts, sale })
+//   console.log(`reset exchange`)
+  
+//   await contracts.sale.reset({ authorization: `${sale}@active` })  
+
+//   console.log(`reset accounts`)
+//   await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+//   console.log(`add user`)
+//   await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+//   console.log(`update daily limits`)
+//   await contracts.sale.initrounds( (100) * 100, "2.00 USD", "1.00 USD", 10, { authorization: `${sale}@active` })
+
+//   console.log(`test husd`)
+//   const balanceBefore = await getBalanceFloat(firstuser)
+//   await contracts.sale.testhusd(firstuser, "x", "0.10 HUSD", { authorization: `${sale}@active` })
+//   const balanceAfter = await getBalanceFloat(firstuser)
+
+//   console.log("b4: "+ balanceBefore)
+//   console.log("after: "+ balanceAfter)
+// })
+
+describe.only('whitelist and limits', async assert => {
+
+  const contracts = await initContracts({ accounts, sale })
+  console.log(`reset exchange`)
+  
+  await contracts.sale.reset({ authorization: `${sale}@active` })  
+
+  console.log(`reset accounts`)
+  await contracts.accounts.reset({ authorization: `${accounts}@active` })
+
+  console.log(`add user`)
+  await contracts.accounts.adduser(firstuser, 'First user', "individual", { authorization: `${accounts}@active` })
+  console.log(`update daily limits`)
+  await contracts.sale.initrounds( (100) * 100, "1.00 USD", "0.00 USD", 1, { authorization: `${sale}@active` })
+
+  console.log(`test limit`)
+
+  await contracts.sale.setflag("whtlst.limit",  1 * 100, { authorization: `${sale}@active` })
+
+    const balanceBefore = await getBalanceFloat(firstuser)
+
+  let canBuyBelowLimit = false;
+  await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000001", parseInt(1 * 10000), { authorization: `${sale}@active` })
+  canBuyBelowLimit = true;
+
+  let canBuyAboveLimit = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000002", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    canBuyAboveLimit = true;
+  } catch (err) {
+    console.log("expected error, over limit")
+    console.log(err)
+  }
+
+  console.log("whitelist first user")
+  await contracts.sale.addwhitelist(firstuser, { authorization: `${sale}@active` })
+
+  let whiteListBuy = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000003", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    whiteListBuy = true;
+  } catch (err) {
+    console.log("expected error, over limit")
+    console.log(err)
+  }
+
+  console.log("remove whitelist for first user")
+  await contracts.sale.remwhitelist(firstuser, { authorization: `${sale}@active` })
+
+  let noWhiteListBuy = false;
+  try {
+    await contracts.sale.newpayment(firstuser, "BTC", "0.000000001",  "000004", parseInt(1 * 1000), { authorization: `${sale}@active` })
+    noWhiteListBuy = true;
+  } catch (err) {
+    console.log("expected error, off whitelist")
+    console.log(err)
+  }
+
+  const balanceAfter = await getBalanceFloat(firstuser)
+
+  console.log("before: "+balanceBefore)
+  console.log("after: "+balanceAfter)
+  console.log("delta: "+(balanceAfter - balanceBefore))
+
+  assert({
+    given: 'under limit',
+    should: 'able to buy',
+    actual: canBuyBelowLimit,
+    expected: true
+  })
+
+  assert({
+    given: 'over limit',
+    should: 'unable to buy',
+    actual: canBuyAboveLimit,
+    expected: false
+  })
+  assert({
+    given: 'on whitelist',
+    should: 'can buy',
+    actual: whiteListBuy,
+    expected: true
+  })
+  assert({
+    given: 'off whitelist',
+    should: 'cant buy over limit',
+    actual: noWhiteListBuy,
+    expected: false
+  })
+
+
+})

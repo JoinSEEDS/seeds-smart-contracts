@@ -36,15 +36,38 @@ describe('Master token list', async assert => {
   }
 
   function dropTime(object) { object.init_time = ""; return object };
+
+  const getWhitelist = async () => {
+    return await eos.getTableRows({
+      code: tokensmaster,
+      scope: tokensmaster,
+      table: 'whitelist',
+      json: true,
+    })
+  }
+
+  const getBlacklist = async () => {
+    return await eos.getTableRows({
+      code: tokensmaster,
+      scope: tokensmaster,
+      table: 'blacklist',
+      json: true,
+    })
+  }
  
   assert({
     given: 'initializing contract',
-    should: 'create config table',
-    actual: dropTime( (await getConfigTable())['rows'][0] ),
-    expected: { chain: "Telos", manager: "seedsuserbbb",
-                  verify: 1, init_time: "" }
+    should: 'create config table, whitelist, blacklist',
+    actual: [ dropTime( (await getConfigTable())['rows'][0] ),
+              (await getWhitelist())['rows'],
+              (await getBlacklist())['rows'] ],
+    expected: [ { chain: "Telos", manager: "seedsuserbbb",
+                  verify: 1, init_time: "" },
+                [ {"id":0,"chainName":"Telos","token":{"sym":"4,SEEDS","contract":"token.seeds"}},
+                  {"id":1,"chainName":"Telos","token":{"sym":"4,TLOS","contract":"eosio.token"}} ],
+                [ {"sym_code":"BTC"}, {"sym_code":"ETH"}, {"sym_code":"TLOS"}, {"sym_code":"SEEDS"} ]
+              ]
   })
-
 
   console.log('submit token')
 
@@ -76,7 +99,7 @@ describe('Master token list', async assert => {
   console.log('accept token')
 
   await contract.accepttoken(0, testSymbol, 'usecase1', true,
-    { authorization: `${tokensmaster}@active` })
+    { authorization: `${seconduser}@active` })
 
   const getUsecaseTable = async () => {
     return await eos.getTableRows({
@@ -101,7 +124,7 @@ describe('Master token list', async assert => {
     given: 'accepting token',
     should: 'accept token entry',
     actual: [(await getUsecaseTable())['rows'], (await getAcceptanceTable('usecase1'))['rows'] ],
-    expected: [ [{"usecase":"usecase1"} ], [{"token_id":0}] ]
+    expected: [ [{"usecase":"usecase1", "curator":"seedsuserbbb"} ], [{"token_id":0}] ]
   })
 
   console.log('add second token')
@@ -112,7 +135,7 @@ describe('Master token list', async assert => {
      '"baltitle_es": "saldo de la billetera", "backgdimage": "someimg"}',
     { authorization: `${fourthuser}@active` })
   await contract.accepttoken(1, secondSymbol, 'usecase1', true,
-    { authorization: `${tokensmaster}@active` })
+    { authorization: `${seconduser}@active` })
 
   assert({
     given: 'add token',
@@ -124,10 +147,24 @@ describe('Master token list', async assert => {
                  json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"} ]
   })
 
+  console.log('change manager/curator')
+
+  await contract.setcurator('', thirduser,
+    { authorization: `${seconduser}@active` })
+  await contract.setcurator('usecase1', fourthuser,
+    { authorization: `${thirduser}@active` })
+
+  assert({
+    given: 'change manager and usecase1 curator',
+    should: 'change them',
+    actual: [(await getConfigTable())['rows'][0]['manager'], (await getUsecaseTable())['rows'] ],
+    expected: [ "seedsuserccc", [{"usecase":"usecase1", "curator":"seedsuserxxx"} ] ]
+  })
+
   console.log('unaccept token')
 
   await contract.accepttoken(0, testSymbol, 'usecase1', false,
-    { authorization: `${tokensmaster}@active` })
+    { authorization: `${thirduser}@active` })
 
   assert({
     given: 'unaccept token',
@@ -138,7 +175,7 @@ describe('Master token list', async assert => {
 
   console.log('token delete')
 
-  await contract.deletetoken(0, testSymbol, { authorization: `${seconduser}@active` })
+  await contract.deletetoken(0, testSymbol, { authorization: `${thirduser}@active` })
 
   assert({
     given: 'deleting token',
@@ -146,11 +183,34 @@ describe('Master token list', async assert => {
     should: 'delete token',
     actual: [(await getUsecaseTable())['rows'], (await getTokenTable('usecase1'))['rows']],
     expected: [
-       [ {"usecase":"usecase1"} ],
+       [ {"usecase":"usecase1", "curator":"seedsuserxxx"} ],
        [ {id:1,submitter:"seedsuserxxx",chainName:"Telos",contract:"token.seeds",symbolcode:"TESTS",
                  json:"{\"name\": \"Test token\", \"logo\": \"somelogo\", \"precision\": \"6\", \"baltitle\": \"Wallet balance\", \"baltitle_es\": \"saldo de la billetera\", \"backgdimage\": \"someimg\"}"}]
       ]
   })
+
+  console.log('modify whitelist & blacklist')
+
+  await contract.updwhitelist( "Telos", {contract: "rainbo.seeds", sym: "3,PIGS" }, true,
+        { authorization: `${thirduser}@active` })
+  await contract.updwhitelist( "Telos", {contract: "token.seeds", sym: "4,SEEDS" }, false,
+        { authorization: `${thirduser}@active` })
+
+  await contract.updblacklist("BLACKS", true, { authorization: `${thirduser}@active` })
+  await contract.updblacklist("BTC", false, { authorization: `${thirduser}@active` })
+
+  assert({
+    given: 'changing white/blacklists',
+
+    should: 'see lists changed',
+    actual: [ (await getWhitelist())['rows'], (await getBlacklist())['rows'] ],
+    expected: [
+       [ {"id":1,"chainName":"Telos","token":{"sym":"4,TLOS","contract":"eosio.token"}},
+         {"id":2,"chainName":"Telos","token":{"sym":"3,PIGS","contract":"rainbo.seeds"}} ],
+       [ {"sym_code":"ETH"}, {"sym_code":"TLOS"}, {"sym_code":"SEEDS"} , {"sym_code":"BLACKS"}]
+      ]
+  })
+
 
   console.log('Failing operations')
 

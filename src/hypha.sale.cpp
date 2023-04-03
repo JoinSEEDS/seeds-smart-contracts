@@ -42,6 +42,11 @@ void sale::reset() {
     fitr = flags.erase(fitr);
   }
 
+  auto sitr = dailystats.begin();
+  while(sitr != dailystats.end()) {
+    sitr = dailystats.erase(sitr);
+  }
+
 }
 
 // TODO fix this up for inverse table - storing token_usd now, used to be usd_token!
@@ -134,16 +139,14 @@ void sale::purchase_usd(name buyer, asset usd_quantity, string paymentSymbol, st
     tokens_purchased = sitr->tokens_purchased;
   }
   
-  // uint64_t price_volatility_leeway = seeds_limit.amount / 20; // 5% leeway
-
-  // check( (seeds_limit.amount + price_volatility_leeway) >= tokens_purchased + token_amount, 
-  //  "account: " + buyer.to_string() + 
-  //  " symbol: " + paymentSymbol + 
-  //  " tx_id: " + memo + 
-  //  " usd_quantity: " + usd_quantity.to_string() + 
-  //  " purchase limit overdrawn, tried to buy " + token_quantity.to_string() + 
-  //  " limit: " + seeds_limit.to_string() + 
-  //  " new total would be: " + std::to_string( (tokens_purchased + token_amount) / asset_factor_d(token_asset)));
+  check( is_whitelisted(buyer) || is_less_than_limit(asset(tokens_purchased + token_amount, hypha_symbol)), 
+   "account: " + buyer.to_string() + 
+   " symbol: " + paymentSymbol + 
+   " tx_id: " + memo + 
+   " usd_quantity: " + usd_quantity.to_string() + 
+   " free limit: " + std::to_string(get_limit()) + 
+   " purchase limit overdrawn, tried to buy " + token_quantity.to_string() + 
+   " new total would be: " + std::to_string( (tokens_purchased + token_amount) / asset_factor_d(token_asset)));
 
   if (sitr == dailystats.end()) {
     dailystats.emplace(get_self(), [&](auto& s) {
@@ -227,7 +230,7 @@ void sale::onhusd(name from, name to, asset quantity, string memo) {
 void sale::on_husd(name from, name to, asset quantity, string memo) {
     uint64_t usd_amount = quantity.amount * 100;
 
-    check(false, "HUSD sale disabled");
+    // check(false, "HUSD sale disabled");
 
     check(quantity.symbol == husd_symbol, "wrong symbol");
 
@@ -548,6 +551,23 @@ bool sale::is_paused() {
   return false;
 }
 
+bool sale::is_less_than_limit(asset hypha_quantity) {
+  auto fitr = flags.find(whitelist_limit_flag.value);
+  if (fitr != flags.end()) {
+    auto limit = asset(fitr->value, hypha_symbol);
+    return hypha_quantity <= limit;
+  }
+  return true;
+}
+uint64_t sale::get_limit() {
+  auto fitr = flags.find(whitelist_limit_flag.value);
+  if (fitr != flags.end()) {
+    return fitr->value;
+  }
+  return 0;
+}
+
+
 bool sale::is_set(name flag) {
   auto fitr = flags.find(flag.value);
   if (fitr != flags.end()) {
@@ -555,3 +575,42 @@ bool sale::is_set(name flag) {
   }
   return false;
 }
+
+bool sale::is_whitelisted(name account) {
+  auto witr = whitelist.find(account.value);
+  if (witr != whitelist.end()) {
+    return witr->value > 0;
+  }
+  return false;
+}
+
+
+ACTION sale::addwhitelist(name account) {
+  require_auth(get_self());
+
+  auto witr = whitelist.find(account.value);
+  if (witr != whitelist.end()) {
+    whitelist.modify(witr, get_self(), [&](auto& item) {
+      item.value = 1;
+    });
+  } else {
+    whitelist.emplace(get_self(), [&](auto& item) {
+      item.account = account;
+      item.value = 1;
+    });
+  }
+
+}
+
+ACTION sale::remwhitelist(name account) {
+  require_auth(get_self());
+
+  auto witr = whitelist.find(account.value);
+  if (witr != whitelist.end()) {
+    whitelist.modify(witr, get_self(), [&](auto& item) {
+      item.value = 0;
+    });
+  } 
+
+}
+

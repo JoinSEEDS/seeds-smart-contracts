@@ -10,25 +10,29 @@ const eosioLocalChainID = '8a34ec7df1b8cd06ff4a8abbaa7cc50300823350cadc59ab296cb
 const networks = {
   local:  eosioLocalChainID,
   telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
-  telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
+  telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11',
+  eosMainnet: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
 }
 
 const networkDisplayName = {
   local: 'Local',
   telosTestnet: 'Telos Testnet',
-  telosMainnet: 'Telos Mainnet'
+  telosMainnet: 'Telos Mainnet',
+  eosMainnet: 'EOS Mainnet',
 }
 
 const endpoints = {
   local: 'http://127.0.0.1:8888',
   telosTestnet: 'https://api-test.telosfoundation.io',
-  telosMainnet: 'https://api.telosfoundation.io'
+  telosMainnet: 'https://api.telosfoundation.io',
+  eosMainnet: 'http://eos.greymass.com',
 }
 
 const ownerAccounts = {
   local: 'owner',
   telosTestnet: 'seeds',
-  telosMainnet: 'seed.seeds'
+  telosMainnet: 'seed.seeds',
+  eosMainnet: 'hypha',
 }
 
 const {
@@ -47,22 +51,24 @@ console.log(""+netName)
 const publicKeys = {
   [networks.local]: ['EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'],
   [networks.telosMainnet]: ['EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR', 'EOS6kp3dm9Ug5D3LddB8kCMqmHg2gxKpmRvTNJ6bDFPiop93sGyLR'],
-  [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm']
-  // NOTE: Testnet seems to use EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm for onwer and active - verify
+  [networks.telosTestnet]: ['EOS8MHrY9xo9HZP4LvZcWEpzMVv1cqSLxiN2QMVNy8naSi1xWZH29', 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm'],
+  [networks.eosMainnet]: []
 }
 const [ ownerPublicKey, activePublicKey ] = publicKeys[chainId]
 
 const apiKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9',
-  [networks.telosTestnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9'
+  [networks.telosTestnet]: 'EOS7YXUpe1EyMAqmuFWUheuMaJoVuY3qTD33WN4TrXbEt8xSKrdH9',
+  [networks.eosMainnet]: []
 }
 const apiPublicKey = apiKeys[chainId]
 
 const inviteApiKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS87Wy26MWLJgQYPCzb8aRe9ezjXRDrigkKZMvhHJy27td5F7nZ5',
-  [networks.telosTestnet]: 'EOS8PC16tnMUkUxeuQHWmEWkAtoz6GvvHVWnehk1HPQSYBV4ujT6v'
+  [networks.telosTestnet]: 'EOS8PC16tnMUkUxeuQHWmEWkAtoz6GvvHVWnehk1HPQSYBV4ujT6v',
+  [networks.eosMainnet]: []
 }
 const inviteApiKey = inviteApiKeys[chainId]
 
@@ -70,7 +76,8 @@ const inviteApiKey = inviteApiKeys[chainId]
 const payForCPUKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
   [networks.telosMainnet]: 'EOS8gu3qzDsieAC7ni7o9vdKKnUjQXMEXN1NQNjFFs6M2u2kEyTvz',
-  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE'
+  [networks.telosTestnet]: 'EOS8CE5iqFh5XNfJygGZjm7FtKRSLEHFHfioXF6VLmoQSAMSrzzXE',
+  [networks.eosMainnet]: []
 }
 
 const payForCPUPublicKey = payForCPUKeys[chainId]
@@ -78,14 +85,16 @@ const payForCPUPublicKey = payForCPUKeys[chainId]
 const applicationKeys = {
   [networks.local]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
   [networks.telosMainnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
-  [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq'
+  [networks.telosTestnet]: 'EOS7HXZn1yhQJAiHbUXeEnPTVHoZLgAScNNELAyvWxoqQJzcLbbjq',
+  [networks.eosMainnet]: []
 }
 const applicationPublicKey = applicationKeys[chainId]
 
 const exchangeKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
   [networks.telosMainnet]: 'EOS75DmTxcnpvhjNekfKQzLrfwo44muPN6YPPX49vYPot4Qmo5cTo', 
-  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm' 
+  [networks.telosTestnet]: 'EOS8C9tXuPMkmB6EA7vDgGtzA99k1BN6UxjkGisC1QKpQ6YV7MFqm',
+  [networks.eosMainnet]: []
 }
 
 const exchangePublicKey = exchangeKeys[chainId]
@@ -94,6 +103,7 @@ const saleKeys = {
   [networks.local]: 'EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV', // normal dev key
   [networks.telosTestnet]: 'EOS7yHExhTMu1m23vAXHzMSBG632ry7yeas73TwBvFf13bEZCXfPP',
   [networks.telosMainnet]: 'EOS6qQjjYCoTmFha6rUk9ciE9NLTK1pvM7YgG6rnX2BLcRYzb9FWg', 
+  [networks.eosMainnet]: []
 }
 
 const salePublicKey = saleKeys[chainId]
@@ -190,6 +200,7 @@ const accountsMetadata = (network) => {
       tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
+      joinhypha: contract('joinhypha111', 'joinhypha'),
     }
   } else if (network == networks.telosMainnet) {
     return {
@@ -286,6 +297,12 @@ const accountsMetadata = (network) => {
       tokensmaster: contract('tmastr.seeds', 'tokensmaster'),
       rainbows: contract('rainbo.seeds','rainbows'),
       sale: contract('sale.hypha', 'sale'),
+      joinhypha: contract('joinhypha111', 'joinhypha'),
+    }
+  } else if (network == networks.eosMainnet) {
+    return {
+      // EOS mainnet doesn't have most of the accounts
+      joinhypha: contract('joinhypha111', 'joinhypha'),
     }
   } else {
     throw new Error(`${network} deployment not supported`)
@@ -820,6 +837,9 @@ var permissions = [{
 }, {
   target: `${accounts.policy.account}@active`,
   actor: `${accounts.policy.account}@eosio.code`
+// }, { // NOTE THESE don't work on mainnet - cleanup and remove
+  // target: `${accounts.joinhypha.account}@active`,
+  // actor: `${accounts.joinhypha.account}@eosio.code`
 }]
 
 const isTestnet = chainId == networks.telosTestnet
@@ -858,7 +878,11 @@ const keyProviders = {
     process.env.TESTNET_NEWPAYMENT_KEY,
     process.env.TELOS_TESTNET_ACTIVE_KEY, 
     process.env.APPLICATION_KEY
+  ],
+  [networks.eosMainnet]: [
+    process.env.EOS_MAINNET_ACTIVE_KEY, 
   ]
+
 }
 
 const keyProvider = keyProviders[chainId].filter((item) => item)
