@@ -4,27 +4,32 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
-
 #include <string>
+
+#ifdef RAINBOW_STANDALONE
+#undef RAINBOW_SEEDS_ECOSYS
+#else
+#define RAINBOW_SEEDS_ECOSYS
+#endif
+
 
 using namespace eosio;
 
    using std::string;
 
    /**
-    * The `rainbows` experimental contract implements the functionality described in the design document
+    * The `rainbows` contract implements the functionality described in the design document
     * https://rieki-cordon.medium.com/1fb713efd9b1 .
     * In the development process we are building on the eosio.token code. 
     *
     * The token contract defines the structures and actions that allow users to create, issue, and manage
-    * tokens for EOSIO based blockchains. It exemplifies one way to implement a smart contract which
-    * allows for creation and management of tokens.
+    * tokens for EOSIO based blockchains.
     * 
     * The `rainbows` contract class also implements a public static method: `get_balance`. This allows
     * one to check the balance of a token for a specified account.
     * 
-    * The `rainbows` contract manages the set of tokens, stakes, accounts and their corresponding balances,
-    * by using four internal tables: the `accounts`, `stats`, `configs`, and `stakes`. The `accounts`
+    * The `rainbows` contract manages the set of tokens, backings, accounts and their corresponding balances,
+    * by using four internal tables: the `accounts`, `stats`, `configs`, and `backings`. The `accounts`
     * multi-index table holds, for each row, instances of `account` object and the `account` object
     * holds information about the balance of one token. The `accounts` table is scoped to an eosio
     * account, and it keeps the rows indexed based on the token's symbol.  This means that when one
@@ -39,22 +44,27 @@ using namespace eosio;
     *
     * The first two tables (`accounts` and `stats`) are structured identically to the `eosio.token`
     * tables, making "rainbow tokens" compatible with most EOSIO wallet and block explorer applications.
-    * The two remaining tables (`configs` and `stakes`) provide additional data specific to the rainbow
+    * The two remaining tables (`configs` and `backings`) provide additional data specific to the rainbow
     * token.
     *
     * The `configs` singleton table contains names of administration accounts (e.g. membership_mgr,
     * freeze_mgr) and some configuration flags. The `configs` table is scoped to the token symbol_code
     * and has a single row per scope.
     *
-    * The `stakes` table contains staking relationships (staked currency, staking ratio, escrow account).
+    * The `backings` table contains backing relationships (backing currency, backing ratio, escrow account).
     * It is scoped by the token symbol_code and may contain 1 or more rows. It has a secondary index
-    * based on the staked currency type.
+    * based on the backing currency type.
     *
     * In addition, the `displays` singleton table contains json metadata intended for applications
     * (e.g. wallets) to use in UI display, such as a logo symbol url. It is scoped by token symbol_code.
     *
     * The `symbols` table is a housekeeping list of all the tokens managed by the contract. It is
     * scoped to the contract.
+    *
+    * The contract can require a prepaid fee (defined by the `fee_ext_sym` and `submission_fee` initializers
+    * in the rainbows constructor) in order to create a token. The prepaid balances are
+    * recorded in the `feebalance` table.
+    *
     */
 
    CONTRACT rainbows : public contract {
@@ -62,7 +72,15 @@ using namespace eosio;
          using contract::contract;
          rainbows( name receiver, name code, datastream<const char*> ds )
          : contract( receiver, code, ds ),
-         symboltable( receiver, receiver.value )
+         symboltable( receiver, receiver.value ),
+         approval_required( true ),
+         #if defined RAINBOW_SEEDS_ECOSYS
+         fee_ext_sym( symbol( "SEEDS",4 ), "token.seeds"_n ),
+         submission_fee( 1000000, symbol( "SEEDS",4 ) )
+         #else
+         fee_ext_sym( ),
+         submission_fee( )
+         #endif
          {}
 
          /**
@@ -70,7 +88,8 @@ using namespace eosio;
           * specified characteristics. 
           * If the token does not exist, a new row in the stats table for token symbol scope is created
           * with the specified characteristics. At creation, its' approval flag is false, preventing
-          * tokens from being issued.
+          * tokens from being issued. (The approval requirement can be bypassed by setting the
+          * data member `approval_required` to false.)
           * If a token of this symbol does exist and update is permitted, the characteristics are updated.
           *
           * @param issuer - the account that creates the token,
@@ -78,7 +97,7 @@ using namespace eosio;
           * @param withdrawal_mgr - the account with authority to withdraw tokens from any account,
           * @param withdraw_to - the account to which withdrawn tokens are deposited,
           * @param freeze_mgr - the account with authority to freeze transfer actions,
-          * @param redeem_locked_until - an ISO8601 date string; user redemption of stake is
+          * @param redeem_locked_until - an ISO8601 date string; user redemption of backings is
           *   disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
           * @param config_locked_until - an ISO8601 date string; changes to token characteristics
           *   are disallowed until this time; blank string is equivalent to "now" (i.e. unlocked).
@@ -105,7 +124,10 @@ using namespace eosio;
           * @pre broker_symbol must be an existing frozen token of zero precision on this contract, or empty
           * @pre cred_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
           * @pre pos_limit_symbol must be an existing frozen token of matching precision on this contract, or empty
-          
+          * @pre if data member `fee_ext_sym` is null, the issuer must provide sufficient RAM resources;
+          *             otherwise, the issuer must have prepaid the required fee to the contract and
+          *               no RAM is required from issuer.  
+          *
           */
          ACTION create( const name&   issuer,
                         const asset&  maximum_supply,
@@ -119,10 +141,26 @@ using namespace eosio;
                         const string& cred_limit_symbol,
                         const string& pos_limit_symbol );
 
+         /**
+          * This action watches for fee transfers into the contract account and updates the
+          * `feebalance` table.
+          */
+         [[eosio::on_notify("*::transfer")]]
+         void ontransfer(name from, name to, asset quantity, string memo);
+
+         /**
+          * This action returns any fee balance associated with an account. This balance is
+          * typically related to an issuance fee.
+          *
+          * @param account - account
+          *
+          */
+         ACTION returnfee( const name& account );
 
          /**
           * By this action the contract owner approves or rejects the creation of the token. Until
-          * this approval, no tokens may be issued. If rejected, and no issued tokens are outstanding,
+          * this approval, no tokens may be issued. (However automatic approval upon creation occurs if
+          * the data member `approval_required` is false.) If rejected, and no issued tokens are outstanding,
           * the table entries for this token are deleted.
           *
           * @param symbolcode - the symbol_code of the token to execute the close action for.
@@ -134,47 +172,46 @@ using namespace eosio;
 
 
          /**
-          * Allows `issuer` account to create a staking relationship for a token. A new row in the
-          * stakes table for token symbol scope gets created with the specified characteristics.
+          * Allows `issuer` account to create a backing relationship for a token. A new row in the
+          * backings table for token symbol scope gets created with the specified characteristics.
           *
           * @param token_bucket - a reference quantity of the token,
-          * @param stake_per_bucket - the number of stake tokens (e.g. Seeds) staked per "bucket" of tokens,
-          * @param stake_token_contract - the staked token contract account (e.g. token.seeds),
-          * @param stake_to - the escrow account where stake is held
-          * @param proportional - redeem by proportion of escrow rather than by staking ratio.
+          * @param backs_per_bucket - the number of backing tokens (e.g. Seeds) placed in escrow per "bucket" of tokens,
+          * @param backing_token_contract - the backing token contract account (e.g. token.seeds),
+          * @param escrow - the escrow account where backing tokens are held
+          * @param proportional - redeem by proportion of escrow rather than by backing ratio.
           * @param reserve_fraction - minimum reserve ratio (as percent) of escrow balance to redemption liability.
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre Token symbol must have already been created by this issuer
           * @pre The config_locked_until field in the configs table must be in the past,
-          * @pre issuer must have a (possibly zero) balance of the stake token,
-          * @pre stake_per_bucket must be non-negative
+          * @pre issuer must have a (possibly zero) balance of the backing token,
+          * @pre backs_per_bucket must be non-negative
           * @param reserve_fraction must be non-negative
           * @pre issuer active permissions must include rainbowcontract@eosio.code
-          * @pre stake_to active permissions must include rainbowcontract@eosio.code
+          * @pre escrow active permissions must include rainbowcontract@eosio.code
           *
           * Note: the contract cannot internally check the required permissions status
           */
-         ACTION setstake( const asset&      token_bucket,
-                          const asset&      stake_per_bucket,
-                          const name&       stake_token_contract,
-                          const name&       stake_to,
+         ACTION setbacking( const asset&      token_bucket,
+                          const asset&      backs_per_bucket,
+                          const name&       backing_token_contract,
+                          const name&       escrow,
                           const bool&       proportional,
                           const uint32_t&   reserve_fraction,
                           const string&     memo);
 
          /**
-          * Allows `issuer` account to delete a staking relationship. Staked tokens are returned
-          * to the issuer account. Deferred stake relationships are reverted. The row is removed
-          * from the stakes table.
+          * Allows `issuer` account to delete a backing relationship. Backing tokens are returned
+          * to the issuer account. The row is removed from the backings table.
           *
-          * @param stake_index - the index field in the `stakes` table
-          * @param symbolcode - the staked token
+          * @param backing_index - the index field in the `backings` table
+          * @param symbolcode - the backing token
           * @param memo - memo string
           *
           * @pre the config_locked_until field in the configs table must be in the past
           */
-         ACTION deletestake( const uint64_t& stake_index,
+         ACTION deletebacking( const uint64_t& backing_index,
                              const symbol_code& symbolcode,
                              const string& memo );
 
@@ -204,7 +241,7 @@ using namespace eosio;
 
          /**
           *  This action issues a `quantity` of tokens to the issuer account, and transfers
-          *  a proportional amount of stake to escrow if staking is configured.
+          *  a proportional amount of backing tokens to escrow if backing is configured.
           *
           * @param quantity - the amount of tokens to be issued,
           * @memo - the memo string that accompanies the token issue transaction.
@@ -215,20 +252,24 @@ using namespace eosio;
 
          /**
           * The opposite for issue action, if all validations succeed,
-          * it debits the statstable.supply amount. Any staked tokens are released from escrow in
-          * proportion to the quantity of tokens retired.
+          * it debits the statstable.supply amount. If `do_redeem` flag is true,
+          * any backing tokens are released from escrow in proportion to the
+          * quantity of tokens retired.
           *
           * @param owner - the account containing tokens to retire,
           * @param quantity - the quantity of tokens to retire,
+          * @param do_redeem - if true, send backing tokens to owner,
+          *                    if false, they remain in escrow,
           * @param memo - the memo string to accompany the transaction.
           *
           * @pre the redeem_locked_until configuration must be in the past (except that
           *   this action is always permitted to the issuer.)
-          * @pre If any staking relationships exist, for each relationship :
-          *   1. the proportional unstaking flag must be configured true, OR
+          * @pre If any backing relationships exist, for each relationship :
+          *   1. the proportional redemption flag must be configured true, OR
           *   2. the balance in the escrow account must meet the reserve_fraction criterion
           */
-         ACTION retire( const name& owner, const asset& quantity, const string& memo );
+         ACTION retire( const name& owner, const asset& quantity,
+                        const bool& do_redeem, const string& memo );
 
          /**
           * Allows `from` account to transfer to `to` account the `quantity` tokens.
@@ -247,9 +288,6 @@ using namespace eosio;
           *   credit if configured with credit_limit_symbol in `create` operation)
           * @pre If configured with positive_limit_symbol in `create` operation, the transfer
           *   must not put the `to` account over its maximum limit
-          *
-          * Note: Transfer of zero tokens can effectively "open" an account (create a new
-          * balance entry in the `accounts` table) using `from` acct's ram.
           */
          ACTION transfer( const name&    from,
                           const name&    to,
@@ -329,7 +367,7 @@ using namespace eosio;
          }
 
       private:
-         const int max_stake_count = 8; // don't use too much cpu time to complete transaction
+         const int max_backings_count = 8; // don't use too much cpu time to complete transaction
          const uint64_t no_index = static_cast<uint64_t>(-1); // flag for nonexistent defer_table link
          static const asset null_asset;
          const uint32_t VISITOR = 1;
@@ -368,18 +406,19 @@ using namespace eosio;
          };
 
 
-         TABLE stake_stats {  // scoped on token symbol code
+         TABLE backing_stats {  // scoped on token symbol code
             uint64_t index;
             asset    token_bucket;
-            asset    stake_per_bucket;
-            name     stake_token_contract;
-            name     stake_to;
+            asset    backs_per_bucket;
+            name     backing_token_contract;
+            name     escrow;
             uint32_t reserve_fraction;
             bool     proportional;
 
             uint64_t primary_key()const { return index; };
             uint128_t by_secondary() const {
-               return (uint128_t)stake_per_bucket.symbol.raw()<<64 | stake_token_contract.value;
+               return (uint128_t)backs_per_bucket.symbol.raw()<<64 |
+                        backing_token_contract.value;
             }
          };
 
@@ -389,35 +428,48 @@ using namespace eosio;
             uint64_t primary_key()const { return symbolcode.raw(); };
          };
 
+         TABLE feebalance { // scoped on account name
+            asset    balance;
+
+            uint64_t primary_key()const { return balance.symbol.code().raw(); }
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
          typedef eosio::singleton< "configs"_n, currency_config > configs;
          typedef eosio::multi_index< "configs"_n, currency_config >  dump_for_config;
          typedef eosio::singleton< "displays"_n, currency_display > displays;
          typedef eosio::multi_index< "displays"_n, currency_display >  dump_for_display;
-         typedef eosio::multi_index< "stakes"_n, stake_stats, indexed_by
-               < "staketoken"_n,
-                 const_mem_fun<stake_stats, uint128_t, &stake_stats::by_secondary >
+         typedef eosio::multi_index< "backings"_n, backing_stats, indexed_by
+               < "backingtoken"_n,
+                 const_mem_fun<backing_stats, uint128_t, &backing_stats::by_secondary >
                >
-            > stakes;
+            > backs;
          typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
+         typedef eosio::multi_index< "feebalance"_n, feebalance > fees;
 
          symbols symboltable;
+         extended_symbol fee_ext_sym;
+         asset submission_fee;
+         bool approval_required;
 
          void sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol );
          void add_balance( const name& owner, const asset& value, const name& ram_payer,
                            const symbol_code& limit_symbol );
          void sister_check(const string& sym_name, uint32_t precision);
-         void stake_all( const name& owner, const asset& quantity );
-         void unstake_all( const name& owner, const asset& quantity );
-         void stake_one( const stake_stats& sk, const name& owner, const asset& quantity );
-         void unstake_one( const stake_stats& sk, const name& owner, const asset& quantity );
+         void set_all_backings( const name& owner, const asset& quantity );
+         void redeem_all_backings( const name& owner, const asset& quantity );
+         void set_one_backing( const backing_stats& bk, const name& owner, const asset& quantity );
+         void redeem_one_backing( const backing_stats& bk, const name& owner, const asset& quantity );
          void reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter );
  
    };
 
+/*
 EOSIO_DISPATCH(rainbows,
-   (create)(approve)(setstake)(setdisplay)(issue)(retire)(transfer)
+   (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)
    (open)(close)(freeze)(reset)(resetacct)
 );
+*/
+
 
