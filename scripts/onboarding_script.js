@@ -144,6 +144,7 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
 
     totalAmount = parseInt(totalAmount)
     var secrets = "Secret,Hash,Seeds (total)\n"
+    var invitelist = ""
     const fileName = 'secrets_'+num+'.csv'
     var log = []
 
@@ -204,9 +205,10 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
             actions.push(inv.action)
             log.push(inv)
             secrets = secrets + inv.secret +"," + inv.hashedSecret + "," + totalAmount + "\n"
+            invitelist = invitelist +"https://joinseeds.app.link/accept-invite?invite-secret="+inv.secret+"\n"
         }
     
-        console.log("secrets: "+secrets)
+        //console.log("secrets: "+secrets)
     
         //console.log("actions: " + JSON.stringify(actions, null, 2))
     
@@ -222,7 +224,7 @@ const bulk_invite = async (sponsor, referrer, num, totalAmount) => {
     
         fs.writeFileSync(fileName, secrets)
         fs.writeFileSync('invite_log_'+num+'.json', JSON.stringify(log, null,2))
-        
+        fs.writeFileSync('invitelist_'+num+'.txt', invitelist)          
         console.log(num + " secrets written to "+fileName)
     
     } catch (err) {
@@ -309,7 +311,7 @@ const createCPUAction = (sponsor) => {
         authorization: [
             {
                 actor: harvest,
-                permission: 'active',
+                permission: 'payforcpu',
             },
             {
                 actor: sponsor,
