@@ -16,9 +16,13 @@ const command = ({ contract, source, include, dir, contractSourceName }) => {
     let inc = include == "" ? "./include" : include
 
     contractSourceName = contractSourceName ?? contract
-    
+
     if (process.env.COMPILER === 'local') {
-      cmd = "eosio-cpp -abigen -I "+ inc +" -contract " + contractSourceName + " -o ./artifacts/"+contract+".wasm "+source;
+      if (process.env.LEAP === 'true') {
+        cmd = "cdt-cpp -abigen -I "+ inc +" -contract " + contractSourceName + " -o ./artifacts/"+contract+".wasm "+source;
+      } else {
+        cmd = "eosio-cpp -abigen -I "+ inc +" -contract " + contractSourceName + " -o ./artifacts/"+contract+".wasm "+source;
+      }
     } else {
       cmd = `docker run --rm --name eosio.cdt_v1.7.0-rc1 --volume ${volume}:/project -w /project eostudio/eosio.cdt:v1.7.0-rc1 /bin/bash -c "echo 'starting';eosio-cpp -abigen -I ${inc} -contract ${contract} -o ./artifacts/${contract}.wasm ${source}"`
     }
