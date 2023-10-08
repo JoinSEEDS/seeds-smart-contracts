@@ -334,8 +334,7 @@ ACTION harvest::calctotal(uint64_t startval) {
 // Calculate Transaction Points for a single account
 // Returns count of iterations
 uint32_t harvest::calc_transaction_points(name account, name type) {
-  uint64_t now = eosio::current_time_point().sec_since_epoch();
-  uint64_t cutoffdate = now - (utils::moon_cycle * config_float_get("cyctrx.trail"_n));
+  uint64_t cutoffdate = utils::get_trx_calc_cutoff_date();
 
   transaction_points_tables transactions(contracts::history, account.value);
 
@@ -350,6 +349,8 @@ uint32_t harvest::calc_transaction_points(name account, name type) {
     titr++;
     count++;
   }
+
+  // TODO: This needs to delete older transactions so we don't eternally grow
 
   if (type == name("organisation")) {
     setorgtxpt(account, total_points);
