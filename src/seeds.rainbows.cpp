@@ -360,6 +360,23 @@ void rainbows::retire( const name& owner, const asset& quantity,
 
 }
 
+void rainbows:: garner( const name&        from,
+                        const name&        to,
+                        const symbol_code& symbolcode,
+                        const int64_t&     rateppm,
+                        const string&      memo )
+{
+    check( is_account( from ), "from account does not exist");
+    accounts from_acnts( get_self(), from.value );
+    const auto fr = from_acnts.find( symbolcode.raw() );
+    if( fr == from_acnts.end() || fr->balance.amount <= 0) {
+        return;
+    }
+    check(rateppm >= 0, "garner: rateppm must be nonnegative"); // may have future use case
+    const asset quantity = asset(fr->balance.amount*(int128_t)rateppm/1000000LL, fr->balance.symbol);
+    transfer(from, to, quantity, memo);
+}
+
 void rainbows::transfer( const name&    from,
                       const name&    to,
                       const asset&   quantity,

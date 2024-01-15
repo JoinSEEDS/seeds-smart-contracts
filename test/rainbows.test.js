@@ -181,6 +181,17 @@ describe('rainbows', async assert => {
     expected: []
   })
 
+  console.log('garner tokens')
+  await contracts.rainbows.garner(fourthuser, withdraw_to, 'TOKES', 10000, 'garner 1%', { authorization: `${issuer}@active` })
+
+  assert({
+    given: 'garner tokens using withdraw power',
+    should: 'see tokens in users account',
+    actual: [ await eos.getCurrencyBalance(rainbows, fourthuser, 'TOKES'),
+              await eos.getCurrencyBalance(rainbows, withdraw_to, 'TOKES'),
+            ],
+    expected: [ [ '19.80 TOKES' ], [ '0.20 TOKES' ] ]
+  })
 
   console.log('create credit limit token')
   await contracts.rainbows.create(issuer, '1000000.00 CREDS', issuer, issuer, issuer,

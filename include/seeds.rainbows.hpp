@@ -257,6 +257,32 @@ using namespace eosio;
                           const asset&   quantity,
                           const string&  memo );
          /**
+          * Allows `from` account to transfer to `to` account a fraction `fraction` of its balance.
+          * One account is debited and the other is credited.
+          * This function is suitable for demurrage or wealth taxation.
+          * When `from` balance is negative (e.g. mutual credit) nothing is transferred.
+          *
+          * @param from - the account to transfer from,
+          * @param to - the account to be transferred to,
+          * @param symbolcode - the token symbol,
+          * @param rateppm - the fraction (in ppm) of the `from` balance to be transferred,
+          * @param memo - the memo string to accompany the transaction.
+          * 
+          * @pre The transfers_frozen flag in the configs table must be false, except for
+          *   administrative-account transfers
+          * @pre If configured with a membership_symbol in `create` operation, the sender and
+          *   receiver must both be members, and at least one of them must be a regular member
+          * @pre The `from` account balance must be sufficient for the transfer (allowing for
+          *   credit if configured with credit_limit_symbol in `create` operation)
+          * @pre If configured with positive_limit_symbol in `create` operation, the transfer
+          *   must not put the `to` account over its maximum limit
+          */
+         ACTION garner( const name&        from,
+                        const name&        to,
+                        const symbol_code& symbolcode,
+                        const int64_t&     rateppm,
+                        const string&      memo );
+         /**
           * Allows `ram_payer` to create an account `owner` with zero balance for
           * token `symbolcode` at the expense of `ram_payer`.
           *
@@ -419,7 +445,7 @@ using namespace eosio;
    };
 
 EOSIO_DISPATCH(rainbows,
-   (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)
+   (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)(garner)
    (open)(close)(freeze)(reset)(resetacct)
 );
 
