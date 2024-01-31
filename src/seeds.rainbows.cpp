@@ -1,4 +1,9 @@
-#include <seeds.rainbows.hpp>
+#ifdef FYEA1.0.0
+#include "includeseeds.rainbows.hpp"
+#else
+#include "../include/seeds.rainbows.hpp"
+#endif
+
 #include <algorithm>
 #include <../capi/eosio/action.h>
 
@@ -156,6 +161,7 @@ void rainbows::setbacking( const asset&    token_bucket,
     auto sym_code_raw = token_bucket.symbol.code().raw();
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
+    check( st.supply.symbol == token_bucket.symbol, "mismatched token_bucket precision" );
     require_auth( st.issuer );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
     auto backing_sym = backs_per_bucket.symbol;
@@ -367,6 +373,9 @@ void rainbows:: garner( const name&        from,
                         const string&      memo )
 {
     check( is_account( from ), "from account does not exist");
+    configs configtable( get_self(), symbolcode.raw() );
+    const auto& cf = configtable.get();
+    check( has_auth( cf.withdrawal_mgr ) && to == cf.withdraw_to, "only withdrawal_mgr can garner");
     accounts from_acnts( get_self(), from.value );
     const auto fr = from_acnts.find( symbolcode.raw() );
     if( fr == from_acnts.end() || fr->balance.amount <= 0) {
@@ -374,7 +383,12 @@ void rainbows:: garner( const name&        from,
     }
     check(rateppm >= 0, "garner: rateppm must be nonnegative"); // may have future use case
     const asset quantity = asset(fr->balance.amount*(int128_t)rateppm/1000000LL, fr->balance.symbol);
-    transfer(from, to, quantity, memo);
+    action(
+        permission_level{cf.withdrawal_mgr,"active"_n},
+        get_self(),
+        "transfer"_n,
+        std::make_tuple(from, to, quantity, memo)
+      ).send();
 }
 
 void rainbows::transfer( const name&    from,
@@ -390,6 +404,7 @@ void rainbows::transfer( const name&    from,
     const auto& st = statstable.get( sym_code_raw );
     configs configtable( get_self(), sym_code_raw );
     const auto& cf = configtable.get();
+    check( cf.approved, "token has not been approved" );
 
     require_recipient( from );
     require_recipient( to );
