@@ -183,31 +183,7 @@ void sale::ontransfer(name buyer, name contract, asset tlos_quantity, string mem
 
     check(!is_set(tlos_paused_flag), "TLOS purchase is paused.");
 
-    configtable c = config.get();
-  
-    asset tlos_usd = c.tlos_usd;
-
-    double tlos_q_double = tlos_quantity.amount / 10000.0;
-    double tlos_usd_double = tlos_usd.amount / 10000.0;
-
-    uint64_t usd_amount = (tlos_q_double * tlos_usd_double) * 10000;
-
-    asset usd_asset = asset(usd_amount, usd_symbol);
-
-    purchase_usd(buyer, usd_asset, "TLOS", memo);
-
-    auto now = eosio::current_time_point().sec_since_epoch();
-
-    string paymentId = buyer.to_string() + ": "+tlos_quantity.to_string() + " time: " + std::to_string(now);
-
-    payhistory.emplace(_self, [&](auto& item) {
-      item.id = payhistory.available_primary_key();
-      item.recipientAccount = buyer;
-      item.paymentSymbol = "TLOS";
-      item.paymentQuantity = tlos_quantity.to_string();
-      item.paymentId = paymentId;
-      item.multipliedUsdValue = usd_asset.amount;
-    });
+  // ... do stuff
 
   }
 }
