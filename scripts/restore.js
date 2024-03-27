@@ -2,7 +2,7 @@ const { createClient, createReducer } = require('eosio-history-demux')
 
 const { eos, names } = require('../scripts/helper')
 
-const httpEndpoint = 'https://node.hypha.earth'
+const httpEndpoint = 'https://mainnet.telos.net'
 
 const client = createClient(httpEndpoint)
 
