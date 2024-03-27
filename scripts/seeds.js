@@ -215,6 +215,7 @@ program
     await proposeDeploy(proposer_account, proposal_name, contract)
   })
 
+  // EOSIO_NETWORK=telosMainnet ./scripts/seeds.js propose_change_guardians illumination changeoguard cg.seeds illumination hyphanewyork cometogether markflowfarm thealchemist
   program
   .command('propose_change_guardians <proposer_account> <proposal_name> <account> [guardians...]')
   .description('Propose change guardians')

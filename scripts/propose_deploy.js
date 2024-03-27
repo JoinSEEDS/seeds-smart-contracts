@@ -7,7 +7,7 @@ const { Serialize } = eosjs
 const { SigningRequest } = require('eosio-signing-request')
 const { source } = require('./deploy')
 const { accounts, eos } = require('./helper')
-const { proposeMsig } = require('./msig')
+const { proposeMsig, createMultisigPropose2 } = require('./msig')
 
 const authPlaceholder = "............1"
 const GuardianAccountName = "cg.seeds"
@@ -33,15 +33,12 @@ const proposeChangeGuardians = async (proposerAccount, proposalName, targetAccou
       createPermissionsAction("owner", guardians) 
     ]
 
-    const res = await createMultisigProposal(proposerAccount, proposalName, actions, "owner")
+    console.log("creating msig " + JSON.stringify(actions, null, 2))
 
-    const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
+    const res = await createMultisigPropose2(proposerAccount, proposalName, actions, "owner")
 
-    console.log("ESR for Approve: " + JSON.stringify(approveESR))
   
-    const execESR = await createESRCodeExec({proposerAccount, proposalName})
-  
-    console.log("ESR for Exec: " + JSON.stringify(execESR))
+    console.log("Msig: " + JSON.stringify(res))
     
 }
 
@@ -150,15 +147,10 @@ const proposeKeyPermissions = async (proposerAccount, proposalName, targetAccoun
         },
     }]
 
-    const res = await createMultisigProposal(proposerAccount, proposalName, actions, "owner")
 
-    const approveESR = await createESRCodeApprove({proposerAccount, proposalName})
+    const res = await createMultisigPropose2(proposerAccount, proposalName, actions, "owner")
 
-    console.log("ESR for Approve: " + JSON.stringify(approveESR))
-  
-    const execESR = await createESRCodeExec({proposerAccount, proposalName})
-  
-    console.log("ESR for Exec: " + JSON.stringify(execESR))
+    console.log("msig: " + JSON.stringify(res))
     
 
   }
@@ -369,6 +361,7 @@ const getActivePermissionAccounts = async (account, permission_name = "active") 
 }
 
 // take any input of actions, create a multisig proposal for guardians from it!
+
 
 const createMultisigProposal = async (proposerAccount, proposalName, actions, permission = "active") => {
 

@@ -7,6 +7,7 @@ const { Serialize } = eosjs
 const { SigningRequest } = require('eosio-signing-request')
 const { source } = require('./deploy')
 const { accounts, eos } = require('./helper')
+const Eos = require('./eosjs-port')
 
 const authPlaceholder = "............1"
 
@@ -198,6 +199,72 @@ const createMultisigPropose = async (proposerAccount, proposalName, contract, ac
 
 }
 
+const createMultisigPropose2 = async ({
+  proposerAccount,
+  proposalName,
+  contract,
+  actions,
+  permission = "active",
+}) => {
+
+  const eos = getEosPort()
+
+  const serializedActions = await eos.api.serializeActions(actions)
+
+  requestedApprovals = await getApprovers(contract, permission)
+
+  //requestedApprovals = await getConstitutionalGuardians(permission)
+
+  console.log("====== PROPOSING ======")
+
+  console.log("requested permissions: " + permission + " " + JSON.stringify(requestedApprovals))
+
+  const info = await eos.api.rpc.get_info();
+  const head_block = await eos.api.rpc.get_block(info.last_irreversible_block_num);
+  const chainId = info.chain_id;
+
+  const expiration = Serialize.timePointSecToDate(Serialize.dateToTimePointSec(head_block.timestamp) + 3600 * 24 * 7)
+
+  const proposeInput = {
+    proposer: proposerAccount,
+    proposal_name: proposalName,
+    requested: requestedApprovals,
+    trx: {
+      expiration: expiration,
+      ref_block_num: 0,
+      ref_block_prefix: 0,
+      max_net_usage_words: 0,
+      max_cpu_usage_ms: 0,
+      delay_sec: 0,
+      context_free_actions: [],
+      actions: serializedActions,
+      transaction_extensions: []
+    }
+  };
+
+  const auth = [{
+    actor: proposerAccount,
+    permission: "active",
+  }]
+
+  const propActions = [{
+    account: 'eosio.msig',
+    name: 'propose',
+    authorization: auth,
+    data: proposeInput
+  }]
+
+  const propose = await createESRWithActions({ actions: propActions })
+
+  return {
+    ...propose,
+    url: `https://mongo.hypha.earth/multisig/${proposerAccount}/${proposalName}`
+  }
+
+
+}
+
+
 const createESRCodeApprove = async ({proposerAccount, proposalName}) => {
 
   const approveActions = [{
@@ -285,4 +352,30 @@ const createESRWithActions = async ({actions}) => {
   return parsedResponse
 }
 
-module.exports = { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction }
+const getEosPort = (endpoint = "https://mainnet.telos.net") => {
+
+    const keyProvider = []
+
+    const networks = {
+        telosTestnet: '1eaa0824707c8c16bd25145493bf062aecddfeb56c736f6ba6397f3195f33c9f',
+        telosMainnet: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
+      }
+
+    const chainId = networks.telosMainnet
+
+    const httpEndpoint = endpoint
+      
+    const config = {
+        keyProvider,
+        httpEndpoint,
+        chainId
+      }
+      
+    const eos = new Eos(config, false)
+
+    return eos
+      
+
+}
+
+module.exports = { proposeMsig, migrateTokens, createESRWithActions, setSettingsAction, createMultisigPropose2 }
