@@ -292,7 +292,7 @@ const allPayments = async () => {
     limit,
 ) => {
 
-  const url = "http://api.telosfoundation.io" + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.account=token.hypha`
+  const url = "http://mainnet.telos.net" + `/v2/history/get_actions?skip=${skip}&limit=${limit}&act.name=transfer&act.account=token.seeds&before=2021-02-20T05:12:36.000Z`
 
   const rawResponse = await fetch(url, {
       method: 'GET',
@@ -447,17 +447,17 @@ const getAllHistory = async () => {
 
     newItems = await get_history_tx(skip, limit)
     newItems = newItems.actions
-    //console.log("got items "+JSON.stringify(newItems, null, 2))
+    console.log("got items "+JSON.stringify(newItems, null, 2))
+    if (!newItems) {
+      newItems = []
+    }
     newItems.forEach(item => {
       act = item.act
       data = act.data
       if (
         act.account == "token.hypha" &&
-        act.name == "transfer" || act.name == "reduce"
+        act.name == "transfer" 
         ) {
-          if (act.name == "reduce") {
-            console.log("adding reduce action "+JSON.stringify(item))
-          }
           items.push(item)
 
           line = item.global_sequence + "," +item.timestamp + ","+

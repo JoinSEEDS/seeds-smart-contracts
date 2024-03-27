@@ -23,8 +23,8 @@ const networkDisplayName = {
 
 const endpoints = {
   local: 'http://127.0.0.1:8888',
-  telosTestnet: 'https://api-test.telosfoundation.io',
-  telosMainnet: 'https://api.telosfoundation.io',
+  telosTestnet: 'https://testnet.telos.net',
+  telosMainnet: 'https://mainnet.telos.net',
   eosMainnet: 'http://eos.greymass.com',
 }
 
