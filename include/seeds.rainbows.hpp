@@ -268,8 +268,8 @@ using namespace eosio;
           * @param rateppm - the fraction (in ppm) of the `from` balance to be transferred,
           * @param memo - the memo string to accompany the transaction.
           * 
-          * @pre The transfers_frozen flag in the configs table must be false, except for
-          *   administrative-account transfers
+          * @pre the transaction must be authorized by the withrawal_mgr account
+          * @pre The `to` account must be the withdraw_to account
           * @pre If configured with a membership_symbol in `create` operation, the sender and
           *   receiver must both be members, and at least one of them must be a regular member
           * @pre The `from` account balance must be sufficient for the transfer (allowing for
