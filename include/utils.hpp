@@ -2,12 +2,12 @@
 #include <eosio/asset.hpp>
 #include <eosio/system.hpp>
 #include <eosio/transaction.hpp>
-#include <tables/rep_table.hpp>
-#include <tables/size_table.hpp>
-#include <tables/user_table.hpp>
-#include <tables/config_table.hpp>
-#include <tables/config_float_table.hpp>
-#include <tables/deferred_id_table.hpp>
+#include "tables/rep_table.hpp"
+#include "tables/size_table.hpp"
+#include "tables/user_table.hpp"
+#include "tables/config_table.hpp"
+#include "tables/config_float_table.hpp"
+#include "tables/deferred_id_table.hpp"
 
 using namespace eosio;
 using std::string;

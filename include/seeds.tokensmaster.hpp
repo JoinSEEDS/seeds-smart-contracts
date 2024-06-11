@@ -2,9 +2,9 @@
 #include <eosio/eosio.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/singleton.hpp>
-#include <contracts.hpp>
-#include <tables.hpp>
-#include <utils.hpp>
+#include "contracts.hpp"
+#include "tables.hpp"
+#include "utils.hpp"
 
 using namespace eosio;
 using std::string;
@@ -40,6 +40,10 @@ using std::string;
 CONTRACT tokensmaster : public contract {
   public:
       using contract::contract;
+      tokensmaster(name receiver, name code, datastream<const char*> ds)
+        : contract(receiver, code, ds),
+          configs(receiver, receiver.value)
+          {}
 
       /**
           * The `reset` action executed by the tokensmaster contract account deletes all table data
@@ -165,6 +169,7 @@ CONTRACT tokensmaster : public contract {
         name               manager;
         bool               verify;
         time_point         init_time;
+        time_point         changed_time;
       } config_row;
 
       TABLE token_table { // single table, scoped by contract account name
@@ -222,6 +227,7 @@ CONTRACT tokensmaster : public contract {
       } schema_row;
 
     typedef eosio::singleton< "config"_n, config > config_table;
+    config_table configs;
     typedef eosio::multi_index< "config"_n, config >  dump_for_config;
 
     typedef eosio::multi_index<"tokens"_n, token_table, indexed_by

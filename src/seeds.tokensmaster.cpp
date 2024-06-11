@@ -1,4 +1,5 @@
-#include <seeds.tokensmaster.hpp>
+//contractName:tokensmaster
+#include "seeds.tokensmaster.hpp"
 #include <cstring>
 #include <algorithm>
 
@@ -12,7 +13,7 @@ void tokensmaster::reset() {
   utils::delete_table<token_tables>(get_self(), get_self().value);
   utils::delete_table<black_table>(get_self(), get_self().value);
   utils::delete_table<white_table>(get_self(), get_self().value);
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   configs.remove();
 }
 
@@ -24,7 +25,7 @@ void tokensmaster::init(string chain, name manager, bool verify) {
     schema_entry.schema = json_schema();
     schemas.set(schema_entry, get_self());
   }
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   check(!configs.exists(), "cannot re-initialize configuration");
 
   updblacklist(symbol_code("BTC"), true);
@@ -40,12 +41,13 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   config_entry.manager = manager;
   config_entry.verify = verify;
   config_entry.init_time = current_time_point();
+  config_entry.changed_time = current_time_point();
   configs.set(config_entry, get_self());
 }
 
 void tokensmaster::submittoken(name submitter, string chain, name contract, symbol_code symbolcode, string json)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   check(configs.exists(), "contract not initialized yet");
   require_auth(submitter);
   check(symbolcode.is_valid(), "invalid symbol");
@@ -83,11 +85,15 @@ void tokensmaster::submittoken(name submitter, string chain, name contract, symb
     s.symbolcode = symbolcode;
     s.json = json;
   });
+  auto cf = configs.get();
+  cf.changed_time = current_time_point();
+  configs.set( cf, get_self() );
+
 }
 
 void tokensmaster::accepttoken(uint64_t id, symbol_code symbolcode, name usecase, bool accept)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   check(configs.exists(), "contract not initialized yet");
   name manager = configs.get().manager;
   check(symbolcode.is_valid(), "invalid symbol");
@@ -121,11 +127,15 @@ void tokensmaster::accepttoken(uint64_t id, symbol_code symbolcode, name usecase
       usecasetable.erase(uc);
     }      
   }
+  auto cf = configs.get();
+  cf.changed_time = current_time_point();
+  configs.set( cf, get_self() );
+
 }
 
 void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   check(configs.exists(), "contract not initialized yet");
   name manager = configs.get().manager;
   check(symbolcode.is_valid(), "invalid symbol");
@@ -143,36 +153,43 @@ void tokensmaster::deletetoken(uint64_t id, symbol_code symbolcode)
 
   }
   tokentable.erase(tt);
+  auto cf = configs.get();
+  cf.changed_time = current_time_point();
+  configs.set( cf, get_self() );
 }
 
 void tokensmaster::setcurator(name usecase, name curator)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   check(configs.exists(), "contract not initialized yet");
-  name manager = configs.get().manager;
+  auto cf = configs.get();
+  name manager = cf.manager;
   if( usecase == name() ) {
     require_auth(manager);
     check(is_account(curator), "account "+curator.to_string()+" does not exist");
-    auto cf = configs.get();
     cf.manager = curator;
-    configs.set( cf, manager );
-    return;
+  } else {
+    usecase_table usecasetable(get_self(), get_self().value);
+    const auto& uc = usecasetable.find(usecase.value);
+    check( uc != usecasetable.end(), "usecase "+usecase.to_string()+" does not exist" );
+    check(is_account(curator), "account "+curator.to_string()+" does not exist");
+    check( has_auth(manager) || has_auth(uc->curator), "not authorized");
+    usecasetable.modify( uc, same_payer, [&]( auto& s ) {
+      s.curator = curator;
+    });
   }
-  usecase_table usecasetable(get_self(), get_self().value);
-  const auto& uc = usecasetable.find(usecase.value);
-  check( uc != usecasetable.end(), "usecase "+usecase.to_string()+" does not exist" );
-  check(is_account(curator), "account "+curator.to_string()+" does not exist");
-  check( has_auth(manager) || has_auth(uc->curator), "not authorized");
-  usecasetable.modify( uc, same_payer, [&]( auto& s ) {
-    s.curator = curator;
-  });
+  cf.changed_time = current_time_point();
+  configs.set( cf, get_self() );
 }
 
 void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   if( configs.exists() ) {
-    require_auth( configs.get().manager );
+    auto cf = configs.get();
+    require_auth( cf.manager );
+    cf.changed_time = current_time_point();
+    configs.set( cf, get_self() );
   } else {
     require_auth( get_self() );
   }
@@ -192,9 +209,12 @@ void tokensmaster::updblacklist(symbol_code symbolcode, bool add)
 
 void tokensmaster::updwhitelist(string chain, extended_symbol token, bool add)
 {
-  config_table configs(get_self(), get_self().value);
+  //config_table configs(get_self(), get_self().value);
   if( configs.exists() ) {
-    require_auth( configs.get().manager );
+    auto cf = configs.get();
+    require_auth( cf.manager );
+    cf.changed_time = current_time_point();
+    configs.set( cf, get_self() );
   } else {
     require_auth( get_self() );
   }
