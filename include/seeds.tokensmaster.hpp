@@ -1,4 +1,5 @@
 #include <eosio/asset.hpp>
+#include <eosio/binary_extension.hpp> 
 #include <eosio/eosio.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/singleton.hpp>
@@ -169,7 +170,9 @@ CONTRACT tokensmaster : public contract {
         name               manager;
         bool               verify;
         time_point         init_time;
-        time_point         changed_time;
+        // binary_extension<> needed temporarily for migration
+        binary_extension<time_point>
+                           changed_time;
       } config_row;
 
       TABLE token_table { // single table, scoped by contract account name
