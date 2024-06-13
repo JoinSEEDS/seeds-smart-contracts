@@ -14,16 +14,14 @@ void tokensmaster::reset() {
   utils::delete_table<white_table>(get_self(), get_self().value);
   config_table configs(get_self(), get_self().value);
   configs.remove();
+  schema_table schema(get_self(), get_self().value);
+  schema.remove();
+  
 }
 
 void tokensmaster::init(string chain, name manager, bool verify) {
   require_auth(get_self());
-  schema_table schemas(get_self(), get_self().value);
-  if( !schemas.exists() ) {
-    auto schema_entry = schemas.get_or_create(get_self(), schema_row);
-    schema_entry.schema = json_schema();
-    schemas.set(schema_entry, get_self());
-  }
+  
   config_table configs(get_self(), get_self().value);
   check(!configs.exists(), "cannot re-initialize configuration");
 
@@ -34,6 +32,7 @@ void tokensmaster::init(string chain, name manager, bool verify) {
   updwhitelist("Telos", extended_symbol( symbol("SEEDS",4 ), "token.seeds"_n ), true);
   updwhitelist("Telos", extended_symbol( symbol("TLOS",4 ), "eosio.token"_n ), true);
 
+  setschema(json_schema());
   auto config_entry = configs.get_or_create(get_self(), config_row);
   check(chain.size() <= 32, "chain name too long");
   config_entry.chain = chain;
@@ -223,7 +222,21 @@ void tokensmaster::updwhitelist(string chain, extended_symbol token, bool add)
   }
 }
 
-string tokensmaster::json_schema() {
+void tokensmaster::setschema(const string& schema)
+{
+  config_table configs(get_self(), get_self().value);
+  if( configs.exists() ) {
+    require_auth( configs.get().manager );
+  } else {
+    require_auth( get_self() );
+  }
+  schema_table schemas(get_self(), get_self().value);
+  auto schema_entry = schemas.get_or_create(get_self(), schema_row);
+  schema_entry.schema = schema;
+  schemas.set(schema_entry, get_self());
+}
+
+const string tokensmaster::json_schema() {
   return 
   R"--({
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -258,18 +271,30 @@ string tokensmaster::json_schema() {
         "logo": {
             "description": "url pointing to lo-res logo image",
             "type": "string",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
         "logo_lg": {
             "description": "url pointing to hi-res logo image",
             "type": "string",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
         "bg_image": {
             "description": "url pointing to card background image",
             "type": "string",
+            "anyOf": [
+                { "format": "uri"},
+                { "pattern": "^assets/"}
+            ],
             "minLength":3,
             "maxlength":128
         },
@@ -288,6 +313,7 @@ string tokensmaster::json_schema() {
         "web_link": {
             "description": "url to webpage with info about token host project",
             "type": "string",
+            "format": "uri",
             "minLength":3,
             "maxlength":128
         },
