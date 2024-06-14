@@ -273,6 +273,24 @@ namespace utils {
 
   }
 
+  double config_float_get(name key) {
+    DEFINE_CONFIG_FLOAT_TABLE
+    DEFINE_CONFIG_FLOAT_TABLE_MULTI_INDEX
+    config_float_tables configfloat(contracts::settings, contracts::settings.value);
+
+    auto citr = configfloat.find(key.value);
+    if (citr == configfloat.end()) { 
+      check(false, ("settings: the "+key.to_string()+" parameter has not been initialized").c_str());
+    }
+    return citr->value;
+  }
+
+  uint64_t get_trx_calc_cutoff_date() {
+    uint64_t now = eosio::current_time_point().sec_since_epoch();
+    uint64_t cutoffdate = now - (utils::moon_cycle * config_float_get("cyctrx.trail"_n));
+    return cutoffdate;
+  }
+
 
 }
 

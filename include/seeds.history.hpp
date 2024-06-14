@@ -61,7 +61,8 @@ CONTRACT history : public contract {
         ACTION migrateusers();
         ACTION migrateuser(uint64_t start, uint64_t transaction_id, uint64_t chunksize);
         ACTION testptrx(uint64_t timestamp);
-
+        ACTION testcleantx(name account);
+        ACTION cleanuserstx(uint64_t start, uint64_t chunksize);
 
     private:
       const uint64_t status_regular = 0;
@@ -93,11 +94,14 @@ CONTRACT history : public contract {
       void send_trx_cbp_reward_action(name from, name to);
       void send_add_cbs(name account, int points);
       void trx_cbp_reward(name account, name key);
+      uint64_t cleantrxpt(name account);
       
       // migration functions
       void save_migration_user_transaction(name from, name to, asset quantity, uint64_t timestamp);
       void adjust_transactions(uint64_t id, uint64_t timestamp);
       uint64_t get_deferred_id();
+
+
 
       TABLE citizen_table {
         uint64_t id;
@@ -348,4 +352,6 @@ EOSIO_DISPATCH(history,
   (cleanptrxs)
   (migrateusers)(migrateuser)
   (migrate)(testptrx)
+  (testcleantx)
+  (cleanuserstx)
 );
