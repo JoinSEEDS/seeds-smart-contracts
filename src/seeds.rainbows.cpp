@@ -1,12 +1,8 @@
-#ifdef FYEA1.0.0
-#include "includeseeds.rainbows.hpp"
-#else
-#include "../include/seeds.rainbows.hpp"
-#endif
-
+#include "seeds.rainbows.hpp"
 #include <algorithm>
 #include <../capi/eosio/action.h>
 
+//contractName:rainbows
 
 void rainbows::create( const name&    issuer,
                     const asset&   maximum_supply,
