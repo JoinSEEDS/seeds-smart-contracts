@@ -1,11 +1,11 @@
 const { Blockchain, nameToBigInt, symbolCodeToBigInt, addInlinePermission,
-        expectToThrow } = require("@proton/vert");
-const { Asset, TimePoint } = require("@greymass/eosio");
+        expectToThrow } = require("@eosnetwork/vert");
+const { Asset, TimePoint, Serializer } = require("@wharfkit/antelope");
 const { assert, expect } = require("chai");
 const blockchain = new Blockchain()
 
 // Load contract (use paths relative to the root of the project)
-const rainbows = blockchain.createContract('rainbows', 'fyartifacts/rainbows')
+const rainbows = blockchain.createContract('rainbows', 'build/seeds.rainbows')
 const seeds = blockchain.createContract('token.seeds', 'fyartifacts/token.seeds')
 const symSEEDS = Asset.SymbolCode.from('SEEDS')
 const symTOKES = Asset.SymbolCode.from('TOKES')
@@ -31,7 +31,8 @@ async function initTOKES(starttimeString) {
     assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
         redeem_locked_until: starttimeString, config_locked_until: starttimeString,
         transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
-        cred_limit: '\x00', positive_limit: '\x00' } ] )
+        cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'eosio.null', valuation_amt: '0.01 TOKES',
+        ref_quantity: 1, ref_currency: '', last_valuation_time: '1970-01-01T00:00:00.000' } ] )
     rows = rainbows.tables.stat(symbolCodeToBigInt(symTOKES)).getTableRows()
     assert.deepEqual(rows, [ { supply: '0.00 TOKES', max_supply: '1000000.00 TOKES',
         issuer: 'issuer'  } ] )
@@ -298,6 +299,51 @@ describe('Rainbow', () => {
                      rainbows.tables.accounts([nameToBigInt('user4')]).getTableRows() ]
         assert.deepEqual(balances, [ [ { balance:'10.00 TOKES' } ], [ { balance:'100.00 CREDS' }, { balance:'-100.00 TOKES' } ] ] )
 
+        
+    });
+    it('did set valuation', async () => {    
+        await rainbows.actions.create(['issuer', '100.00 TOKES', 'issuer', 'user3', 'issuer',
+            starttimeString, starttimeString, '', '', '', '', 'user5']).send('issuer@active')
+        await expectToThrow(
+            rainbows.actions.transfer(['user4', 'issuer', '50.00 TOKES', '']).send('user4@active'),
+            'eosio_assert: token has not been approved' )
+        await rainbows.actions.approve(['TOKES', false]).send('rainbows@active')
+        console.log('check valuation_mgr config')
+        cfg = rainbows.tables.configs(symbolCodeToBigInt(symTOKES)).getTableRows()
+        assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
+            redeem_locked_until: starttimeString, config_locked_until: starttimeString,
+            transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
+            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '0.01 TOKES',
+            ref_quantity: 1, ref_currency: '', last_valuation_time: '1970-01-01T00:00:00.000' } ] )
+        console.log('set valuation')
+        await expectToThrow(
+            rainbows.actions.setvaluation(['100.00 JOKES', '250', 'USD', 'memo']).send('user5@active'),
+            'eosio_assert: token with symbol does not exist' )
+        await expectToThrow(
+            rainbows.actions.setvaluation(['100 TOKES', '250', 'USD', 'memo']).send('user5@active'),
+            'eosio_assert: mismatched valuation_amount precision' )
+        await expectToThrow(
+            rainbows.actions.setvaluation(['0.00 TOKES', '250', 'USD', 'memo']).send('user5@active'),
+            'eosio_assert: valuation_amount must be >0' )
+        await expectToThrow(
+            rainbows.actions.setvaluation(['100.00 TOKES', '250',
+             'gobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledy',
+             'memo']).send('user5@active'),
+            'eosio_assert: ref_currency designator has more than 64 bytes' )
+        await expectToThrow(
+            rainbows.actions.setvaluation(['100.00 TOKES', '250', 'USD', 'memo']).send('issuer@active'),
+            'missing required authority user5' )
+        await rainbows.actions.setvaluation(['100.00 TOKES', '250', 'USD', 'memo']).send('user5@active')
+        cfg = rainbows.tables.configs(symbolCodeToBigInt(symTOKES)).getTableRows()
+        assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
+            redeem_locked_until: starttimeString, config_locked_until: starttimeString,
+            transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
+            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '100.00 TOKES',
+            ref_quantity: 250, ref_currency: 'USD', last_valuation_time: starttimeString } ] )
+        await rainbows.actions.getvaluation(['10.00 TOKES']).send();
+        rvbuf = Buffer.from(blockchain.actionTraces[0].returnValue)
+        rv = Serializer.decode({data: rvbuf, type: 'valuation_t', abi: rainbows.abi})
+        assert.deepEqual(rv, {currency: 'USD', valuation: {value: 25.0}});
         
     });
 

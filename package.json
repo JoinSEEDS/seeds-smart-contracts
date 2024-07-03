@@ -1,37 +1,21 @@
 {
-  "name": "seeds-contracts",
-  "version": "1.2.0",
-  "description": "",
+  "name": "your-project",
+  "version": "1.0.0",
   "main": "index.js",
+  "license": "",
   "scripts": {
-    "test": "riteway test/*.test.js | tap-nirvana",
-    "test:eoslime": "eoslime test --path='eoslime-tests'",
-    "deploy": "./scripts/seeds.js init",
-    "deploy:local": "EOSIO_NETWORK=local ./scripts/seeds.js init",
-    "deploy:testnet": "EOSIO_NETWORK=telosTestnet ./scripts/seeds.js init",
-    "deploy:mainnet": "EOSIO_NETWORK=telosMainnet ./scripts/seeds.js init"
+    "build": "npx fuckyea build",
+    "deploy": "npx fuckyea deploy",
+    "test": "npx fuckyea test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "bignumber.js": "^8.1.1",
-    "chai": "^4.2.0",
-    "cheerio": "^1.0.0-rc.3",
-    "commander": "^3.0.2",
-    "commonmark": "^0.29.2",
-    "dotenv": "^8.1.0",
-    "eosio-signing-request": "^2.2.1",
-    "eosjs": "^21.0.3",
-    "eosjs-ecc": "^4.0.7",
-    "fs-extra": "^9.1.0",
-    "handlebars": "^4.7.6",
-    "json": "^9.0.6",
-    "mocha": "^6.1.4",
-    "moment": "^2.24.0",
-    "node-fetch": "^2.6.1",
-    "ramda": "^0.26.1",
-    "riteway": "^6.0.3",
-    "tap-nirvana": "^1.1.0"
+  "devDependencies": {
+    "@eosnetwork/vert": "^1.0.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.7",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.3"
   }
 }

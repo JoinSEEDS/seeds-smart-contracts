@@ -1,4 +1,5 @@
-#include "seeds.rainbows.hpp"
+//#include <seeds.rainbows.hpp> // for cdt-cpp
+#include "seeds.rainbows.hpp" // for webide
 #include <algorithm>
 #include <../capi/eosio/action.h>
 
@@ -14,7 +15,8 @@ void rainbows::create( const name&    issuer,
                     const string&  membership_symbol,
                     const string&  broker_symbol,
                     const string&  cred_limit_symbol,
-                    const string&  pos_limit_symbol )
+                    const string&  pos_limit_symbol,
+                    const std::optional<name>& valuation_mgr )
 {
     require_auth( issuer );
     auto sym = maximum_supply.symbol;
@@ -42,6 +44,9 @@ void rainbows::create( const name&    issuer,
     sister_check( broker_symbol, 0);
     sister_check( cred_limit_symbol, maximum_supply.symbol.precision());
     sister_check( pos_limit_symbol, maximum_supply.symbol.precision());
+    if (valuation_mgr) {
+      check( is_account( valuation_mgr.value() ), "valuation_mgr account does not exist");
+    }
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
     if( existing != statstable.end()) {
@@ -73,6 +78,9 @@ void rainbows::create( const name&    issuer,
        cf.broker = symbol_code( broker_symbol );
        cf.cred_limit = symbol_code( cred_limit_symbol );
        cf.positive_limit = symbol_code( pos_limit_symbol );
+       if (valuation_mgr) {
+         cf.valuation_mgr = valuation_mgr.value();
+       }
        configtable.set( cf, issuer );
     return;
     }
@@ -98,7 +106,12 @@ void rainbows::create( const name&    issuer,
        .membership = symbol_code( membership_symbol ),
        .broker = symbol_code( broker_symbol ),
        .cred_limit = symbol_code( cred_limit_symbol ),
-       .positive_limit = symbol_code( pos_limit_symbol )
+       .positive_limit = symbol_code( pos_limit_symbol ),
+       .valuation_mgr = valuation_mgr.value_or("eosio.null"_n),
+       .valuation_amt = asset(1, maximum_supply.symbol),
+       .ref_quantity = 1,
+       .ref_currency = binary_extension<string>(""),
+       .last_valuation_time = time_point()
     };
     configtable.set( new_config, issuer );
     displays displaytable( get_self(), sym.code().raw() );
@@ -144,6 +157,29 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
        configtable.set (cf, st.issuer );
     }
 
+}
+
+void rainbows::setvaluation( const asset& valuation_amount,
+                             const uint32_t ref_quantity,
+                             const string& ref_currency,
+                             const string& memo )
+{
+    auto sym_code_raw = valuation_amount.symbol.code().raw();
+    stats statstable( get_self(), sym_code_raw );
+    const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
+    check( st.supply.symbol == valuation_amount.symbol, "mismatched valuation_amount precision" );
+    check( valuation_amount.amount > 0, "valuation_amount must be >0" );
+    check( ref_currency.size() <= 64, "ref_currency designator has more than 64 bytes" );
+    check( memo.size() <= 256, "memo has more than 256 bytes" );
+    configs configtable( get_self(), sym_code_raw );
+    auto cf = configtable.get();
+    require_auth(cf.valuation_mgr.value());
+    
+    cf.valuation_amt = valuation_amount;
+    cf.ref_quantity = ref_quantity;
+    cf.ref_currency = ref_currency;
+    cf.last_valuation_time = current_time_point();
+    configtable.set( cf, cf.valuation_mgr.value() );
 }
 
 void rainbows::setbacking( const asset&    token_bucket,

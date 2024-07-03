@@ -1,6 +1,7 @@
 #pragma once
 
 #include <eosio/asset.hpp>
+#include <eosio/binary_extension.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
@@ -91,6 +92,7 @@ using namespace eosio;
           *   a positive balance in the sister token will permit a user to overspend to that amount
           * @param pos_limit_symbol - a frozen "sister" token, also managed by this contract;
           *   no user transfer is allowed to increase the user balance over the sister token balance.
+          * @param valuation_mgr - the account with authority to set valuation.
           *
           * @pre Token symbol has to be valid,
           * @pre Token symbol must not be already created, OR if it has been created,
@@ -118,7 +120,8 @@ using namespace eosio;
                         const string& membership_symbol,
                         const string& broker_symbol,
                         const string& cred_limit_symbol,
-                        const string& pos_limit_symbol );
+                        const string& pos_limit_symbol,
+                        const std::optional<name>& valuation_mgr );
 
 
          /**
@@ -133,6 +136,44 @@ using namespace eosio;
           */
          ACTION approve( const symbol_code& symbolcode, const bool& reject_and_clear );
 
+        /**
+          * Allows `valuation_mgr` account to assign a valuation of the token with
+          * reference to another currency (e.g. USD, EUR)
+          *
+          * Note: the static function `get_valuation` returns valuation (e.g. USD per token) 
+          *
+          * @param valuation_amount - a specified amount of a token under this contract
+          * @param ref_quantity - an integer quantity of a reference currency which is
+          *                       considered equal in value to the token_amount
+          * @param ref_currency - a string specifying the reference currency
+          *                       Most commonly this will be an ISO 4217 code, however
+          *                       interpretation of this string is the responsibility
+          *                       of a wallet or other app, not this contract.
+          * @param memo - memo string
+          *
+          */
+         ACTION setvaluation( const asset& valuation_amount,
+                              const uint32_t ref_quantity,
+                              const string& ref_currency,
+                              const string& memo );
+
+        /**
+          * Read the valuation (in the configured ref_currency) for a specified
+          * quantity of tokens, based on the config parameters submitted in an
+          * earlier `setvaluation` action.
+          *
+          * @param amount - the quantity of tokens
+          *
+          * @return - a 2-element structure containing the ref_currency designator
+          *           and a floating point quantity
+          */
+         struct valuation_t { string currency; float valuation; };
+         
+         [[eosio::action]] valuation_t getvaluation( const asset& amount ) {
+           valuation_t rv = get_valuation( get_self(), amount.symbol.code() );
+           rv.valuation *= amount.amount / pow(10, amount.symbol.precision());
+           return rv;
+         }
 
          /**
           * Allows `issuer` account to create a backing relationship for a token. A new row in the
@@ -355,6 +396,16 @@ using namespace eosio;
             return ac->balance;
          }
 
+         static valuation_t get_valuation( const name& token_contract_account, const symbol_code& sym_code )
+         {
+           configs configtable( token_contract_account, sym_code.raw() );
+           check(configtable.exists(), "symbol does not exist");
+           auto cf = configtable.get();
+           float val = cf.valuation_amt->amount / pow(10, cf.valuation_amt->symbol.precision());
+           valuation_t rv = {cf.ref_currency.value(), cf.ref_quantity.value()/val};
+           return rv;
+         }
+
       private:
          const int max_backings_count = 8; // don't use too much cpu time to complete transaction
          const uint64_t no_index = static_cast<uint64_t>(-1); // flag for nonexistent defer_table link
@@ -388,6 +439,17 @@ using namespace eosio;
             symbol_code broker;
             symbol_code cred_limit;
             symbol_code positive_limit;
+            // binary_extension<> for backward compatibility
+            binary_extension<name>
+                        valuation_mgr;
+            binary_extension<asset>
+                        valuation_amt;
+            binary_extension<uint32_t>
+                        ref_quantity;
+            binary_extension<string>
+                        ref_currency;
+            binary_extension<time_point>
+                        last_valuation_time;
          };
 
          TABLE currency_display {  // singleton, scoped on token symbol code
@@ -443,9 +505,4 @@ using namespace eosio;
          void reset_one( const symbol_code symbolcode, const bool all, const uint32_t limit, uint32_t& counter );
  
    };
-
-EOSIO_DISPATCH(rainbows,
-   (create)(approve)(setbacking)(deletebacking)(setdisplay)(issue)(retire)(transfer)(garner)
-   (open)(close)(freeze)(reset)(resetacct)
-);
 
