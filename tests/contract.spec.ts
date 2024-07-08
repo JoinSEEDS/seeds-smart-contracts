@@ -32,7 +32,7 @@ async function initTOKES(starttimeString) {
         redeem_locked_until: starttimeString, config_locked_until: starttimeString,
         transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
         cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'eosio.null', valuation_amt: '0.01 TOKES',
-        ref_quantity: 1, ref_currency: '', last_valuation_time: '1970-01-01T00:00:00.000' } ] )
+        ref_quantity: 1, ref_currency: '' } ] )
     rows = rainbows.tables.stat(symbolCodeToBigInt(symTOKES)).getTableRows()
     assert.deepEqual(rows, [ { supply: '0.00 TOKES', max_supply: '1000000.00 TOKES',
         issuer: 'issuer'  } ] )
@@ -333,7 +333,7 @@ describe('Rainbow', () => {
             redeem_locked_until: starttimeString, config_locked_until: starttimeString,
             transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
             cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '0.01 TOKES',
-            ref_quantity: 1, ref_currency: '', last_valuation_time: '1970-01-01T00:00:00.000' } ] )
+            ref_quantity: 1, ref_currency: '' } ] )
         console.log('set valuation')
         await expectToThrow(
             rainbows.actions.setvaluation(['100.00 JOKES', '250', 'USD', 'memo']).send('user5@active'),
@@ -358,7 +358,7 @@ describe('Rainbow', () => {
             redeem_locked_until: starttimeString, config_locked_until: starttimeString,
             transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
             cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '100.00 TOKES',
-            ref_quantity: 250, ref_currency: 'USD', last_valuation_time: starttimeString } ] )
+            ref_quantity: 250, ref_currency: 'USD' } ] )
         await rainbows.actions.getvaluation(['10.00 TOKES']).send();
         rvbuf = Buffer.from(blockchain.actionTraces[0].returnValue)
         rv = Serializer.decode({data: rvbuf, type: 'valuation_t', abi: rainbows.abi})

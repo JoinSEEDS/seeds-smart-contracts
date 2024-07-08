@@ -463,8 +463,6 @@ using namespace eosio;
                         ref_quantity;
             binary_extension<string>
                         ref_currency;
-            binary_extension<time_point>
-                        last_valuation_time;
          };
 
          TABLE currency_display {  // singleton, scoped on token symbol code

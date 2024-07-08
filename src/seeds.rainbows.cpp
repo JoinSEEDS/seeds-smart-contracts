@@ -111,7 +111,6 @@ void rainbows::create( const name&    issuer,
        .valuation_amt = asset(1, maximum_supply.symbol),
        .ref_quantity = 1,
        .ref_currency = binary_extension<string>(""),
-       .last_valuation_time = time_point()
     };
     configtable.set( new_config, issuer );
     displays displaytable( get_self(), sym.code().raw() );
@@ -179,7 +178,6 @@ void rainbows::setvaluation( const asset& valuation_amount,
     cf.valuation_amt = valuation_amount;
     cf.ref_quantity = ref_quantity;
     cf.ref_currency = ref_currency;
-    cf.last_valuation_time = current_time_point();
     configtable.set( cf, cf.valuation_mgr.value() );
 }
 
