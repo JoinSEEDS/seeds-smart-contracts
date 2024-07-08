@@ -164,11 +164,12 @@ using namespace eosio;
           *
           * @param amount - the quantity of tokens
           *
-          * @return - a 2-element structure containing the ref_currency designator
-          *           and a floating point quantity
+          * @return - a 2-element structure containing
+          *           currency: the ref_currency designator (typ an ISO 4217 code)
+          *           valuation: a floating point quantity
           */
          struct valuation_t { string currency; float valuation; };
-         
+
          [[eosio::action]] valuation_t getvaluation( const asset& amount ) {
            valuation_t rv = get_valuation( get_self(), amount.symbol.code() );
            rv.valuation *= amount.amount / pow(10, amount.symbol.precision());
@@ -401,9 +402,11 @@ using namespace eosio;
            configs configtable( token_contract_account, sym_code.raw() );
            check(configtable.exists(), "symbol does not exist");
            auto cf = configtable.get();
+           if (!cf.ref_currency.has_value() || cf.ref_currency.value() == "") {
+             return {"", 0.00};
+           }
            float val = cf.valuation_amt->amount / pow(10, cf.valuation_amt->symbol.precision());
-           valuation_t rv = {cf.ref_currency.value(), cf.ref_quantity.value()/val};
-           return rv;
+           return {cf.ref_currency.value(), cf.ref_quantity.value()/val};
          }
 
       private:

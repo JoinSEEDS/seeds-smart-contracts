@@ -173,6 +173,7 @@ void rainbows::setvaluation( const asset& valuation_amount,
     check( memo.size() <= 256, "memo has more than 256 bytes" );
     configs configtable( get_self(), sym_code_raw );
     auto cf = configtable.get();
+    check(cf.valuation_mgr.has_value(), "setvaluation: no valuation_mgr field");
     require_auth(cf.valuation_mgr.value());
     
     cf.valuation_amt = valuation_amount;

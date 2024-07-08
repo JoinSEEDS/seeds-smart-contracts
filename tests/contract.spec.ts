@@ -1,6 +1,6 @@
 const { Blockchain, nameToBigInt, symbolCodeToBigInt, addInlinePermission,
         expectToThrow } = require("@eosnetwork/vert");
-const { Asset, TimePoint, Serializer } = require("@wharfkit/antelope");
+const { Asset, TimePoint, Serializer } = require("@greymass/eosio");
 const { assert, expect } = require("chai");
 const blockchain = new Blockchain()
 
