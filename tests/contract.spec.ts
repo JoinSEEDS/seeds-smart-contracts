@@ -272,14 +272,14 @@ describe('Rainbow', () => {
             rainbows.actions.retire(['user4', '20.0000 FRACS', true, 'redeemed by user']).send('user4@active'),
             "eosio_assert_message: can't redeem, escrow underfunded in SEEDS (30% reserve)" )
     });
-    it('did garner/demurrage', async () => {
+    it('did garner/tax', async () => {
         await initTOKES(starttimeString)
         await rainbows.actions.issue(['10000.00 TOKES', '']).send('issuer@active')
         await rainbows.actions.transfer(['issuer','user4', '1000.00 TOKES', '']).send('issuer@active')
         console.log('garner 1% = 10000ppm')
         // must have rainbows@eosio.code permission on withdraw_mgr accout
         addInlinePermission( 'rainbows', accounts.find( (acct) => acct.name == 'issuer').permissions )
-        await rainbows.actions.garner(['user4', 'user3', symTOKES, 10000, '']).send('issuer@active')
+        await rainbows.actions.garner(['user4', 'user3', symTOKES, 0, 10000, '']).send('issuer@active')
         balances = [ rainbows.tables.accounts([nameToBigInt('user3')]).getTableRows(),
                      rainbows.tables.accounts([nameToBigInt('user4')]).getTableRows() ]
         assert.deepEqual(balances, [ [ { balance:'10.00 TOKES' } ], [ { balance:'990.00 TOKES' } ] ] )
@@ -294,12 +294,31 @@ describe('Rainbow', () => {
         await rainbows.actions.create(['issuer', '1000000.00 TOKES', 'issuer', 'user3', 'issuer',
             starttimeString, starttimeString, '', '', 'CREDS', '']).send('issuer@active')
         await rainbows.actions.transfer(['user4', 'issuer', '1090.00 TOKES', '']).send('user4@active')
-        await rainbows.actions.garner(['user4', 'user3', symTOKES, 10000, '']).send('issuer@active')
+        await rainbows.actions.garner(['user4', 'user3', symTOKES, 0, 10000, '']).send('issuer@active')
         balances = [ rainbows.tables.accounts([nameToBigInt('user3')]).getTableRows(),
                      rainbows.tables.accounts([nameToBigInt('user4')]).getTableRows() ]
         assert.deepEqual(balances, [ [ { balance:'10.00 TOKES' } ], [ { balance:'100.00 CREDS' }, { balance:'-100.00 TOKES' } ] ] )
 
         
+    });
+    it('did garner/demurrage', async () => {
+        await initTOKES(starttimeString)
+        await rainbows.actions.issue(['10000.00 TOKES', '']).send('issuer@active')
+        await rainbows.actions.transfer(['issuer','user4', '1000.00 TOKES', '']).send('issuer@active')
+        console.log('garner per-week; first time')
+        // must have rainbows@eosio.code permission on withdraw_mgr accout
+        addInlinePermission( 'rainbows', accounts.find( (acct) => acct.name == 'issuer').permissions )
+        await rainbows.actions.garner(['user4', 'user3', symTOKES, 10000, 0, '']).send('issuer@active')
+        balances = [ rainbows.tables.accounts([nameToBigInt('user3')]).getTableRows(),
+                     rainbows.tables.accounts([nameToBigInt('user4')]).getTableRows() ]
+        assert.deepEqual(balances, [ [ { balance:'0.00 TOKES' } ], [ { balance:'1000.00 TOKES' } ] ] )
+        console.log('garner per-week 1% = 10000ppm; after 2 weeks')
+        blockchain.setTime(TimePoint.fromMilliseconds(starttime.valueOf()+1000*60*60*24*14))  
+        addInlinePermission( 'rainbows', accounts.find( (acct) => acct.name == 'issuer').permissions )
+        await rainbows.actions.garner(['user4', 'user3', symTOKES, 10000, 0, '']).send('issuer@active')
+        balances = [ rainbows.tables.accounts([nameToBigInt('user3')]).getTableRows(),
+                     rainbows.tables.accounts([nameToBigInt('user4')]).getTableRows() ]
+        assert.deepEqual(balances, [ [ { balance:'20.00 TOKES' } ], [ { balance:'980.00 TOKES' } ] ] )
     });
     it('did set valuation', async () => {    
         await rainbows.actions.create(['issuer', '100.00 TOKES', 'issuer', 'user3', 'issuer',

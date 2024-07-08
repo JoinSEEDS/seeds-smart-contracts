@@ -298,16 +298,26 @@ using namespace eosio;
                           const name&    to,
                           const asset&   quantity,
                           const string&  memo );
+         
          /**
-          * Allows `from` account to transfer to `to` account a fraction `fraction` of its balance.
+          * Allows `from` account to transfer to `to` account a fraction of its balance.
           * One account is debited and the other is credited.
+          * The transaction must be signed by the withdrawal_mgr and the
+          * `to` account must be the `withdraw_to` account.
           * This function is suitable for demurrage or wealth taxation.
           * When `from` balance is negative (e.g. mutual credit) nothing is transferred.
+          * Fractions are expressed in parts per million (ppm).
+          * For demurrage, the fraction withdrawn is proportional to the time elapsed since
+          * the previous demurrage withdrawal. The rate is expressed as `ppm_per_week`.
+          * For wealth taxation, the tax rate is expressed as `ppm_abs`.
+          * The first time a demurrage action is applied to a particular account/token,
+          * the date is registered but no transfer is made.
           *
           * @param from - the account to transfer from,
           * @param to - the account to be transferred to,
           * @param symbolcode - the token symbol,
-          * @param rateppm - the fraction (in ppm) of the `from` balance to be transferred,
+          * @param ppm_per_week - the demurrage rate in ppm per week,
+          * @param ppm_abs - the tax rate (in ppm),
           * @param memo - the memo string to accompany the transaction.
           * 
           * @pre The transfers_frozen flag in the configs table must be false, except for
@@ -322,8 +332,10 @@ using namespace eosio;
          ACTION garner( const name&        from,
                         const name&        to,
                         const symbol_code& symbolcode,
-                        const int64_t&     rateppm,
+                        const int64_t&     ppm_per_week,
+                        const int64_t&     ppm_abs,
                         const string&      memo );
+         
          /**
           * Allows `ram_payer` to create an account `owner` with zero balance for
           * token `symbolcode` at the expense of `ram_payer`.
@@ -482,6 +494,13 @@ using namespace eosio;
             uint64_t primary_key()const { return symbolcode.raw(); };
          };
 
+         TABLE garner_dates { // scoped on symbolcode
+            name  account;
+            time_point last_garner;
+
+            uint64_t primary_key()const { return account.value; };
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
          typedef eosio::singleton< "configs"_n, currency_config > configs;
@@ -494,8 +513,8 @@ using namespace eosio;
                >
             > backs;
          typedef eosio::multi_index< "symbols"_n, symbolt > symbols;
-
          symbols symboltable;
+         typedef eosio::multi_index< "garnerdates"_n, garner_dates > garnerdates;
 
          void sub_balance( const name& owner, const asset& value, const symbol_code& limit_symbol );
          void add_balance( const name& owner, const asset& value, const name& ram_payer,

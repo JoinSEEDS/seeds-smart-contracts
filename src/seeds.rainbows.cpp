@@ -402,7 +402,8 @@ void rainbows::retire( const name& owner, const asset& quantity,
 void rainbows:: garner( const name&        from,
                         const name&        to,
                         const symbol_code& symbolcode,
-                        const int64_t&     rateppm,
+                        const int64_t&     ppm_per_week,
+                        const int64_t&     ppm_abs,
                         const string&      memo )
 {
     check( is_account( from ), "from account does not exist");
@@ -414,8 +415,27 @@ void rainbows:: garner( const name&        from,
     if( fr == from_acnts.end() || fr->balance.amount <= 0) {
         return;
     }
-    check(rateppm >= 0, "garner: rateppm must be nonnegative"); // may have future use case
-    const asset quantity = asset(fr->balance.amount*(int128_t)rateppm/1000000LL, fr->balance.symbol);
+    check(ppm_per_week >= 0, "garner: ppm_per_week must be nonnegative"); // may have future use case
+    check(ppm_abs >= 0, "garner: ppm_abs must be nonnegative");
+    int64_t demurrage_ppm = 0;
+    if (ppm_per_week > 0) {
+      garnerdates gdates(get_self(), symbolcode.raw());
+      auto gd = gdates.find(from.value);
+      if (gd == gdates.end()) { // first garner action on this account/token
+        gdates.emplace( cf.withdrawal_mgr, [&]( auto& a ){
+          a.account = from;
+          a.last_garner = current_time_point();
+        });
+      } else { // compute demurrage
+        int32_t elapsed_sec = current_time_point().sec_since_epoch() - gd->last_garner.sec_since_epoch();
+        gdates.modify( gd, same_payer, [&]( auto& a ) {
+          a.last_garner = current_time_point();
+        });
+        const uint64_t secs_per_week = 7*24*60*60;
+        demurrage_ppm = elapsed_sec*(int128_t)ppm_per_week/secs_per_week;
+      } 
+    } 
+    const asset quantity = asset(fr->balance.amount*(int128_t)(demurrage_ppm+ppm_abs)/1000000LL, fr->balance.symbol);
     action(
         permission_level{cf.withdrawal_mgr,"active"_n},
         get_self(),
