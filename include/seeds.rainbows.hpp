@@ -121,7 +121,7 @@ using namespace eosio;
                         const string& broker_symbol,
                         const string& cred_limit_symbol,
                         const string& pos_limit_symbol,
-                        const std::optional<name>& valuation_mgr );
+                        const binary_extension<name>& valuation_mgr );
 
 
          /**
@@ -142,9 +142,9 @@ using namespace eosio;
           *
           * Note: the static function `get_valuation` returns valuation (e.g. USD per token) 
           *
-          * @param valuation_amount - a specified amount of a token under this contract
-          * @param ref_quantity - an integer quantity of a reference currency which is
-          *                       considered equal in value to the token_amount
+          * @param symbolcode - the token symbol
+          * @param val_per_token - the quantity (float32) of a reference currency which is
+          *                       considered equal in value one token
           * @param ref_currency - a string specifying the reference currency
           *                       Most commonly this will be an ISO 4217 code, however
           *                       interpretation of this string is the responsibility
@@ -152,8 +152,8 @@ using namespace eosio;
           * @param memo - memo string
           *
           */
-         ACTION setvaluation( const asset& valuation_amount,
-                              const uint32_t ref_quantity,
+         ACTION setvaluation( const symbol_code& symbolcode,
+                              const float& val_per_token,
                               const string& ref_currency,
                               const string& memo );
 
@@ -417,8 +417,7 @@ using namespace eosio;
            if (!cf.ref_currency.has_value() || cf.ref_currency.value() == "") {
              return {"", 0.00};
            }
-           float val = cf.valuation_amt->amount / pow(10, cf.valuation_amt->symbol.precision());
-           return {cf.ref_currency.value(), cf.ref_quantity.value()/val};
+           return {cf.ref_currency.value(), cf.val_per_token.value()};
          }
 
       private:
@@ -457,10 +456,8 @@ using namespace eosio;
             // binary_extension<> for backward compatibility
             binary_extension<name>
                         valuation_mgr;
-            binary_extension<asset>
-                        valuation_amt;
-            binary_extension<uint32_t>
-                        ref_quantity;
+            binary_extension<float>
+                        val_per_token;
             binary_extension<string>
                         ref_currency;
          };

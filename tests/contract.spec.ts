@@ -31,8 +31,8 @@ async function initTOKES(starttimeString) {
     assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
         redeem_locked_until: starttimeString, config_locked_until: starttimeString,
         transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
-        cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'eosio.null', valuation_amt: '0.01 TOKES',
-        ref_quantity: 1, ref_currency: '' } ] )
+        cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'eosio.null', val_per_token: '1.0000000',
+        ref_currency: '' } ] )
     rows = rainbows.tables.stat(symbolCodeToBigInt(symTOKES)).getTableRows()
     assert.deepEqual(rows, [ { supply: '0.00 TOKES', max_supply: '1000000.00 TOKES',
         issuer: 'issuer'  } ] )
@@ -332,33 +332,30 @@ describe('Rainbow', () => {
         assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
             redeem_locked_until: starttimeString, config_locked_until: starttimeString,
             transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
-            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '0.01 TOKES',
-            ref_quantity: 1, ref_currency: '' } ] )
+            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', val_per_token: '1.0000000',
+            ref_currency: '' } ] )
         console.log('set valuation')
         await expectToThrow(
-            rainbows.actions.setvaluation(['100.00 JOKES', '250', 'USD', 'memo']).send('user5@active'),
+            rainbows.actions.setvaluation(['JOKES', '250', 'USD', 'memo']).send('user5@active'),
             'eosio_assert: token with symbol does not exist' )
         await expectToThrow(
-            rainbows.actions.setvaluation(['100 TOKES', '250', 'USD', 'memo']).send('user5@active'),
-            'eosio_assert: mismatched valuation_amount precision' )
+            rainbows.actions.setvaluation(['TOKES', '-2.50', 'USD', 'memo']).send('user5@active'),
+            'eosio_assert: valuation per token must be >=0' )
         await expectToThrow(
-            rainbows.actions.setvaluation(['0.00 TOKES', '250', 'USD', 'memo']).send('user5@active'),
-            'eosio_assert: valuation_amount must be >0' )
-        await expectToThrow(
-            rainbows.actions.setvaluation(['100.00 TOKES', '250',
+            rainbows.actions.setvaluation(['TOKES', '250',
              'gobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledygobbledy',
              'memo']).send('user5@active'),
             'eosio_assert: ref_currency designator has more than 64 bytes' )
         await expectToThrow(
-            rainbows.actions.setvaluation(['100.00 TOKES', '250', 'USD', 'memo']).send('issuer@active'),
+            rainbows.actions.setvaluation(['TOKES', '2.50', 'USD', 'memo']).send('issuer@active'),
             'missing required authority user5' )
-        await rainbows.actions.setvaluation(['100.00 TOKES', '250', 'USD', 'memo']).send('user5@active')
+        await rainbows.actions.setvaluation(['TOKES', '2.50', 'USD', 'memo']).send('user5@active')
         cfg = rainbows.tables.configs(symbolCodeToBigInt(symTOKES)).getTableRows()
         assert.deepEqual(cfg, [ { withdrawal_mgr: 'issuer', withdraw_to: 'user3', freeze_mgr: 'issuer',
             redeem_locked_until: starttimeString, config_locked_until: starttimeString,
             transfers_frozen: false, approved: true, membership: '\x00', broker: '\x00',
-            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', valuation_amt: '100.00 TOKES',
-            ref_quantity: 250, ref_currency: 'USD' } ] )
+            cred_limit: '\x00', positive_limit: '\x00', valuation_mgr: 'user5', val_per_token: '2.5000000',
+            ref_currency: 'USD' } ] )
         await rainbows.actions.getvaluation(['10.00 TOKES']).send();
         rvbuf = Buffer.from(blockchain.actionTraces[0].returnValue)
         rv = Serializer.decode({data: rvbuf, type: 'valuation_t', abi: rainbows.abi})

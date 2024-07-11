@@ -16,7 +16,7 @@ void rainbows::create( const name&    issuer,
                     const string&  broker_symbol,
                     const string&  cred_limit_symbol,
                     const string&  pos_limit_symbol,
-                    const std::optional<name>& valuation_mgr )
+                    const binary_extension<name>& valuation_mgr )
 {
     require_auth( issuer );
     auto sym = maximum_supply.symbol;
@@ -107,9 +107,8 @@ void rainbows::create( const name&    issuer,
        .broker = symbol_code( broker_symbol ),
        .cred_limit = symbol_code( cred_limit_symbol ),
        .positive_limit = symbol_code( pos_limit_symbol ),
-       .valuation_mgr = valuation_mgr.value_or("eosio.null"_n),
-       .valuation_amt = asset(1, maximum_supply.symbol),
-       .ref_quantity = 1,
+       .valuation_mgr = valuation_mgr ? valuation_mgr.value() : "eosio.null"_n,
+       .val_per_token = 1.00,
        .ref_currency = binary_extension<string>(""),
     };
     configtable.set( new_config, issuer );
@@ -158,16 +157,15 @@ void rainbows::approve( const symbol_code& symbolcode, const bool& reject_and_cl
 
 }
 
-void rainbows::setvaluation( const asset& valuation_amount,
-                             const uint32_t ref_quantity,
+void rainbows::setvaluation( const symbol_code& symbolcode,
+                             const float& val_per_token,
                              const string& ref_currency,
                              const string& memo )
 {
-    auto sym_code_raw = valuation_amount.symbol.code().raw();
+    auto sym_code_raw = symbolcode.raw();
     stats statstable( get_self(), sym_code_raw );
     const auto& st = statstable.get( sym_code_raw, "token with symbol does not exist" );
-    check( st.supply.symbol == valuation_amount.symbol, "mismatched valuation_amount precision" );
-    check( valuation_amount.amount > 0, "valuation_amount must be >0" );
+    check( val_per_token >= 0, "valuation per token must be >=0" );
     check( ref_currency.size() <= 64, "ref_currency designator has more than 64 bytes" );
     check( memo.size() <= 256, "memo has more than 256 bytes" );
     configs configtable( get_self(), sym_code_raw );
@@ -175,8 +173,7 @@ void rainbows::setvaluation( const asset& valuation_amount,
     check(cf.valuation_mgr.has_value(), "setvaluation: no valuation_mgr field");
     require_auth(cf.valuation_mgr.value());
     
-    cf.valuation_amt = valuation_amount;
-    cf.ref_quantity = ref_quantity;
+    cf.val_per_token = val_per_token;
     cf.ref_currency = ref_currency;
     configtable.set( cf, cf.valuation_mgr.value() );
 }
