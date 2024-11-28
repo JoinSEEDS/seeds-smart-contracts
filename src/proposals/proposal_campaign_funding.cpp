@@ -3,6 +3,8 @@
 
 void ProposalCampaignFunding::create_impl (std::map<std::string, VariantValue> & args) {
 
+  check(false, "Funding campaigns are disabled.")
+
   dao::proposal_auxiliary_tables propaux_t(contract_name, contract_name.value);
 
   asset quantity = std::get<asset>(args["quantity"]);

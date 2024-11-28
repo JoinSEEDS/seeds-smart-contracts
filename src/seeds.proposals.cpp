@@ -2408,6 +2408,62 @@ ACTION proposals::testalliance (uint64_t id, name creator, asset quantity, asset
 
 }
 
+ACTION proposals::migcampaign ( uint64_t start, uint64_t chunksize ) {
+
+  require_auth(get_self());
+
+  auto props_by_campaign_type_id = props.get_index<"bycmptypeid"_n>();
+
+  uint128_t id = (uint128_t(campaign_funding_type.value) << 64);
+  auto pitr = props_by_campaign_type_id.lower_bound(id);
+
+  uint64_t count = 0;
+
+  while (pitr != props_by_campaign_type_id.end() && count < chunksize) {
+
+    if (pitr->campaign_type == campaign_funding_type) {
+
+      // Cancel existing ongoing funding campaigns and return the stake to the creator
+      // Cancel staged funding campaigns and return the stake
+
+      if ( pitr->stage == stage_active || pitr->stage == stage_staged ) {
+
+        refund_staked(pitr->creator, pitr->staked );
+
+        props_by_campaign_type_id.modify(pitr, _self, [&](auto & prop){
+          prop.staked = asset(0, utils::seeds_symbol);
+          prop.status = status_inactive;
+          prop.stage = stage_done;
+        });
+
+      }
+
+
+    }
+
+    pitr++;
+    count++;
+  }
+
+  if (pitr != props_by_campaign_type_id.end() && pitr->campaign_type == campaign_funding_type) {
+
+    action next_execution(
+      permission_level{get_self(), "active"_n},
+      get_self(),
+      "migcampaign"_n,
+      std::make_tuple(pitr->id, chunksize)
+    );
+
+    transaction tx;
+    tx.actions.emplace_back(next_execution);
+    tx.delay_sec = 1;
+    tx.send(pitr->id, _self);
+
+  }
+
+
+}
+
 // TODO: Remove
 ACTION proposals::migalliances (uint64_t start, uint64_t chunksize) {
 
