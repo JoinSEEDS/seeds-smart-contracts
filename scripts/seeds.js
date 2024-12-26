@@ -357,6 +357,7 @@ program
       "buy", 
       "sale",
       "costak",
+      "costak2",
       "voice",
       "msig",
       "docs",
